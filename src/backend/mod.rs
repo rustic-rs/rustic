@@ -18,7 +18,7 @@ impl FileType {
     pub fn name(&self) -> &str {
         match &self {
             FileType::Config => "config",
-            FileType::Snapshot => "snapshot",
+            FileType::Snapshot => "snapshots",
             FileType::Index => "index",
             FileType::Key => "keys",
             FileType::Pack => "data",

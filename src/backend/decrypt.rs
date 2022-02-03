@@ -15,13 +15,13 @@ pub enum RepoError<E> {
     RepoError(#[from] E),
 }
 
-pub struct DecryptBackend<R> {
-    backend: R,
+pub struct DecryptBackend<'a, R> {
+    backend: &'a R,
     key: Key,
 }
 
-impl<R: ReadBackend> DecryptBackend<R> {
-    pub fn new(be: R, key: Key) -> Self {
+impl<'a, R: ReadBackend> DecryptBackend<'a, R> {
+    pub fn new(be: &'a R, key: Key) -> Self {
         Self {
             backend: be,
             key: key,
@@ -29,7 +29,7 @@ impl<R: ReadBackend> DecryptBackend<R> {
     }
 }
 
-impl<R: ReadBackend> ReadBackend for DecryptBackend<R> {
+impl<'a, R: ReadBackend> ReadBackend for DecryptBackend<'a, R> {
     type Error = RepoError<R::Error>;
 
     fn location(&self) -> &str {

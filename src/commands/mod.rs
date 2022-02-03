@@ -36,7 +36,7 @@ pub fn execute() -> Result<()> {
 
     let be = LocalBackend::new(&args.repository);
     let key = repo::find_key_in_backend(&be, &args.password, None)?;
-    let be = DecryptBackend::new(be, key);
+    let be = DecryptBackend::new(&be, key);
 
     match args.command {
         Command::List(opts) => list::execute(&be, opts),

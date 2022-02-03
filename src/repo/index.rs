@@ -1,9 +1,11 @@
+use anyhow::Result;
 use std::iter::Iterator;
 
 use serde::{Deserialize, Serialize};
 
-use super::Id;
+use crate::backend::{FileType, ReadBackend};
 use crate::blob::{Blob, BlobInformation, BlobType, IndexEntry};
+use crate::id::Id;
 use crate::index::ReadIndex;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -11,6 +13,14 @@ pub struct IndexFile {
     #[serde(skip_serializing_if = "Option::is_none")]
     supersedes: Option<Id>,
     packs: Vec<PackIndex>,
+}
+
+impl IndexFile {
+    /// Get an IndexFile from the backend
+    pub fn from_backend<B: ReadBackend>(be: &B, id: Id) -> Result<Self> {
+        let data = be.read_full(FileType::Index, id)?;
+        Ok(serde_json::from_slice(&data)?)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

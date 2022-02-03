@@ -1,0 +1,21 @@
+[package]
+name = "rustic"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+thiserror = "1.0"
+aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
+base64 = "0.13"
+scrypt = { version = "0.8", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+# index
+boomphf = "0.5"
+# local backend
+walkdir = "2"

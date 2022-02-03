@@ -28,3 +28,17 @@ pub struct IndexEntry {
     pub pack: Id,
     pub bi: BlobInformation,
 }
+
+impl IndexEntry {
+    pub fn id(&self) -> &Id {
+        &self.bi.blob.id
+    }
+
+    pub fn tpe(&self) -> &BlobType {
+        &self.bi.blob.tpe
+    }
+
+    pub fn blob(&self) -> &Blob {
+        &self.bi.blob
+    }
+}

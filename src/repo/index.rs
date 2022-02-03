@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::iter::Iterator;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +19,31 @@ impl IndexFile {
     pub fn from_backend<B: ReadBackend>(be: &B, id: Id) -> Result<Self> {
         let data = be.read_full(FileType::Index, id)?;
         Ok(serde_json::from_slice(&data)?)
+    }
+}
+
+impl IntoIterator for IndexFile {
+    type Item = IndexEntry;
+    type IntoIter = Box<dyn Iterator<Item = IndexEntry>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Box::new(self.packs.into_iter().flat_map(|p| {
+            p.blobs.into_iter().map(move |b| IndexEntry {
+                pack: p.id,
+                bi: b.to_bi(),
+            })
+        }))
+    }
+}
+
+impl ReadIndex for IndexFile {
+    fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_> {
+        Box::new(self.packs.iter().flat_map(|p| {
+            p.blobs.iter().map(|b| IndexEntry {
+                pack: p.id,
+                bi: b.to_bi(),
+            })
+        }))
     }
 }
 
@@ -48,16 +72,5 @@ impl BlobIndex {
             offset: self.offset,
             length: self.length,
         }
-    }
-}
-
-impl ReadIndex for IndexFile {
-    fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_> {
-        Box::new(self.packs.iter().flat_map(|p| {
-            p.blobs.iter().map(|b| IndexEntry {
-                pack: p.id,
-                bi: b.to_bi(),
-            })
-        }))
     }
 }

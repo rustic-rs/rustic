@@ -1,5 +1,7 @@
+pub mod indexfiles;
+
 use crate::blob::{Blob, IndexEntry};
-use crate::Id;
+use crate::id::Id;
 
 pub trait ReadIndex {
     fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_>;

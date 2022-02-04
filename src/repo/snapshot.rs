@@ -1,28 +1,38 @@
+use anyhow::Result;
+use chrono::{DateTime, Local};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use super::Id;
-use chrono::{DateTime, Local};
-use serde::{Deserialize, Serialize};
+use crate::backend::{FileType, ReadBackend};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnapshotFile {
-    time: DateTime<Local>,
-    tree: Id,
-    paths: Vec<PathBuf>,
+    pub time: DateTime<Local>,
+    pub tree: Id,
+    pub paths: Vec<PathBuf>,
     #[serde(default)]
-    hostname: String,
+    pub hostname: String,
     #[serde(default)]
-    username: String,
+    pub username: String,
     #[serde(default)]
-    uid: u32,
+    pub uid: u32,
     #[serde(default)]
-    gid: u32,
+    pub gid: u32,
     #[serde(default)]
-    tags: TagList,
+    pub tags: TagList,
+}
+
+impl SnapshotFile {
+    /// Get an IndexFile from the backend
+    pub fn from_backend<B: ReadBackend>(be: &B, id: Id) -> Result<Self> {
+        let data = be.read_full(FileType::Snapshot, id)?;
+        Ok(serde_json::from_slice(&data)?)
+    }
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
-struct TagList(Vec<Tag>);
+pub struct TagList(Vec<Tag>);
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Tag(String);

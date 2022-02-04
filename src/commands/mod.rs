@@ -6,6 +6,7 @@ use crate::repo;
 
 mod cat;
 mod list;
+mod snapshots;
 
 #[derive(Parser)]
 #[clap(about, version)]
@@ -29,6 +30,9 @@ enum Command {
 
     /// cat files
     Cat(cat::Opts),
+
+    /// cat files
+    Snapshots(snapshots::Opts),
 }
 
 pub fn execute() -> Result<()> {
@@ -41,5 +45,6 @@ pub fn execute() -> Result<()> {
     match args.command {
         Command::List(opts) => list::execute(&be, opts),
         Command::Cat(opts) => cat::execute(&be, &dbe, opts),
+        Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
     }
 }

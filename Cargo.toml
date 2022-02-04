@@ -22,4 +22,5 @@ boomphf = "0.5"
 walkdir = "2"
 # commands
 clap = { version = "3", features = ["derive"] }
+prettytable-rs = "0.8"
 

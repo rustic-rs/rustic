@@ -20,10 +20,10 @@ pub(super) fn execute(be: &impl ReadBackend, dbe: &impl ReadBackend, opts: Opts)
     let tpe = match opts.tpe.as_str() {
         // special treatment for catingg blobs: read the index and use it to locate the blob
         "blob" => {
-            let blob = AllIndexFiles::new(be)
-                .get_id(id)
-                .ok_or(anyhow!("blob not found in index"))?;
-            let dec = be.read_partial(FileType::Pack, blob.pack, blob.bi.offset, blob.bi.length)?;
+            let dec = AllIndexFiles::new(be)
+                .get_id(&id)
+                .ok_or(anyhow!("blob not found in index"))?
+                .read_data(be)?;
             print!("{}", String::from_utf8_lossy(&dec));
             return Ok(());
         }

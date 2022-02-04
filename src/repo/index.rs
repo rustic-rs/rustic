@@ -28,10 +28,7 @@ impl IntoIterator for IndexFile {
 
     fn into_iter(self) -> Self::IntoIter {
         Box::new(self.packs.into_iter().flat_map(|p| {
-            p.blobs.into_iter().map(move |b| IndexEntry {
-                pack: p.id,
-                bi: b.to_bi(),
-            })
+            p.blobs.into_iter().map(move |b| IndexEntry::new(p.id,b.to_bi()))
         }))
     }
 }
@@ -39,10 +36,7 @@ impl IntoIterator for IndexFile {
 impl ReadIndex for IndexFile {
     fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_> {
         Box::new(self.packs.iter().flat_map(|p| {
-            p.blobs.iter().map(|b| IndexEntry {
-                pack: p.id,
-                bi: b.to_bi(),
-            })
+            p.blobs.iter().map(|b| IndexEntry::new(p.id,b.to_bi()))
         }))
     }
 }
@@ -64,13 +58,6 @@ struct BlobIndex {
 
 impl BlobIndex {
     pub fn to_bi(&self) -> BlobInformation {
-        BlobInformation {
-            blob: Blob {
-                id: self.id,
-                tpe: self.tpe,
-            },
-            offset: self.offset,
-            length: self.length,
-        }
+        BlobInformation::new(Blob::new(self.tpe, self.id), self.offset, self.length)
     }
 }

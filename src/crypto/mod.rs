@@ -8,6 +8,7 @@ pub type CryptoError = aead::Error;
 type Nonce = aead::Nonce<Aes256CtrPoly1305Aes>;
 type AeadKey = aead::Key<Aes256CtrPoly1305Aes>;
 
+#[derive(Clone)]
 pub struct Key(AeadKey);
 
 impl Key {

@@ -27,7 +27,7 @@ impl FileType {
     }
 }
 
-pub trait ReadBackend {
+pub trait ReadBackend: Clone {
     type Error: Send + Sync + std::error::Error + 'static;
 
     fn location(&self) -> &str;

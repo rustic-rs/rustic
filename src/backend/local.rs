@@ -5,6 +5,7 @@ use walkdir::WalkDir;
 
 use super::{FileType, Id, ReadBackend};
 
+#[derive(Clone)]
 pub struct LocalBackend {
     path: PathBuf,
 }

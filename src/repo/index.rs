@@ -28,16 +28,20 @@ impl IntoIterator for IndexFile {
 
     fn into_iter(self) -> Self::IntoIter {
         Box::new(self.packs.into_iter().flat_map(|p| {
-            p.blobs.into_iter().map(move |b| IndexEntry::new(p.id,b.to_bi()))
+            p.blobs
+                .into_iter()
+                .map(move |b| IndexEntry::new(p.id, b.to_bi()))
         }))
     }
 }
 
 impl ReadIndex for IndexFile {
     fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_> {
-        Box::new(self.packs.iter().flat_map(|p| {
-            p.blobs.iter().map(|b| IndexEntry::new(p.id,b.to_bi()))
-        }))
+        Box::new(
+            self.packs
+                .iter()
+                .flat_map(|p| p.blobs.iter().map(|b| IndexEntry::new(p.id, b.to_bi()))),
+        )
     }
 }
 

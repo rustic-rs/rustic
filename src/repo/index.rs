@@ -3,9 +3,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::backend::{FileType, ReadBackend};
-use crate::blob::{Blob, BlobInformation, BlobType, IndexEntry};
+use crate::blob::{Blob, BlobInformation, BlobType};
 use crate::id::Id;
-use crate::index::ReadIndex;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IndexFile {
@@ -20,39 +19,30 @@ impl IndexFile {
         let data = be.read_full(FileType::Index, id)?;
         Ok(serde_json::from_slice(&data)?)
     }
-}
 
-impl IntoIterator for IndexFile {
-    type Item = IndexEntry;
-    type IntoIter = Box<dyn Iterator<Item = IndexEntry>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        Box::new(self.packs.into_iter().flat_map(|p| {
-            p.blobs
-                .into_iter()
-                .map(move |b| IndexEntry::new(p.id, b.to_bi()))
-        }))
-    }
-}
-
-impl ReadIndex for IndexFile {
-    fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_> {
-        Box::new(
-            self.packs
-                .iter()
-                .flat_map(|p| p.blobs.iter().map(|b| IndexEntry::new(p.id, b.to_bi()))),
-        )
+    /// Packs contained in the IndexFile
+    pub fn packs(self) -> Vec<PackIndex> {
+        self.packs
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PackIndex {
+pub struct PackIndex {
     id: Id,
     blobs: Vec<BlobIndex>,
 }
 
+impl PackIndex {
+    pub fn id(&self) -> &Id {
+        &self.id
+    }
+    pub fn blobs(self) -> Vec<BlobIndex> {
+        self.blobs
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-struct BlobIndex {
+pub struct BlobIndex {
     id: Id,
     #[serde(rename = "type")]
     tpe: BlobType,

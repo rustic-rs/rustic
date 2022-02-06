@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use clap::Parser;
 
 use crate::backend::{FileType, ReadBackend};
-use crate::index::{indexfiles::AllIndexFiles, ReadIndex};
+use crate::index::{indexfiles::AllIndexFiles};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -15,7 +15,7 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
     let tpe = match opts.tpe.as_str() {
         // special treatment for listing blobs: read the index and display it
         "blobs" => {
-            for ie in AllIndexFiles::new(be).iter() {
+            for ie in AllIndexFiles::new(be.clone()).into_iter() {
                 println!("{:?} {}", ie.tpe(), ie.id().to_hex());
             }
             return Ok(());

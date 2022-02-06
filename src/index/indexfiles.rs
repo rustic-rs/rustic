@@ -3,26 +3,40 @@ use crate::backend::{FileType, ReadBackend};
 use crate::id::Id;
 use crate::repo::IndexFile;
 
+#[derive(Clone)]
 pub struct AllIndexFiles<BE> {
     be: BE,
-    files: Vec<Id>,
 }
 
 impl<BE: ReadBackend> AllIndexFiles<BE> {
-    pub fn new(be: &BE) -> Self {
-        Self {
-            be: be.clone(),
-            files: be.list(FileType::Index).unwrap(),
-        }
+    pub fn new(be: BE) -> Self {
+        Self { be: be }
+    }
+}
+
+impl<BE: ReadBackend> AllIndexFiles<BE> {
+    pub fn into_iter(self) -> impl Iterator<Item = IndexEntry> {
+        self.be
+            .list(FileType::Index)
+            .unwrap()
+            .into_iter()
+            .flat_map(move |id| {
+                IndexFile::from_backend(&self.be, id)
+                    .unwrap()
+                    .packs()
+                    .into_iter()
+                    .flat_map(|p| {
+                        let id = p.id().clone();
+                        p.blobs()
+                            .into_iter()
+                            .map(move |b| IndexEntry::new(id, b.to_bi()))
+                    })
+            })
     }
 }
 
 impl<BE: ReadBackend> ReadIndex for AllIndexFiles<BE> {
-    fn iter(&self) -> Box<dyn Iterator<Item = IndexEntry> + '_> {
-        Box::new(
-            self.files
-                .iter()
-                .flat_map(|&id| IndexFile::from_backend(&self.be, id).unwrap().into_iter()),
-        )
+    fn get_id(&self, id: &Id) -> Option<IndexEntry> {
+        self.clone().into_iter().find(|ie| ie.id() == id)
     }
 }

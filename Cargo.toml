@@ -8,12 +8,13 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 thiserror = "1.0"
-derive-new = "0.5"
+derive_more = "0.99"
 aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
 base64 = "0.13"
 scrypt = { version = "0.8", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde-aux = "3"
 hex = { version = "0.4", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 # index

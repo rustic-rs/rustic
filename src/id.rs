@@ -1,7 +1,9 @@
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, Display)]
+#[display(fmt = "{}", "&self.to_hex()[0..8]")]
 pub struct Id(
     #[serde(serialize_with = "hex::serde::serialize")]
     #[serde(deserialize_with = "hex::serde::deserialize")]
@@ -30,11 +32,5 @@ impl Id {
 
     pub fn to_hex(&self) -> String {
         hex::encode(&self.0)
-    }
-}
-
-impl std::fmt::Display for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.to_hex()[0..8])
     }
 }

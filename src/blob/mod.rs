@@ -1,5 +1,8 @@
+mod tree;
+pub use tree::*;
+
 use anyhow::Result;
-use derive_new::new;
+use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 
 use crate::backend::{FileType, ReadBackend};
@@ -13,20 +16,20 @@ pub enum BlobType {
     Tree,
 }
 
-#[derive(Debug, PartialEq, new)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct Blob {
     tpe: BlobType,
     id: Id,
 }
 
-#[derive(Debug, new)]
+#[derive(Debug, Constructor)]
 pub struct BlobInformation {
     blob: Blob,
     offset: u32,
     length: u32,
 }
 
-#[derive(Debug, new)]
+#[derive(Debug, Constructor)]
 pub struct IndexEntry {
     pack: Id,
     bi: BlobInformation,

@@ -10,7 +10,7 @@ pub struct AllIndexFiles<BE> {
 
 impl<BE: ReadBackend> AllIndexFiles<BE> {
     pub fn new(be: BE) -> Self {
-        Self { be: be }
+        Self { be }
     }
 }
 
@@ -26,7 +26,7 @@ impl<BE: ReadBackend> AllIndexFiles<BE> {
                     .packs()
                     .into_iter()
                     .flat_map(|p| {
-                        let id = p.id().clone();
+                        let id = *p.id();
                         p.blobs()
                             .into_iter()
                             .map(move |b| IndexEntry::new(id, b.to_bi()))

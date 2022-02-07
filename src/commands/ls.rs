@@ -1,10 +1,10 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use clap::Parser;
 
 use crate::backend::{FileType, MapResult, ReadBackend};
-use crate::blob::{Tree, TreeIterator};
+use crate::blob::TreeIterator;
 use crate::id::Id;
-use crate::index::{indexfiles::AllIndexFiles, ReadIndex};
+use crate::index::indexfiles::AllIndexFiles;
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]

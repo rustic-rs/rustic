@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
-use derive_more::{Constructor, Display};
+use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::*;
 
@@ -96,8 +96,8 @@ where
                 .unwrap()
                 .nodes
                 .into_iter(),
-            be: be,
-            index: index,
+            be,
+            index,
             open_iterators: Vec::new(),
             path: PathBuf::new(),
         }
@@ -135,7 +135,7 @@ where
                         } else {
                             self.path.join(&node.name)
                         },
-                        node: node,
+                        node,
                     });
                 }
                 None => match self.open_iterators.pop() {

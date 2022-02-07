@@ -25,7 +25,7 @@ impl<R: ReadBackend> DecryptBackend<R> {
     pub fn new(be: &R, key: Key) -> Self {
         Self {
             backend: be.clone(),
-            key: key,
+            key,
         }
     }
 }
@@ -38,15 +38,13 @@ impl<R: ReadBackend> ReadBackend for DecryptBackend<R> {
     }
 
     fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
-        self.backend
-            .list(tpe)
-            .map_err(|err| RepoError::RepoError(err))
+        self.backend.list(tpe).map_err(RepoError::RepoError)
     }
 
     fn read_full(&self, tpe: FileType, id: Id) -> Result<Vec<u8>, Self::Error> {
         self.key
             .decrypt_data(&self.backend.read_full(tpe, id)?)
-            .map_err(|err| RepoError::CryptoError(err))
+            .map_err(RepoError::CryptoError)
     }
 
     fn read_partial(
@@ -58,6 +56,6 @@ impl<R: ReadBackend> ReadBackend for DecryptBackend<R> {
     ) -> Result<Vec<u8>, Self::Error> {
         self.key
             .decrypt_data(&self.backend.read_partial(tpe, id, offset, length)?)
-            .map_err(|err| RepoError::CryptoError(err))
+            .map_err(RepoError::CryptoError)
     }
 }

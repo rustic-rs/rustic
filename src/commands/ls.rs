@@ -4,7 +4,7 @@ use clap::Parser;
 use crate::backend::{FileType, MapResult, ReadBackend};
 use crate::blob::TreeIterator;
 use crate::id::Id;
-use crate::index::indexfiles::AllIndexFiles;
+use crate::index::{AllIndexFiles, BoomIndex};
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
@@ -24,7 +24,7 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
         }
     })?;
 
-    let index = AllIndexFiles::new(be.clone());
+    let index= BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
     let snap = SnapshotFile::from_backend(be, id)?;
 
     for path_node in TreeIterator::from_id(be.clone(), index, snap.tree) {

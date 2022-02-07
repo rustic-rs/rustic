@@ -16,20 +16,20 @@ pub enum BlobType {
     Tree,
 }
 
-#[derive(Debug, PartialEq, Constructor)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Blob {
     tpe: BlobType,
     id: Id,
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, Clone, Constructor)]
 pub struct BlobInformation {
     blob: Blob,
     offset: u32,
     length: u32,
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, Clone, Constructor)]
 pub struct IndexEntry {
     pack: Id,
     bi: BlobInformation,

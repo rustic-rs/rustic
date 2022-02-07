@@ -1,4 +1,8 @@
+pub mod boom;
 pub mod indexfiles;
+
+pub use boom::*;
+pub use indexfiles::*;
 
 use crate::blob::IndexEntry;
 use crate::id::Id;

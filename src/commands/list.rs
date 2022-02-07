@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use clap::Parser;
 
 use crate::backend::{FileType, ReadBackend};
-use crate::index::{indexfiles::AllIndexFiles};
+use crate::index::indexfiles::AllIndexFiles;
 
 #[derive(Parser)]
 pub(super) struct Opts {

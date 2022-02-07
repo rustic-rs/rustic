@@ -6,6 +6,7 @@ use crate::repo;
 
 mod cat;
 mod list;
+mod ls;
 mod snapshots;
 
 #[derive(Parser)]
@@ -33,6 +34,9 @@ enum Command {
 
     /// cat files
     Snapshots(snapshots::Opts),
+
+    /// ls snapshots
+    Ls(ls::Opts),
 }
 
 pub fn execute() -> Result<()> {
@@ -43,8 +47,9 @@ pub fn execute() -> Result<()> {
     let dbe = DecryptBackend::new(&be, key);
 
     match args.command {
-        Command::List(opts) => list::execute(&be, opts),
+        Command::List(opts) => list::execute(&dbe, opts),
         Command::Cat(opts) => cat::execute(&be, &dbe, opts),
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
+        Command::Ls(opts) => ls::execute(&dbe, opts),
     }
 }

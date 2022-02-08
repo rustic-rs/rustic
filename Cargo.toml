@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0"
 thiserror = "1.0"
 derive_more = "0.99"
+derive-getters = "0.2"
 aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
 base64 = "0.13"
 scrypt = { version = "0.8", default-features = false }

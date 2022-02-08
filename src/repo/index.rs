@@ -1,16 +1,16 @@
 use anyhow::Result;
-
+use derive_getters::{Dissolve, Getters};
 use serde::{Deserialize, Serialize};
 
 use crate::backend::{FileType, ReadBackend};
-use crate::blob::{Blob, BlobInformation, BlobType};
+use crate::blob::BlobType;
 use crate::id::Id;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Getters, Dissolve)]
 pub struct IndexFile {
     #[serde(skip_serializing_if = "Option::is_none")]
     supersedes: Option<Vec<Id>>,
-    packs: Vec<PackIndex>,
+    packs: Vec<IndexPack>,
 }
 
 impl IndexFile {
@@ -19,39 +19,19 @@ impl IndexFile {
         let data = be.read_full(FileType::Index, id)?;
         Ok(serde_json::from_slice(&data)?)
     }
-
-    /// Packs contained in the IndexFile
-    pub fn packs(self) -> Vec<PackIndex> {
-        self.packs
-    }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PackIndex {
+#[derive(Debug, Serialize, Deserialize, Getters, Dissolve)]
+pub struct IndexPack {
     id: Id,
-    blobs: Vec<BlobIndex>,
+    blobs: Vec<IndexBlob>,
 }
 
-impl PackIndex {
-    pub fn id(&self) -> &Id {
-        &self.id
-    }
-    pub fn blobs(self) -> Vec<BlobIndex> {
-        self.blobs
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BlobIndex {
+#[derive(Debug, Clone, Serialize, Deserialize, Getters, Dissolve)]
+pub struct IndexBlob {
     id: Id,
     #[serde(rename = "type")]
     tpe: BlobType,
     offset: u32,
     length: u32,
-}
-
-impl BlobIndex {
-    pub fn to_bi(&self) -> BlobInformation {
-        BlobInformation::new(Blob::new(self.tpe, self.id), self.offset, self.length)
-    }
 }

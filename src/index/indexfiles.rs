@@ -21,16 +21,13 @@ impl<BE: ReadBackend> AllIndexFiles<BE> {
             .unwrap()
             .into_iter()
             .flat_map(move |id| {
-                IndexFile::from_backend(&self.be, id)
-                    .unwrap()
-                    .packs()
-                    .into_iter()
-                    .flat_map(|p| {
-                        let id = *p.id();
-                        p.blobs()
-                            .into_iter()
-                            .map(move |b| IndexEntry::new(id, b.to_bi()))
-                    })
+                let (_, packs) = IndexFile::from_backend(&self.be, id).unwrap().dissolve();
+                packs.into_iter().flat_map(|p| {
+                    let (id, blobs) = p.dissolve();
+                    blobs
+                        .into_iter()
+                        .map(move |b| IndexEntry::from_index_blob(id, b))
+                })
             })
     }
 }

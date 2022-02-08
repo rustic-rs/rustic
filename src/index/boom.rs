@@ -1,8 +1,7 @@
 use boomphf::hashmap::BoomHashMap;
 
-use super::{AllIndexFiles, ReadIndex};
+use super::{AllIndexFiles, IndexEntry, ReadIndex};
 use crate::backend::ReadBackend;
-use crate::blob::IndexEntry;
 use crate::id::Id;
 
 pub struct BoomIndex(BoomHashMap<Id, IndexEntry>);

@@ -1,11 +1,9 @@
 mod tree;
 pub use tree::*;
 
-use anyhow::Result;
 use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 
-use crate::backend::{FileType, ReadBackend};
 use crate::id::Id;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -27,42 +25,4 @@ pub struct BlobInformation {
     blob: Blob,
     offset: u32,
     length: u32,
-}
-
-#[derive(Debug, Clone, Constructor)]
-pub struct IndexEntry {
-    pack: Id,
-    bi: BlobInformation,
-}
-
-impl IndexEntry {
-    /// Get a blob described by IndexEntry from the backend
-    pub fn read_data<B: ReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
-        Ok(be.read_partial(FileType::Pack, self.pack, self.offset(), self.length())?)
-    }
-
-    #[inline]
-    pub fn id(&self) -> &Id {
-        &self.bi.blob.id
-    }
-
-    #[inline]
-    pub fn tpe(&self) -> &BlobType {
-        &self.bi.blob.tpe
-    }
-
-    #[inline]
-    pub fn offset(&self) -> u32 {
-        self.bi.offset
-    }
-
-    #[inline]
-    pub fn length(&self) -> u32 {
-        self.bi.length
-    }
-
-    #[inline]
-    pub fn blob(&self) -> &Blob {
-        &self.bi.blob
-    }
 }

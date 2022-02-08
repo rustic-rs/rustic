@@ -24,7 +24,7 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
         }
     })?;
 
-    let index= BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
+    let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
     let snap = SnapshotFile::from_backend(be, id)?;
 
     for path_node in TreeIterator::from_id(be.clone(), index, snap.tree) {

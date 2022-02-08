@@ -28,8 +28,7 @@ impl KeyFile {
         let salt = base64::decode(&self.salt)?;
 
         let mut key = [0; 64];
-        scrypt::scrypt(passwd.as_ref(), &salt, &params, &mut key)
-            .expect("output length invalid?");
+        scrypt::scrypt(passwd.as_ref(), &salt, &params, &mut key).expect("output length invalid?");
 
         Ok(Key::from_slice(&key))
     }
@@ -93,7 +92,11 @@ impl MasterKey {
 
 /// Find a KeyFile in the backend that fits to the given password and return the contained key
 /// If a key hint is given, only this key is tested (recommended for a large number of keys)
-pub fn find_key_in_backend<B: ReadBackend>(be: &B, passwd: &impl AsRef<[u8]>, hint: Option<Id>) -> Result<Key> {
+pub fn find_key_in_backend<B: ReadBackend>(
+    be: &B,
+    passwd: &impl AsRef<[u8]>,
+    hint: Option<Id>,
+) -> Result<Key> {
     match hint {
         Some(id) => KeyFile::from_backend(be, id)?.key_from_password(passwd),
         None => be

@@ -45,7 +45,7 @@ pub fn execute() -> Result<()> {
     let args = Opts::parse();
 
     let be = LocalBackend::new(&args.repository);
-    let passwd = fs::read_to_string(&args.password_file)?.replace("\n","");
+    let passwd = fs::read_to_string(&args.password_file)?.replace("\n", "");
     let key = repo::find_key_in_backend(&be, &passwd, None)?;
     let dbe = DecryptBackend::new(&be, key);
 

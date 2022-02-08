@@ -9,7 +9,7 @@ use crate::id::Id;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IndexFile {
     #[serde(skip_serializing_if = "Option::is_none")]
-    supersedes: Option<Id>,
+    supersedes: Option<Vec<Id>>,
     packs: Vec<PackIndex>,
 }
 

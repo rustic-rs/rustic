@@ -1,3 +1,5 @@
+use std::fs;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -16,9 +18,9 @@ struct Opts {
     #[clap(short, long)]
     repository: String,
 
-    /// password
+    /// file to read the password from
     #[clap(short, long)]
-    password: String,
+    password_file: String,
 
     #[clap(subcommand)]
     command: Command,
@@ -43,7 +45,8 @@ pub fn execute() -> Result<()> {
     let args = Opts::parse();
 
     let be = LocalBackend::new(&args.repository);
-    let key = repo::find_key_in_backend(&be, &args.password, None)?;
+    let passwd = fs::read_to_string(&args.password_file)?.replace("\n","");
+    let key = repo::find_key_in_backend(&be, &passwd, None)?;
     let dbe = DecryptBackend::new(&be, key);
 
     match args.command {

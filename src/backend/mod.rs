@@ -1,10 +1,11 @@
+use crate::id::*;
+use derive_more::Constructor;
+
 pub mod decrypt;
 pub mod local;
 
 pub use decrypt::DecryptBackend;
 pub use local::LocalBackend;
-
-use crate::id::*;
 
 #[derive(Clone, Copy)]
 pub enum FileType {
@@ -27,11 +28,18 @@ impl FileType {
     }
 }
 
+#[derive(Constructor)]
+pub struct IdWithSize {
+    id: Id,
+    size: u32,
+}
+
 pub trait ReadBackend: Clone {
     type Error: Send + Sync + std::error::Error + 'static;
 
     fn location(&self) -> &str;
     fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error>;
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<IdWithSize>, Self::Error>;
     fn read_full(&self, tpe: FileType, id: Id) -> Result<Vec<u8>, Self::Error>;
     fn read_partial(
         &self,

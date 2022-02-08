@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use super::{FileType, Id, ReadBackend};
+use super::{FileType, Id, IdWithSize, ReadBackend};
 use crate::crypto::{CryptoError, Key};
 
 /// RepoError describes the errors that can be returned by accessing this repository
@@ -39,6 +39,12 @@ impl<R: ReadBackend> ReadBackend for DecryptBackend<R> {
 
     fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
         self.backend.list(tpe).map_err(RepoError::RepoError)
+    }
+
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<IdWithSize>, Self::Error> {
+        self.backend
+            .list_with_size(tpe)
+            .map_err(RepoError::RepoError)
     }
 
     fn read_full(&self, tpe: FileType, id: Id) -> Result<Vec<u8>, Self::Error> {

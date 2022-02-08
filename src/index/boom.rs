@@ -1,36 +1,61 @@
 use boomphf::hashmap::BoomHashMap;
 
-use super::{AllIndexFiles, IndexEntry, ReadIndex};
-use crate::backend::ReadBackend;
+use super::{BlobType, IndexEntry, ReadIndex};
 use crate::id::Id;
+use crate::repo::IndexPack;
 
-pub struct BoomIndex(BoomHashMap<Id, IndexEntry>);
-
-impl BoomIndex {
-    pub fn from_all_indexfiles<BE: ReadBackend>(aif: AllIndexFiles<BE>) -> Self {
-        Self::from_iter(aif.into_iter())
-    }
+#[derive(Debug)]
+struct BoomEntry {
+    pack_idx: usize,
+    tpe: BlobType,
+    offset: u32,
+    length: u32,
 }
 
-impl FromIterator<IndexEntry> for BoomIndex {
+pub struct BoomIndex {
+    packs: Vec<Id>,
+    boom: BoomHashMap<Id, BoomEntry>,
+}
+
+impl FromIterator<IndexPack> for BoomIndex {
     fn from_iter<T>(iter: T) -> Self
     where
-        T: IntoIterator<Item = IndexEntry>,
+        T: IntoIterator<Item = IndexPack>,
     {
+        let mut packs = Vec::new();
         let mut ids = Vec::new();
-        let mut ies = Vec::new();
+        let mut bes = Vec::new();
 
-        for ie in iter {
-            ids.push(*ie.id());
-            ies.push(ie);
+        for i in iter {
+            let idx = packs.len();
+            packs.push(*i.id());
+
+            let len = i.blobs().len();
+            ids.reserve(len);
+            bes.reserve(len);
+            for blob in i.blobs() {
+                let be = BoomEntry {
+                    pack_idx: idx,
+                    tpe: *blob.tpe(),
+                    offset: *blob.offset(),
+                    length: *blob.length(),
+                };
+                ids.push(*blob.id());
+                bes.push(be);
+            }
         }
 
-        BoomIndex(BoomHashMap::new(ids, ies))
+        Self {
+            packs,
+            boom: BoomHashMap::new(ids, bes),
+        }
     }
 }
 
 impl ReadIndex for BoomIndex {
     fn get_id(&self, id: &Id) -> Option<IndexEntry> {
-        self.0.get(id).map(IndexEntry::clone)
+        self.boom
+            .get(id)
+            .map(|be| IndexEntry::new(self.packs[be.pack_idx], be.tpe, be.offset, be.length))
     }
 }

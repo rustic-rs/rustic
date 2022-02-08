@@ -19,10 +19,3 @@ pub struct Blob {
     tpe: BlobType,
     id: Id,
 }
-
-#[derive(Debug, Clone, Constructor)]
-pub struct BlobInformation {
-    blob: Blob,
-    offset: u32,
-    length: u32,
-}

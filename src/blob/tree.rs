@@ -49,8 +49,16 @@ pub struct Node {
 }
 
 impl Node {
-    fn is_tree(&self) -> bool {
+    pub fn is_tree(&self) -> bool {
         &self.tpe == "dir"
+    }
+
+    pub fn is_file(&self) -> bool {
+        &self.tpe == "file"
+    }
+
+    pub fn is_symlink(&self) -> bool {
+        &self.tpe == "symlink"
     }
 }
 
@@ -144,7 +152,7 @@ where
         loop {
             match self.inner.next() {
                 Some(node) => {
-                    let path = self.path.clone().join(node.name);
+                    let path = self.path.join(node.name.clone());
                     if node.is_tree() {
                         let old_inner = mem::replace(&mut self.inner, (self.getter)(node.subtree));
                         self.open_iterators.push(old_inner);

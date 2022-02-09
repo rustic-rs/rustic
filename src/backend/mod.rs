@@ -80,3 +80,29 @@ pub enum MapResult<T> {
     Some(T),
     NonUnique,
 }
+
+/*
+pub trait ReadSource: Clone {
+    fn walker(&self) -> &dyn Iterator<Item: PathBuf>;
+
+    fn metadata(&self, item: PathBuf) -> MetaData;
+
+    fn read(&self, item: PathBuf) -> &dyn io::Read;
+
+    fn read_partial(
+        &self,
+        item: PathBuf,
+        offset: u64,
+        length: u64,
+    ) -> Result<Vec<u8>, Self::Error>;
+
+}
+
+pub trait WriteSource: Clone {
+    fn create(&self, item: PathBuf);
+
+    fn set_metadata(&self, item: PathBuf, metadata: MetaData);
+
+    fn write_at(&self, item: PathBuf, offset: u64, Vec<u8>);
+}
+*/

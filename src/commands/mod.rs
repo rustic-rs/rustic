@@ -10,6 +10,7 @@ mod cat;
 mod check;
 mod list;
 mod ls;
+mod restore;
 mod snapshots;
 
 #[derive(Parser)]
@@ -35,7 +36,7 @@ enum Command {
     /// cat files
     Cat(cat::Opts),
 
-    /// cat files
+    /// show snapshots
     Snapshots(snapshots::Opts),
 
     /// ls snapshots
@@ -43,6 +44,9 @@ enum Command {
 
     /// check repository
     Check(check::Opts),
+
+    /// restore snapshot
+    Restore(restore::Opts),
 }
 
 pub fn execute() -> Result<()> {
@@ -59,5 +63,6 @@ pub fn execute() -> Result<()> {
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
         Command::Ls(opts) => ls::execute(&dbe, opts),
         Command::Check(opts) => check::execute(&dbe, opts),
+        Command::Restore(opts) => restore::execute(&dbe, opts),
     }
 }

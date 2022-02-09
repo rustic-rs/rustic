@@ -1,6 +1,7 @@
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom};
-use std::path::PathBuf;
+use std::os::unix::fs::FileExt;
+use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 use super::{FileType, Id, ReadBackend};
@@ -80,5 +81,52 @@ impl ReadBackend for LocalBackend {
         let mut vec = vec![0; length.try_into().unwrap()];
         file.read_exact(&mut vec)?;
         Ok(vec)
+    }
+}
+
+impl LocalBackend {
+    pub fn walker(&self) -> impl Iterator<Item = PathBuf> {
+        let path = self.path.clone();
+        WalkDir::new(path.clone())
+            .min_depth(1)
+            .into_iter()
+            .filter_map(walkdir::Result::ok)
+            .map(move |e| e.path().strip_prefix(path.clone()).unwrap().into())
+    }
+
+    pub fn remove_dir(&self, item: impl AsRef<Path>) {
+        let dirname = self.path.join(item);
+        fs::remove_dir(&dirname).unwrap();
+    }
+
+    pub fn remove_file(&self, item: impl AsRef<Path>) {
+        let filename = self.path.join(item);
+        fs::remove_file(&filename).unwrap();
+    }
+
+    pub fn create_dir(&self, item: impl AsRef<Path>) {
+        let dirname = self.path.join(item);
+        fs::create_dir(&dirname).unwrap();
+    }
+
+    pub fn create_symlink(&self, item: impl AsRef<Path>, dest: impl AsRef<Path>) {
+        let filename = self.path.join(item);
+        std::os::unix::fs::symlink(dest, filename).unwrap();
+    }
+
+    pub fn create_file(&self, item: impl AsRef<Path>, size: u64) {
+        let filename = self.path.join(item);
+        let f = fs::File::create(filename).unwrap();
+        f.set_len(size).unwrap();
+    }
+
+    pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) {
+        let filename = self.path.join(item);
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&filename)
+            .unwrap();
+        file.write_all_at(data, offset).unwrap();
     }
 }

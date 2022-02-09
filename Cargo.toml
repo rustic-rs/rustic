@@ -25,4 +25,5 @@ walkdir = "2"
 # commands
 clap = { version = "3", features = ["derive"] }
 prettytable-rs = "0.8"
-
+# restore
+itertools = "0.10"

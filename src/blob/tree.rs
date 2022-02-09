@@ -1,9 +1,10 @@
+use std::collections::HashSet;
 use std::mem;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
-use derive_more::Constructor;
+use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::*;
 
@@ -11,7 +12,7 @@ use crate::backend::ReadBackend;
 use crate::id::Id;
 use crate::index::ReadIndex;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Node {
     name: String,
     #[serde(rename = "type")]
@@ -69,74 +70,88 @@ impl Tree {
     }
 }
 
+/// tree_iterator creates an Iterator over the trees given by ids using the backend be and the index
+/// index
+pub fn tree_iterator<'a>(
+    be: &'a impl ReadBackend,
+    index: &'a impl ReadIndex,
+    ids: Vec<Id>,
+) -> impl Iterator<Item = (PathBuf, Node)> + 'a {
+    TreeIterator::new(
+        |i| Tree::from_backend(be, index, i).unwrap().nodes.into_iter(),
+        ids,
+    )
+}
+
+/// tree_iterator_once creates an Iterator over the trees given by ids using the backend be and the index
+/// index where each node is only visited once
+pub fn tree_iterator_once<'a>(
+    be: &'a impl ReadBackend,
+    index: &'a impl ReadIndex,
+    ids: Vec<Id>,
+) -> impl Iterator<Item = (PathBuf, Node)> + 'a {
+    let mut visited = HashSet::new();
+    TreeIterator::new(
+        move |i| {
+            if visited.insert(i) {
+                Tree::from_backend(be, index, i).unwrap().nodes.into_iter()
+            } else {
+                Vec::new().into_iter()
+            }
+        },
+        ids,
+    )
+}
+
 /// TreeIterator is a recursive iterator over a Tree, i.e. it recursively iterates over
 /// a full tree visiting subtrees
-#[derive(Constructor)]
-pub struct TreeIterator<BE, I, IT>
+pub struct TreeIterator<IT, F>
 where
-    BE: ReadBackend,
-    I: ReadIndex,
     IT: Iterator<Item = Node>,
+    F: FnMut(Id) -> IT,
 {
-    be: BE,
-    index: I,
     open_iterators: Vec<IT>,
     inner: IT,
     path: PathBuf,
+    getter: F,
 }
 
-impl<BE, I> TreeIterator<BE, I, std::vec::IntoIter<Node>>
+impl<IT, F> TreeIterator<IT, F>
 where
-    BE: ReadBackend,
-    I: ReadIndex,
+    IT: Iterator<Item = Node>,
+    F: FnMut(Id) -> IT,
 {
-    pub fn from_id(be: BE, index: I, id: Id) -> Self {
+    fn new(mut getter: F, ids: Vec<Id>) -> Self {
+        let mut iters = ids.into_iter().map(&mut getter).collect::<Vec<_>>();
+        iters.rotate_right(1);
         Self {
-            inner: Tree::from_backend(&be, &index, id)
-                .unwrap()
-                .nodes
-                .into_iter(),
-            be,
-            index,
-            open_iterators: Vec::new(),
+            inner: iters.pop().unwrap(),
+            open_iterators: iters,
             path: PathBuf::new(),
+            getter,
         }
     }
 }
 
-pub struct PathNode {
-    pub path: PathBuf,
-    pub node: Node,
-}
-
-impl<BE, I> Iterator for TreeIterator<BE, I, std::vec::IntoIter<Node>>
+impl<IT, F> Iterator for TreeIterator<IT, F>
 where
-    BE: ReadBackend,
-    I: ReadIndex,
+    IT: Iterator<Item = Node>,
+    F: FnMut(Id) -> IT,
 {
-    type Item = PathNode;
+    type Item = (PathBuf, Node);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.inner.next() {
                 Some(node) => {
+                    let path = self.path.clone().join(node.name);
                     if node.is_tree() {
-                        let new_inner = Tree::from_backend(&self.be, &self.index, node.subtree)
-                            .unwrap()
-                            .nodes
-                            .into_iter();
-                        let old_inner = mem::replace(&mut self.inner, new_inner);
+                        let old_inner = mem::replace(&mut self.inner, (self.getter)(node.subtree));
                         self.open_iterators.push(old_inner);
                         self.path.push(node.name.clone());
                     }
-                    return Some(PathNode {
-                        path: if node.is_tree() {
-                            self.path.clone()
-                        } else {
-                            self.path.join(&node.name)
-                        },
-                        node,
-                    });
+
+                    return Some((path, node));
                 }
                 None => match self.open_iterators.pop() {
                     Some(it) => {

@@ -78,32 +78,29 @@ fn check_snapshots(be: &impl ReadBackend, index: &impl ReadIndex) -> Result<()> 
         .map(|id| SnapshotFile::from_backend(be, id).unwrap().tree)
         .collect();
 
-    for path_node in tree_iterator_once(be, index, snap_ids) {
-        let fullname = path_node.path().join(path_node.node().name());
-        let node = path_node.node();
-
+    for (path, node) in tree_iterator_once(be, index, snap_ids) {
         match node.tpe() as &str {
             "file" => {
                 for (i, id) in node.content().iter().enumerate() {
                     if id.is_null() {
-                        println!("file {:?} blob {} has null ID", fullname, i);
+                        println!("file {:?} blob {} has null ID", path, i);
                     }
 
                     if index.get_id(id).is_none() {
-                        println!("file {:?} blob {} is missig in index", fullname, id);
+                        println!("file {:?} blob {} is missig in index", path, id);
                     }
                 }
             }
 
             "dir" => {
                 if node.subtree().is_null() {
-                    println!("dir {:?} subtree has null ID", fullname);
+                    println!("dir {:?} subtree has null ID", path);
                 }
             }
 
             "symlink" | "socket" | "chardev" | "dev" | "fifo" => {} // nothing to check
 
-            tpe => println!("file {:?} unkown type {}", fullname, tpe),
+            tpe => println!("file {:?} unkown type {}", path, tpe),
         }
     }
 

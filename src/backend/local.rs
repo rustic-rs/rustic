@@ -3,7 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
-use super::{FileType, Id, IdWithSize, ReadBackend};
+use super::{FileType, Id, ReadBackend};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -50,13 +50,13 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    fn list_with_size(&self, tpe: FileType) -> Result<Vec<IdWithSize>, Self::Error> {
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
         let walker = WalkDir::new(self.path.join(tpe.name()))
             .into_iter()
             .filter_map(walkdir::Result::ok)
             .filter(|e| e.file_type().is_file())
             .map(|e| {
-                IdWithSize::new(
+                (
                     Id::from_hex(&e.file_name().to_string_lossy()).unwrap(),
                     e.metadata().unwrap().len().try_into().unwrap(),
                 )

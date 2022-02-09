@@ -7,6 +7,7 @@ use crate::backend::{DecryptBackend, LocalBackend};
 use crate::repo;
 
 mod cat;
+mod check;
 mod list;
 mod ls;
 mod snapshots;
@@ -39,6 +40,9 @@ enum Command {
 
     /// ls snapshots
     Ls(ls::Opts),
+
+    /// check repository
+    Check(check::Opts),
 }
 
 pub fn execute() -> Result<()> {
@@ -54,5 +58,6 @@ pub fn execute() -> Result<()> {
         Command::Cat(opts) => cat::execute(&be, &dbe, opts),
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
         Command::Ls(opts) => ls::execute(&dbe, opts),
+        Command::Check(opts) => check::execute(&dbe, opts),
     }
 }

@@ -8,6 +8,7 @@ use crate::repo;
 
 mod cat;
 mod check;
+mod diff;
 mod list;
 mod ls;
 mod restore;
@@ -30,20 +31,23 @@ struct Opts {
 
 #[derive(Subcommand)]
 enum Command {
-    /// list files
-    List(list::Opts),
-
-    /// cat files
+    /// cat repository files and blobs
     Cat(cat::Opts),
 
-    /// show snapshots
-    Snapshots(snapshots::Opts),
+    /// check repository
+    Check(check::Opts),
+
+    /// compare two snapshots
+    Diff(diff::Opts),
+
+    /// list repository files
+    List(list::Opts),
 
     /// ls snapshots
     Ls(ls::Opts),
 
-    /// check repository
-    Check(check::Opts),
+    /// show snapshots
+    Snapshots(snapshots::Opts),
 
     /// restore snapshot
     Restore(restore::Opts),
@@ -58,11 +62,12 @@ pub fn execute() -> Result<()> {
     let dbe = DecryptBackend::new(&be, key);
 
     match args.command {
-        Command::List(opts) => list::execute(&dbe, opts),
         Command::Cat(opts) => cat::execute(&be, &dbe, opts),
-        Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
-        Command::Ls(opts) => ls::execute(&dbe, opts),
         Command::Check(opts) => check::execute(&dbe, opts),
+        Command::Diff(opts) => diff::execute(&dbe, opts),
+        Command::List(opts) => list::execute(&dbe, opts),
+        Command::Ls(opts) => ls::execute(&dbe, opts),
+        Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
         Command::Restore(opts) => restore::execute(&dbe, opts),
     }
 }

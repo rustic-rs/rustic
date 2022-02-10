@@ -1,4 +1,5 @@
 use crate::id::*;
+use anyhow::anyhow;
 
 pub mod decrypt;
 pub mod local;
@@ -46,8 +47,18 @@ pub trait ReadBackend: Clone {
         &self,
         tpe: FileType,
         vec: &[&str],
-    ) -> Result<Vec<MapResult<Id>>, Self::Error> {
+    ) -> Result<Vec<Result<Id, anyhow::Error>>, Self::Error> {
         self.map_list(tpe, vec, |s, id| id.to_hex().starts_with(s))
+            .map(|res| {
+                res.into_iter()
+                    .enumerate()
+                    .map(|(i, id)| match id {
+                        MapResult::Some(id) => Ok(id),
+                        MapResult::None => Err(anyhow!("no suitable id found for {}", &vec[i])),
+                        MapResult::NonUnique => Err(anyhow!("id {} is not unique", &vec[i])),
+                    })
+                    .collect()
+            })
     }
 
     /// map_list

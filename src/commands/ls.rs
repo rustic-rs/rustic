@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Parser;
 
-use crate::backend::{FileType, MapResult, ReadBackend};
+use crate::backend::{FileType, ReadBackend};
 use crate::blob::tree_iterator;
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex};
@@ -16,12 +16,7 @@ pub(super) struct Opts {
 pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
-        let res = be.find_starts_with(FileType::Snapshot, &[&opts.id])?[0];
-        match res {
-            MapResult::Some(id) => Ok(id),
-            MapResult::None => Err(anyhow!("no suitable id found for {}", &opts.id)),
-            MapResult::NonUnique => Err(anyhow!("id {} is not unique", &opts.id)),
-        }
+        be.find_starts_with(FileType::Index, &[&opts.id])?.remove(0)
     })?;
 
     let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());

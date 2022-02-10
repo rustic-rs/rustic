@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 
-use crate::backend::{FileType, MapResult, ReadBackend};
+use crate::backend::{FileType, ReadBackend};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
 
@@ -36,12 +36,7 @@ pub(super) fn execute(be: &impl ReadBackend, dbe: &impl ReadBackend, opts: Opts)
 
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
-        let res = be.find_starts_with(tpe, &[&opts.id])?[0];
-        match res {
-            MapResult::Some(id) => Ok(id),
-            MapResult::None => Err(anyhow!("no suitable id found for {}", &opts.id)),
-            MapResult::NonUnique => Err(anyhow!("id {} is not unique", &opts.id)),
-        }
+        be.find_starts_with(tpe, &[&opts.id])?.remove(0)
     })?;
 
     let dec = match tpe {

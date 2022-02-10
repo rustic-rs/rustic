@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Parser;
 use derive_getters::Dissolve;
 use itertools::{
@@ -9,7 +9,7 @@ use itertools::{
     Itertools,
 };
 
-use crate::backend::{FileType, LocalBackend, MapResult, ReadBackend};
+use crate::backend::{FileType, LocalBackend, ReadBackend};
 use crate::blob::{tree_iterator, Node};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
@@ -32,13 +32,9 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
     println!("getting snapshot...");
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
-        let res = be.find_starts_with(FileType::Snapshot, &[&opts.id])?[0];
-        match res {
-            MapResult::Some(id) => Ok(id),
-            MapResult::None => Err(anyhow!("no suitable id found for {}", &opts.id)),
-            MapResult::NonUnique => Err(anyhow!("id {} is not unique", &opts.id)),
-        }
+        be.find_starts_with(FileType::Index, &[&opts.id])?.remove(0)
     })?;
+
     let snap = SnapshotFile::from_backend(be, id)?;
 
     let dest = LocalBackend::new(&opts.dest);

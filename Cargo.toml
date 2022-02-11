@@ -20,10 +20,11 @@ hex = { version = "0.4", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 # index
 boomphf = "0.5"
+# chunker
+cdc = "0.1"
 # local backend
 walkdir = "2"
 # commands
 clap = { version = "3", features = ["derive"] }
 prettytable-rs = "0.8"
-# restore
 itertools = "0.10"

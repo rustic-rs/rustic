@@ -1,10 +1,12 @@
 use std::fmt;
 
-use derive_more::Display;
+use derive_more::{Constructor, Display};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[derive(
+    Clone, Copy, Default, PartialEq, Eq, Hash, Constructor, Serialize, Deserialize, Display,
+)]
 #[display(fmt = "{}", "&self.to_hex()[0..8]")]
 pub struct Id(
     #[serde(serialize_with = "hex::serde::serialize")]
@@ -36,8 +38,8 @@ impl Id {
         hex::encode(self.0)
     }
 
-    pub fn is_null(self) -> bool {
-        self == Id::default()
+    pub fn is_null(&self) -> bool {
+        self == &Id::default()
     }
 }
 

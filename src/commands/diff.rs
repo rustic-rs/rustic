@@ -6,7 +6,7 @@ use itertools::{
 };
 
 use crate::backend::{FileType, ReadBackend};
-use crate::blob::tree_iterator;
+use crate::blob::{tree_iterator, NodeType};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex};
 use crate::repo::SnapshotFile;
@@ -43,11 +43,21 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
         match file {
             Left((path, _)) => println!("-    {:?}", path),
             Right((path, _)) => println!("+    {:?}", path),
-            Both((path, node1), (_, node2)) => {
-                if node1.content() != node2.content() {
-                    println!("M    {:?}", path);
+            Both((path, node1), (_, node2)) => match node1.node_type() {
+                tpe if tpe != node2.node_type() => println!("M    {:?}", path), // type was changed
+                NodeType::File if node1.content() != node2.content() => println!("M    {:?}", path),
+                NodeType::Symlink { linktarget } => {
+                    if let NodeType::Symlink {
+                        linktarget: linktarget2,
+                    } = node2.node_type()
+                    {
+                        if *linktarget != *linktarget2 {
+                            println!("M    {:?}", path)
+                        }
+                    }
                 }
-            }
+                _ => {} // no difference to show
+            },
         }
     }
 

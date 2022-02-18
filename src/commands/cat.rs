@@ -19,11 +19,11 @@ pub(super) fn execute(be: &impl ReadBackend, dbe: &impl ReadBackend, opts: Opts)
         // special treatment for catingg blobs: read the index and use it to locate the blob
         "blob" => {
             let id = Id::from_hex(&opts.id)?;
-            let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
+            let index = BoomIndex::from_iter(AllIndexFiles::new(dbe.clone()).into_iter());
             let dec = index
                 .get_id(&id)
                 .ok_or(anyhow!("blob not found in index"))?
-                .read_data(be)?;
+                .read_data(dbe)?;
             print!("{}", String::from_utf8_lossy(&dec));
             return Ok(());
         }

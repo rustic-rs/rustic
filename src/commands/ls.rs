@@ -16,7 +16,8 @@ pub(super) struct Opts {
 pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
-        be.find_starts_with(FileType::Index, &[&opts.id])?.remove(0)
+        be.find_starts_with(FileType::Snapshot, &[&opts.id])?
+            .remove(0)
     })?;
 
     let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());

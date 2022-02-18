@@ -3,7 +3,7 @@ use clap::Parser;
 use std::collections::HashMap;
 
 use crate::backend::{FileType, ReadBackend};
-use crate::blob::tree_iterator_once;
+use crate::blob::{tree_iterator_once, NodeType};
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
 use crate::repo::{IndexBlob, SnapshotFile};
 
@@ -79,8 +79,8 @@ fn check_snapshots(be: &impl ReadBackend, index: &impl ReadIndex) -> Result<()> 
         .collect();
 
     for (path, node) in tree_iterator_once(be, index, snap_ids) {
-        match node.tpe() as &str {
-            "file" => {
+        match node.node_type() {
+            NodeType::File => {
                 for (i, id) in node.content().iter().enumerate() {
                     if id.is_null() {
                         println!("file {:?} blob {} has null ID", path, i);
@@ -92,15 +92,15 @@ fn check_snapshots(be: &impl ReadBackend, index: &impl ReadIndex) -> Result<()> 
                 }
             }
 
-            "dir" => {
-                if node.subtree().is_null() {
-                    println!("dir {:?} subtree has null ID", path);
+            NodeType::Dir => {
+                match node.subtree() {
+                    None => println!("dir {:?} subtree does not exist", path),
+                    Some(tree) if tree.is_null() => println!("dir {:?} subtree has null ID", path),
+                    _ => {} // subtree is ok
                 }
             }
 
-            "symlink" | "socket" | "chardev" | "dev" | "fifo" => {} // nothing to check
-
-            tpe => println!("file {:?} unkown type {}", path, tpe),
+            _ => {} // nothing to check
         }
     }
 

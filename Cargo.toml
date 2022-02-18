@@ -11,13 +11,16 @@ thiserror = "1.0"
 derive_more = "0.99"
 derive-getters = "0.2"
 aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
-base64 = "0.13"
+sha2 = "0.10"
+rand = "0.8"
 scrypt = { version = "0.8", default-features = false }
+base64 = "0.13"
+hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde-aux = "3"
-hex = { version = "0.4", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3"
 # index
 boomphf = "0.5"
 # chunker
@@ -25,6 +28,15 @@ cdc = "0.1"
 # local backend
 walkdir = "2"
 # commands
+bytesize = "1"
 clap = { version = "3", features = ["derive"] }
+rpassword = "5"
 prettytable-rs = "0.8"
 itertools = "0.10"
+ignore = "0.4"
+
+
+# usefule crates:
+# ambassador -> derive traits from struct/enum element(s)
+# delegate -> impl methods from struct/enum element(s)
+

@@ -1,10 +1,10 @@
 use std::fs::{self, File};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{copy, Read, Seek, SeekFrom};
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-use super::{FileType, Id, ReadBackend};
+use super::{FileType, Id, ReadBackend, WriteBackend};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -84,6 +84,21 @@ impl ReadBackend for LocalBackend {
     }
 }
 
+impl WriteBackend for LocalBackend {
+    type Error = std::io::Error;
+
+    fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error> {
+        println!("writing tpe: {:?}, id: {}", &tpe, &id);
+        let filename = self.path(tpe, *id);
+        let mut file = fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&filename)?;
+        copy(r, &mut file)?;
+        file.sync_all()
+    }
+}
+
 impl LocalBackend {
     pub fn walker(&self) -> impl Iterator<Item = PathBuf> {
         let path = self.path.clone();
@@ -129,4 +144,5 @@ impl LocalBackend {
             .unwrap();
         file.write_all_at(data, offset).unwrap();
     }
+
 }

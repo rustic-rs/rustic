@@ -3,64 +3,13 @@ use std::mem;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Local};
-use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
-use serde_aux::prelude::*;
 
 use crate::backend::ReadBackend;
 use crate::id::Id;
 use crate::index::ReadIndex;
 
-#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
-pub struct Node {
-    name: String,
-    #[serde(rename = "type")]
-    tpe: String,
-    #[serde(default)]
-    mode: u32,
-    mtime: DateTime<Local>,
-    atime: DateTime<Local>,
-    ctime: DateTime<Local>,
-    #[serde(default)]
-    uid: u32,
-    #[serde(default)]
-    gid: u32,
-    #[serde(default)]
-    user: String,
-    #[serde(default)]
-    group: String,
-    #[serde(default)]
-    inode: u64,
-    #[serde(default)]
-    device_id: u64,
-    #[serde(default)]
-    size: u64,
-    #[serde(default)]
-    links: u64,
-    #[serde(default)]
-    linktarget: String,
-    #[serde(default)]
-    device: u64,
-    #[serde(deserialize_with = "deserialize_default_from_null")]
-    content: Vec<Id>,
-    #[serde(default)]
-    subtree: Id,
-}
-
-impl Node {
-    pub fn is_tree(&self) -> bool {
-        &self.tpe == "dir"
-    }
-
-    pub fn is_file(&self) -> bool {
-        &self.tpe == "file"
-    }
-
-    pub fn is_symlink(&self) -> bool {
-        &self.tpe == "symlink"
-    }
-}
+use super::Node;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tree {
@@ -68,9 +17,21 @@ pub struct Tree {
 }
 
 impl Tree {
-    pub fn from_backend(be: &impl ReadBackend, index: &impl ReadIndex, id: Id) -> Result<Self> {
+    pub fn new() -> Self {
+        Self { nodes: Vec::new() }
+    }
+
+    pub fn add(&mut self, node: Node) {
+        self.nodes.push(node)
+    }
+
+    pub fn serialize(&self) -> Result<Vec<u8>> {
+        Ok(serde_json::to_vec(&self)?)
+    }
+
+    pub fn from_backend(be: &impl ReadBackend, index: &impl ReadIndex, id: &Id) -> Result<Self> {
         let data = index
-            .get_id(&id)
+            .get_id(id)
             .ok_or(anyhow!("blob not found in index"))?
             .read_data(be)?;
 
@@ -101,7 +62,7 @@ pub fn tree_iterator_once<'a>(
     let mut visited = HashSet::new();
     TreeIterator::new(
         move |i| {
-            if visited.insert(i) {
+            if visited.insert(*i) {
                 Tree::from_backend(be, index, i).unwrap().nodes.into_iter()
             } else {
                 Vec::new().into_iter()
@@ -116,7 +77,7 @@ pub fn tree_iterator_once<'a>(
 pub struct TreeIterator<IT, F>
 where
     IT: Iterator<Item = Node>,
-    F: FnMut(Id) -> IT,
+    F: FnMut(&Id) -> IT,
 {
     open_iterators: Vec<IT>,
     inner: IT,
@@ -127,10 +88,10 @@ where
 impl<IT, F> TreeIterator<IT, F>
 where
     IT: Iterator<Item = Node>,
-    F: FnMut(Id) -> IT,
+    F: FnMut(&Id) -> IT,
 {
     fn new(mut getter: F, ids: Vec<Id>) -> Self {
-        let mut iters = ids.into_iter().map(&mut getter).collect::<Vec<_>>();
+        let mut iters = ids.iter().map(&mut getter).collect::<Vec<_>>();
         iters.rotate_right(1);
         Self {
             inner: iters.pop().unwrap(),
@@ -144,7 +105,7 @@ where
 impl<IT, F> Iterator for TreeIterator<IT, F>
 where
     IT: Iterator<Item = Node>,
-    F: FnMut(Id) -> IT,
+    F: FnMut(&Id) -> IT,
 {
     type Item = (PathBuf, Node);
 
@@ -152,11 +113,11 @@ where
         loop {
             match self.inner.next() {
                 Some(node) => {
-                    let path = self.path.join(node.name.clone());
-                    if node.is_tree() {
-                        let old_inner = mem::replace(&mut self.inner, (self.getter)(node.subtree));
+                    let path = self.path.join(node.name());
+                    if let Some(subtree) = node.subtree() {
+                        let old_inner = mem::replace(&mut self.inner, (self.getter)(subtree));
                         self.open_iterators.push(old_inner);
-                        self.path.push(node.name.clone());
+                        self.path.push(node.name());
                     }
 
                     return Some((path, node));

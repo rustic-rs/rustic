@@ -1,13 +1,18 @@
-use crate::id::*;
+use std::io::{Cursor, Read};
+
 use anyhow::anyhow;
+
+use crate::crypto::hash;
+use crate::id::Id;
 
 pub mod decrypt;
 pub mod local;
+pub mod node;
 
-pub use decrypt::DecryptBackend;
-pub use local::LocalBackend;
+pub use decrypt::*;
+pub use local::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum FileType {
     Config,
     Index,
@@ -92,6 +97,17 @@ pub enum MapResult<T> {
     NonUnique,
 }
 
+pub trait WriteBackend: Clone {
+    type Error: Send + Sync + std::error::Error + 'static;
+
+    fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error>;
+
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
+        let id = hash(data);
+        self.write_full(tpe, &id, &mut Cursor::new(data))?;
+        Ok(id)
+    }
+}
 /*
 pub trait ReadSource: Clone {
     fn walker(&self) -> &dyn Iterator<Item: PathBuf>;

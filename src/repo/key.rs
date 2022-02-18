@@ -1,5 +1,5 @@
 use crate::backend::{FileType, ReadBackend};
-use crate::crypto::Key;
+use crate::crypto::{CryptoKey, Key};
 use crate::id::Id;
 
 use anyhow::{anyhow, Result};

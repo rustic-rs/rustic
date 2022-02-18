@@ -10,7 +10,7 @@ use itertools::{
 };
 
 use crate::backend::{FileType, LocalBackend, ReadBackend};
-use crate::blob::{tree_iterator, Node};
+use crate::blob::{tree_iterator, Node, NodeType};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
 use crate::repo::SnapshotFile;
@@ -32,7 +32,8 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
     println!("getting snapshot...");
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
-        be.find_starts_with(FileType::Index, &[&opts.id])?.remove(0)
+        be.find_starts_with(FileType::Snapshot, &[&opts.id])?
+            .remove(0)
     })?;
 
     let snap = SnapshotFile::from_backend(be, id)?;
@@ -75,16 +76,19 @@ fn allocate_and_collect(
         match file {
             // node is only in snapshot
             Left((path, node)) => {
-                if node.is_tree() && !opts.dry_run {
-                    dest.create_dir(&path);
-                }
-                if node.is_file() {
-                    // collect blobs needed for restoring
-                    let size = file_infos.add_file(&node, path.clone(), index);
-                    // create the file
-                    if !opts.dry_run {
-                        dest.create_file(&path, size);
+                match node.node_type() {
+                    NodeType::Dir => {
+                        dest.create_dir(&path);
                     }
+                    NodeType::File => {
+                        // collect blobs needed for restoring
+                        let size = file_infos.add_file(&node, path.clone(), index);
+                        // create the file
+                        if !opts.dry_run {
+                            dest.create_file(&path, size);
+                        }
+                    }
+                    _ => {} // nothing to do for symlink, device, etc.
                 }
             }
             // node is in snapshot but already exists
@@ -147,8 +151,10 @@ fn restore_metadata(
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
     for (path, node) in tree_iterator(be, index, vec![tree]) {
-        if node.is_symlink() && !opts.dry_run {
-            dest.create_symlink(&path, node.linktarget());
+        if !opts.dry_run {
+            if let NodeType::Symlink { linktarget } = node.node_type() {
+                dest.create_symlink(&path, linktarget);
+            }
         }
         // TODO: metadata
     }
@@ -188,12 +194,12 @@ impl FileInfos {
 
     /// Add the file to FilesInfos using index to get blob information.
     /// Returns the computed length of the file
-    fn add_file(&mut self, node: &Node, name: PathBuf, index: &impl ReadIndex) -> u64 {
+    fn add_file(&mut self, file: &Node, name: PathBuf, index: &impl ReadIndex) -> u64 {
         let mut file_pos = 0;
-        if !node.content().is_empty() {
+        if !file.content().is_empty() {
             let file_idx = self.names.len();
             self.names.push(name);
-            for id in node.content().iter() {
+            for id in file.content().iter() {
                 let ie = index.get_id(id).unwrap();
                 let bl = BlobLocation {
                     offset: *ie.offset(),

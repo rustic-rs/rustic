@@ -1,28 +1,35 @@
+use std::io::{Cursor, Read};
+
 use thiserror::Error;
 
-use super::{FileType, Id, ReadBackend};
-use crate::crypto::{CryptoError, Key};
+use super::{FileType, Id, ReadBackend, WriteBackend};
+use crate::crypto::{hash, CryptoKey};
+
+pub trait DecryptWriteBackend: WriteBackend {
+    type Key;
+    fn key(&self) -> &Self::Key;
+}
 
 /// RepoError describes the errors that can be returned by accessing this repository
 #[derive(Error, Debug)]
-pub enum RepoError<E> {
-    /// Represents an error while decrypting.
-    #[error("Decryption error")]
-    CryptoError(CryptoError),
+pub enum RepoError<R, C> {
+    /// Represents an error while encrypting/decrypting.
+    #[error("Crypto error")]
+    CryptoError(C),
 
     /// Represents another error from the embedded repository.
     #[error("Repo error")]
-    RepoError(#[from] E),
+    RepoError(#[from] R),
 }
 
 #[derive(Clone)]
-pub struct DecryptBackend<R> {
+pub struct DecryptBackend<R, C> {
     backend: R,
-    key: Key,
+    key: C,
 }
 
-impl<R: ReadBackend> DecryptBackend<R> {
-    pub fn new(be: &R, key: Key) -> Self {
+impl<R: ReadBackend, C> DecryptBackend<R, C> {
+    pub fn new(be: &R, key: C) -> Self {
         Self {
             backend: be.clone(),
             key,
@@ -30,8 +37,15 @@ impl<R: ReadBackend> DecryptBackend<R> {
     }
 }
 
-impl<R: ReadBackend> ReadBackend for DecryptBackend<R> {
-    type Error = RepoError<R::Error>;
+impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C> {
+    type Key = C;
+    fn key(&self) -> &Self::Key {
+        &self.key
+    }
+}
+
+impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
+    type Error = RepoError<R::Error, C::CryptoError>;
 
     fn location(&self) -> &str {
         self.backend.location()
@@ -63,5 +77,24 @@ impl<R: ReadBackend> ReadBackend for DecryptBackend<R> {
         self.key
             .decrypt_data(&self.backend.read_partial(tpe, id, offset, length)?)
             .map_err(RepoError::CryptoError)
+    }
+}
+
+impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
+    type Error = RepoError<R::Error, C::CryptoError>;
+
+    fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error> {
+        self.backend.write_full(tpe, id, r)?;
+        Ok(())
+    }
+
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
+        let data = self
+            .key
+            .encrypt_data(data)
+            .map_err(RepoError::CryptoError)?;
+        let id = hash(&data);
+        self.write_full(tpe, &id, &mut Cursor::new(data))?;
+        Ok(id)
     }
 }

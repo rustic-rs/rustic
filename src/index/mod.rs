@@ -5,10 +5,12 @@ use anyhow::Result;
 use derive_getters::{Dissolve, Getters};
 use derive_more::Constructor;
 
-pub mod boom;
-pub mod indexfiles;
+mod boom;
+mod indexer;
+mod indexfiles;
 
 pub use boom::*;
+pub use indexer::*;
 pub use indexfiles::*;
 
 #[derive(Debug, Clone, Constructor, Getters, Dissolve)]
@@ -25,6 +27,11 @@ impl IndexEntry {
         Ok(be.read_partial(FileType::Pack, self.pack, self.offset, self.length)?)
     }
 }
+
 pub trait ReadIndex {
     fn get_id(&self, id: &Id) -> Option<IndexEntry>;
+
+    fn has(&self, id: &Id) -> bool {
+        self.get_id(id).is_some()
+    }
 }

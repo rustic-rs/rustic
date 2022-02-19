@@ -1,11 +1,22 @@
 use std::fmt;
 
+use binrw::BinWrite;
 use derive_more::{Constructor, Display};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(
-    Clone, Copy, Default, PartialEq, Eq, Hash, Constructor, Serialize, Deserialize, Display,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    Hash,
+    Constructor,
+    Serialize,
+    Deserialize,
+    BinWrite,
+    Display,
 )]
 #[display(fmt = "{}", "&self.to_hex()[0..8]")]
 pub struct Id(

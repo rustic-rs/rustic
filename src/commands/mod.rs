@@ -1,21 +1,21 @@
-use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use rpassword::{prompt_password_stderr, read_password_with_reader};
 
 use crate::backend::{DecryptBackend, LocalBackend};
-use crate::repo;
 
 mod backup;
 mod cat;
 mod check;
 mod diff;
+mod helpers;
 mod list;
 mod ls;
 mod restore;
 mod snapshots;
+
+use helpers::get_key;
 
 #[derive(Parser)]
 #[clap(about, version)]
@@ -59,28 +59,11 @@ enum Command {
     Restore(restore::Opts),
 }
 
-const MAX_PASSWORD_RETRIES: usize = 5;
-
 pub fn execute() -> Result<()> {
     let args = Opts::parse();
 
     let be = LocalBackend::new(&args.repository);
-
-    let key = match args.password_file {
-        None => (0..MAX_PASSWORD_RETRIES)
-            .map(|_| {
-                let pass = prompt_password_stderr("enter repository password: ")?;
-                repo::find_key_in_backend(&be, &pass, None)
-            })
-            .find(Result::is_ok)
-            .unwrap_or_else(|| bail!("tried too often...aborting!"))?,
-        Some(file) => {
-            let pass = fs::read_to_string(file)?.replace("\n", "");
-            repo::find_key_in_backend(&be, &pass, None)?
-        }
-    };
-    eprintln!("password is correct");
-
+    let key = get_key(&be, args.password_file)?;
     let dbe = DecryptBackend::new(&be, key.clone());
 
     match args.command {

@@ -28,7 +28,6 @@ pub(super) fn execute(
 ) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
 
-    let poly = "37ffea04120bf1";
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
     backup_file(opts.sources, &poly, be, key)?;
     Ok(())

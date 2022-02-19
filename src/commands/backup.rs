@@ -39,6 +39,7 @@ fn backup_file(
     be: &(impl ReadBackend + DecryptWriteBackend),
     key: &Key,
 ) -> Result<()> {
+    println! {"reading index..."}
     let index: BoomIndex = AllIndexFiles::new(be.clone()).into_iter().collect();
 
     let indexer = Rc::new(RefCell::new(Indexer::new(be.clone())));

@@ -69,15 +69,13 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
             return Ok(());
         }
 
-        // write data
+        let offset = self.count;
         let data = self
             .key
             .encrypt_data(data)
             .map_err(|_| anyhow!("crypto error"))?;
         let len = self.write_data(&data)?;
-
-        // add to index
-        self.index.add(*id, tpe, self.count, len);
+        self.index.add(*id, tpe, offset, len);
 
         // check if PackFile needs to be saved
         if self.count >= MAX_SIZE || self.created.elapsed()? >= MAX_AGE {
@@ -100,6 +98,7 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
             id: Id,
         }
 
+        // collect header entries
         let mut writer = Cursor::new(Vec::new());
         for blob in self.index.blobs() {
             PackHeaderEntry {
@@ -109,10 +108,22 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
             }
             .write_to(&mut writer)?;
         }
-        let headerlen = writer.get_ref().len();
+
+        // encrypt and write to pack file
+        let data = writer.into_inner();
+        let data = self
+            .key
+            .encrypt_data(&data)
+            .map_err(|_| anyhow!("crypto error"))?;
+        let headerlen = data.len();
+        self.write_data(&data)?;
+
+        // finally write length of header unencrypted to pack file
+        let mut writer = Cursor::new(Vec::new());
         PackHeaderLength(headerlen.try_into()?).write_to(&mut writer)?;
         let data = writer.into_inner();
         self.write_data(&data)?;
+
         Ok(())
     }
 
@@ -120,6 +131,8 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
         if self.count == 0 {
             return Ok(());
         }
+
+        self.write_header()?;
 
         // compute id of packfile
         let id = self.hasher.finalize();

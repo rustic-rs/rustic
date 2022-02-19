@@ -91,6 +91,7 @@ where
     F: FnMut(&Id) -> IT,
 {
     fn new(mut getter: F, ids: Vec<Id>) -> Self {
+        // TODO: empty ids vector will panic here!
         let mut iters = ids.iter().map(&mut getter).collect::<Vec<_>>();
         iters.rotate_right(1);
         Self {

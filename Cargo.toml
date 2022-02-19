@@ -35,6 +35,7 @@ rpassword = "5"
 prettytable-rs = {version = "0.8", default-features = false }
 itertools = "0.10"
 ignore = "0.4"
+path-absolutize = "3"
 
 
 # usefule crates:

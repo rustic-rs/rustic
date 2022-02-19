@@ -1,12 +1,13 @@
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use anyhow::Result;
 use clap::Parser;
 use ignore::WalkBuilder;
+use path_absolutize::*;
 
 use crate::backend::{DecryptWriteBackend, ReadBackend};
 use crate::blob::{BlobType, Node, Packer, Tree};
@@ -29,12 +30,13 @@ pub(super) fn execute(
     let config = ConfigFile::from_backend_no_id(be)?;
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
-    backup_file(opts.sources, &poly, be, key)?;
+    let path = PathBuf::from(&opts.sources[0]);
+    backup_file(path.absolutize()?, &poly, be, key)?;
     Ok(())
 }
 
 fn backup_file(
-    paths: Vec<String>,
+    path: impl AsRef<Path>,
     poly: &u64,
     be: &(impl ReadBackend + DecryptWriteBackend),
     key: &Key,
@@ -46,7 +48,6 @@ fn backup_file(
     let mut data_packer = Packer::new(be.clone(), indexer.clone(), key.clone())?;
     let mut tree_packer = Packer::new(be.clone(), indexer.clone(), key.clone())?;
 
-    let path = &paths[0];
     let mut wb = WalkBuilder::new(path);
     /*
      for path in paths[1..].into_iter() {
@@ -155,7 +156,7 @@ fn backup_file(
     // save snapshot
     let snap = SnapshotFile::new(
         id,
-        paths,
+        vec![path.to_str().unwrap().to_string()],
         "host".to_string(),
         "user".to_string(),
         0,

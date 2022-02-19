@@ -18,16 +18,11 @@ impl LocalBackend {
 
     fn path(&self, tpe: FileType, id: Id) -> PathBuf {
         let hex_id = id.to_hex();
-        self.path
-            .join(tpe.name())
-            .join(match tpe {
-                FileType::Pack => &hex_id[0..2],
-                _ => "",
-            })
-            .join(match tpe {
-                FileType::Config => "",
-                _ => &hex_id,
-            })
+        match tpe {
+            FileType::Config => self.path.join("config"),
+            FileType::Pack => self.path.join("data").join(&hex_id[0..2]).join(&hex_id),
+            _ => self.path.join(tpe.name()).join(&hex_id),
+        }
     }
 }
 
@@ -43,10 +38,7 @@ impl ReadBackend for LocalBackend {
             .into_iter()
             .filter_map(walkdir::Result::ok)
             .filter(|e| e.file_type().is_file())
-            .map(|e| {
-                Id::from_hex(&e.file_name().to_string_lossy())
-                // size: e.metadata()?.len(),
-            })
+            .map(|e| Id::from_hex(&e.file_name().to_string_lossy()))
             .filter_map(Result::ok);
         Ok(walker.collect())
     }
@@ -62,6 +54,7 @@ impl ReadBackend for LocalBackend {
                     e.metadata().unwrap().len().try_into().unwrap(),
                 )
             });
+
         Ok(walker.collect())
     }
 
@@ -144,5 +137,4 @@ impl LocalBackend {
             .unwrap();
         file.write_all_at(data, offset).unwrap();
     }
-
 }

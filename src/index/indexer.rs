@@ -19,7 +19,7 @@ pub struct Indexer<BE: WriteBackend> {
     indexed: HashSet<Id>,
 }
 
-const MAX_SIZE: usize = 50000;
+const MAX_COUNT: usize = 50_000;
 const MAX_AGE: Duration = Duration::from_secs(300);
 
 impl<BE: WriteBackend> Indexer<BE> {
@@ -60,7 +60,7 @@ impl<BE: WriteBackend> Indexer<BE> {
         self.file.add(pack);
 
         // check if IndexFile needs to be saved
-        if self.count >= MAX_SIZE || self.created.elapsed()? >= MAX_AGE {
+        if self.count >= MAX_COUNT || self.created.elapsed()? >= MAX_AGE {
             self.save()?;
             self.reset();
         }

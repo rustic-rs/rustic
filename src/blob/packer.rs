@@ -13,12 +13,16 @@ use crate::id::Id;
 use crate::index::SharedIndexer;
 use crate::repo::IndexPack;
 
-const MAX_SIZE: u32 = 50000;
+const KB: u32 = 1024;
+const MB: u32 = 1024 * KB;
+const MAX_SIZE: u32 = 4 * MB;
+const MAX_COUNT: u32 = 10_000;
 const MAX_AGE: Duration = Duration::from_secs(300);
 
 pub struct Packer<BE: DecryptWriteBackend, C: CryptoKey> {
     be: BE,
     file: File,
+    size: u32,
     count: u32,
     created: SystemTime,
     index: IndexPack,
@@ -32,6 +36,7 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
         Ok(Self {
             be,
             file: tempfile()?,
+            size: 0,
             count: 0,
             created: SystemTime::now(),
             index: IndexPack::new(),
@@ -43,6 +48,7 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
 
     pub fn reset(&mut self) -> Result<()> {
         self.file = tempfile()?;
+        self.size = 0;
         self.count = 0;
         self.created = SystemTime::now();
         self.hasher.reset();
@@ -56,7 +62,7 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
     pub fn write_data(&mut self, data: &[u8]) -> Result<u32> {
         self.hasher.update(&data);
         let len = self.file.write(&data)?.try_into()?;
-        self.count += len;
+        self.size += len;
         Ok(len)
     }
 
@@ -69,16 +75,17 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
             return Ok(());
         }
 
-        let offset = self.count;
+        let offset = self.size;
         let data = self
             .key
             .encrypt_data(data)
             .map_err(|_| anyhow!("crypto error"))?;
         let len = self.write_data(&data)?;
         self.index.add(*id, tpe, offset, len);
+        self.count += 1;
 
         // check if PackFile needs to be saved
-        if self.count >= MAX_SIZE || self.created.elapsed()? >= MAX_AGE {
+        if self.count >= MAX_COUNT || self.size >= MAX_SIZE || self.created.elapsed()? >= MAX_AGE {
             self.save()?;
             self.reset()?;
         }
@@ -128,7 +135,7 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
     }
 
     pub fn save(&mut self) -> Result<()> {
-        if self.count == 0 {
+        if self.size == 0 {
             return Ok(());
         }
 

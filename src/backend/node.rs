@@ -76,4 +76,18 @@ impl Node {
             meta: Metadata::default(),
         })
     }
+
+    pub fn new_tree(name: OsString) -> Result<Self> {
+        Ok(Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Dir,
+            content: Vec::new(),
+            subtree: None,
+            meta: Metadata::default(),
+        })
+    }
+
+    pub fn set_subtree(&mut self, id: Id) {
+        self.subtree = Some(id);
+    }
 }

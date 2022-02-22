@@ -38,16 +38,15 @@ impl Tree {
     }
 }
 
+type TreeIterItem = Result<(PathBuf, Node)>;
+
 /// tree_iterator creates an Iterator over the trees given by ids using the backend be and the index
 /// index
 pub fn tree_iterator(
     be: &impl IndexedBackend,
     ids: Vec<Id>,
-) -> impl Iterator<Item = (PathBuf, Node)> + '_ {
-    TreeIterator::new(
-        |i| Tree::from_backend(be, i).unwrap().nodes.into_iter(),
-        ids,
-    )
+) -> Result<impl Iterator<Item = TreeIterItem> + '_> {
+    TreeIterator::new(|i| Ok(Tree::from_backend(be, i)?.nodes.into_iter()), ids)
 }
 
 /// tree_iterator_once creates an Iterator over the trees given by ids using the backend be and the index
@@ -55,14 +54,14 @@ pub fn tree_iterator(
 pub fn tree_iterator_once(
     be: &impl IndexedBackend,
     ids: Vec<Id>,
-) -> impl Iterator<Item = (PathBuf, Node)> + '_ {
+) -> Result<impl Iterator<Item = TreeIterItem> + '_> {
     let mut visited = HashSet::new();
     TreeIterator::new(
         move |i| {
             if visited.insert(*i) {
-                Tree::from_backend(be, i).unwrap().nodes.into_iter()
+                Ok(Tree::from_backend(be, i)?.nodes.into_iter())
             } else {
-                Vec::new().into_iter()
+                Ok(Vec::new().into_iter())
             }
         },
         ids,
@@ -74,7 +73,7 @@ pub fn tree_iterator_once(
 pub struct TreeIterator<IT, F>
 where
     IT: Iterator<Item = Node>,
-    F: FnMut(&Id) -> IT,
+    F: FnMut(&Id) -> Result<IT>,
 {
     open_iterators: Vec<IT>,
     inner: IT,
@@ -85,40 +84,40 @@ where
 impl<IT, F> TreeIterator<IT, F>
 where
     IT: Iterator<Item = Node>,
-    F: FnMut(&Id) -> IT,
+    F: FnMut(&Id) -> Result<IT>,
 {
-    fn new(mut getter: F, ids: Vec<Id>) -> Self {
+    fn new(mut getter: F, ids: Vec<Id>) -> Result<Self> {
         // TODO: empty ids vector will panic here!
-        let mut iters = ids.iter().map(&mut getter).collect::<Vec<_>>();
+        let mut iters: Vec<_> = ids.iter().map(&mut getter).collect::<Result<_>>()?;
         iters.rotate_right(1);
-        Self {
+        Ok(Self {
             inner: iters.pop().unwrap(),
             open_iterators: iters,
             path: PathBuf::new(),
             getter,
-        }
+        })
     }
 }
 
 impl<IT, F> Iterator for TreeIterator<IT, F>
 where
     IT: Iterator<Item = Node>,
-    F: FnMut(&Id) -> IT,
+    F: FnMut(&Id) -> Result<IT>,
 {
-    type Item = (PathBuf, Node);
+    type Item = Result<(PathBuf, Node)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.inner.next() {
                 Some(node) => {
                     let path = self.path.join(node.name());
-                    if let Some(subtree) = node.subtree() {
-                        let old_inner = mem::replace(&mut self.inner, (self.getter)(subtree));
+                    if let Some(id) = node.subtree() {
+                        let old_inner = mem::replace(&mut self.inner, (self.getter)(id).unwrap());
                         self.open_iterators.push(old_inner);
                         self.path.push(node.name());
                     }
 
-                    return Some((path, node));
+                    return Some(Ok((path, node)));
                 }
                 None => match self.open_iterators.pop() {
                     Some(it) => {

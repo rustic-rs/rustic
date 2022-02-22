@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use derive_getters::Dissolve;
 use itertools::{
@@ -68,10 +68,10 @@ fn allocate_and_collect(
     // collect dirs to delete as they need to be deleted in reverse order
     //    let mut dirs_to_delete = Vec::new();
 
+    let tree_iter = tree_iterator(index, vec![tree])?.filter_map(Result::ok);
+
     // walk over tree in repository and compare with tree in dest
-    for file in
-        tree_iterator(index, vec![tree]).merge_join_by(dest.walker(), |(path, _), j| path.cmp(j))
-    {
+    for file in tree_iter.merge_join_by(dest.walker(), |(path, _), j| path.cmp(j)) {
         match file {
             // node is only in snapshot
             Left((path, node)) => {
@@ -81,7 +81,7 @@ fn allocate_and_collect(
                     }
                     NodeType::File => {
                         // collect blobs needed for restoring
-                        let size = file_infos.add_file(&node, path.clone(), index);
+                        let size = file_infos.add_file(&node, path.clone(), index)?;
                         // create the file
                         if !opts.dry_run {
                             dest.create_file(&path, size);
@@ -148,7 +148,8 @@ fn restore_metadata(
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    for (path, node) in tree_iterator(index, vec![tree]) {
+    let tree_iter = tree_iterator(index, vec![tree])?.filter_map(Result::ok);
+    for (path, node) in tree_iter {
         if !opts.dry_run {
             if let NodeType::Symlink { linktarget } = node.node_type() {
                 dest.create_symlink(&path, linktarget);
@@ -194,13 +195,15 @@ impl FileInfos {
 
     /// Add the file to FilesInfos using index to get blob information.
     /// Returns the computed length of the file
-    fn add_file(&mut self, file: &Node, name: PathBuf, index: &impl IndexedBackend) -> u64 {
+    fn add_file(&mut self, file: &Node, name: PathBuf, index: &impl IndexedBackend) -> Result<u64> {
         let mut file_pos = 0;
         if !file.content().is_empty() {
             let file_idx = self.names.len();
             self.names.push(name);
             for id in file.content().iter() {
-                let ie = index.get_id(id).unwrap();
+                let ie = index
+                    .get_id(id)
+                    .ok_or(anyhow!("did not find id {} in index", id))?;
                 let bl = BlobLocation {
                     offset: *ie.offset(),
                     length: *ie.length(),
@@ -216,6 +219,6 @@ impl FileInfos {
                 file_pos += *ie.length() as u64 - 32; // blob crypto overhead
             }
         }
-        file_pos
+        Ok(file_pos)
     }
 }

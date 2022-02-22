@@ -46,7 +46,7 @@ impl<R: Read> Iterator for ChunkIter<R> {
 
         let mut vec = Vec::new();
         let size = match (&mut self.reader)
-            .take(self.min_size.try_into().unwrap())
+            .take(self.min_size as u64)
             .read_to_end(&mut vec)
         {
             Ok(size) => size,

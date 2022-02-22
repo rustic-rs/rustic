@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Node, Packer, Tree};
@@ -19,8 +19,7 @@ pub type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
 pub struct Archiver<BE: DecryptWriteBackend, I: ReadIndex> {
     path: PathBuf,
     tree: Tree,
-    names: Vec<OsString>,
-    trees: Vec<Tree>,
+    stack: Vec<(Node, Tree)>,
     size: u64,
     count: u64,
     be: BE,
@@ -37,8 +36,7 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         Ok(Self {
             path: PathBuf::from("/"),
             tree: Tree::new(),
-            names: Vec::new(),
-            trees: Vec::new(),
+            stack: Vec::new(),
             size: 0,
             count: 0,
             index,
@@ -54,7 +52,8 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         let basepath = if file_type.is_dir() {
             path
         } else {
-            path.parent().unwrap()
+            path.parent()
+                .ok_or(anyhow!("file path should have a parent!"))?
         };
 
         self.finish_trees(&basepath)?;
@@ -65,8 +64,8 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         for p in missing_dirs.iter() {
             // new subdir
             let tree = std::mem::replace(&mut self.tree, Tree::new());
-            self.trees.push(tree);
-            self.names.push(p.to_os_string());
+            let node = Node::new_tree(p.to_os_string())?;
+            self.stack.push((node, tree));
             self.path.push(p);
             println!("add tree {:?}, path: {:?}", p, self.path);
         }
@@ -87,10 +86,10 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
             if !self.index.has(&id) {
                 self.tree_packer.add(&chunk, &id, BlobType::Tree)?;
             }
-            self.tree = self.trees.pop().unwrap();
-            let name = self.names.pop().unwrap();
+
+            let (mut node, name) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
             println!("finish: {:?}", name);
-            let node = Node::from_tree(name, id)?;
+            node.set_subtree(id);
 
             self.tree.add(node);
             self.path.pop();
@@ -135,7 +134,10 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         // save snapshot
         let snap = SnapshotFile::new(
             id,
-            vec![backup_path.to_str().unwrap().to_string()],
+            vec![backup_path
+                .to_str()
+                .ok_or(anyhow!("non-unicode path {:?}", backup_path))?
+                .to_string()],
             "host".to_string(),
             "user".to_string(),
             0,

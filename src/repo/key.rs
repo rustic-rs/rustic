@@ -63,9 +63,7 @@ const fn num_bits<T>() -> usize {
 
 fn log_2(x: u32) -> u8 {
     assert!(x > 0);
-    (num_bits::<u32>() as u32 - x.leading_zeros() - 1)
-        .try_into()
-        .unwrap()
+    num_bits::<u32>() as u8 - x.leading_zeros() as u8 - 1
 }
 
 #[derive(Debug, Deserialize)]

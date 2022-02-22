@@ -36,11 +36,10 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
 
     println!("reading index...");
     let index = IndexBackend::new(be)?;
+    let iterator1 = tree_iterator(&index, vec![snap.tree])?.filter_map(Result::ok);
+    let iterator2 = tree_iterator(&index, vec![snap_with.tree])?.filter_map(Result::ok);
 
-    for file in tree_iterator(&index, vec![snap.tree]).merge_join_by(
-        tree_iterator(&index, vec![snap_with.tree]),
-        |(path1, _), (path2, _)| path1.cmp(path2),
-    ) {
+    for file in iterator1.merge_join_by(iterator2, |(path1, _), (path2, _)| path1.cmp(path2)) {
         match file {
             Left((path, _)) => println!("-    {:?}", path),
             Right((path, _)) => println!("+    {:?}", path),

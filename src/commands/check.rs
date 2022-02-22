@@ -80,7 +80,8 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
         .map(|id| Ok(SnapshotFile::from_backend(index.be(), &id)?.tree))
         .collect::<Result<_>>()?;
 
-    for (path, node) in tree_iterator_once(index, snap_ids) {
+    for item in tree_iterator_once(index, snap_ids)? {
+        let (path, node) = item?;
         match node.node_type() {
             NodeType::File => {
                 for (i, id) in node.content().iter().enumerate() {

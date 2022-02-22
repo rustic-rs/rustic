@@ -43,7 +43,6 @@ fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -
         let entry = entry?;
         let name = entry.file_name().to_os_string();
         let file_type = entry.file_type().unwrap();
-        println!("entry: {:?}", entry.path());
 
         archiver.add_entry(entry.path(), name, file_type)?;
     }

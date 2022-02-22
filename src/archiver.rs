@@ -59,7 +59,6 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         self.finish_trees(&basepath)?;
 
         let missing_dirs = basepath.strip_prefix(&self.path)?;
-        println!("missing_dirs: {:?}", missing_dirs);
 
         for p in missing_dirs.iter() {
             // new subdir
@@ -71,6 +70,7 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         }
 
         if file_type.is_file() {
+            println!("add file {:?}, path: {:?}", name, self.path);
             let f = File::open(&path)?;
             let reader: BufReader<File> = BufReader::new(f);
             self.backup_file(name, reader)?;
@@ -83,15 +83,18 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
             // go back to parent dir
             let chunk = self.tree.serialize()?;
             let id = hash(&chunk);
+            let dirsize: u64 = chunk.len().try_into()?;
             if !self.index.has(&id) {
                 self.tree_packer.add(&chunk, &id, BlobType::Tree)?;
             }
 
-            let (mut node, name) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
-            println!("finish: {:?}", name);
+            let (mut node, tree) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
+            println!("finishing tree: {:?}", node.name());
             node.set_subtree(id);
-
+            self.tree = tree;
             self.tree.add(node);
+            self.count += 1;
+            self.size += dirsize;
             self.path.pop();
         }
         Ok(())

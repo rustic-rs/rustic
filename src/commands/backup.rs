@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::BufReader;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -7,6 +9,7 @@ use path_absolutize::*;
 
 use crate::archiver::Archiver;
 use crate::backend::DecryptFullBackend;
+use crate::blob::Node;
 use crate::index::IndexBackend;
 use crate::repo::ConfigFile;
 
@@ -43,8 +46,14 @@ fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -
         let entry = entry?;
         let name = entry.file_name().to_os_string();
         let file_type = entry.file_type().unwrap();
+        let (node, r) = if file_type.is_dir() {
+            let f = File::open(&entry.path())?;
+            (Node::new_dir(name), Some(BufReader::new(f)))
+        } else {
+            (Node::new_file(name), None)
+        };
 
-        archiver.add_entry(entry.path(), name, file_type)?;
+        archiver.add_entry(entry.path(), node, r)?;
     }
     archiver.finalize_snapshot(backup_path)?;
 

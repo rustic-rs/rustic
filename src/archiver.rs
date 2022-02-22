@@ -1,14 +1,12 @@
 use std::cell::RefCell;
-use std::ffi::OsString;
-use std::fs::{File, FileType};
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 
 use crate::backend::DecryptWriteBackend;
-use crate::blob::{BlobType, Node, Packer, Tree};
+use crate::blob::{BlobType, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::index::{Indexer, ReadIndex};
@@ -48,8 +46,14 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         })
     }
 
-    pub fn add_entry(&mut self, path: &Path, name: OsString, file_type: FileType) -> Result<()> {
-        let basepath = if file_type.is_dir() {
+    pub fn add_node(&mut self, node: Node, size: u64) {
+        self.tree.add(node);
+        self.count += 1;
+        self.size += size;
+    }
+
+    pub fn add_entry(&mut self, path: &Path, node: Node, r: Option<impl BufRead>) -> Result<()> {
+        let basepath = if node.is_dir() {
             path
         } else {
             path.parent()
@@ -59,21 +63,27 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
         self.finish_trees(&basepath)?;
 
         let missing_dirs = basepath.strip_prefix(&self.path)?;
-
         for p in missing_dirs.iter() {
             // new subdir
-            let tree = std::mem::replace(&mut self.tree, Tree::new());
-            let node = Node::new_tree(p.to_os_string())?;
-            self.stack.push((node, tree));
             self.path.push(p);
+            let tree = std::mem::replace(&mut self.tree, Tree::new());
+            if self.path == path {
+                self.stack.push((node, tree));
+                return Ok(());
+            } else {
+                self.stack.push((Node::new_dir(p.to_os_string()), tree));
+            }
+
             println!("add tree {:?}, path: {:?}", p, self.path);
         }
 
-        if file_type.is_file() {
-            println!("add file {:?}, path: {:?}", name, self.path);
-            let f = File::open(&path)?;
-            let reader: BufReader<File> = BufReader::new(f);
-            self.backup_file(name, reader)?;
+        match node.node_type() {
+            NodeType::File if r.is_some() => {
+                println!("add file {:?}, path: {:?}", node.name(), self.path);
+                self.backup_file(node, r.unwrap())?;
+            }
+            NodeType::Dir => {}          // is already handled, see above
+            _ => self.add_node(node, 0), // all other cases: just save the given node
         }
         Ok(())
     }
@@ -92,15 +102,13 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
             println!("finishing tree: {:?}", node.name());
             node.set_subtree(id);
             self.tree = tree;
-            self.tree.add(node);
-            self.count += 1;
-            self.size += dirsize;
+            self.add_node(node, dirsize);
             self.path.pop();
         }
         Ok(())
     }
 
-    pub fn backup_file(&mut self, name: OsString, reader: impl BufRead) -> Result<()> {
+    pub fn backup_file(&mut self, node: Node, reader: impl BufRead) -> Result<()> {
         let chunk_iter = ChunkIter::new(reader, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
@@ -114,10 +122,9 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
             }
             content.push(id);
         }
-        let node = Node::from_content(name, content, filesize)?;
-        self.tree.add(node);
-        self.count += 1;
-        self.size += filesize;
+        let mut node = node;
+        node.set_content(content);
+        self.add_node(node, filesize);
         Ok(())
     }
 

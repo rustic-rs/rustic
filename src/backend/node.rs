@@ -1,7 +1,6 @@
 use std::ffi::OsString;
 use std::fmt::Debug;
 
-use anyhow::Result;
 use chrono::{DateTime, Local};
 use derive_getters::Getters;
 use derive_more::{Constructor, IsVariant};
@@ -57,37 +56,35 @@ pub struct Metadata {
 }
 
 impl Node {
-    pub fn from_content(name: OsString, content: Vec<Id>, _size: u64) -> Result<Self> {
-        Ok(Self {
+    pub fn new_file(name: OsString) -> Self {
+        Self {
             name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::File,
-            content,
+            content: Vec::new(),
             subtree: None,
             meta: Metadata::default(),
-        })
+        }
     }
 
-    pub fn from_tree(name: OsString, id: Id) -> Result<Self> {
-        Ok(Self {
-            name: name.to_str().expect("no unicode").to_string(),
-            node_type: NodeType::Dir,
-            content: Vec::new(),
-            subtree: Some(id),
-            meta: Metadata::default(),
-        })
-    }
-
-    pub fn new_tree(name: OsString) -> Result<Self> {
-        Ok(Self {
+    pub fn new_dir(name: OsString) -> Self {
+        Self {
             name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::Dir,
             content: Vec::new(),
             subtree: None,
             meta: Metadata::default(),
-        })
+        }
+    }
+
+    pub fn is_dir(&self) -> bool {
+        self.node_type == NodeType::Dir
     }
 
     pub fn set_subtree(&mut self, id: Id) {
         self.subtree = Some(id);
+    }
+
+    pub fn set_content(&mut self, content: Vec<Id>) {
+        self.content = content;
     }
 }

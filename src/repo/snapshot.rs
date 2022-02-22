@@ -20,7 +20,7 @@ pub struct SnapshotFile {
     pub gid: u32,
     #[serde(default)]
     pub tags: TagList,
-    pub file_count: Option<u64>,
+    pub node_count: Option<u64>,
     pub size: Option<u64>,
 
     #[serde(skip)]
@@ -36,7 +36,7 @@ impl SnapshotFile {
         uid: u32,
         gid: u32,
         tags: TagList,
-        file_count: Option<u64>,
+        node_count: Option<u64>,
         size: Option<u64>,
     ) -> Self {
         Self {
@@ -48,7 +48,7 @@ impl SnapshotFile {
             uid,
             gid,
             tags,
-            file_count,
+            node_count,
             size,
             id: Id::default(),
         }

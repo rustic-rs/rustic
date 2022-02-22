@@ -18,19 +18,19 @@ pub(super) fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
         .map(|sn| {
             let paths = sn.paths.into_iter().map(|p| p + "\n").collect::<String>();
             let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+            let nodes = sn
+                .node_count
+                .map(|c| c.to_string())
+                .unwrap_or("?".to_string());
             let size = sn
                 .size
                 .map(|b| ByteSize(b).to_string_as(true))
                 .unwrap_or("?".to_string());
-            let files = sn
-                .file_count
-                .map(|c| c.to_string())
-                .unwrap_or("?".to_string());
-            row![sn.id, time, sn.hostname, "", paths, r->files, r->size]
+            row![sn.id, time, sn.hostname, "", paths, r->nodes, r->size]
         })
         .collect();
     table.set_titles(
-        row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Files", br->"Size"],
+        row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Nodes", br->"Size"],
     );
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
     table.printstd();

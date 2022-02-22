@@ -6,8 +6,8 @@ use ignore::WalkBuilder;
 use path_absolutize::*;
 
 use crate::archiver::Archiver;
-use crate::backend::{DecryptWriteBackend, ReadBackend};
-use crate::index::{AllIndexFiles, BoomIndex};
+use crate::backend::DecryptFullBackend;
+use crate::index::IndexBackend;
 use crate::repo::ConfigFile;
 
 #[derive(Parser)]
@@ -16,7 +16,7 @@ pub(super) struct Opts {
     sources: Vec<String>,
 }
 
-pub(super) fn execute(opts: Opts, be: &(impl ReadBackend + DecryptWriteBackend)) -> Result<()> {
+pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
@@ -26,13 +26,9 @@ pub(super) fn execute(opts: Opts, be: &(impl ReadBackend + DecryptWriteBackend))
     Ok(())
 }
 
-fn backup_file(
-    backup_path: PathBuf,
-    poly: &u64,
-    be: &(impl ReadBackend + DecryptWriteBackend),
-) -> Result<()> {
+fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -> Result<()> {
     println! {"reading index..."}
-    let index: BoomIndex = AllIndexFiles::new(be.clone()).into_iter().collect();
+    let index = IndexBackend::new(be);
     let mut archiver = Archiver::new(be.clone(), index, *poly)?;
 
     let mut wb = WalkBuilder::new(backup_path.clone());

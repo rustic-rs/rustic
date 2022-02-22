@@ -2,9 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use std::collections::HashMap;
 
-use crate::backend::{DecryptReadBackend, FileType};
+use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{tree_iterator_once, NodeType};
-use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
+use crate::index::{AllIndexFiles, IndexBackend, IndexedBackend};
 use crate::repo::{IndexBlob, SnapshotFile};
 
 #[derive(Parser)]
@@ -19,10 +19,10 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     check_packs(be)?;
 
     println!("loading index...");
-    let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
+    let be = IndexBackend::new(be);
 
     println!("checking snapshots and trees...");
-    check_snapshots(be, &index)?;
+    check_snapshots(&be)?;
 
     if opts.read_data {
         unimplemented!()
@@ -42,6 +42,7 @@ fn pack_size(blobs: &[IndexBlob]) -> u32 {
 
 // check if packs correspond to index
 fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
+    // TODO: only read index files once
     let mut packs = AllIndexFiles::new(be.clone())
         .into_iter()
         .map(|p| (*p.id(), pack_size(p.blobs())))
@@ -71,14 +72,15 @@ fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
-fn check_snapshots(be: &impl DecryptReadBackend, index: &impl ReadIndex) -> Result<()> {
-    let snap_ids = be
+fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
+    let snap_ids = index
+        .be()
         .list(FileType::Snapshot)?
         .into_iter()
-        .map(|id| SnapshotFile::from_backend(be, id).unwrap().tree)
+        .map(|id| SnapshotFile::from_backend(index.be(), id).unwrap().tree)
         .collect();
 
-    for (path, node) in tree_iterator_once(be, index, snap_ids) {
+    for (path, node) in tree_iterator_once(index, snap_ids) {
         match node.node_type() {
             NodeType::File => {
                 for (i, id) in node.content().iter().enumerate() {

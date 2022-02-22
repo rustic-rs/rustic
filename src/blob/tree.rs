@@ -5,9 +5,8 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::backend::DecryptReadBackend;
 use crate::id::Id;
-use crate::index::ReadIndex;
+use crate::index::IndexedBackend;
 
 use super::Node;
 
@@ -29,15 +28,11 @@ impl Tree {
         Ok(serde_json::to_vec(&self)?)
     }
 
-    pub fn from_backend(
-        be: &impl DecryptReadBackend,
-        index: &impl ReadIndex,
-        id: &Id,
-    ) -> Result<Self> {
-        let data = index
+    pub fn from_backend(be: &impl IndexedBackend, id: &Id) -> Result<Self> {
+        let data = be
             .get_id(id)
             .ok_or(anyhow!("blob not found in index"))?
-            .read_data(be)?;
+            .read_data(be.be())?;
 
         Ok(serde_json::from_slice(&data)?)
     }
@@ -45,29 +40,27 @@ impl Tree {
 
 /// tree_iterator creates an Iterator over the trees given by ids using the backend be and the index
 /// index
-pub fn tree_iterator<'a>(
-    be: &'a impl DecryptReadBackend,
-    index: &'a impl ReadIndex,
+pub fn tree_iterator(
+    be: &impl IndexedBackend,
     ids: Vec<Id>,
-) -> impl Iterator<Item = (PathBuf, Node)> + 'a {
+) -> impl Iterator<Item = (PathBuf, Node)> + '_ {
     TreeIterator::new(
-        |i| Tree::from_backend(be, index, i).unwrap().nodes.into_iter(),
+        |i| Tree::from_backend(be, i).unwrap().nodes.into_iter(),
         ids,
     )
 }
 
 /// tree_iterator_once creates an Iterator over the trees given by ids using the backend be and the index
 /// index where each node is only visited once
-pub fn tree_iterator_once<'a>(
-    be: &'a impl DecryptReadBackend,
-    index: &'a impl ReadIndex,
+pub fn tree_iterator_once(
+    be: &impl IndexedBackend,
     ids: Vec<Id>,
-) -> impl Iterator<Item = (PathBuf, Node)> + 'a {
+) -> impl Iterator<Item = (PathBuf, Node)> + '_ {
     let mut visited = HashSet::new();
     TreeIterator::new(
         move |i| {
             if visited.insert(*i) {
-                Tree::from_backend(be, index, i).unwrap().nodes.into_iter()
+                Tree::from_backend(be, i).unwrap().nodes.into_iter()
             } else {
                 Vec::new().into_iter()
             }

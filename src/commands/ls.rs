@@ -4,7 +4,7 @@ use clap::Parser;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::tree_iterator;
 use crate::id::Id;
-use crate::index::{AllIndexFiles, BoomIndex};
+use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
@@ -20,10 +20,10 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
             .remove(0)
     })?;
 
-    let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
     let snap = SnapshotFile::from_backend(be, id)?;
+    let index = IndexBackend::new(be);
 
-    for (path, _) in tree_iterator(be, &index, vec![snap.tree]) {
+    for (path, _) in tree_iterator(&index, vec![snap.tree]) {
         println!("{:?} ", path);
     }
 

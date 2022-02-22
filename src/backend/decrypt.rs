@@ -5,6 +5,8 @@ use thiserror::Error;
 use super::{FileType, Id, ReadBackend, WriteBackend};
 use crate::crypto::{hash, CryptoKey};
 
+pub trait DecryptFullBackend: DecryptWriteBackend + DecryptReadBackend {}
+
 pub trait DecryptReadBackend: ReadBackend {}
 
 pub trait DecryptWriteBackend: WriteBackend {
@@ -102,3 +104,5 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         Ok(id)
     }
 }
+
+impl<R: ReadBackend + WriteBackend, C: CryptoKey> DecryptFullBackend for DecryptBackend<R, C> {}

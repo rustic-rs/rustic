@@ -12,7 +12,7 @@ struct BoomEntry {
     length: u32,
 }
 
-pub struct BoomIndex {
+pub(super) struct BoomIndex {
     packs: Vec<Id>,
     boom: BoomHashMap<Id, BoomEntry>,
 }

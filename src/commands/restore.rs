@@ -12,7 +12,7 @@ use itertools::{
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{tree_iterator, Node, NodeType};
 use crate::id::Id;
-use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
+use crate::index::{IndexBackend, IndexedBackend};
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
@@ -41,16 +41,16 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let dest = LocalBackend::new(&opts.dest);
 
     println!("reading index...");
-    let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
+    let index = IndexBackend::new(be);
 
     println!("1st tree walk: allocating dirs/files and collecting restore information...");
-    let file_infos = allocate_and_collect(be, &dest, &index, snap.tree, &opts)?;
+    let file_infos = allocate_and_collect(&dest, &index, snap.tree, &opts)?;
 
     println!("restoring file contents...");
     restore_contents(be, &dest, file_infos, &opts)?;
 
     println!("2nd tree walk: setting metadata");
-    restore_metadata(be, &dest, &index, snap.tree, &opts)?;
+    restore_metadata(&dest, &index, snap.tree, &opts)?;
 
     println!("done.");
     Ok(())
@@ -58,9 +58,8 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
 
 /// allocate files, scan or remove existing files and collect restore information
 fn allocate_and_collect(
-    be: &impl DecryptReadBackend,
     dest: &LocalBackend,
-    index: &impl ReadIndex,
+    index: &impl IndexedBackend,
     tree: Id,
     opts: &Opts,
 ) -> Result<FileInfos> {
@@ -70,8 +69,8 @@ fn allocate_and_collect(
     //    let mut dirs_to_delete = Vec::new();
 
     // walk over tree in repository and compare with tree in dest
-    for file in tree_iterator(be, index, vec![tree])
-        .merge_join_by(dest.walker(), |(path, _), j| path.cmp(j))
+    for file in
+        tree_iterator(index, vec![tree]).merge_join_by(dest.walker(), |(path, _), j| path.cmp(j))
     {
         match file {
             // node is only in snapshot
@@ -143,14 +142,13 @@ fn restore_contents(
 }
 
 fn restore_metadata(
-    be: &impl DecryptReadBackend,
     dest: &LocalBackend,
-    index: &impl ReadIndex,
+    index: &impl IndexedBackend,
     tree: Id,
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    for (path, node) in tree_iterator(be, index, vec![tree]) {
+    for (path, node) in tree_iterator(index, vec![tree]) {
         if !opts.dry_run {
             if let NodeType::Symlink { linktarget } = node.node_type() {
                 dest.create_symlink(&path, linktarget);
@@ -161,8 +159,10 @@ fn restore_metadata(
 
     Ok(())
 }
-/// struct that contains information of file contents grouped by 1) pack ID, 2) blob within this pack
-/// and 3) the actual files and position of this blob within those.
+/// struct that contains information of file contents grouped by
+/// 1) pack ID,
+/// 2) blob within this pack
+/// 3) the actual files and position of this blob within those
 #[derive(Debug, Dissolve)]
 struct FileInfos {
     names: Filenames,
@@ -194,7 +194,7 @@ impl FileInfos {
 
     /// Add the file to FilesInfos using index to get blob information.
     /// Returns the computed length of the file
-    fn add_file(&mut self, file: &Node, name: PathBuf, index: &impl ReadIndex) -> u64 {
+    fn add_file(&mut self, file: &Node, name: PathBuf, index: &impl IndexedBackend) -> u64 {
         let mut file_pos = 0;
         if !file.content().is_empty() {
             let file_idx = self.names.len();

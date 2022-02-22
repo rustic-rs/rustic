@@ -3,7 +3,7 @@ use clap::Parser;
 
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::id::Id;
-use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
+use crate::index::{IndexBackend, ReadIndex};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -23,7 +23,8 @@ pub(super) fn execute(
         // special treatment for catingg blobs: read the index and use it to locate the blob
         "blob" => {
             let id = Id::from_hex(&opts.id)?;
-            let index = BoomIndex::from_iter(AllIndexFiles::new(dbe.clone()).into_iter());
+            println!("reading index files..");
+            let index = IndexBackend::new(dbe);
             let dec = index
                 .get_id(&id)
                 .ok_or(anyhow!("blob not found in index"))?

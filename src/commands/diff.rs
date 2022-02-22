@@ -8,7 +8,7 @@ use itertools::{
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{tree_iterator, NodeType};
 use crate::id::Id;
-use crate::index::{AllIndexFiles, BoomIndex};
+use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
@@ -34,10 +34,11 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let snap = SnapshotFile::from_backend(be, ids[0])?;
     let snap_with = SnapshotFile::from_backend(be, ids[1])?;
 
-    let index = BoomIndex::from_iter(AllIndexFiles::new(be.clone()).into_iter());
+    println!("reading index...");
+    let index = IndexBackend::new(be);
 
-    for file in tree_iterator(be, &index, vec![snap.tree]).merge_join_by(
-        tree_iterator(be, &index, vec![snap_with.tree]),
+    for file in tree_iterator(&index, vec![snap.tree]).merge_join_by(
+        tree_iterator(&index, vec![snap_with.tree]),
         |(path1, _), (path2, _)| path1.cmp(path2),
     ) {
         match file {

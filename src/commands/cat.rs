@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 
-use crate::backend::{FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
 
@@ -14,7 +14,11 @@ pub(super) struct Opts {
     id: String,
 }
 
-pub(super) fn execute(be: &impl ReadBackend, dbe: &impl ReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(
+    be: &impl ReadBackend,
+    dbe: &impl DecryptReadBackend,
+    opts: Opts,
+) -> Result<()> {
     let tpe = match opts.tpe.as_str() {
         // special treatment for catingg blobs: read the index and use it to locate the blob
         "blob" => {

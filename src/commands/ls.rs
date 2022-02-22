@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-use crate::backend::{FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::tree_iterator;
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex};
@@ -13,7 +13,7 @@ pub(super) struct Opts {
     id: String,
 }
 
-pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
         be.find_starts_with(FileType::Snapshot, &[&opts.id])?

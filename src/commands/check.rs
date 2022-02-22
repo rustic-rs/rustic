@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::collections::HashMap;
 
-use crate::backend::{FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{tree_iterator_once, NodeType};
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
 use crate::repo::{IndexBlob, SnapshotFile};
@@ -14,7 +14,7 @@ pub(super) struct Opts {
     read_data: bool,
 }
 
-pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     println!("checking packs...");
     check_packs(be)?;
 
@@ -41,7 +41,7 @@ fn pack_size(blobs: &[IndexBlob]) -> u32 {
 }
 
 // check if packs correspond to index
-fn check_packs(be: &impl ReadBackend) -> Result<()> {
+fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     let mut packs = AllIndexFiles::new(be.clone())
         .into_iter()
         .map(|p| (*p.id(), pack_size(p.blobs())))
@@ -71,7 +71,7 @@ fn check_packs(be: &impl ReadBackend) -> Result<()> {
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
-fn check_snapshots(be: &impl ReadBackend, index: &impl ReadIndex) -> Result<()> {
+fn check_snapshots(be: &impl DecryptReadBackend, index: &impl ReadIndex) -> Result<()> {
     let snap_ids = be
         .list(FileType::Snapshot)?
         .into_iter()

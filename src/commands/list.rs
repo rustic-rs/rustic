@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use clap::Parser;
 
-use crate::backend::{FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType};
 use crate::index::AllIndexFiles;
 
 #[derive(Parser)]
@@ -11,7 +11,7 @@ pub(super) struct Opts {
     tpe: String,
 }
 
-pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let tpe = match opts.tpe.as_str() {
         // special treatment for listing blobs: read the index and display it
         "blobs" => {

@@ -9,7 +9,7 @@ use itertools::{
     Itertools,
 };
 
-use crate::backend::{FileType, LocalBackend, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{tree_iterator, Node, NodeType};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex, ReadIndex};
@@ -28,7 +28,7 @@ pub(super) struct Opts {
     dest: String,
 }
 
-pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     println!("getting snapshot...");
     let id = Id::from_hex(&opts.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
@@ -58,7 +58,7 @@ pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
 
 /// allocate files, scan or remove existing files and collect restore information
 fn allocate_and_collect(
-    be: &impl ReadBackend,
+    be: &impl DecryptReadBackend,
     dest: &LocalBackend,
     index: &impl ReadIndex,
     tree: Id,
@@ -121,7 +121,7 @@ fn allocate_and_collect(
 /// restore_contents restores all files contents as described by file_infos
 /// using the ReadBackend be and writing them into the LocalBackend dest.
 fn restore_contents(
-    be: &impl ReadBackend,
+    be: &impl DecryptReadBackend,
     dest: &LocalBackend,
     file_infos: FileInfos,
     opts: &Opts,
@@ -143,7 +143,7 @@ fn restore_contents(
 }
 
 fn restore_metadata(
-    be: &impl ReadBackend,
+    be: &impl DecryptReadBackend,
     dest: &LocalBackend,
     index: &impl ReadIndex,
     tree: Id,

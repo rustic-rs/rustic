@@ -5,6 +5,8 @@ use thiserror::Error;
 use super::{FileType, Id, ReadBackend, WriteBackend};
 use crate::crypto::{hash, CryptoKey};
 
+pub trait DecryptReadBackend: ReadBackend {}
+
 pub trait DecryptWriteBackend: WriteBackend {
     type Key: CryptoKey;
     fn key(&self) -> &Self::Key;
@@ -43,6 +45,8 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
         &self.key
     }
 }
+
+impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {}
 
 impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     type Error = RepoError<R::Error, C::CryptoError>;

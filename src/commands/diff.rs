@@ -5,7 +5,7 @@ use itertools::{
     Itertools,
 };
 
-use crate::backend::{FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{tree_iterator, NodeType};
 use crate::id::Id;
 use crate::index::{AllIndexFiles, BoomIndex};
@@ -20,7 +20,7 @@ pub(super) struct Opts {
     id2: String,
 }
 
-pub(super) fn execute(be: &impl ReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     println!("getting snapshots...");
     let ids = match (Id::from_hex(&opts.id1), Id::from_hex(&opts.id2)) {
         (Ok(id1), Ok(id2)) => vec![id1, id2],

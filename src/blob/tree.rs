@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::backend::ReadBackend;
+use crate::backend::DecryptReadBackend;
 use crate::id::Id;
 use crate::index::ReadIndex;
 
@@ -29,7 +29,11 @@ impl Tree {
         Ok(serde_json::to_vec(&self)?)
     }
 
-    pub fn from_backend(be: &impl ReadBackend, index: &impl ReadIndex, id: &Id) -> Result<Self> {
+    pub fn from_backend(
+        be: &impl DecryptReadBackend,
+        index: &impl ReadIndex,
+        id: &Id,
+    ) -> Result<Self> {
         let data = index
             .get_id(id)
             .ok_or(anyhow!("blob not found in index"))?
@@ -42,7 +46,7 @@ impl Tree {
 /// tree_iterator creates an Iterator over the trees given by ids using the backend be and the index
 /// index
 pub fn tree_iterator<'a>(
-    be: &'a impl ReadBackend,
+    be: &'a impl DecryptReadBackend,
     index: &'a impl ReadIndex,
     ids: Vec<Id>,
 ) -> impl Iterator<Item = (PathBuf, Node)> + 'a {
@@ -55,7 +59,7 @@ pub fn tree_iterator<'a>(
 /// tree_iterator_once creates an Iterator over the trees given by ids using the backend be and the index
 /// index where each node is only visited once
 pub fn tree_iterator_once<'a>(
-    be: &'a impl ReadBackend,
+    be: &'a impl DecryptReadBackend,
     index: &'a impl ReadIndex,
     ids: Vec<Id>,
 ) -> impl Iterator<Item = (PathBuf, Node)> + 'a {

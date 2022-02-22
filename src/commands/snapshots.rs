@@ -3,13 +3,13 @@ use bytesize::ByteSize;
 use clap::Parser;
 use prettytable::{cell, format, row, Table};
 
-use crate::backend::ReadBackend;
+use crate::backend::DecryptReadBackend;
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {}
 
-pub(super) fn execute(be: &impl ReadBackend, _opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
     let mut snapshots = SnapshotFile::all_from_backend(be)?;
     snapshots.sort();
 

@@ -1,5 +1,6 @@
 use std::ffi::OsString;
 use std::fmt::Debug;
+use std::path::PathBuf;
 
 use chrono::{DateTime, Local};
 use derive_getters::Getters;
@@ -30,7 +31,7 @@ pub enum NodeType {
     Device { device: u64 },
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Constructor, Getters)]
 pub struct Metadata {
     #[serde(default)]
     size: u64,
@@ -56,23 +57,35 @@ pub struct Metadata {
 }
 
 impl Node {
-    pub fn new_file(name: OsString) -> Self {
+    pub fn new_file(name: OsString, meta: Metadata) -> Self {
         Self {
             name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::File,
             content: Vec::new(),
             subtree: None,
-            meta: Metadata::default(),
+            meta,
         }
     }
 
-    pub fn new_dir(name: OsString) -> Self {
+    pub fn new_dir(name: OsString, meta: Metadata) -> Self {
         Self {
             name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::Dir,
             content: Vec::new(),
             subtree: None,
-            meta: Metadata::default(),
+            meta,
+        }
+    }
+
+    pub fn new_symlink(name: OsString, target: PathBuf, meta: Metadata) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Symlink {
+                linktarget: target.to_str().expect("no unicode").to_string(),
+            },
+            content: Vec::new(),
+            subtree: None,
+            meta,
         }
     }
 

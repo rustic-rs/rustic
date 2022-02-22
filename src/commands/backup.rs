@@ -1,5 +1,6 @@
-use std::fs::File;
+use std::fs::{read_link, File};
 use std::io::BufReader;
+use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -9,7 +10,7 @@ use path_absolutize::*;
 
 use crate::archiver::Archiver;
 use crate::backend::DecryptFullBackend;
-use crate::blob::Node;
+use crate::blob::{Metadata, Node};
 use crate::index::IndexBackend;
 use crate::repo::ConfigFile;
 
@@ -45,14 +46,31 @@ fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -
     for entry in wb.build() {
         let entry = entry?;
         let name = entry.file_name().to_os_string();
-        let file_type = entry.file_type().unwrap();
-        let (node, r) = if file_type.is_dir() {
-            let f = File::open(&entry.path())?;
-            (Node::new_dir(name), Some(BufReader::new(f)))
-        } else {
-            (Node::new_file(name), None)
-        };
+        let m = entry.metadata()?;
 
+        let meta = Metadata::new(
+            m.len(),
+            m.modified().ok().map(|t| t.into()),
+            m.accessed().ok().map(|t| t.into()),
+            m.created().ok().map(|t| t.into()),
+            m.mode(),
+            m.uid(),
+            m.gid(),
+            "".to_string(),
+            "".to_string(),
+            m.ino(),
+            m.dev(),
+            m.nlink(),
+        );
+        let (node, r) = if m.is_dir() {
+            (Node::new_dir(name, meta), None)
+        } else if m.is_symlink() {
+            let target = read_link(entry.path())?;
+            (Node::new_symlink(name, target, meta), None)
+        } else {
+            let f = File::open(&entry.path())?;
+            (Node::new_file(name, meta), Some(BufReader::new(f)))
+        };
         archiver.add_entry(entry.path(), node, r)?;
     }
     archiver.finalize_snapshot(backup_path)?;

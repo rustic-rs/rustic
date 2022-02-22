@@ -6,7 +6,7 @@ use std::rc::Rc;
 use anyhow::{anyhow, Result};
 
 use crate::backend::DecryptWriteBackend;
-use crate::blob::{BlobType, Node, NodeType, Packer, Tree};
+use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::index::{Indexer, ReadIndex};
@@ -71,7 +71,8 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
                 self.stack.push((node, tree));
                 return Ok(());
             } else {
-                self.stack.push((Node::new_dir(p.to_os_string()), tree));
+                self.stack
+                    .push((Node::new_dir(p.to_os_string(), Metadata::default()), tree));
             }
 
             println!("add tree {:?}, path: {:?}", p, self.path);

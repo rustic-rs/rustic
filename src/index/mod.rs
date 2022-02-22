@@ -26,7 +26,7 @@ pub struct IndexEntry {
 impl IndexEntry {
     /// Get a blob described by IndexEntry from the backend
     pub fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
-        Ok(be.read_partial(FileType::Pack, self.pack, self.offset, self.length)?)
+        Ok(be.read_partial(FileType::Pack, &self.pack, self.offset, self.length)?)
     }
 }
 
@@ -57,11 +57,11 @@ pub struct IndexBackend<BE: DecryptReadBackend> {
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
-    pub fn new(be: &BE) -> Self {
-        Self {
+    pub fn new(be: &BE) -> Result<Self> {
+        Ok(Self {
             be: be.clone(),
-            boom: AllIndexFiles::new(be.clone()).into_iter().collect(),
-        }
+            boom: AllIndexFiles::new(be.clone()).into_iter()?.collect(),
+        })
     }
 }
 

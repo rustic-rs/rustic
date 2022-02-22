@@ -22,7 +22,7 @@ impl IndexFile {
     }
 
     /// Get an IndexFile from the backend
-    pub fn from_backend<B: ReadBackend>(be: &B, id: Id) -> Result<Self> {
+    pub fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
         let data = be.read_full(FileType::Index, id)?;
         Ok(serde_json::from_slice(&data)?)
     }

@@ -28,7 +28,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
 
 fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -> Result<()> {
     println! {"reading index..."}
-    let index = IndexBackend::new(be);
+    let index = IndexBackend::new(be)?;
     let mut archiver = Archiver::new(be.clone(), index, *poly)?;
 
     let mut wb = WalkBuilder::new(backup_path.clone());

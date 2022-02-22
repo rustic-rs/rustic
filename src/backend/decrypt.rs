@@ -67,7 +67,7 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
             .map_err(RepoError::RepoError)
     }
 
-    fn read_full(&self, tpe: FileType, id: Id) -> Result<Vec<u8>, Self::Error> {
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
         self.key
             .decrypt_data(&self.backend.read_full(tpe, id)?)
             .map_err(RepoError::CryptoError)
@@ -76,12 +76,12 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     fn read_partial(
         &self,
         tpe: FileType,
-        id: Id,
+        id: &Id,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>, Self::Error> {
         self.key
-            .decrypt_data(&self.backend.read_partial(tpe, id, offset, length)?)
+            .decrypt_data(&self.backend.read_partial(tpe, &id, offset, length)?)
             .map_err(RepoError::CryptoError)
     }
 }

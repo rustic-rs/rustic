@@ -31,11 +31,11 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
             .collect::<Result<Vec<_>>>()?,
     };
 
-    let snap = SnapshotFile::from_backend(be, ids[0])?;
-    let snap_with = SnapshotFile::from_backend(be, ids[1])?;
+    let snap = SnapshotFile::from_backend(be, &ids[0])?;
+    let snap_with = SnapshotFile::from_backend(be, &ids[1])?;
 
     println!("reading index...");
-    let index = IndexBackend::new(be);
+    let index = IndexBackend::new(be)?;
 
     for file in tree_iterator(&index, vec![snap.tree]).merge_join_by(
         tree_iterator(&index, vec![snap_with.tree]),

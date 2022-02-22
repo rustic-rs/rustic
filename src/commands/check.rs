@@ -19,7 +19,7 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     check_packs(be)?;
 
     println!("loading index...");
-    let be = IndexBackend::new(be);
+    let be = IndexBackend::new(be)?;
 
     println!("checking snapshots and trees...");
     check_snapshots(&be)?;
@@ -44,7 +44,7 @@ fn pack_size(blobs: &[IndexBlob]) -> u32 {
 fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     // TODO: only read index files once
     let mut packs = AllIndexFiles::new(be.clone())
-        .into_iter()
+        .into_iter()?
         .map(|p| (*p.id(), pack_size(p.blobs())))
         .collect::<HashMap<_, _>>();
 
@@ -73,12 +73,12 @@ fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
 fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
-    let snap_ids = index
+    let snap_ids: Vec<_> = index
         .be()
         .list(FileType::Snapshot)?
         .into_iter()
-        .map(|id| SnapshotFile::from_backend(index.be(), id).unwrap().tree)
-        .collect();
+        .map(|id| Ok(SnapshotFile::from_backend(index.be(), &id)?.tree))
+        .collect::<Result<_>>()?;
 
     for (path, node) in tree_iterator_once(index, snap_ids) {
         match node.node_type() {

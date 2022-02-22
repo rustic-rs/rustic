@@ -24,7 +24,7 @@ pub(super) fn execute(
         "blob" => {
             let id = Id::from_hex(&opts.id)?;
             println!("reading index files..");
-            let index = IndexBackend::new(dbe);
+            let index = IndexBackend::new(dbe)?;
             let dec = index
                 .get_id(&id)
                 .ok_or(anyhow!("blob not found in index"))?
@@ -46,8 +46,8 @@ pub(super) fn execute(
 
     let dec = match tpe {
         // special treatment for catting key files: those need no decryption
-        FileType::Key => be.read_full(tpe, id)?,
-        _ => dbe.read_full(tpe, id)?,
+        FileType::Key => be.read_full(tpe, &id)?,
+        _ => dbe.read_full(tpe, &id)?,
     };
 
     print!("{}", String::from_utf8_lossy(&dec));

@@ -16,7 +16,7 @@ impl LocalBackend {
         Self { path: path.into() }
     }
 
-    fn path(&self, tpe: FileType, id: Id) -> PathBuf {
+    fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
         let hex_id = id.to_hex();
         match tpe {
             FileType::Config => self.path.join("config"),
@@ -58,14 +58,14 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    fn read_full(&self, tpe: FileType, id: Id) -> Result<Vec<u8>, Self::Error> {
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
         fs::read(self.path(tpe, id))
     }
 
     fn read_partial(
         &self,
         tpe: FileType,
-        id: Id,
+        id: &Id,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>, Self::Error> {
@@ -82,7 +82,7 @@ impl WriteBackend for LocalBackend {
 
     fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error> {
         println!("writing tpe: {:?}, id: {}", &tpe, &id);
-        let filename = self.path(tpe, *id);
+        let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
             .create_new(true)
             .write(true)

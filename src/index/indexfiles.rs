@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use crate::backend::{FileType, ReadBackend};
 use crate::repo::{IndexFile, IndexPack};
 
@@ -13,14 +15,14 @@ impl<BE: ReadBackend> AllIndexFiles<BE> {
 }
 
 impl<BE: ReadBackend> AllIndexFiles<BE> {
-    pub fn into_iter(self) -> impl Iterator<Item = IndexPack> {
-        self.be
-            .list(FileType::Index)
-            .unwrap()
+    pub fn into_iter(self) -> Result<impl Iterator<Item = IndexPack>> {
+        Ok(self
+            .be
+            .list(FileType::Index)?
             .into_iter()
             .flat_map(move |id| {
-                let (_, packs) = IndexFile::from_backend(&self.be, id).unwrap().dissolve();
+                let (_, packs) = IndexFile::from_backend(&self.be, &id).unwrap().dissolve();
                 packs
-            })
+            }))
     }
 }

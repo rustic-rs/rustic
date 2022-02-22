@@ -20,8 +20,8 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
             .remove(0)
     })?;
 
-    let snap = SnapshotFile::from_backend(be, id)?;
-    let index = IndexBackend::new(be);
+    let snap = SnapshotFile::from_backend(be, &id)?;
+    let index = IndexBackend::new(be)?;
 
     for (path, _) in tree_iterator(&index, vec![snap.tree]) {
         println!("{:?} ", path);

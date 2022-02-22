@@ -14,7 +14,7 @@ pub struct ConfigFile {
 
 impl ConfigFile {
     pub fn from_backend_no_id<B: ReadBackend>(b: &B) -> Result<Self> {
-        let data = b.read_full(FileType::Config, Id::default())?;
+        let data = b.read_full(FileType::Config, &Id::default())?;
         Ok(serde_json::from_slice::<ConfigFile>(&data)?)
     }
 }

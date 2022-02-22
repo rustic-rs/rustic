@@ -36,12 +36,12 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
             .remove(0)
     })?;
 
-    let snap = SnapshotFile::from_backend(be, id)?;
+    let snap = SnapshotFile::from_backend(be, &id)?;
 
     let dest = LocalBackend::new(&opts.dest);
 
     println!("reading index...");
-    let index = IndexBackend::new(be);
+    let index = IndexBackend::new(be)?;
 
     println!("1st tree walk: allocating dirs/files and collecting restore information...");
     let file_infos = allocate_and_collect(&dest, &index, snap.tree, &opts)?;
@@ -129,7 +129,7 @@ fn restore_contents(
     for (pack, blob) in restore_info {
         for (bl, fls) in blob {
             // read pack at blob_offset with length blob_length
-            let data = be.read_partial(FileType::Pack, pack, bl.offset, bl.length)?;
+            let data = be.read_partial(FileType::Pack, &pack, bl.offset, bl.length)?;
             for fl in fls {
                 // save in file at file_start
                 if !opts.dry_run {

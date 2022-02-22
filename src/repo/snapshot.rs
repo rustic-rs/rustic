@@ -55,10 +55,10 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend
-    pub fn from_backend<B: ReadBackend>(be: &B, id: Id) -> Result<Self> {
+    pub fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
         let data = be.read_full(FileType::Snapshot, id)?;
         let mut snap: Self = serde_json::from_slice(&data)?;
-        snap.set_id(id);
+        snap.set_id(*id);
         Ok(snap)
     }
 
@@ -66,7 +66,7 @@ impl SnapshotFile {
     pub fn all_from_backend<B: ReadBackend>(be: &B) -> Result<Vec<Self>> {
         let snapshots: Vec<_> = be
             .list(FileType::Snapshot)?
-            .into_iter()
+            .iter()
             .map(|id| SnapshotFile::from_backend(be, id))
             .collect::<Result<_, _>>()?;
         Ok(snapshots)

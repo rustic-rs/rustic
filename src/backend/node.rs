@@ -1,5 +1,7 @@
+use std::ffi::OsString;
 use std::fmt::Debug;
 
+use anyhow::Result;
 use chrono::{DateTime, Local};
 use derive_getters::Getters;
 use derive_more::{Constructor, IsVariant};
@@ -55,23 +57,23 @@ pub struct Metadata {
 }
 
 impl Node {
-    pub fn from_content(name: String, content: Vec<Id>, _size: u64) -> Self {
-        Self {
-            name,
+    pub fn from_content(name: OsString, content: Vec<Id>, _size: u64) -> Result<Self> {
+        Ok(Self {
+            name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::File,
             content,
             subtree: None,
             meta: Metadata::default(),
-        }
+        })
     }
 
-    pub fn from_tree(name: String, id: Id) -> Self {
-        Self {
-            name,
+    pub fn from_tree(name: OsString, id: Id) -> Result<Self> {
+        Ok(Self {
+            name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::Dir,
             content: Vec::new(),
             subtree: Some(id),
             meta: Metadata::default(),
-        }
+        })
     }
 }

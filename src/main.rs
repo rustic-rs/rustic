@@ -1,5 +1,6 @@
 use anyhow::Result;
 
+mod archiver;
 mod backend;
 mod blob;
 mod chunker;

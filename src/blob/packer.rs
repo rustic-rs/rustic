@@ -19,7 +19,7 @@ const MAX_SIZE: u32 = 4 * MB;
 const MAX_COUNT: u32 = 10_000;
 const MAX_AGE: Duration = Duration::from_secs(300);
 
-pub struct Packer<BE: DecryptWriteBackend, C: CryptoKey> {
+pub struct Packer<BE: DecryptWriteBackend> {
     be: BE,
     file: File,
     size: u32,
@@ -28,11 +28,10 @@ pub struct Packer<BE: DecryptWriteBackend, C: CryptoKey> {
     index: IndexPack,
     indexer: SharedIndexer<BE>,
     hasher: Hasher,
-    key: C,
 }
 
-impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
-    pub fn new(be: BE, indexer: SharedIndexer<BE>, key: C) -> Result<Self> {
+impl<BE: DecryptWriteBackend> Packer<BE> {
+    pub fn new(be: BE, indexer: SharedIndexer<BE>) -> Result<Self> {
         Ok(Self {
             be,
             file: tempfile()?,
@@ -42,7 +41,6 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
             index: IndexPack::new(),
             indexer,
             hasher: Hasher::new(),
-            key,
         })
     }
 
@@ -77,7 +75,8 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
 
         let offset = self.size;
         let data = self
-            .key
+            .be
+            .key()
             .encrypt_data(data)
             .map_err(|_| anyhow!("crypto error"))?;
         let len = self.write_data(&data)?;
@@ -119,7 +118,8 @@ impl<BE: DecryptWriteBackend, C: CryptoKey> Packer<BE, C> {
         // encrypt and write to pack file
         let data = writer.into_inner();
         let data = self
-            .key
+            .be
+            .key()
             .encrypt_data(&data)
             .map_err(|_| anyhow!("crypto error"))?;
         let headerlen = data.len();

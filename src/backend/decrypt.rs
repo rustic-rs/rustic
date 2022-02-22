@@ -6,7 +6,7 @@ use super::{FileType, Id, ReadBackend, WriteBackend};
 use crate::crypto::{hash, CryptoKey};
 
 pub trait DecryptWriteBackend: WriteBackend {
-    type Key;
+    type Key: CryptoKey;
     fn key(&self) -> &Self::Key;
 }
 

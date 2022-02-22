@@ -10,13 +10,13 @@ use anyhow::Result;
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Node, Packer, Tree};
 use crate::chunker::ChunkIter;
-use crate::crypto::{hash, CryptoKey};
+use crate::crypto::hash;
 use crate::index::{Indexer, ReadIndex};
 use crate::repo::{SnapshotFile, TagList};
 
 pub type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
 
-pub struct Archiver<BE: DecryptWriteBackend, C: CryptoKey, I: ReadIndex> {
+pub struct Archiver<BE: DecryptWriteBackend, I: ReadIndex> {
     path: PathBuf,
     tree: Tree,
     names: Vec<OsString>,
@@ -26,13 +26,13 @@ pub struct Archiver<BE: DecryptWriteBackend, C: CryptoKey, I: ReadIndex> {
     be: BE,
     index: I,
     indexer: SharedIndexer<BE>,
-    data_packer: Packer<BE, C>,
-    tree_packer: Packer<BE, C>,
+    data_packer: Packer<BE>,
+    tree_packer: Packer<BE>,
     poly: u64,
 }
 
-impl<BE: DecryptWriteBackend, C: CryptoKey, I: ReadIndex> Archiver<BE, C, I> {
-    pub fn new(be: BE, key: C, index: I, poly: u64) -> Result<Self> {
+impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
+    pub fn new(be: BE, index: I, poly: u64) -> Result<Self> {
         let indexer = Rc::new(RefCell::new(Indexer::new(be.clone())));
         Ok(Self {
             path: PathBuf::from("/"),
@@ -42,8 +42,8 @@ impl<BE: DecryptWriteBackend, C: CryptoKey, I: ReadIndex> Archiver<BE, C, I> {
             size: 0,
             count: 0,
             index,
-            data_packer: Packer::new(be.clone(), indexer.clone(), key.clone())?,
-            tree_packer: Packer::new(be.clone(), indexer.clone(), key.clone())?,
+            data_packer: Packer::new(be.clone(), indexer.clone())?,
+            tree_packer: Packer::new(be.clone(), indexer.clone())?,
             poly,
             be,
             indexer,

@@ -7,7 +7,6 @@ use path_absolutize::*;
 
 use crate::archiver::Archiver;
 use crate::backend::{DecryptWriteBackend, ReadBackend};
-use crate::crypto::Key;
 use crate::index::{AllIndexFiles, BoomIndex};
 use crate::repo::ConfigFile;
 
@@ -17,17 +16,13 @@ pub(super) struct Opts {
     sources: Vec<String>,
 }
 
-pub(super) fn execute(
-    opts: Opts,
-    be: &(impl ReadBackend + DecryptWriteBackend),
-    key: &Key,
-) -> Result<()> {
+pub(super) fn execute(opts: Opts, be: &(impl ReadBackend + DecryptWriteBackend)) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
     let path = PathBuf::from(&opts.sources[0]);
     let path = path.absolutize()?;
-    backup_file(path.into(), &poly, be, key)?;
+    backup_file(path.into(), &poly, be)?;
     Ok(())
 }
 
@@ -35,12 +30,10 @@ fn backup_file(
     backup_path: PathBuf,
     poly: &u64,
     be: &(impl ReadBackend + DecryptWriteBackend),
-    key: &Key,
 ) -> Result<()> {
     println! {"reading index..."}
     let index: BoomIndex = AllIndexFiles::new(be.clone()).into_iter().collect();
-
-    let mut archiver = Archiver::new(be.clone(), key.clone(), index, *poly)?;
+    let mut archiver = Archiver::new(be.clone(), index, *poly)?;
 
     let mut wb = WalkBuilder::new(backup_path.clone());
     /*
@@ -52,7 +45,6 @@ fn backup_file(
 
     for entry in wb.build() {
         let entry = entry?;
-        // TODO
         let name = entry.file_name().to_os_string();
         let file_type = entry.file_type().unwrap();
         println!("entry: {:?}", entry.path());

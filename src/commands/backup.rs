@@ -16,6 +16,10 @@ use crate::repo::ConfigFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {
+    /// save access time for files and directories
+    #[clap(long)]
+    with_atime: bool,
+
     /// backup sources
     sources: Vec<String>,
 }
@@ -26,11 +30,16 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
     let path = PathBuf::from(&opts.sources[0]);
     let path = path.absolutize()?;
-    backup_file(path.into(), &poly, be)?;
+    backup(path.into(), &poly, be, opts)?;
     Ok(())
 }
 
-fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -> Result<()> {
+fn backup(
+    backup_path: PathBuf,
+    poly: &u64,
+    be: &impl DecryptFullBackend,
+    opts: Opts,
+) -> Result<()> {
     println! {"reading index..."}
     let index = IndexBackend::new(be)?;
     let mut archiver = Archiver::new(be.clone(), index, *poly)?;
@@ -51,7 +60,12 @@ fn backup_file(backup_path: PathBuf, poly: &u64, be: &impl DecryptFullBackend) -
         let meta = Metadata::new(
             m.len(),
             m.modified().ok().map(|t| t.into()),
-            m.accessed().ok().map(|t| t.into()),
+            if opts.with_atime {
+                m.accessed().ok().map(|t| t.into())
+            } else {
+                // TODO: Use None here?
+                m.modified().ok().map(|t| t.into())
+            },
             m.created().ok().map(|t| t.into()),
             m.mode(),
             m.uid(),

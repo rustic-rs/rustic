@@ -30,7 +30,7 @@ serde-aux = "3"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
 # index
-boomphf = "0.5"
+boomphf = {version = "0.5", optional = true}
 # local backend
 walkdir = "2"
 ignore = "0.4"

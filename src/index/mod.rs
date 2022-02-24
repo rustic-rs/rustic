@@ -7,11 +7,17 @@ use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
 use crate::id::Id;
 
+#[cfg(feature = "boomphf")]
 mod boom;
+#[cfg(not(feature = "boomphf"))]
+mod hashmap;
 mod indexer;
 mod indexfiles;
 
-use boom::*;
+#[cfg(feature = "boomphf")]
+use boom::BoomIndex;
+#[cfg(not(feature = "boomphf"))]
+use hashmap::HashMapIndex;
 pub use indexer::*;
 pub use indexfiles::*;
 
@@ -50,17 +56,20 @@ pub trait IndexedBackend: ReadIndex {
 }
 
 #[derive(Delegate)]
-#[delegate(ReadIndex, target = "boom")]
+#[delegate(ReadIndex, target = "index")]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
-    boom: BoomIndex,
+    #[cfg(feature = "boomphf")]
+    index: BoomIndex,
+    #[cfg(not(feature = "boomphf"))]
+    index: HashMapIndex,
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub fn new(be: &BE) -> Result<Self> {
         Ok(Self {
             be: be.clone(),
-            boom: AllIndexFiles::new(be.clone()).into_iter()?.collect(),
+            index: AllIndexFiles::new(be.clone()).into_iter()?.collect(),
         })
     }
 }

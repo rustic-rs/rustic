@@ -1,11 +1,12 @@
 use std::fs::{read_link, File};
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use chrono::{TimeZone, Utc};
 use clap::Parser;
-use ignore::WalkBuilder;
+use ignore::{DirEntry, WalkBuilder};
 use path_absolutize::*;
 
 use crate::archiver::Archiver;
@@ -52,42 +53,48 @@ fn backup(
     */
     wb.follow_links(false).hidden(false);
 
-    for entry in wb.build() {
-        let entry = entry?;
-        let name = entry.file_name().to_os_string();
-        let m = entry.metadata()?;
+    let nodes = wb.build().map(|entry| map_entry(entry?, opts.with_atime));
 
-        let meta = Metadata::new(
-            m.len(),
-            m.modified().ok().map(|t| t.into()),
-            if opts.with_atime {
-                m.accessed().ok().map(|t| t.into())
-            } else {
-                // TODO: Use None here?
-                m.modified().ok().map(|t| t.into())
-            },
-            m.created().ok().map(|t| t.into()),
-            m.mode(),
-            m.uid(),
-            m.gid(),
-            "".to_string(),
-            "".to_string(),
-            m.ino(),
-            m.dev(),
-            m.nlink(),
-        );
-        let (node, r) = if m.is_dir() {
-            (Node::new_dir(name, meta), None)
-        } else if m.is_symlink() {
-            let target = read_link(entry.path())?;
-            (Node::new_symlink(name, target, meta), None)
-        } else {
-            let f = File::open(&entry.path())?;
-            (Node::new_file(name, meta), Some(BufReader::new(f)))
-        };
-        archiver.add_entry(entry.path(), node, r)?;
+    for res in nodes {
+        let (path, node, r) = res?;
+        archiver.add_entry(&path, node, r)?;
     }
     archiver.finalize_snapshot(backup_path)?;
 
     Ok(())
+}
+
+fn map_entry(entry: DirEntry, with_atime: bool) -> Result<(PathBuf, Node, Option<impl BufRead>)> {
+    let name = entry.file_name().to_os_string();
+    let m = entry.metadata()?;
+
+    let meta = Metadata::new(
+        m.len(),
+        m.modified().ok().map(|t| t.into()),
+        if with_atime {
+            m.accessed().ok().map(|t| t.into())
+        } else {
+            // TODO: Use None here?
+            m.modified().ok().map(|t| t.into())
+        },
+        Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into()),
+        m.mode(),
+        m.uid(),
+        m.gid(),
+        "".to_string(),
+        "".to_string(),
+        m.ino(),
+        m.dev(),
+        m.nlink(),
+    );
+    let (node, r) = if m.is_dir() {
+        (Node::new_dir(name, meta), None)
+    } else if m.is_symlink() {
+        let target = read_link(entry.path())?;
+        (Node::new_symlink(name, target, meta), None)
+    } else {
+        let f = File::open(&entry.path())?;
+        (Node::new_file(name, meta), Some(BufReader::new(f)))
+    };
+    Ok((entry.path().to_path_buf(), node, r))
 }

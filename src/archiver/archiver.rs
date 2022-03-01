@@ -9,15 +9,18 @@ use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
-use crate::index::{Indexer, ReadIndex};
+use crate::index::{IndexedBackend, Indexer};
 use crate::repo::{SnapshotFile, TagList};
 
-pub type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
+use super::Parent;
 
-pub struct Archiver<BE: DecryptWriteBackend, I: ReadIndex> {
+type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
+
+pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     path: PathBuf,
     tree: Tree,
-    stack: Vec<(Node, Tree)>,
+    parent: Parent<I>,
+    stack: Vec<(Node, Tree, Parent<I>)>,
     size: u64,
     count: u64,
     be: BE,
@@ -28,12 +31,13 @@ pub struct Archiver<BE: DecryptWriteBackend, I: ReadIndex> {
     poly: u64,
 }
 
-impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
-    pub fn new(be: BE, index: I, poly: u64) -> Result<Self> {
+impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
+    pub fn new(be: BE, index: I, poly: u64, parent: Parent<I>) -> Result<Self> {
         let indexer = Rc::new(RefCell::new(Indexer::new(be.clone())));
         Ok(Self {
             path: PathBuf::from("/"),
             tree: Tree::new(),
+            parent: parent,
             stack: Vec::new(),
             size: 0,
             count: 0,
@@ -68,13 +72,17 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
             self.path.push(p);
             let tree = std::mem::replace(&mut self.tree, Tree::new());
             if self.path == path {
-                self.stack.push((node, tree));
+                // use Node and return
+                let new_parent = self.parent.sub_parent(&node);
+                let parent = std::mem::replace(&mut self.parent, new_parent);
+                self.stack.push((node, tree, parent));
                 return Ok(());
             } else {
-                self.stack
-                    .push((Node::new_dir(p.to_os_string(), Metadata::default()), tree));
-            }
-
+                let node = Node::new_dir(p.to_os_string(), Metadata::default());
+                let new_parent = self.parent.sub_parent(&node);
+                let parent = std::mem::replace(&mut self.parent, new_parent);
+                self.stack.push((node, tree, parent));
+            };
             println!("add tree {:?}, path: {:?}", p, self.path);
         }
 
@@ -99,10 +107,11 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
                 self.tree_packer.add(&chunk, &id, BlobType::Tree)?;
             }
 
-            let (mut node, tree) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
+            let (mut node, tree, parent) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
             println!("finishing tree: {:?}", node.name());
             node.set_subtree(id);
             self.tree = tree;
+            self.parent = parent;
             self.add_node(node, dirsize);
             self.path.pop();
         }
@@ -110,6 +119,13 @@ impl<BE: DecryptWriteBackend, I: ReadIndex> Archiver<BE, I> {
     }
 
     pub fn backup_file(&mut self, node: Node, reader: impl BufRead) -> Result<()> {
+        if let Some(p_node) = self.parent.is_parent(&node) {
+            println!("using parent!");
+            let size = *p_node.meta().size();
+            let node = p_node.clone();
+            self.add_node(node, size);
+            return Ok(());
+        }
         let chunk_iter = ChunkIter::new(reader, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;

@@ -9,12 +9,12 @@ use clap::Parser;
 use ignore::{DirEntry, WalkBuilder};
 use path_absolutize::*;
 
-use crate::archiver::Archiver;
-use crate::backend::DecryptFullBackend;
+use crate::archiver::{Archiver, Parent};
+use crate::backend::{DecryptFullBackend, FileType};
 use crate::blob::{Metadata, Node};
+use crate::id::Id;
 use crate::index::IndexBackend;
-use crate::repo::ConfigFile;
-
+use crate::repo::{ConfigFile, SnapshotFile};
 #[derive(Parser)]
 pub(super) struct Opts {
     /// save access time for files and directories
@@ -23,27 +23,35 @@ pub(super) struct Opts {
 
     /// backup sources
     sources: Vec<String>,
+
+    /// snapshot to use as parent
+    #[clap(long)]
+    parent: Option<String>,
 }
 
 pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
-    let path = PathBuf::from(&opts.sources[0]);
-    let path = path.absolutize()?;
-    backup(path.into(), &poly, be, opts)?;
-    Ok(())
-}
+    let backup_path = PathBuf::from(&opts.sources[0]);
+    let backup_path = backup_path.absolutize()?;
 
-fn backup(
-    backup_path: PathBuf,
-    poly: &u64,
-    be: &impl DecryptFullBackend,
-    opts: Opts,
-) -> Result<()> {
     println! {"reading index..."}
     let index = IndexBackend::new(be)?;
-    let mut archiver = Archiver::new(be.clone(), index, *poly)?;
+    let parent_tree = match opts.parent {
+        None => None,
+        Some(parent) => {
+            let id = Id::from_hex(&parent).or_else(|_| {
+                // if the given id param is not a full Id, search for a suitable one
+                be.find_starts_with(FileType::Snapshot, &[&parent])?
+                    .remove(0)
+            })?;
+            let snap = SnapshotFile::from_backend(be, &id)?;
+            Some(snap.tree)
+        }
+    };
+    let parent = Parent::new(&index, parent_tree.as_ref());
+    let mut archiver = Archiver::new(be.clone(), index, poly, parent)?;
 
     let mut wb = WalkBuilder::new(backup_path.clone());
     /*
@@ -59,7 +67,7 @@ fn backup(
         let (path, node, r) = res?;
         archiver.add_entry(&path, node, r)?;
     }
-    archiver.finalize_snapshot(backup_path)?;
+    archiver.finalize_snapshot(backup_path.to_path_buf())?;
 
     Ok(())
 }
@@ -93,6 +101,7 @@ fn map_entry(entry: DirEntry, with_atime: bool) -> Result<(PathBuf, Node, Option
         let target = read_link(entry.path())?;
         (Node::new_symlink(name, target, meta), None)
     } else {
+        // TODO: lazily open file! - might be contained in parent
         let f = File::open(&entry.path())?;
         (Node::new_file(name, meta), Some(BufReader::new(f)))
     };

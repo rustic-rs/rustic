@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use ambassador::{delegatable_trait, Delegate};
 use anyhow::Result;
 use derive_getters::{Dissolve, Getters};
@@ -45,7 +47,7 @@ pub trait ReadIndex {
     }
 }
 
-pub trait IndexedBackend: ReadIndex {
+pub trait IndexedBackend: Clone + ReadIndex {
     type Backend: DecryptReadBackend;
 
     fn be(&self) -> &Self::Backend;
@@ -55,21 +57,21 @@ pub trait IndexedBackend: ReadIndex {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Clone, Delegate)]
 #[delegate(ReadIndex, target = "index")]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
     #[cfg(feature = "boomphf")]
-    index: BoomIndex,
+    index: Rc<BoomIndex>,
     #[cfg(not(feature = "boomphf"))]
-    index: HashMapIndex,
+    index: Rc<HashMapIndex>,
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub fn new(be: &BE) -> Result<Self> {
         Ok(Self {
             be: be.clone(),
-            index: AllIndexFiles::new(be.clone()).into_iter()?.collect(),
+            index: Rc::new(AllIndexFiles::new(be.clone()).into_iter()?.collect()),
         })
     }
 }

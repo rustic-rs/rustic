@@ -3,6 +3,7 @@ use std::mem;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
+use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
@@ -10,7 +11,7 @@ use crate::index::IndexedBackend;
 
 use super::Node;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Tree {
     nodes: Vec<Node>,
 }

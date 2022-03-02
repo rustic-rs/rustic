@@ -21,19 +21,19 @@ pub(super) struct Opts {
     #[clap(long)]
     with_atime: bool,
 
-    /// backup sources
-    sources: Vec<String>,
-
     /// snapshot to use as parent
     #[clap(long)]
     parent: Option<String>,
+
+    /// backup source
+    source: String,
 }
 
 pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
-    let backup_path = PathBuf::from(&opts.sources[0]);
+    let backup_path = PathBuf::from(&opts.source);
     let backup_path = backup_path.absolutize()?;
 
     println! {"reading index..."}

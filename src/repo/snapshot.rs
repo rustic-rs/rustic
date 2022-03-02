@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
@@ -60,6 +60,41 @@ impl SnapshotFile {
         let mut snap: Self = serde_json::from_slice(&data)?;
         snap.set_id(*id);
         Ok(snap)
+    }
+
+    pub fn from_str<B: ReadBackend>(be: &B, string: &str) -> Result<Self> {
+        match string {
+            "latest" => Self::latest(be),
+            _ => Self::from_id(be, string),
+        }
+    }
+
+    /// Get the latest SnapshotFile from the backend
+    pub fn latest<B: ReadBackend>(be: &B) -> Result<Self> {
+        let mut latest: Option<Self> = None;
+        for snap in be
+            .list(FileType::Snapshot)?
+            .iter()
+            .map(|id| SnapshotFile::from_backend(be, &id))
+        {
+            let snap = snap?;
+            match &latest {
+                Some(l) if l.time > snap.time => {}
+                _ => {
+                    latest = Some(snap);
+                }
+            }
+        }
+        latest.ok_or_else(|| anyhow!("no snapshots found"))
+    }
+
+    /// Get a SnapshotFile from the backend by (part of the) id
+    pub fn from_id<B: ReadBackend>(be: &B, id: &str) -> Result<Self> {
+        let id = Id::from_hex(id).or_else(|_| {
+            // if the given id param is not a full Id, search for a suitable one
+            be.find_starts_with(FileType::Snapshot, &[id])?.remove(0)
+        })?;
+        SnapshotFile::from_backend(be, &id)
     }
 
     /// Get all SnapshotFiles from the backend

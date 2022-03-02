@@ -21,6 +21,10 @@ pub(super) struct Opts {
     #[clap(long, short = 'n')]
     dry_run: bool,
 
+    /// TODO: remove files/dirs destination which are not contained in snapshot
+    #[clap(long)]
+    delete: bool,
+
     /// snapshot to restore
     id: String,
 
@@ -30,13 +34,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     println!("getting snapshot...");
-    let id = Id::from_hex(&opts.id).or_else(|_| {
-        // if the given id param is not a full Id, search for a suitable one
-        be.find_starts_with(FileType::Snapshot, &[&opts.id])?
-            .remove(0)
-    })?;
-
-    let snap = SnapshotFile::from_backend(be, &id)?;
+    let snap = SnapshotFile::from_str(be, &opts.id)?;
 
     let dest = LocalBackend::new(&opts.dest);
 

@@ -10,9 +10,8 @@ use ignore::{DirEntry, WalkBuilder};
 use path_absolutize::*;
 
 use crate::archiver::{Archiver, Parent};
-use crate::backend::{DecryptFullBackend, FileType};
+use crate::backend::DecryptFullBackend;
 use crate::blob::{Metadata, Node};
-use crate::id::Id;
 use crate::index::IndexBackend;
 use crate::repo::{ConfigFile, SnapshotFile};
 #[derive(Parser)]
@@ -41,12 +40,8 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let parent_tree = match opts.parent {
         None => None,
         Some(parent) => {
-            let id = Id::from_hex(&parent).or_else(|_| {
-                // if the given id param is not a full Id, search for a suitable one
-                be.find_starts_with(FileType::Snapshot, &[&parent])?
-                    .remove(0)
-            })?;
-            let snap = SnapshotFile::from_backend(be, &id)?;
+            let snap = SnapshotFile::from_str(be, &parent)?;
+            println!("using parent {}", snap.id);
             Some(snap.tree)
         }
     };

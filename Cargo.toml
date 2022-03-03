@@ -36,6 +36,7 @@ walkdir = "2"
 ignore = "0.4"
 # commands
 gethostname = "0.2"
+users = "0.11"
 bytesize = "1"
 clap = { version = "3", features = ["derive"] }
 rpassword = "5"

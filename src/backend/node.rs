@@ -52,10 +52,10 @@ pub struct Metadata {
     uid: u32,
     #[serde(default, skip_serializing_if = "is_default")]
     gid: u32,
-    #[serde(default, skip_serializing_if = "is_default")]
-    user: String,
-    #[serde(default, skip_serializing_if = "is_default")]
-    group: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    user: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    group: Option<String>,
     #[serde(default, skip_serializing_if = "is_default")]
     inode: u64,
     #[serde(default, skip_serializing_if = "is_default")]

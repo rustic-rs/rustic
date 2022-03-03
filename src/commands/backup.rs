@@ -2,13 +2,14 @@ use gethostname::gethostname;
 use std::fs::{read_link, File};
 use std::io::{BufRead, BufReader};
 use std::os::unix::fs::MetadataExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use ignore::{DirEntry, WalkBuilder};
 use path_absolutize::*;
+use users::{cache::UsersCache, Groups, Users};
 
 use crate::archiver::{Archiver, Parent};
 use crate::backend::DecryptFullBackend;
@@ -67,9 +68,15 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         wb.add(path);
     }
     */
-    wb.follow_links(false).hidden(false);
+    wb.follow_links(false)
+        .hidden(false)
+        .sort_by_file_path(Path::cmp);
 
-    let nodes = wb.build().map(|entry| map_entry(entry?, opts.with_atime));
+    let cache = UsersCache::new();
+
+    let nodes = wb
+        .build()
+        .map(|entry| map_entry(entry?, opts.with_atime, &cache));
 
     for res in nodes {
         let (path, node, r) = res?;
@@ -80,9 +87,16 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     Ok(())
 }
 
-fn map_entry(entry: DirEntry, with_atime: bool) -> Result<(PathBuf, Node, Option<impl BufRead>)> {
+fn map_entry(
+    entry: DirEntry,
+    with_atime: bool,
+    cache: &UsersCache,
+) -> Result<(PathBuf, Node, Option<impl BufRead>)> {
     let name = entry.file_name().to_os_string();
     let m = entry.metadata()?;
+
+    let uid = m.uid();
+    let gid = m.gid();
 
     let meta = Metadata::new(
         m.len(),
@@ -95,10 +109,14 @@ fn map_entry(entry: DirEntry, with_atime: bool) -> Result<(PathBuf, Node, Option
         },
         Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into()),
         m.mode(),
-        m.uid(),
-        m.gid(),
-        "".to_string(),
-        "".to_string(),
+        uid,
+        gid,
+        cache
+            .get_user_by_uid(uid)
+            .map(|u| u.name().to_str().unwrap().to_string()),
+        cache
+            .get_group_by_gid(gid)
+            .map(|g| g.name().to_str().unwrap().to_string()),
         m.ino(),
         m.dev(),
         m.nlink(),

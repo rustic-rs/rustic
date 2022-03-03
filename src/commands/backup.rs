@@ -1,9 +1,10 @@
+use gethostname::gethostname;
 use std::fs::{read_link, File};
 use std::io::{BufRead, BufReader};
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use ignore::{DirEntry, WalkBuilder};
@@ -34,17 +35,29 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
     let backup_path = PathBuf::from(&opts.source);
     let backup_path = backup_path.absolutize()?;
+    let backup_path_str = backup_path
+        .to_str()
+        .ok_or(anyhow!("non-unicode path {:?}", backup_path))?
+        .to_string();
 
-    println! {"reading index..."}
-    let index = IndexBackend::new(be)?;
-    let parent_tree = match opts.parent {
-        None => None,
-        Some(parent) => {
-            let snap = SnapshotFile::from_str(be, &parent)?;
+    let parent = match opts.parent {
+        None => SnapshotFile::latest(be, |snap| snap.paths.contains(&backup_path_str)).ok(),
+        Some(parent) => SnapshotFile::from_id(be, &parent).ok(),
+    };
+    let parent_tree = match parent {
+        Some(snap) => {
             println!("using parent {}", snap.id);
             Some(snap.tree)
         }
+        None => {
+            println!("using no parent");
+            None
+        }
     };
+
+    println! {"reading index..."}
+    let index = IndexBackend::new(be)?;
+
     let parent = Parent::new(&index, parent_tree.as_ref());
     let mut archiver = Archiver::new(be.clone(), index, poly, parent)?;
 
@@ -62,7 +75,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         let (path, node, r) = res?;
         archiver.add_entry(&path, node, r)?;
     }
-    archiver.finalize_snapshot(backup_path.to_path_buf())?;
+    archiver.finalize_snapshot(backup_path.to_path_buf(), gethostname())?;
 
     Ok(())
 }

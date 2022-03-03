@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ffi::OsString;
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -145,7 +146,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub fn finalize_snapshot(&mut self, backup_path: PathBuf) -> Result<()> {
+    pub fn finalize_snapshot(&mut self, backup_path: PathBuf, hostname: OsString) -> Result<()> {
         self.finish_trees(&PathBuf::from("/"))?;
 
         let chunk = self.tree.serialize()?;
@@ -165,7 +166,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 .to_str()
                 .ok_or(anyhow!("non-unicode path {:?}", backup_path))?
                 .to_string()],
-            "host".to_string(),
+            hostname.to_str().unwrap().to_string(),
             "user".to_string(),
             0,
             0,

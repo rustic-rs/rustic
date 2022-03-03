@@ -62,22 +62,30 @@ impl SnapshotFile {
         Ok(snap)
     }
 
-    pub fn from_str<B: ReadBackend>(be: &B, string: &str) -> Result<Self> {
+    pub fn from_str<B: ReadBackend>(
+        be: &B,
+        string: &str,
+        predicate: impl FnMut(&Self) -> bool,
+    ) -> Result<Self> {
         match string {
-            "latest" => Self::latest(be),
+            "latest" => Self::latest(be, predicate),
             _ => Self::from_id(be, string),
         }
     }
 
     /// Get the latest SnapshotFile from the backend
-    pub fn latest<B: ReadBackend>(be: &B) -> Result<Self> {
+    pub fn latest<B: ReadBackend>(be: &B, predicate: impl FnMut(&Self) -> bool) -> Result<Self> {
         let mut latest: Option<Self> = None;
+        let mut pred = predicate;
         for snap in be
             .list(FileType::Snapshot)?
             .iter()
             .map(|id| SnapshotFile::from_backend(be, &id))
         {
             let snap = snap?;
+            if !pred(&snap) {
+                continue;
+            }
             match &latest {
                 Some(l) if l.time > snap.time => {}
                 _ => {

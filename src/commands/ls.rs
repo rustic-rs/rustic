@@ -13,7 +13,7 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    let snap = SnapshotFile::from_str(be, &opts.id)?;
+    let snap = SnapshotFile::from_str(be, &opts.id, |_| true)?;
     let index = IndexBackend::new(be)?;
 
     let tree_iter = tree_iterator(&index, vec![snap.tree])?.filter_map(Result::ok);

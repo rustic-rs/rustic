@@ -34,7 +34,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     println!("getting snapshot...");
-    let snap = SnapshotFile::from_str(be, &opts.id)?;
+    let snap = SnapshotFile::from_str(be, &opts.id, |_| true)?;
 
     let dest = LocalBackend::new(&opts.dest);
 

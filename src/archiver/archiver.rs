@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
+use bytesize::ByteSize;
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
@@ -13,7 +14,7 @@ use crate::crypto::hash;
 use crate::index::{IndexedBackend, Indexer};
 use crate::repo::{SnapshotFile, TagList};
 
-use super::Parent;
+use super::{Parent, ParentResult};
 
 type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
 
@@ -22,14 +23,20 @@ pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     tree: Tree,
     parent: Parent<I>,
     stack: Vec<(Node, Tree, Parent<I>)>,
-    size: u64,
-    count: u64,
-    be: BE,
     index: I,
     indexer: SharedIndexer<BE>,
     data_packer: Packer<BE>,
     tree_packer: Packer<BE>,
+    be: BE,
     poly: u64,
+    size: u64,
+    count: u64,
+    files_new: u64,
+    files_changed: u64,
+    files_unmodified: u64,
+    data_blobs_written: u64,
+    tree_blobs_written: u64,
+    data_added: u64,
 }
 
 impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
@@ -40,14 +47,20 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             tree: Tree::new(),
             parent: parent,
             stack: Vec::new(),
-            size: 0,
-            count: 0,
             index,
             data_packer: Packer::new(be.clone(), indexer.clone())?,
             tree_packer: Packer::new(be.clone(), indexer.clone())?,
-            poly,
             be,
+            poly,
             indexer,
+            size: 0,
+            count: 0,
+            files_new: 0,
+            files_changed: 0,
+            files_unmodified: 0,
+            data_blobs_written: 0,
+            tree_blobs_written: 0,
+            data_added: 0,
         })
     }
 
@@ -74,22 +87,20 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let tree = std::mem::replace(&mut self.tree, Tree::new());
             if self.path == path {
                 // use Node and return
-                let new_parent = self.parent.sub_parent(&node);
+                let new_parent = self.parent.sub_parent(&node)?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));
                 return Ok(());
             } else {
                 let node = Node::new_dir(p.to_os_string(), Metadata::default());
-                let new_parent = self.parent.sub_parent(&node);
+                let new_parent = self.parent.sub_parent(&node)?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));
             };
-            println!("add tree {:?}, path: {:?}", p, self.path);
         }
 
         match node.node_type() {
             NodeType::File if r.is_some() => {
-                println!("add file {:?}, path: {:?}", node.name(), self.path);
                 self.backup_file(node, r.unwrap())?;
             }
             NodeType::Dir => {}          // is already handled, see above
@@ -104,12 +115,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let chunk = self.tree.serialize()?;
             let id = hash(&chunk);
             let dirsize: u64 = chunk.len().try_into()?;
+
             if !self.index.has(&id) {
-                self.tree_packer.add(&chunk, &id, BlobType::Tree)?;
+                if self.tree_packer.add(&chunk, &id, BlobType::Tree)? {
+                    self.tree_blobs_written += 1;
+                    self.data_added += dirsize;
+                    println!(
+                        "new       tree: {:?} {}",
+                        self.path,
+                        ByteSize(dirsize).to_string_as(true)
+                    );
+                } else {
+                    println!("unchanged tree: {:?}", self.path);
+                }
             }
 
             let (mut node, tree, parent) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
-            println!("finishing tree: {:?}", node.name());
             node.set_subtree(id);
             self.tree = tree;
             self.parent = parent;
@@ -120,12 +141,27 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
     }
 
     pub fn backup_file(&mut self, node: Node, reader: impl BufRead) -> Result<()> {
-        if let Some(p_node) = self.parent.is_parent(&node) {
-            println!("using parent!");
-            let size = *p_node.meta().size();
-            let node = p_node.clone();
-            self.add_node(node, size);
-            return Ok(());
+        match self.parent.is_parent(&node) {
+            ParentResult::Matched(p_node) => {
+                println!("unchanged file: {:?} {}", self.path, node.name());
+                self.files_unmodified += 1;
+                if p_node.content().iter().all(|id| self.index.has(id)) {
+                    let size = *p_node.meta().size();
+                    let node = p_node.clone();
+                    self.add_node(node, size);
+                    return Ok(());
+                } else {
+                    eprintln!("missing blobs for node in index!");
+                }
+            }
+            ParentResult::NotMatched => {
+                println!("changed   file: {:?} {}", self.path, node.name());
+                self.files_changed += 1;
+            }
+            ParentResult::NotFound => {
+                println!("new       file: {:?} {}", self.path, node.name());
+                self.files_new += 1;
+            }
         }
         let chunk_iter = ChunkIter::new(reader, &self.poly);
         let mut content = Vec::new();
@@ -136,7 +172,10 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             filesize += chunk.len() as u64;
             let id = hash(&chunk);
             if !self.index.has(&id) {
-                self.data_packer.add(&chunk, &id, BlobType::Data)?;
+                if self.data_packer.add(&chunk, &id, BlobType::Data)? {
+                    self.data_blobs_written += 1;
+                    self.data_added += filesize;
+                }
             }
             content.push(id);
         }
@@ -175,6 +214,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             Some(self.size),
         );
         let id = snap.save_to_backend(&self.be)?;
+
+        println!(
+            "Files:       {} new, {} changed, {} unmodified",
+            self.files_new, self.files_changed, self.files_unmodified
+        );
+        println!("Data Blobs:  {} new", self.data_blobs_written);
+        println!("Tree Blobs:  {} new", self.tree_blobs_written);
+        println!(
+            "Added to the repo: {}",
+            ByteSize(self.data_added).to_string_as(true)
+        );
+        println!(
+            "processed {} nodes, {}",
+            self.count,
+            ByteSize(self.size).to_string_as(true)
+        );
         println!("snapshot {} successfully saved.", id);
         Ok(())
     }

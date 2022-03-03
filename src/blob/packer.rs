@@ -64,13 +64,14 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(len)
     }
 
-    pub fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<()> {
+    // adds the blob to the packfile; returns false if it is already contained
+    pub fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<bool> {
         // only add if this blob is not present
         if self.has(id) {
-            return Ok(());
+            return Ok(false);
         }
         if self.indexer.borrow().has(id) {
-            return Ok(());
+            return Ok(false);
         }
 
         let offset = self.size;
@@ -88,7 +89,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             self.save()?;
             self.reset()?;
         }
-        Ok(())
+        Ok(true)
     }
 
     /// writes header and length of header to packfile

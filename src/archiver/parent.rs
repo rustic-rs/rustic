@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use crate::blob::{Node, Tree};
 use crate::id::Id;
 use crate::index::IndexedBackend;
@@ -7,9 +9,17 @@ pub struct Parent<BE: IndexedBackend> {
     be: BE,
 }
 
+pub enum ParentResult<T> {
+    Matched(T),
+    NotFound,
+    NotMatched,
+}
+
 impl<BE: IndexedBackend> Parent<BE> {
     pub fn new(be: &BE, tree_id: Option<&Id>) -> Self {
-        let tree = tree_id.map(|id| Tree::from_backend(be, id).unwrap());
+        // if tree_id is given, load tre from backend. Turn errors into None.
+        // TODO: print warning when loading failed
+        let tree = tree_id.map(|id| Tree::from_backend(be, id).ok()).flatten();
         Self {
             tree,
             be: be.clone(),
@@ -26,35 +36,38 @@ impl<BE: IndexedBackend> Parent<BE> {
         }
     }
 
-    pub fn is_parent(&self, node: &Node) -> Option<&Node> {
+    pub fn is_parent(&self, node: &Node) -> ParentResult<&Node> {
         match self.p_node(node) {
-            None => None,
+            None => ParentResult::NotFound,
             Some(p_node) => {
                 if p_node.node_type() == node.node_type()
                     && p_node.meta().ctime() == node.meta().ctime()
                     && p_node.meta().inode() > &0
                     && p_node.meta().inode() == node.meta().inode()
-                    && p_node.content().iter().all(|id| self.be.has(id))
                 {
-                    Some(p_node)
+                    ParentResult::Matched(p_node)
                 } else {
-                    None
+                    ParentResult::NotMatched
                 }
             }
         }
     }
 
-    pub fn sub_parent(&self, node: &Node) -> Self {
+    pub fn sub_parent(&self, node: &Node) -> Result<Self> {
         let tree = match self.p_node(node) {
             None => None,
-            Some(p_node) if p_node.node_type() == node.node_type() => {
-                Some(Tree::from_backend(&self.be, &p_node.subtree().unwrap()).unwrap())
+            Some(p_node) => {
+                if p_node.node_type() == node.node_type() {
+                    // TODO: print warning when loading failed
+                    Some(Tree::from_backend(&self.be, &p_node.subtree().unwrap()).ok()).flatten()
+                } else {
+                    None
+                }
             }
-            Some(..) => None,
         };
-        Self {
+        Ok(Self {
             tree,
             be: self.be.clone(),
-        }
+        })
     }
 }

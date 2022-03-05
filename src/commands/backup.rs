@@ -1,4 +1,5 @@
 use gethostname::gethostname;
+use std::ffi::OsString;
 use std::fs::{read_link, File};
 use std::io::{BufRead, BufReader};
 use std::os::unix::fs::MetadataExt;
@@ -26,6 +27,10 @@ pub(super) struct Opts {
     #[clap(long)]
     parent: Option<String>,
 
+    /// use no parent, read all files
+    #[clap(long)]
+    force: bool,
+
     /// backup source
     source: String,
 }
@@ -41,9 +46,14 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path))?
         .to_string();
 
-    let parent = match opts.parent {
-        None => SnapshotFile::latest(be, |snap| snap.paths.contains(&backup_path_str)).ok(),
-        Some(parent) => SnapshotFile::from_id(be, &parent).ok(),
+    let hostname = gethostname();
+    let parent = match (opts.force, opts.parent) {
+        (true, _) => None,
+        (false, None) => SnapshotFile::latest(be, |snap| {
+            OsString::from(&snap.hostname) == hostname && snap.paths.contains(&backup_path_str)
+        })
+        .ok(),
+        (false, Some(parent)) => SnapshotFile::from_id(be, &parent).ok(),
     };
     let parent_tree = match parent {
         Some(snap) => {
@@ -85,7 +95,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
 
     let mut snap = SnapshotFile::default();
     snap.set_paths(vec![backup_path.to_path_buf()]);
-    snap.set_hostname(gethostname());
+    snap.set_hostname(hostname);
     archiver.finalize_snapshot(snap)?;
 
     Ok(())

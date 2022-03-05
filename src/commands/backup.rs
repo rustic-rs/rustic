@@ -38,7 +38,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let backup_path = backup_path.absolutize()?;
     let backup_path_str = backup_path
         .to_str()
-        .ok_or(anyhow!("non-unicode path {:?}", backup_path))?
+        .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path))?
         .to_string();
 
     let parent = match opts.parent {
@@ -82,7 +82,11 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         let (path, node, r) = res?;
         archiver.add_entry(&path, node, r)?;
     }
-    archiver.finalize_snapshot(backup_path.to_path_buf(), gethostname())?;
+
+    let mut snap = SnapshotFile::default();
+    snap.set_paths(vec![backup_path.to_path_buf()]);
+    snap.set_hostname(gethostname());
+    archiver.finalize_snapshot(snap)?;
 
     Ok(())
 }
@@ -98,29 +102,29 @@ fn map_entry(
     let uid = m.uid();
     let gid = m.gid();
 
-    let meta = Metadata::new(
-        m.len(),
-        m.modified().ok().map(|t| t.into()),
-        if with_atime {
+    let meta = Metadata {
+        size: m.len(),
+        mtime: m.modified().ok().map(|t| t.into()),
+        atime: if with_atime {
             m.accessed().ok().map(|t| t.into())
         } else {
             // TODO: Use None here?
             m.modified().ok().map(|t| t.into())
         },
-        Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into()),
-        m.mode(),
+        ctime: Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into()),
+        mode: m.mode(),
         uid,
         gid,
-        cache
+        user: cache
             .get_user_by_uid(uid)
             .map(|u| u.name().to_str().unwrap().to_string()),
-        cache
+        group: cache
             .get_group_by_gid(gid)
             .map(|g| g.name().to_str().unwrap().to_string()),
-        m.ino(),
-        m.dev(),
-        m.nlink(),
-    );
+        inode: m.ino(),
+        device_id: m.dev(),
+        links: m.nlink(),
+    };
     let (node, r) = if m.is_dir() {
         (Node::new_dir(name, meta), None)
     } else if m.is_symlink() {

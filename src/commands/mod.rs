@@ -64,7 +64,7 @@ pub fn execute() -> Result<()> {
 
     let be = LocalBackend::new(&args.repository);
     let key = get_key(&be, args.password_file)?;
-    let dbe = DecryptBackend::new(&be, key.clone());
+    let dbe = DecryptBackend::new(&be, key);
 
     match args.command {
         Command::Backup(opts) => backup::execute(opts, &dbe),

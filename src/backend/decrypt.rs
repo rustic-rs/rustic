@@ -6,7 +6,6 @@ use super::{FileType, Id, ReadBackend, WriteBackend};
 use crate::crypto::{hash, CryptoKey};
 
 pub trait DecryptFullBackend: DecryptWriteBackend + DecryptReadBackend {}
-
 pub trait DecryptReadBackend: ReadBackend {}
 
 pub trait DecryptWriteBackend: WriteBackend {
@@ -81,7 +80,7 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         length: u32,
     ) -> Result<Vec<u8>, Self::Error> {
         self.key
-            .decrypt_data(&self.backend.read_partial(tpe, &id, offset, length)?)
+            .decrypt_data(&self.backend.read_partial(tpe, id, offset, length)?)
             .map_err(RepoError::CryptoError)
     }
 }

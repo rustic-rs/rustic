@@ -58,8 +58,8 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 
     pub fn write_data(&mut self, data: &[u8]) -> Result<u32> {
-        self.hasher.update(&data);
-        let len = self.file.write(&data)?.try_into()?;
+        self.hasher.update(data);
+        let len = self.file.write(data)?.try_into()?;
         self.size += len;
         Ok(len)
     }

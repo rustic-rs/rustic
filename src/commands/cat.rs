@@ -81,7 +81,7 @@ fn cat_blob(be: &impl DecryptReadBackend, opt: IdOpt) -> Result<()> {
         .ok_or(anyhow!("blob not found in index"))?
         .read_data(be)?;
     print!("{}", String::from_utf8_lossy(&dec));
-    return Ok(());
+    Ok(())
 }
 
 fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
@@ -115,5 +115,5 @@ fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
         .read_data(be)?;
     print!("{}", String::from_utf8_lossy(&dec));
 
-    return Ok(());
+    Ok(())
 }

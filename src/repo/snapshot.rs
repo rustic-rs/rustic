@@ -1,3 +1,6 @@
+use std::ffi::OsString;
+use std::path::PathBuf;
+
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
@@ -27,33 +30,25 @@ pub struct SnapshotFile {
     pub id: Id,
 }
 
-impl SnapshotFile {
-    pub fn new(
-        tree: Id,
-        paths: Vec<String>,
-        hostname: String,
-        username: String,
-        uid: u32,
-        gid: u32,
-        tags: TagList,
-        node_count: Option<u64>,
-        size: Option<u64>,
-    ) -> Self {
+impl Default for SnapshotFile {
+    fn default() -> Self {
         Self {
             time: Local::now(),
-            tree,
-            paths,
-            hostname,
-            username,
-            uid,
-            gid,
-            tags,
-            node_count,
-            size,
+            tree: Id::default(),
+            paths: Vec::new(),
+            hostname: String::default(),
+            username: String::default(),
+            uid: 0,
+            gid: 0,
+            tags: TagList::default(),
+            node_count: None,
+            size: None,
             id: Id::default(),
         }
     }
+}
 
+impl SnapshotFile {
     /// Get a SnapshotFile from the backend
     pub fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
         let data = be.read_full(FileType::Snapshot, id)?;
@@ -80,7 +75,7 @@ impl SnapshotFile {
         for snap in be
             .list(FileType::Snapshot)?
             .iter()
-            .map(|id| SnapshotFile::from_backend(be, &id))
+            .map(|id| SnapshotFile::from_backend(be, id))
         {
             let snap = snap?;
             if !pred(&snap) {
@@ -123,6 +118,29 @@ impl SnapshotFile {
 
     pub fn set_id(&mut self, id: Id) {
         self.id = id;
+    }
+
+    pub fn set_tree(&mut self, id: Id) {
+        self.tree = id;
+    }
+
+    pub fn set_size(&mut self, size: u64) {
+        self.size = Some(size);
+    }
+
+    pub fn set_hostname(&mut self, name: OsString) {
+        self.hostname = name.to_str().unwrap().to_string();
+    }
+
+    pub fn set_paths(&mut self, paths: Vec<PathBuf>) {
+        self.paths = paths
+            .into_iter()
+            .map(|path| path.to_str().expect("non-unicode path {:?}").to_string())
+            .collect();
+    }
+
+    pub fn set_count(&mut self, count: u64) {
+        self.node_count = Some(count);
     }
 }
 

@@ -36,32 +36,32 @@ pub enum NodeType {
     Device { device: u64 },
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Constructor, Getters)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]
 pub struct Metadata {
     #[serde(default, skip_serializing_if = "is_default")]
-    size: u64,
+    pub size: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    mtime: Option<DateTime<Local>>,
+    pub mtime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    atime: Option<DateTime<Local>>,
+    pub atime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    ctime: Option<DateTime<Local>>,
+    pub ctime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "is_default")]
-    mode: u32,
+    pub mode: u32,
     #[serde(default, skip_serializing_if = "is_default")]
-    uid: u32,
+    pub uid: u32,
     #[serde(default, skip_serializing_if = "is_default")]
-    gid: u32,
+    pub gid: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    user: Option<String>,
+    pub user: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    group: Option<String>,
+    pub group: Option<String>,
     #[serde(default, skip_serializing_if = "is_default")]
-    inode: u64,
+    pub inode: u64,
     #[serde(default, skip_serializing_if = "is_default")]
-    device_id: u64,
+    pub device_id: u64,
     #[serde(default, skip_serializing_if = "is_default")]
-    links: u64,
+    pub links: u64,
 }
 
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {

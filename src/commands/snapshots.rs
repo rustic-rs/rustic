@@ -21,11 +21,11 @@ pub(super) fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
             let nodes = sn
                 .node_count
                 .map(|c| c.to_string())
-                .unwrap_or("?".to_string());
+                .unwrap_or_else(|| "?".to_string());
             let size = sn
                 .size
                 .map(|b| ByteSize(b).to_string_as(true))
-                .unwrap_or("?".to_string());
+                .unwrap_or_else(|| "?".to_string());
             row![sn.id, time, sn.hostname, "", paths, r->nodes, r->size]
         })
         .collect();

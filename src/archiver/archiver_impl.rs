@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::ffi::OsString;
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -12,7 +11,7 @@ use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::index::{IndexedBackend, Indexer};
-use crate::repo::{SnapshotFile, TagList};
+use crate::repo::SnapshotFile;
 
 use super::{Parent, ParentResult};
 
@@ -45,7 +44,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(Self {
             path: PathBuf::from("/"),
             tree: Tree::new(),
-            parent: parent,
+            parent,
             stack: Vec::new(),
             index,
             data_packer: Packer::new(be.clone(), indexer.clone())?,
@@ -78,7 +77,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 .ok_or(anyhow!("file path should have a parent!"))?
         };
 
-        self.finish_trees(&basepath)?;
+        self.finish_trees(basepath)?;
 
         let missing_dirs = basepath.strip_prefix(&self.path)?;
         for p in missing_dirs.iter() {
@@ -171,11 +170,9 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let chunk = chunk?;
             filesize += chunk.len() as u64;
             let id = hash(&chunk);
-            if !self.index.has(&id) {
-                if self.data_packer.add(&chunk, &id, BlobType::Data)? {
-                    self.data_blobs_written += 1;
-                    self.data_added += filesize;
-                }
+            if !self.index.has(&id) && self.data_packer.add(&chunk, &id, BlobType::Data)? {
+                self.data_blobs_written += 1;
+                self.data_added += filesize;
             }
             content.push(id);
         }
@@ -185,7 +182,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub fn finalize_snapshot(&mut self, backup_path: PathBuf, hostname: OsString) -> Result<()> {
+    pub fn finalize_snapshot(&mut self, mut snap: SnapshotFile) -> Result<()> {
         self.finish_trees(&PathBuf::from("/"))?;
 
         let chunk = self.tree.serialize()?;
@@ -198,21 +195,10 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.tree_packer.finalize()?;
         self.indexer.borrow().finalize()?;
 
-        // save snapshot
-        let snap = SnapshotFile::new(
-            id,
-            vec![backup_path
-                .to_str()
-                .ok_or(anyhow!("non-unicode path {:?}", backup_path))?
-                .to_string()],
-            hostname.to_str().unwrap().to_string(),
-            "user".to_string(),
-            0,
-            0,
-            TagList::default(),
-            Some(self.count),
-            Some(self.size),
-        );
+        snap.set_tree(id);
+        snap.set_size(self.size);
+        snap.set_count(self.count);
+
         let id = snap.save_to_backend(&self.be)?;
 
         println!(

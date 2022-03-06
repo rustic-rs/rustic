@@ -146,7 +146,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 self.files_unmodified += 1;
                 if p_node.content().iter().all(|id| self.index.has(id)) {
                     let size = *p_node.meta().size();
-                    let node = p_node.clone();
+                    let mut node = node;
+                    node.set_content(p_node.content().to_vec());
                     self.add_node(node, size);
                     return Ok(());
                 } else {

@@ -67,7 +67,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     };
 
     println! {"reading index..."}
-    let index = IndexBackend::new(be)?;
+    let index = IndexBackend::only_full_trees(be)?;
 
     let parent = Parent::new(&index, parent_tree.as_ref());
     let mut archiver = Archiver::new(be.clone(), index, poly, parent)?;

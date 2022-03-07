@@ -89,7 +89,7 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
                         println!("file {:?} blob {} has null ID", path, i);
                     }
 
-                    if index.get_id(id).is_none() {
+                    if !index.has_data(id) {
                         println!("file {:?} blob {} is missig in index", path, id);
                     }
                 }

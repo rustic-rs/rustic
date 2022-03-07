@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, BinWrite)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, BinWrite)]
 pub enum BlobType {
     #[serde(rename = "data")]
     #[bw(magic(0u8))]

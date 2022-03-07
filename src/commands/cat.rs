@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
-use crate::blob::Tree;
+use crate::blob::{BlobType, Tree};
 use crate::id::Id;
-use crate::index::{IndexBackend, ReadIndex};
+use crate::index::{IndexBackend, IndexedBackend};
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
@@ -17,7 +17,8 @@ pub(super) struct Opts {
 
 #[derive(Subcommand)]
 enum Command {
-    Blob(IdOpt),
+    TreeBlob(IdOpt),
+    DataBlob(IdOpt),
     Config(IdOpt),
     Index(IdOpt),
     Snapshot(IdOpt),
@@ -53,7 +54,8 @@ pub(super) fn execute(
         // special treatment for catting key files: those need no decryption
         Command::Key(opt) => cat_file(be, FileType::Key, opt),
         // special treatment for catingg blobs: read the index and use it to locate the blob
-        Command::Blob(opt) => cat_blob(dbe, opt),
+        Command::TreeBlob(opt) => cat_blob(dbe, BlobType::Tree, opt),
+        Command::DataBlob(opt) => cat_blob(dbe, BlobType::Data, opt),
         // special treatment for cating a tree within a snapshot
         Command::Tree(opts) => cat_tree(dbe, opts),
     }
@@ -72,15 +74,12 @@ fn cat_file(be: &impl ReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
     Ok(())
 }
 
-fn cat_blob(be: &impl DecryptReadBackend, opt: IdOpt) -> Result<()> {
+fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id)?;
     eprintln!("reading index files..");
     let index = IndexBackend::new(be)?;
-    let dec = index
-        .get_id(&id)
-        .ok_or(anyhow!("blob not found in index"))?
-        .read_data(be)?;
-    print!("{}", String::from_utf8_lossy(&dec));
+    let dec = index.blob_from_backend(&tpe, &id)?;
+    print!("{}", String::from_utf8(dec)?);
     Ok(())
 }
 
@@ -109,11 +108,8 @@ fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
             .unwrap();
     }
 
-    let dec = index
-        .get_id(&id)
-        .ok_or(anyhow!("blob not found in index"))?
-        .read_data(be)?;
-    print!("{}", String::from_utf8_lossy(&dec));
+    let dec = index.blob_from_backend(&BlobType::Tree, &id)?;
+    print!("{}", String::from_utf8(dec)?);
 
     Ok(())
 }

@@ -7,14 +7,13 @@ use crate::repo::IndexPack;
 #[derive(Debug)]
 struct HashMapEntry {
     pack_idx: usize,
-    tpe: BlobType,
     offset: u32,
     length: u32,
 }
 
 pub(super) struct HashMapIndex {
     packs: Vec<Id>,
-    hash: HashMap<Id, HashMapEntry>,
+    hash: HashMap<BlobType, HashMap<Id, HashMapEntry>>,
 }
 
 impl FromIterator<IndexPack> for HashMapIndex {
@@ -23,22 +22,20 @@ impl FromIterator<IndexPack> for HashMapIndex {
         T: IntoIterator<Item = IndexPack>,
     {
         let mut packs = Vec::new();
-        let mut map = HashMap::new();
+        let mut map: HashMap<BlobType, HashMap<_, _>> = HashMap::new();
 
         for i in iter {
             let idx = packs.len();
             packs.push(*i.id());
 
-            let len = i.blobs().len();
-            map.reserve(len);
             for blob in i.blobs() {
                 let be = HashMapEntry {
                     pack_idx: idx,
-                    tpe: *blob.tpe(),
                     offset: *blob.offset(),
                     length: *blob.length(),
                 };
-                map.insert(*blob.id(), be);
+                let entry = map.entry(*blob.tpe()).or_default();
+                entry.insert(*blob.id(), be);
             }
         }
 
@@ -47,9 +44,14 @@ impl FromIterator<IndexPack> for HashMapIndex {
 }
 
 impl ReadIndex for HashMapIndex {
-    fn get_id(&self, id: &Id) -> Option<IndexEntry> {
+    fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry> {
         self.hash
-            .get(id)
-            .map(|be| IndexEntry::new(self.packs[be.pack_idx], be.tpe, be.offset, be.length))
+            .get(tpe)
+            .map(|entry| {
+                entry
+                    .get(id)
+                    .map(|be| IndexEntry::new(self.packs[be.pack_idx], be.offset, be.length))
+            })
+            .flatten()
     }
 }

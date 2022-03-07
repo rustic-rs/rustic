@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use ambassador::{delegatable_trait, Delegate};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use derive_getters::{Dissolve, Getters};
 use derive_more::Constructor;
 
@@ -26,7 +26,6 @@ pub use indexfiles::*;
 #[derive(Debug, Clone, Constructor, Getters, Dissolve)]
 pub struct IndexEntry {
     pack: Id,
-    tpe: BlobType,
     offset: u32,
     length: u32,
 }
@@ -40,10 +39,26 @@ impl IndexEntry {
 
 #[delegatable_trait]
 pub trait ReadIndex {
-    fn get_id(&self, id: &Id) -> Option<IndexEntry>;
+    fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry>;
 
-    fn has(&self, id: &Id) -> bool {
-        self.get_id(id).is_some()
+    fn get_tree(&self, id: &Id) -> Option<IndexEntry> {
+        self.get_id(&BlobType::Tree, id)
+    }
+
+    fn get_data(&self, id: &Id) -> Option<IndexEntry> {
+        self.get_id(&BlobType::Data, id)
+    }
+
+    fn has(&self, tpe: &BlobType, id: &Id) -> bool {
+        self.get_id(tpe, id).is_some()
+    }
+
+    fn has_tree(&self, id: &Id) -> bool {
+        self.has(&BlobType::Tree, id)
+    }
+
+    fn has_data(&self, id: &Id) -> bool {
+        self.has(&BlobType::Data, id)
     }
 }
 
@@ -52,8 +67,10 @@ pub trait IndexedBackend: Clone + ReadIndex {
 
     fn be(&self) -> &Self::Backend;
 
-    fn blob_from_backend(&self, id: &Id) -> Option<Result<Vec<u8>>> {
-        self.get_id(id).map(|ie| ie.read_data(self.be()))
+    fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Vec<u8>> {
+        self.get_id(tpe, id)
+            .map(|ie| ie.read_data(self.be()))
+            .ok_or(anyhow!("blob not found in index"))?
     }
 }
 
@@ -72,6 +89,21 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
         Ok(Self {
             be: be.clone(),
             index: Rc::new(AllIndexFiles::new(be.clone()).into_iter()?.collect()),
+        })
+    }
+
+    #[cfg(not(feature = "boomphf"))]
+    pub fn only_full_trees(be: &BE) -> Result<Self> {
+        Self::new(be)
+    }
+
+    #[cfg(feature = "boomphf")]
+    pub fn only_full_trees(be: &BE) -> Result<Self> {
+        Ok(Self {
+            be: be.clone(),
+            index: Rc::new(BoomIndex::only_full_trees(
+                AllIndexFiles::new(be.clone()).into_iter()?,
+            )),
         })
     }
 }

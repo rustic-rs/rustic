@@ -31,7 +31,7 @@ impl Tree {
 
     pub fn from_backend(be: &impl IndexedBackend, id: &Id) -> Result<Self> {
         let data = be
-            .get_id(id)
+            .get_tree(id)
             .ok_or(anyhow!("blob not found in index"))?
             .read_data(be.be())?;
 

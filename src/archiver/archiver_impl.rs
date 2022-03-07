@@ -115,7 +115,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let id = hash(&chunk);
             let dirsize: u64 = chunk.len().try_into()?;
 
-            if !self.index.has(&id) {
+            if !self.index.has_tree(&id) {
                 if self.tree_packer.add(&chunk, &id, BlobType::Tree)? {
                     self.tree_blobs_written += 1;
                     self.data_added += dirsize;
@@ -144,7 +144,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             ParentResult::Matched(p_node) => {
                 println!("unchanged file: {:?} {}", self.path, node.name());
                 self.files_unmodified += 1;
-                if p_node.content().iter().all(|id| self.index.has(id)) {
+                if p_node.content().iter().all(|id| self.index.has_data(id)) {
                     let size = *p_node.meta().size();
                     let mut node = node;
                     node.set_content(p_node.content().to_vec());
@@ -171,7 +171,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let chunk = chunk?;
             filesize += chunk.len() as u64;
             let id = hash(&chunk);
-            if !self.index.has(&id) && self.data_packer.add(&chunk, &id, BlobType::Data)? {
+            if !self.index.has_data(&id) && self.data_packer.add(&chunk, &id, BlobType::Data)? {
                 self.data_blobs_written += 1;
                 self.data_added += filesize;
             }
@@ -188,7 +188,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         let chunk = self.tree.serialize()?;
         let id = hash(&chunk);
-        if !self.index.has(&id) {
+        if !self.index.has_tree(&id) {
             self.tree_packer.add(&chunk, &id, BlobType::Tree)?;
         }
 

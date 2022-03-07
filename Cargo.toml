@@ -12,11 +12,12 @@ ambassador = "0.2"
 thiserror = "1.0"
 derive_more = "0.99"
 derive-getters = "0.2"
+lazy_static = "1.4"
 #crypto
 aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
 sha2 = "0.10"
 rand = "0.8"
-scrypt = { version = "0.8", default-features = false }
+scrypt = { version = "0.9", default-features = false }
 # chunker
 cdc = "0.1"
 # serialization

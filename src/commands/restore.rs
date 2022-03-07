@@ -200,7 +200,7 @@ impl FileInfos {
             self.names.push(name);
             for id in file.content().iter() {
                 let ie = index
-                    .get_id(id)
+                    .get_data(id)
                     .ok_or_else(|| anyhow!("did not find id {} in index", id))?;
                 let bl = BlobLocation {
                     offset: *ie.offset(),

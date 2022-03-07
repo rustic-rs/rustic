@@ -1,4 +1,3 @@
-use gethostname::gethostname;
 use std::ffi::OsString;
 use std::fs::{read_link, File};
 use std::io::{BufRead, BufReader};
@@ -8,28 +7,57 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 use chrono::{TimeZone, Utc};
 use clap::Parser;
-use ignore::{DirEntry, WalkBuilder};
+use gethostname::gethostname;
+use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder};
 use path_absolutize::*;
 use users::{cache::UsersCache, Groups, Users};
 
 use crate::archiver::{Archiver, Parent};
-use crate::backend::DecryptFullBackend;
+use crate::backend::{DecryptFullBackend, DryRunBackend};
 use crate::blob::{Metadata, Node};
 use crate::index::IndexBackend;
 use crate::repo::{ConfigFile, SnapshotFile};
 #[derive(Parser)]
 pub(super) struct Opts {
-    /// save access time for files and directories
+    /// Do not upload or write any data, just show what would be done
+    #[clap(long, short = 'n')]
+    dry_run: bool,
+
+    /// Save access time for files and directories
     #[clap(long)]
     with_atime: bool,
 
-    /// snapshot to use as parent
-    #[clap(long)]
+    /// Snapshot to use as parent
+    #[clap(long, value_name = "SNAPSHOT", conflicts_with = "force")]
     parent: Option<String>,
 
-    /// use no parent, read all files
-    #[clap(long)]
+    /// Use no parent, read all files
+    #[clap(long, short, conflicts_with = "parent")]
     force: bool,
+
+    /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
+    #[clap(long, short = 'x')]
+    one_file_system: bool,
+
+    /// glob pattern to include/exclue (can be specified multiple times)
+    #[clap(long, short = 'e')]
+    glob: Vec<String>,
+
+    /// Read glob patterns to exclude/include from a file (can be specified multiple times)
+    #[clap(long, value_name = "FILE")]
+    glob_file: Vec<String>,
+
+    /// Exclude contents of directories containing filename (can be specified multiple times)
+    #[clap(long, value_name = "FILE")]
+    exclude_if_present: Vec<String>,
+
+    /// Same as --glob pattern but ignores the casing of filenames
+    #[clap(long, value_name = "GLOB")]
+    iglob: Vec<String>,
+
+    /// Same as --glob-file ignores the casing of filenames in patterns
+    #[clap(long, value_name = "FILE")]
+    iglob_file: Vec<String>,
 
     /// backup source
     source: String,
@@ -37,6 +65,8 @@ pub(super) struct Opts {
 
 pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
+
+    let be = DryRunBackend::new(be.clone(), opts.dry_run);
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
     let backup_path = PathBuf::from(&opts.source);
@@ -49,11 +79,11 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let hostname = gethostname();
     let parent = match (opts.force, opts.parent) {
         (true, _) => None,
-        (false, None) => SnapshotFile::latest(be, |snap| {
+        (false, None) => SnapshotFile::latest(&be, |snap| {
             OsString::from(&snap.hostname) == hostname && snap.paths.contains(&backup_path_str)
         })
         .ok(),
-        (false, Some(parent)) => SnapshotFile::from_id(be, &parent).ok(),
+        (false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
     };
     let parent_tree = match parent {
         Some(snap) => {
@@ -67,24 +97,69 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     };
 
     println! {"reading index..."}
-    let index = IndexBackend::only_full_trees(be)?;
+    let index = IndexBackend::only_full_trees(&be)?;
 
     let parent = Parent::new(&index, parent_tree.as_ref());
-    let mut archiver = Archiver::new(be.clone(), index, poly, parent)?;
+    let mut archiver = Archiver::new(be, index, poly, parent)?;
 
-    let mut wb = WalkBuilder::new(backup_path.clone());
+    let mut walk_builder = WalkBuilder::new(backup_path.clone());
     /*
-     for path in paths[1..].into_iter() {
+     for path in &paths[1..] {
         wb.add(path);
     }
     */
-    wb.follow_links(false)
+
+    let mut override_builder = OverrideBuilder::new("/");
+
+    // TODO: Add opts.glob-file // opts.iglob-file
+    for g in opts.glob {
+        override_builder.add(&g)?;
+    }
+
+    for file in opts.glob_file {
+        for line in std::fs::read_to_string(file)?.lines() {
+            override_builder.add(line)?;
+        }
+    }
+
+    override_builder.case_insensitive(true)?;
+    for g in opts.iglob {
+        override_builder.add(&g)?;
+    }
+
+    for file in opts.iglob_file {
+        for line in std::fs::read_to_string(file)?.lines() {
+            override_builder.add(line)?;
+        }
+    }
+
+    walk_builder
+        .follow_links(false)
         .hidden(false)
-        .sort_by_file_path(Path::cmp);
+        .ignore(false)
+        .git_ignore(false)
+        .sort_by_file_path(Path::cmp)
+        .same_file_system(opts.one_file_system)
+        .overrides(override_builder.build()?);
+
+    if !opts.exclude_if_present.is_empty() {
+        walk_builder.filter_entry(move |entry| match entry.file_type() {
+            None => true,
+            Some(tpe) if tpe.is_dir() => {
+                for file in &opts.exclude_if_present {
+                    if entry.path().join(file).exists() {
+                        return false;
+                    }
+                }
+                true
+            }
+            Some(_) => true,
+        });
+    }
 
     let cache = UsersCache::new();
 
-    let nodes = wb
+    let nodes = walk_builder
         .build()
         .map(|entry| map_entry(entry?, opts.with_atime, &cache));
 

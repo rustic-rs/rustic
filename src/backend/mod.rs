@@ -1,4 +1,5 @@
 use std::io::{Cursor, Read};
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 
@@ -6,11 +7,14 @@ use crate::crypto::hash;
 use crate::id::Id;
 
 pub mod decrypt;
+pub mod dry_run;
 pub mod local;
 pub mod node;
 
 pub use decrypt::*;
+pub use dry_run::*;
 pub use local::*;
+use node::Node;
 
 #[derive(Clone, Copy, Debug)]
 pub enum FileType {
@@ -116,28 +120,16 @@ pub trait WriteBackend: Clone {
         Ok(id)
     }
 }
-/*
-pub trait ReadSource: Clone {
-    fn walker(&self) -> &dyn Iterator<Item: PathBuf>;
 
-    fn metadata(&self, item: PathBuf) -> MetaData;
-
-    fn read(&self, item: PathBuf) -> &dyn io::Read;
-
-    fn read_partial(
-        &self,
-        item: PathBuf,
-        offset: u64,
-        length: u64,
-    ) -> Result<Vec<u8>, Self::Error>;
-
+pub trait WalkerItem {
+    fn node(&self) -> Node;
+    fn read(&self) -> Box<dyn Read>;
 }
+
+pub trait ReadSource<I: WalkerItem>: Iterator<Item = I> {}
 
 pub trait WriteSource: Clone {
-    fn create(&self, item: PathBuf);
-
-    fn set_metadata(&self, item: PathBuf, metadata: MetaData);
-
-    fn write_at(&self, item: PathBuf, offset: u64, Vec<u8>);
+    fn create(&self, path: PathBuf, node: Node);
+    fn set_metadata(&self, path: PathBuf, node: Node);
+    fn write_at(&self, path: PathBuf, offset: u64, data: Vec<u8>);
 }
-*/

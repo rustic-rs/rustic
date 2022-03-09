@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
+use indicatif::{ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use vlog::*;
 
@@ -71,12 +72,22 @@ impl SnapshotFile {
 
     /// Get the latest SnapshotFile from the backend
     pub fn latest<B: ReadBackend>(be: &B, predicate: impl FnMut(&Self) -> bool) -> Result<Self> {
-        v1!("getting snapshot...");
+        v1!("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
-        for snap in be
-            .list(FileType::Snapshot)?
+        let snaps = be.list(FileType::Snapshot)?;
+
+        let pb = ProgressBar::new(snaps.len() as u64).with_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}"),
+        );
+
+        for snap in snaps
             .iter()
+            .inspect(|id| {
+                pb.set_message(format!("{}", id));
+                pb.inc(1);
+            })
             .map(|id| SnapshotFile::from_backend(be, id))
         {
             let snap = snap?;
@@ -90,6 +101,7 @@ impl SnapshotFile {
                 }
             }
         }
+        pb.finish_with_message("done");
         latest.ok_or_else(|| anyhow!("no snapshots found"))
     }
 

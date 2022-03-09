@@ -110,7 +110,6 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
 
     let mut override_builder = OverrideBuilder::new("/");
 
-    // TODO: Add opts.glob-file // opts.iglob-file
     for g in opts.glob {
         override_builder.add(&g)?;
     }
@@ -157,6 +156,8 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     }
 
     let cache = UsersCache::new();
+
+    v1!("starting backup...");
 
     let nodes = walk_builder
         .build()

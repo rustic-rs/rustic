@@ -87,8 +87,10 @@ fn allocate_and_collect(
                 }
             }
             // node is in snapshot but already exists
+            // TODO: check which blobs are not needed for restore
             Both((_path, _node), _file) => {}
             // node exists, but is not in snapshot
+            // TODO: Delete files
             Right(_file) => {
                 /*
                 if !opts.dry_run {

@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::fs::{read_link, File};
 use std::io::{BufRead, BufReader};
-use std::os::unix::fs::MetadataExt;
+use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
@@ -176,6 +176,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     Ok(())
 }
 
+// map_entry: turn entry into a Path, a Node and a Reader
 fn map_entry(
     entry: DirEntry,
     with_atime: bool,
@@ -184,31 +185,51 @@ fn map_entry(
     let name = entry.file_name().to_os_string();
     let m = entry.metadata()?;
 
-    let uid = m.uid();
-    let gid = m.gid();
+    let uid = m.st_uid();
+    let gid = m.st_gid();
+    let user = cache
+        .get_user_by_uid(uid)
+        .map(|u| u.name().to_str().unwrap().to_string());
+    let group = cache
+        .get_group_by_gid(gid)
+        .map(|g| g.name().to_str().unwrap().to_string());
+
+    let mtime = Some(
+        Utc.timestamp(m.st_mtime(), m.st_mtime_nsec().try_into()?)
+            .into(),
+    );
+    let atime = if with_atime {
+        Some(
+            Utc.timestamp(m.st_atime(), m.st_atime_nsec().try_into()?)
+                .into(),
+        )
+    } else {
+        // TODO: Use None here?
+        mtime
+    };
+    let ctime = Some(
+        Utc.timestamp(m.st_ctime(), m.st_ctime_nsec().try_into()?)
+            .into(),
+    );
+    let size = if m.is_dir() { 0 } else { m.len() };
+    let mode = m.st_mode();
+    let inode = m.st_ino();
+    let device_id = m.st_dev();
+    let links = m.st_nlink();
 
     let meta = Metadata {
-        size: m.len(),
-        mtime: m.modified().ok().map(|t| t.into()),
-        atime: if with_atime {
-            m.accessed().ok().map(|t| t.into())
-        } else {
-            // TODO: Use None here?
-            m.modified().ok().map(|t| t.into())
-        },
-        ctime: Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into()),
-        mode: m.mode(),
+        size,
+        mtime,
+        atime,
+        ctime,
+        mode,
         uid,
         gid,
-        user: cache
-            .get_user_by_uid(uid)
-            .map(|u| u.name().to_str().unwrap().to_string()),
-        group: cache
-            .get_group_by_gid(gid)
-            .map(|g| g.name().to_str().unwrap().to_string()),
-        inode: m.ino(),
-        device_id: m.dev(),
-        links: m.nlink(),
+        user,
+        group,
+        inode,
+        device_id,
+        links,
     };
     let (node, r) = if m.is_dir() {
         (Node::new_dir(name, meta), None)

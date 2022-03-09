@@ -15,6 +15,8 @@ pub struct Node {
     name: String,
     #[serde(flatten)]
     node_type: NodeType,
+    #[serde(flatten)]
+    meta: Metadata,
     #[serde(
         default,
         deserialize_with = "deserialize_default_from_null",
@@ -23,8 +25,6 @@ pub struct Node {
     content: Vec<Id>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     subtree: Option<Id>,
-    #[serde(flatten)]
-    meta: Metadata,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, IsVariant)]
@@ -39,15 +39,13 @@ pub enum NodeType {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]
 pub struct Metadata {
     #[serde(default, skip_serializing_if = "is_default")]
-    pub size: u64,
+    pub mode: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mtime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub atime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ctime: Option<DateTime<Local>>,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub mode: u32,
     #[serde(default, skip_serializing_if = "is_default")]
     pub uid: u32,
     #[serde(default, skip_serializing_if = "is_default")]
@@ -60,6 +58,8 @@ pub struct Metadata {
     pub inode: u64,
     #[serde(default, skip_serializing_if = "is_default")]
     pub device_id: u64,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub size: u64,
     #[serde(default, skip_serializing_if = "is_default")]
     pub links: u64,
 }

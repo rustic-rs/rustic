@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::io::BufRead;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -70,7 +71,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.size += size;
     }
 
-    pub fn add_entry(&mut self, path: &Path, node: Node, r: Option<impl BufRead>) -> Result<()> {
+    pub fn add_entry(&mut self, path: &Path, node: Node) -> Result<()> {
         let basepath = if node.is_dir() {
             path
         } else {
@@ -100,8 +101,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
 
         match node.node_type() {
-            NodeType::File if r.is_some() => {
-                self.backup_file(node, r.unwrap())?;
+            NodeType::File => {
+                self.backup_file(path, node)?;
             }
             NodeType::Dir => {}          // is already handled, see above
             _ => self.add_node(node, 0), // all other cases: just save the given node
@@ -140,7 +141,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub fn backup_file(&mut self, node: Node, reader: impl BufRead) -> Result<()> {
+    pub fn backup_file(&mut self, path: &Path, node: Node) -> Result<()> {
         match self.parent.is_parent(&node) {
             ParentResult::Matched(p_node) => {
                 v2!("unchanged file: {:?}", self.path.join(node.name()));
@@ -167,6 +168,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 self.files_new += 1;
             }
         }
+        let f = File::open(path)?;
+        let reader = BufReader::new(f);
         let chunk_iter = ChunkIter::new(reader, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;

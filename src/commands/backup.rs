@@ -1,6 +1,5 @@
 use std::ffi::OsString;
-use std::fs::{read_link, File};
-use std::io::{BufRead, BufReader};
+use std::fs::read_link;
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
@@ -164,8 +163,8 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         .map(|entry| map_entry(entry?, opts.with_atime, &cache));
 
     for res in nodes {
-        let (path, node, r) = res?;
-        archiver.add_entry(&path, node, r)?;
+        let (path, node) = res?;
+        archiver.add_entry(&path, node)?;
     }
 
     let mut snap = SnapshotFile::default();
@@ -177,11 +176,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
 }
 
 // map_entry: turn entry into a Path, a Node and a Reader
-fn map_entry(
-    entry: DirEntry,
-    with_atime: bool,
-    cache: &UsersCache,
-) -> Result<(PathBuf, Node, Option<impl BufRead>)> {
+fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(PathBuf, Node)> {
     let name = entry.file_name().to_os_string();
     let m = entry.metadata()?;
 
@@ -231,15 +226,13 @@ fn map_entry(
         device_id,
         links,
     };
-    let (node, r) = if m.is_dir() {
-        (Node::new_dir(name, meta), None)
+    let node = if m.is_dir() {
+        Node::new_dir(name, meta)
     } else if m.is_symlink() {
         let target = read_link(entry.path())?;
-        (Node::new_symlink(name, target, meta), None)
+        Node::new_symlink(name, target, meta)
     } else {
-        // TODO: lazily open file! - might be contained in parent
-        let f = File::open(&entry.path())?;
-        (Node::new_file(name, meta), Some(BufReader::new(f)))
+        Node::new_file(name, meta)
     };
-    Ok((entry.path().to_path_buf(), node, r))
+    Ok((entry.path().to_path_buf(), node))
 }

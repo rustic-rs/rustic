@@ -8,6 +8,7 @@ use itertools::{
     EitherOrBoth::{Both, Left, Right},
     Itertools,
 };
+use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{tree_iterator, Node, NodeType};
@@ -33,24 +34,21 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    println!("getting snapshot...");
     let snap = SnapshotFile::from_str(be, &opts.id, |_| true)?;
 
     let dest = LocalBackend::new(&opts.dest);
-
-    println!("reading index...");
     let index = IndexBackend::new(be)?;
 
-    println!("1st tree walk: allocating dirs/files and collecting restore information...");
+    v2!("1st tree walk: allocating dirs/files and collecting restore information...");
     let file_infos = allocate_and_collect(&dest, &index, snap.tree, &opts)?;
 
-    println!("restoring file contents...");
+    v2!("restoring file contents...");
     restore_contents(be, &dest, file_infos, &opts)?;
 
-    println!("2nd tree walk: setting metadata");
+    v2!("2nd tree walk: setting metadata");
     restore_metadata(&dest, &index, snap.tree, &opts)?;
 
-    println!("done.");
+    v1!("done.");
     Ok(())
 }
 

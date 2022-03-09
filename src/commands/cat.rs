@@ -66,29 +66,23 @@ fn cat_file(be: &impl ReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
         // if the given id param is not a full Id, search for a suitable one
         be.find_starts_with(tpe, &[&opt.id])?.remove(0)
     })?;
-
-    let dec = be.read_full(tpe, &id)?;
-
-    print!("{}", String::from_utf8_lossy(&dec));
+    let data = be.read_full(tpe, &id)?;
+    println!("{}", String::from_utf8(data)?);
 
     Ok(())
 }
 
 fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id)?;
-    eprintln!("reading index files..");
-    let index = IndexBackend::new(be)?;
-    let dec = index.blob_from_backend(&tpe, &id)?;
-    print!("{}", String::from_utf8(dec)?);
+    let data = IndexBackend::new(be)?.blob_from_backend(&tpe, &id)?;
+    print!("{}", String::from_utf8(data)?);
+
     Ok(())
 }
 
 fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
     let snap = SnapshotFile::from_str(be, &opts.id, |_| true)?;
-
-    eprintln!("reading index files..");
     let index = IndexBackend::new(be)?;
-
     let mut id = snap.tree;
 
     for p in opts.path.iter() {
@@ -108,8 +102,8 @@ fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
             .unwrap();
     }
 
-    let dec = index.blob_from_backend(&BlobType::Tree, &id)?;
-    print!("{}", String::from_utf8(dec)?);
+    let data = index.blob_from_backend(&BlobType::Tree, &id)?;
+    println!("{}", String::from_utf8(data)?);
 
     Ok(())
 }

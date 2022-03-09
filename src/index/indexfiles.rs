@@ -1,4 +1,5 @@
 use anyhow::Result;
+use vlog::*;
 
 use crate::backend::{FileType, ReadBackend};
 use crate::repo::{IndexFile, IndexPack};
@@ -16,6 +17,8 @@ impl<BE: ReadBackend> AllIndexFiles<BE> {
 
 impl<BE: ReadBackend> AllIndexFiles<BE> {
     pub fn into_iter(self) -> Result<impl Iterator<Item = IndexPack>> {
+        v1!("reading index...");
+
         Ok(self
             .be
             .list(FileType::Index)?

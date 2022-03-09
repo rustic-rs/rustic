@@ -4,6 +4,7 @@ use itertools::{
     EitherOrBoth::{Both, Left, Right},
     Itertools,
 };
+use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{tree_iterator, NodeType};
@@ -21,7 +22,7 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    println!("getting snapshots...");
+    v1!("getting snapshots...");
     let ids = match (Id::from_hex(&opts.id1), Id::from_hex(&opts.id2)) {
         (Ok(id1), Ok(id2)) => vec![id1, id2],
         // if the given id param are not full Ids, search for a suitable one
@@ -34,7 +35,6 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let snap = SnapshotFile::from_backend(be, &ids[0])?;
     let snap_with = SnapshotFile::from_backend(be, &ids[1])?;
 
-    println!("reading index...");
     let index = IndexBackend::new(be)?;
     let iterator1 = tree_iterator(&index, vec![snap.tree])?.filter_map(Result::ok);
     let iterator2 = tree_iterator(&index, vec![snap_with.tree])?.filter_map(Result::ok);

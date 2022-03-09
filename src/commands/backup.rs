@@ -11,6 +11,7 @@ use gethostname::gethostname;
 use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder};
 use path_absolutize::*;
 use users::{cache::UsersCache, Groups, Users};
+use vlog::*;
 
 use crate::archiver::{Archiver, Parent};
 use crate::backend::{DecryptFullBackend, DryRunBackend};
@@ -87,16 +88,15 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     };
     let parent_tree = match parent {
         Some(snap) => {
-            println!("using parent {}", snap.id);
+            v1!("using parent {}", snap.id);
             Some(snap.tree)
         }
         None => {
-            println!("using no parent");
+            v1!("using no parent");
             None
         }
     };
 
-    println! {"reading index..."}
     let index = IndexBackend::only_full_trees(&be)?;
 
     let parent = Parent::new(&index, parent_tree.as_ref());

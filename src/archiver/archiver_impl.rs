@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
+use vlog::*;
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
@@ -119,13 +120,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 if self.tree_packer.add(&chunk, &id, BlobType::Tree)? {
                     self.tree_blobs_written += 1;
                     self.data_added += dirsize;
-                    println!(
+                    v2!(
                         "new       tree: {:?} {}",
                         self.path,
                         ByteSize(dirsize).to_string_as(true)
                     );
                 } else {
-                    println!("unchanged tree: {:?}", self.path);
+                    v2!("unchanged tree: {:?}", self.path);
                 }
             }
 
@@ -142,7 +143,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
     pub fn backup_file(&mut self, node: Node, reader: impl BufRead) -> Result<()> {
         match self.parent.is_parent(&node) {
             ParentResult::Matched(p_node) => {
-                println!("unchanged file: {:?} {}", self.path, node.name());
+                v2!("unchanged file: {:?}", self.path.join(node.name()));
                 self.files_unmodified += 1;
                 if p_node.content().iter().all(|id| self.index.has_data(id)) {
                     let size = *p_node.meta().size();
@@ -151,15 +152,18 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                     self.add_node(node, size);
                     return Ok(());
                 } else {
-                    eprintln!("missing blobs for node in index!");
+                    ve1!(
+                        "missing blobs in index for unchanged file {:?}; re-reading file",
+                        self.path.join(node.name())
+                    );
                 }
             }
             ParentResult::NotMatched => {
-                println!("changed   file: {:?} {}", self.path, node.name());
+                v2!("changed   file: {:?}", self.path.join(node.name()));
                 self.files_changed += 1;
             }
             ParentResult::NotFound => {
-                println!("new       file: {:?} {}", self.path, node.name());
+                v2!("new       file: {:?}", self.path.join(node.name()));
                 self.files_new += 1;
             }
         }
@@ -196,28 +200,30 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.tree_packer.finalize()?;
         self.indexer.borrow().finalize()?;
 
+        v1!(
+            "Files:       {} new, {} changed, {} unmodified",
+            self.files_new,
+            self.files_changed,
+            self.files_unmodified
+        );
+        v2!("Data Blobs:  {} new", self.data_blobs_written);
+        v2!("Tree Blobs:  {} new", self.tree_blobs_written);
+        v1!(
+            "Added to the repo: {}",
+            ByteSize(self.data_added).to_string_as(true)
+        );
+        v1!(
+            "processed {} nodes, {}",
+            self.count,
+            ByteSize(self.size).to_string_as(true)
+        );
+
         snap.set_tree(id);
         snap.set_size(self.size);
         snap.set_count(self.count);
 
         let id = snap.save_to_backend(&self.be)?;
-
-        println!(
-            "Files:       {} new, {} changed, {} unmodified",
-            self.files_new, self.files_changed, self.files_unmodified
-        );
-        println!("Data Blobs:  {} new", self.data_blobs_written);
-        println!("Tree Blobs:  {} new", self.tree_blobs_written);
-        println!(
-            "Added to the repo: {}",
-            ByteSize(self.data_added).to_string_as(true)
-        );
-        println!(
-            "processed {} nodes, {}",
-            self.count,
-            ByteSize(self.size).to_string_as(true)
-        );
-        println!("snapshot {} successfully saved.", id);
+        v1!("snapshot {} successfully saved.", id);
         Ok(())
     }
 }

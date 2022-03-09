@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use clap::Parser;
-use std::collections::HashMap;
+use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{tree_iterator_once, NodeType};
@@ -15,13 +17,12 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    println!("checking packs...");
+    v1!("checking packs...");
     check_packs(be)?;
 
-    println!("loading index...");
     let be = IndexBackend::new(be)?;
 
-    println!("checking snapshots and trees...");
+    v1!("checking snapshots and trees...");
     check_snapshots(&be)?;
 
     if opts.read_data {
@@ -50,8 +51,8 @@ fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 
     for (id, size) in be.list_with_size(FileType::Pack)? {
         match packs.remove(&id) {
-            None => println!("pack {} not contained in index", id.to_hex()),
-            Some(index_size) if index_size != size => println!(
+            None => eprintln!("pack {} not contained in index", id.to_hex()),
+            Some(index_size) if index_size != size => eprintln!(
                 "pack {}: size computed by index: {}, actual size: {}",
                 id.to_hex(),
                 index_size,
@@ -62,7 +63,7 @@ fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     }
 
     for (id, _) in packs {
-        println!(
+        eprintln!(
             "pack {} is referenced by the index but not presend!",
             id.to_hex()
         );
@@ -86,19 +87,19 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
             NodeType::File => {
                 for (i, id) in node.content().iter().enumerate() {
                     if id.is_null() {
-                        println!("file {:?} blob {} has null ID", path, i);
+                        eprintln!("file {:?} blob {} has null ID", path, i);
                     }
 
                     if !index.has_data(id) {
-                        println!("file {:?} blob {} is missig in index", path, id);
+                        eprintln!("file {:?} blob {} is missig in index", path, id);
                     }
                 }
             }
 
             NodeType::Dir => {
                 match node.subtree() {
-                    None => println!("dir {:?} subtree does not exist", path),
-                    Some(tree) if tree.is_null() => println!("dir {:?} subtree has null ID", path),
+                    None => eprintln!("dir {:?} subtree does not exist", path),
+                    Some(tree) if tree.is_null() => eprintln!("dir {:?} subtree has null ID", path),
                     _ => {} // subtree is ok
                 }
             }

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
+use vlog::*;
 
 use super::Id;
 use crate::backend::{FileType, ReadBackend, WriteBackend};
@@ -70,6 +71,7 @@ impl SnapshotFile {
 
     /// Get the latest SnapshotFile from the backend
     pub fn latest<B: ReadBackend>(be: &B, predicate: impl FnMut(&Self) -> bool) -> Result<Self> {
+        v1!("getting snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
         for snap in be
@@ -93,6 +95,7 @@ impl SnapshotFile {
 
     /// Get a SnapshotFile from the backend by (part of the) id
     pub fn from_id<B: ReadBackend>(be: &B, id: &str) -> Result<Self> {
+        v1!("getting snapshot...");
         let id = Id::from_hex(id).or_else(|_| {
             // if the given id param is not a full Id, search for a suitable one
             be.find_starts_with(FileType::Snapshot, &[id])?.remove(0)

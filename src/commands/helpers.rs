@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use rpassword::{prompt_password_stderr, read_password_with_reader};
+use vlog::*;
 
 use crate::backend::ReadBackend;
 use crate::crypto::Key;
@@ -26,6 +27,6 @@ pub fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> Result<
             find_key_in_backend(be, &pass, None)?
         }
     };
-    eprintln!("password is correct");
+    ve1!("password is correct");
     Ok(key)
 }

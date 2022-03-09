@@ -13,6 +13,7 @@ thiserror = "1.0"
 derive_more = "0.99"
 derive-getters = "0.2"
 lazy_static = "1.4"
+vlog = "0.1"
 #crypto
 aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
 sha2 = "0.10"

@@ -2,6 +2,8 @@ use std::fs::{self, File};
 use std::io::{copy, Read, Seek, SeekFrom};
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
+
+use vlog::*;
 use walkdir::WalkDir;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
@@ -81,7 +83,7 @@ impl WriteBackend for LocalBackend {
     type Error = std::io::Error;
 
     fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error> {
-        println!("writing tpe: {:?}, id: {}", &tpe, &id);
+        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
             .create_new(true)

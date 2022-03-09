@@ -16,6 +16,7 @@ mod restore;
 mod snapshots;
 
 use helpers::get_key;
+use vlog::*;
 
 #[derive(Parser)]
 #[clap(about, version)]
@@ -27,6 +28,12 @@ struct Opts {
     /// file to read the password from
     #[clap(short, long, parse(from_os_str))]
     password_file: Option<PathBuf>,
+
+    #[clap(long, short = 'v', parse(from_occurrences))]
+    verbose: i8,
+
+    #[clap(long, short = 'q', parse(from_occurrences), conflicts_with = "verbose")]
+    quiet: i8,
 
     #[clap(subcommand)]
     command: Command,
@@ -61,6 +68,9 @@ enum Command {
 
 pub fn execute() -> Result<()> {
     let args = Opts::parse();
+
+    let verbosity = (1 + args.verbose - args.quiet).clamp(0, 3);
+    set_verbosity_level(verbosity as usize);
 
     let be = LocalBackend::new(&args.repository);
     let key = get_key(&be, args.password_file)?;

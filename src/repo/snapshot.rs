@@ -77,19 +77,16 @@ impl SnapshotFile {
         let mut pred = predicate;
         let snaps = be.list(FileType::Snapshot)?;
 
-        let pb = ProgressBar::new(snaps.len() as u64).with_style(
-            ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}"),
-        );
+        let p = if get_verbosity_level() == 1 {
+            ProgressBar::new(snaps.len() as u64).with_style(
+                ProgressStyle::default_bar()
+                    .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}"),
+            )
+        } else {
+            ProgressBar::hidden()
+        };
 
-        for snap in snaps
-            .iter()
-            .inspect(|id| {
-                pb.set_message(format!("{}", id));
-                pb.inc(1);
-            })
-            .map(|id| SnapshotFile::from_backend(be, id))
-        {
+        for snap in snaps.iter().map(|id| SnapshotFile::from_backend(be, id)) {
             let snap = snap?;
             if !pred(&snap) {
                 continue;
@@ -100,8 +97,9 @@ impl SnapshotFile {
                     latest = Some(snap);
                 }
             }
+            p.inc(1);
         }
-        pb.finish_with_message("done");
+        p.finish_with_message("done");
         latest.ok_or_else(|| anyhow!("no snapshots found"))
     }
 

@@ -8,6 +8,7 @@ use chrono::{TimeZone, Utc};
 use clap::Parser;
 use gethostname::gethostname;
 use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder};
+use indicatif::{ProgressBar, ProgressStyle};
 use path_absolutize::*;
 use users::{cache::UsersCache, Groups, Users};
 use vlog::*;
@@ -155,6 +156,13 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         });
     }
 
+    v1!("scanning backup source...");
+    let mut size = 0;
+    for entry in walk_builder.build() {
+        let m = entry?.metadata()?;
+        size += if m.is_dir() { 0 } else { m.len() };
+    }
+
     let cache = UsersCache::new();
 
     v1!("starting backup...");
@@ -163,11 +171,23 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         .build()
         .map(|entry| map_entry(entry?, opts.with_atime, &cache));
 
+    let p = if get_verbosity_level() == 1 {
+        ProgressBar::new(size).with_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10}"),
+        )
+    } else {
+        ProgressBar::hidden()
+    };
+
+    p.reset();
     for res in nodes {
         let (path, node) = res?;
+        let size = *node.meta().size();
         archiver.add_entry(&path, node)?;
+        p.inc(size);
     }
-
+    p.finish_with_message("done");
     let mut snap = SnapshotFile::default();
     snap.set_paths(vec![backup_path.to_path_buf()]);
     snap.set_hostname(hostname);

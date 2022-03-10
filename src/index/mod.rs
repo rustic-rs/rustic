@@ -86,9 +86,10 @@ pub struct IndexBackend<BE: DecryptReadBackend> {
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub fn new(be: &BE) -> Result<Self> {
+        let index = Rc::new(AllIndexFiles::new(be.clone()).into_iter()?.collect());
         Ok(Self {
             be: be.clone(),
-            index: Rc::new(AllIndexFiles::new(be.clone()).into_iter()?.collect()),
+            index,
         })
     }
 
@@ -99,11 +100,12 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
 
     #[cfg(feature = "boomphf")]
     pub fn only_full_trees(be: &BE) -> Result<Self> {
+        let index = Rc::new(BoomIndex::only_full_trees(
+            AllIndexFiles::new(be.clone()).into_iter()?,
+        ));
         Ok(Self {
             be: be.clone(),
-            index: Rc::new(BoomIndex::only_full_trees(
-                AllIndexFiles::new(be.clone()).into_iter()?,
-            )),
+            index,
         })
     }
 }

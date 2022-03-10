@@ -40,8 +40,8 @@ pub(super) struct Opts {
     #[clap(long, short = 'x')]
     one_file_system: bool,
 
-    /// glob pattern to include/exclue (can be specified multiple times)
-    #[clap(long, short = 'e')]
+    /// Glob pattern to include/exclue (can be specified multiple times)
+    #[clap(long, short = 'g')]
     glob: Vec<String>,
 
     /// Read glob patterns to exclude/include from a file (can be specified multiple times)
@@ -51,6 +51,10 @@ pub(super) struct Opts {
     /// Exclude contents of directories containing filename (can be specified multiple times)
     #[clap(long, value_name = "FILE")]
     exclude_if_present: Vec<String>,
+
+    /// Ignore files based on .gitignore files
+    #[clap(long)]
+    git_ignore: bool,
 
     /// Same as --glob pattern but ignores the casing of filenames
     #[clap(long, value_name = "GLOB")]
@@ -136,7 +140,7 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         .follow_links(false)
         .hidden(false)
         .ignore(false)
-        .git_ignore(false)
+        .git_ignore(opts.git_ignore)
         .sort_by_file_path(Path::cmp)
         .same_file_system(opts.one_file_system)
         .overrides(override_builder.build()?);
@@ -156,11 +160,17 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         });
     }
 
-    v1!("scanning backup source...");
+    //  total size to backup => only used in progress bar
     let mut size = 0;
-    for entry in walk_builder.build() {
-        let m = entry?.metadata()?;
-        size += if m.is_dir() { 0 } else { m.len() };
+    if get_verbosity_level() == 1 {
+        v1!("scanning backup source...");
+        for entry in walk_builder.build() {
+            if let Err(e) = entry.and_then(|e| e.metadata()).map(|m| {
+                size += if m.is_dir() { 0 } else { m.len() };
+            }) {
+                eprintln!("ignoring error {}", e);
+            }
+        }
     }
 
     let cache = UsersCache::new();
@@ -182,10 +192,15 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
 
     p.reset();
     for res in nodes {
-        let (path, node) = res?;
-        let size = *node.meta().size();
-        archiver.add_entry(&path, node)?;
-        p.inc(size);
+        if let Err(e) = res.and_then(|(path, node)| {
+            let size = *node.meta().size();
+            archiver.add_entry(&path, node)?;
+            p.inc(size);
+            Ok(())
+        }) {
+            // TODO: Only ignore source errors, don't ignore repo errors
+            eprintln!("ignoring error {}\n", e);
+        }
     }
     p.finish_with_message("done");
     let mut snap = SnapshotFile::default();

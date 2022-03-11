@@ -1,16 +1,18 @@
 use std::io::{Cursor, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 
 use crate::crypto::hash;
 use crate::id::Id;
 
 pub mod decrypt;
 pub mod dry_run;
+pub mod ignore;
 pub mod local;
 pub mod node;
 
+pub use self::ignore::*;
 pub use decrypt::*;
 pub use dry_run::*;
 pub use local::*;
@@ -121,12 +123,11 @@ pub trait WriteBackend: Clone {
     }
 }
 
-pub trait WalkerItem {
-    fn node(&self) -> Node;
-    fn read(&self) -> Box<dyn Read>;
+pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {
+    type Reader: Read;
+    fn read(path: &Path) -> Result<Self::Reader>;
+    fn size(&self) -> Result<u64>;
 }
-
-pub trait ReadSource<I: WalkerItem>: Iterator<Item = I> {}
 
 pub trait WriteSource: Clone {
     fn create(&self, path: PathBuf, node: Node);

@@ -1,32 +1,25 @@
 use std::ffi::OsString;
-use std::fs::read_link;
-use std::os::linux::fs::MetadataExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use chrono::{TimeZone, Utc};
 use clap::Parser;
 use gethostname::gethostname;
-use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder};
 use indicatif::{ProgressBar, ProgressStyle};
 use path_absolutize::*;
-use users::{cache::UsersCache, Groups, Users};
 use vlog::*;
 
 use crate::archiver::{Archiver, Parent};
-use crate::backend::{DecryptFullBackend, DryRunBackend};
-use crate::blob::{Metadata, Node};
+use crate::backend::{
+    DecryptFullBackend, DryRunBackend, LocalSource, LocalSourceOptions, ReadSource,
+};
 use crate::index::IndexBackend;
 use crate::repo::{ConfigFile, SnapshotFile};
+
 #[derive(Parser)]
 pub(super) struct Opts {
     /// Do not upload or write any data, just show what would be done
     #[clap(long, short = 'n')]
     dry_run: bool,
-
-    /// Save access time for files and directories
-    #[clap(long)]
-    with_atime: bool,
 
     /// Snapshot to use as parent
     #[clap(long, value_name = "SNAPSHOT", conflicts_with = "force")]
@@ -36,33 +29,8 @@ pub(super) struct Opts {
     #[clap(long, short, conflicts_with = "parent")]
     force: bool,
 
-    /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
-    #[clap(long, short = 'x')]
-    one_file_system: bool,
-
-    /// Glob pattern to include/exclue (can be specified multiple times)
-    #[clap(long, short = 'g')]
-    glob: Vec<String>,
-
-    /// Read glob patterns to exclude/include from a file (can be specified multiple times)
-    #[clap(long, value_name = "FILE")]
-    glob_file: Vec<String>,
-
-    /// Exclude contents of directories containing filename (can be specified multiple times)
-    #[clap(long, value_name = "FILE")]
-    exclude_if_present: Vec<String>,
-
-    /// Ignore files based on .gitignore files
-    #[clap(long)]
-    git_ignore: bool,
-
-    /// Same as --glob pattern but ignores the casing of filenames
-    #[clap(long, value_name = "GLOB")]
-    iglob: Vec<String>,
-
-    /// Same as --glob-file ignores the casing of filenames in patterns
-    #[clap(long, value_name = "FILE")]
-    iglob_file: Vec<String>,
+    #[clap(flatten)]
+    ignore_opts: LocalSourceOptions,
 
     /// backup source
     source: String,
@@ -106,83 +74,11 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     let parent = Parent::new(&index, parent_tree.as_ref());
     let mut archiver = Archiver::new(be, index, poly, parent)?;
 
-    let mut walk_builder = WalkBuilder::new(backup_path.clone());
-    /*
-     for path in &paths[1..] {
-        wb.add(path);
-    }
-    */
-
-    let mut override_builder = OverrideBuilder::new("/");
-
-    for g in opts.glob {
-        override_builder.add(&g)?;
-    }
-
-    for file in opts.glob_file {
-        for line in std::fs::read_to_string(file)?.lines() {
-            override_builder.add(line)?;
-        }
-    }
-
-    override_builder.case_insensitive(true)?;
-    for g in opts.iglob {
-        override_builder.add(&g)?;
-    }
-
-    for file in opts.iglob_file {
-        for line in std::fs::read_to_string(file)?.lines() {
-            override_builder.add(line)?;
-        }
-    }
-
-    walk_builder
-        .follow_links(false)
-        .hidden(false)
-        .ignore(false)
-        .git_ignore(opts.git_ignore)
-        .sort_by_file_path(Path::cmp)
-        .same_file_system(opts.one_file_system)
-        .overrides(override_builder.build()?);
-
-    if !opts.exclude_if_present.is_empty() {
-        walk_builder.filter_entry(move |entry| match entry.file_type() {
-            None => true,
-            Some(tpe) if tpe.is_dir() => {
-                for file in &opts.exclude_if_present {
-                    if entry.path().join(file).exists() {
-                        return false;
-                    }
-                }
-                true
-            }
-            Some(_) => true,
-        });
-    }
-
-    //  total size to backup => only used in progress bar
-    let mut size = 0;
-    if get_verbosity_level() == 1 {
-        v1!("scanning backup source...");
-        for entry in walk_builder.build() {
-            if let Err(e) = entry.and_then(|e| e.metadata()).map(|m| {
-                size += if m.is_dir() { 0 } else { m.len() };
-            }) {
-                eprintln!("ignoring error {}", e);
-            }
-        }
-    }
-
-    let cache = UsersCache::new();
-
-    v1!("starting backup...");
-
-    let nodes = walk_builder
-        .build()
-        .map(|entry| map_entry(entry?, opts.with_atime, &cache));
+    let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 
     let p = if get_verbosity_level() == 1 {
-        ProgressBar::new(size).with_style(
+        v1!("determining size of backup source...");
+        ProgressBar::new(src.size()?).with_style(
             ProgressStyle::default_bar()
                 .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10}"),
         )
@@ -190,9 +86,9 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
         ProgressBar::hidden()
     };
 
-    p.reset();
-    for res in nodes {
-        if let Err(e) = res.and_then(|(path, node)| {
+    v1!("starting backup...");
+    for item in src {
+        if let Err(e) = item.and_then(|(path, node)| {
             let size = *node.meta().size();
             archiver.add_entry(&path, node)?;
             p.inc(size);
@@ -209,66 +105,4 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
     archiver.finalize_snapshot(snap)?;
 
     Ok(())
-}
-
-// map_entry: turn entry into a Path, a Node and a Reader
-fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(PathBuf, Node)> {
-    let name = entry.file_name().to_os_string();
-    let m = entry.metadata()?;
-
-    let uid = m.st_uid();
-    let gid = m.st_gid();
-    let user = cache
-        .get_user_by_uid(uid)
-        .map(|u| u.name().to_str().unwrap().to_string());
-    let group = cache
-        .get_group_by_gid(gid)
-        .map(|g| g.name().to_str().unwrap().to_string());
-
-    let mtime = Some(
-        Utc.timestamp(m.st_mtime(), m.st_mtime_nsec().try_into()?)
-            .into(),
-    );
-    let atime = if with_atime {
-        Some(
-            Utc.timestamp(m.st_atime(), m.st_atime_nsec().try_into()?)
-                .into(),
-        )
-    } else {
-        // TODO: Use None here?
-        mtime
-    };
-    let ctime = Some(
-        Utc.timestamp(m.st_ctime(), m.st_ctime_nsec().try_into()?)
-            .into(),
-    );
-    let size = if m.is_dir() { 0 } else { m.len() };
-    let mode = m.st_mode();
-    let inode = m.st_ino();
-    let device_id = m.st_dev();
-    let links = m.st_nlink();
-
-    let meta = Metadata {
-        size,
-        mtime,
-        atime,
-        ctime,
-        mode,
-        uid,
-        gid,
-        user,
-        group,
-        inode,
-        device_id,
-        links,
-    };
-    let node = if m.is_dir() {
-        Node::new_dir(name, meta)
-    } else if m.is_symlink() {
-        let target = read_link(entry.path())?;
-        Node::new_symlink(name, target, meta)
-    } else {
-        Node::new_file(name, meta)
-    };
-    Ok((entry.path().to_path_buf(), node))
 }

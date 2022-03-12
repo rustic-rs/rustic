@@ -6,11 +6,23 @@ use super::{FileType, Id, ReadBackend, WriteBackend};
 use crate::crypto::{hash, CryptoKey};
 
 pub trait DecryptFullBackend: DecryptWriteBackend + DecryptReadBackend {}
-pub trait DecryptReadBackend: ReadBackend {}
+impl<T: DecryptWriteBackend + DecryptReadBackend> DecryptFullBackend for T {}
+
+pub trait DecryptReadBackend: ReadBackend {
+    fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error>;
+    fn read_encrypted_partial(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        offset: u32,
+        length: u32,
+    ) -> Result<Vec<u8>, Self::Error>;
+}
 
 pub trait DecryptWriteBackend: WriteBackend {
     type Key: CryptoKey;
     fn key(&self) -> &Self::Key;
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error>;
 }
 
 /// RepoError describes the errors that can be returned by accessing this repository
@@ -45,9 +57,36 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
     fn key(&self) -> &Self::Key {
         &self.key
     }
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
+        let data = self
+            .key()
+            .encrypt_data(data)
+            .map_err(RepoError::CryptoError)?;
+        let id = hash(&data);
+        self.write_full(tpe, &id, &mut Cursor::new(data))?;
+        Ok(id)
+    }
 }
 
-impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {}
+impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
+    fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+        self.key
+            .decrypt_data(&self.backend.read_full(tpe, id)?)
+            .map_err(RepoError::CryptoError)
+    }
+
+    fn read_encrypted_partial(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        offset: u32,
+        length: u32,
+    ) -> Result<Vec<u8>, Self::Error> {
+        self.key
+            .decrypt_data(&self.backend.read_partial(tpe, id, offset, length)?)
+            .map_err(RepoError::CryptoError)
+    }
+}
 
 impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     type Error = RepoError<R::Error, C::CryptoError>;
@@ -67,9 +106,9 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     }
 
     fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
-        self.key
-            .decrypt_data(&self.backend.read_full(tpe, id)?)
-            .map_err(RepoError::CryptoError)
+        self.backend
+            .read_full(tpe, id)
+            .map_err(RepoError::RepoError)
     }
 
     fn read_partial(
@@ -79,9 +118,9 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>, Self::Error> {
-        self.key
-            .decrypt_data(&self.backend.read_partial(tpe, id, offset, length)?)
-            .map_err(RepoError::CryptoError)
+        self.backend
+            .read_partial(tpe, id, offset, length)
+            .map_err(RepoError::RepoError)
     }
 }
 
@@ -92,16 +131,4 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         self.backend.write_full(tpe, id, r)?;
         Ok(())
     }
-
-    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
-        let data = self
-            .key
-            .encrypt_data(data)
-            .map_err(RepoError::CryptoError)?;
-        let id = hash(&data);
-        self.write_full(tpe, &id, &mut Cursor::new(data))?;
-        Ok(id)
-    }
 }
-
-impl<R: ReadBackend + WriteBackend, C: CryptoKey> DecryptFullBackend for DecryptBackend<R, C> {}

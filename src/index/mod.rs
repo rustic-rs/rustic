@@ -33,7 +33,7 @@ pub struct IndexEntry {
 impl IndexEntry {
     /// Get a blob described by IndexEntry from the backend
     pub fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
-        Ok(be.read_partial(FileType::Pack, &self.pack, self.offset, self.length)?)
+        Ok(be.read_encrypted_partial(FileType::Pack, &self.pack, self.offset, self.length)?)
     }
 }
 

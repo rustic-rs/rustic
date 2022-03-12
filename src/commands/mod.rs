@@ -77,8 +77,8 @@ pub fn execute() -> Result<()> {
     let dbe = DecryptBackend::new(&be, key);
 
     match args.command {
-        Command::Backup(opts) => backup::execute(opts, &dbe),
-        Command::Cat(opts) => cat::execute(&be, &dbe, opts),
+        Command::Backup(opts) => backup::execute(&dbe, opts),
+        Command::Cat(opts) => cat::execute(&dbe, opts),
         Command::Check(opts) => check::execute(&dbe, opts),
         Command::Diff(opts) => diff::execute(&dbe, opts),
         Command::List(opts) => list::execute(&dbe, opts),

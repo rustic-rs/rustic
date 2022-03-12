@@ -5,13 +5,13 @@ use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 
-use crate::backend::WriteBackend;
+use crate::backend::DecryptWriteBackend;
 use crate::id::Id;
 use crate::repo::{IndexFile, IndexPack};
 
 pub type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
 
-pub struct Indexer<BE: WriteBackend> {
+pub struct Indexer<BE: DecryptWriteBackend> {
     be: BE,
     file: IndexFile,
     count: usize,
@@ -22,7 +22,7 @@ pub struct Indexer<BE: WriteBackend> {
 const MAX_COUNT: usize = 50_000;
 const MAX_AGE: Duration = Duration::from_secs(300);
 
-impl<BE: WriteBackend> Indexer<BE> {
+impl<BE: DecryptWriteBackend> Indexer<BE> {
     pub fn new(be: BE) -> Self {
         Self {
             be,

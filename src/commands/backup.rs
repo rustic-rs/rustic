@@ -36,7 +36,7 @@ pub(super) struct Opts {
     source: String,
 }
 
-pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
     let config = ConfigFile::from_backend_no_id(be)?;
 
     let be = DryRunBackend::new(be.clone(), opts.dry_run);
@@ -73,7 +73,6 @@ pub(super) fn execute(opts: Opts, be: &impl DecryptFullBackend) -> Result<()> {
 
     let parent = Parent::new(&index, parent_tree.as_ref());
     let mut archiver = Archiver::new(be, index, poly, parent)?;
-
     let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 
     let p = if get_verbosity_level() == 1 {

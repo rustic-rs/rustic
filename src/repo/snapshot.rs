@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use vlog::*;
 
 use super::Id;
-use crate::backend::{FileType, ReadBackend, WriteBackend};
+use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SnapshotFile {
@@ -52,14 +52,14 @@ impl Default for SnapshotFile {
 
 impl SnapshotFile {
     /// Get a SnapshotFile from the backend
-    pub fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        let data = be.read_full(FileType::Snapshot, id)?;
+    pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
+        let data = be.read_encrypted_full(FileType::Snapshot, id)?;
         let mut snap: Self = serde_json::from_slice(&data)?;
         snap.set_id(*id);
         Ok(snap)
     }
 
-    pub fn from_str<B: ReadBackend>(
+    pub fn from_str<B: DecryptReadBackend>(
         be: &B,
         string: &str,
         predicate: impl FnMut(&Self) -> bool,
@@ -71,7 +71,10 @@ impl SnapshotFile {
     }
 
     /// Get the latest SnapshotFile from the backend
-    pub fn latest<B: ReadBackend>(be: &B, predicate: impl FnMut(&Self) -> bool) -> Result<Self> {
+    pub fn latest<B: DecryptReadBackend>(
+        be: &B,
+        predicate: impl FnMut(&Self) -> bool,
+    ) -> Result<Self> {
         v1!("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
@@ -104,7 +107,7 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend by (part of the) id
-    pub fn from_id<B: ReadBackend>(be: &B, id: &str) -> Result<Self> {
+    pub fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
         v1!("getting snapshot...");
         let id = Id::from_hex(id).or_else(|_| {
             // if the given id param is not a full Id, search for a suitable one
@@ -114,7 +117,7 @@ impl SnapshotFile {
     }
 
     /// Get all SnapshotFiles from the backend
-    pub fn all_from_backend<B: ReadBackend>(be: &B) -> Result<Vec<Self>> {
+    pub fn all_from_backend<B: DecryptReadBackend>(be: &B) -> Result<Vec<Self>> {
         let snapshots: Vec<_> = be
             .list(FileType::Snapshot)?
             .iter()
@@ -124,7 +127,7 @@ impl SnapshotFile {
     }
 
     /// Save a SnapshotFile to the backend
-    pub fn save_to_backend<B: WriteBackend>(&self, be: &B) -> Result<Id> {
+    pub fn save_to_backend<B: DecryptWriteBackend>(&self, be: &B) -> Result<Id> {
         let data = serde_json::to_vec(&self)?;
         Ok(be.hash_write_full(FileType::Snapshot, &data)?)
     }

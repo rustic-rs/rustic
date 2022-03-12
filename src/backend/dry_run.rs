@@ -4,7 +4,6 @@ use super::{
     DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType, Id, ReadBackend,
     WriteBackend,
 };
-use crate::crypto::hash;
 
 #[derive(Clone)]
 pub struct DryRunBackend<BE: DecryptFullBackend> {
@@ -18,8 +17,20 @@ impl<BE: DecryptFullBackend> DryRunBackend<BE> {
     }
 }
 
-impl<BE: DecryptFullBackend> DecryptFullBackend for DryRunBackend<BE> {}
-impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {}
+impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
+    fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+        self.be.read_encrypted_full(tpe, id)
+    }
+    fn read_encrypted_partial(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        offset: u32,
+        length: u32,
+    ) -> Result<Vec<u8>, Self::Error> {
+        self.be.read_encrypted_partial(tpe, id, offset, length)
+    }
+}
 
 impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
     type Error = <BE as ReadBackend>::Error;
@@ -48,8 +59,16 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
 
 impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
     type Key = <BE as DecryptWriteBackend>::Key;
+
     fn key(&self) -> &Self::Key {
         self.be.key()
+    }
+
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
+        match self.dry_run {
+            true => Ok(Id::default()),
+            false => self.be.hash_write_full(tpe, data),
+        }
     }
 }
 
@@ -59,13 +78,6 @@ impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
         match self.dry_run {
             true => Ok(()),
             false => self.be.write_full(tpe, id, r),
-        }
-    }
-
-    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
-        match self.dry_run {
-            true => Ok(hash(data)),
-            false => self.be.hash_write_full(tpe, data),
         }
     }
 }

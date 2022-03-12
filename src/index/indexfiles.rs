@@ -1,7 +1,7 @@
 use anyhow::Result;
 use vlog::*;
 
-use crate::backend::{FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType};
 use crate::repo::{IndexFile, IndexPack};
 
 #[derive(Clone)]
@@ -9,13 +9,13 @@ pub struct AllIndexFiles<BE> {
     be: BE,
 }
 
-impl<BE: ReadBackend> AllIndexFiles<BE> {
+impl<BE: DecryptReadBackend> AllIndexFiles<BE> {
     pub fn new(be: BE) -> Self {
         Self { be }
     }
 }
 
-impl<BE: ReadBackend> AllIndexFiles<BE> {
+impl<BE: DecryptReadBackend> AllIndexFiles<BE> {
     pub fn into_iter(self) -> Result<impl Iterator<Item = IndexPack>> {
         v1!("reading index...");
 

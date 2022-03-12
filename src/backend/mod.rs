@@ -1,9 +1,8 @@
-use std::io::{Cursor, Read};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 
-use crate::crypto::hash;
 use crate::id::Id;
 
 pub mod decrypt;
@@ -115,12 +114,6 @@ pub trait WriteBackend: Clone {
     type Error: Send + Sync + std::error::Error + 'static;
 
     fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error>;
-
-    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
-        let id = hash(data);
-        self.write_full(tpe, &id, &mut Cursor::new(data))?;
-        Ok(id)
-    }
 }
 
 pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {

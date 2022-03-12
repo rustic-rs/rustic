@@ -127,7 +127,7 @@ fn restore_contents(
     for (pack, blob) in restore_info {
         for (bl, fls) in blob {
             // read pack at blob_offset with length blob_length
-            let data = be.read_partial(FileType::Pack, &pack, bl.offset, bl.length)?;
+            let data = be.read_encrypted_partial(FileType::Pack, &pack, bl.offset, bl.length)?;
             for fl in fls {
                 // save in file at file_start
                 if !opts.dry_run {

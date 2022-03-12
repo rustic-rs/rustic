@@ -2,7 +2,7 @@ use anyhow::Result;
 use derive_getters::{Dissolve, Getters};
 use serde::{Deserialize, Serialize};
 
-use crate::backend::{FileType, ReadBackend, WriteBackend};
+use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType};
 use crate::blob::BlobType;
 use crate::id::Id;
 
@@ -22,13 +22,13 @@ impl IndexFile {
     }
 
     /// Get an IndexFile from the backend
-    pub fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        let data = be.read_full(FileType::Index, id)?;
+    pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
+        let data = be.read_encrypted_full(FileType::Index, id)?;
         Ok(serde_json::from_slice(&data)?)
     }
 
     /// Sace an IndexFile to the backend
-    pub fn save_to_backend<B: WriteBackend>(&self, be: &B) -> Result<()> {
+    pub fn save_to_backend<B: DecryptWriteBackend>(&self, be: &B) -> Result<()> {
         let data = serde_json::to_vec(&self)?;
         be.hash_write_full(FileType::Index, &data)?;
         Ok(())

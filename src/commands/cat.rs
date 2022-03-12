@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{BlobType, Tree};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
@@ -22,7 +22,6 @@ enum Command {
     Config(IdOpt),
     Index(IdOpt),
     Snapshot(IdOpt),
-    Key(IdOpt),
     /// display a tree within a snapshot
     Tree(TreeOpts),
 }
@@ -42,31 +41,25 @@ struct TreeOpts {
     path: PathBuf,
 }
 
-pub(super) fn execute(
-    be: &impl ReadBackend,
-    dbe: &impl DecryptReadBackend,
-    opts: Opts,
-) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Config(opt) => cat_file(dbe, FileType::Config, opt),
-        Command::Index(opt) => cat_file(dbe, FileType::Index, opt),
-        Command::Snapshot(opt) => cat_file(dbe, FileType::Snapshot, opt),
-        // special treatment for catting key files: those need no decryption
-        Command::Key(opt) => cat_file(be, FileType::Key, opt),
+        Command::Config(opt) => cat_file(be, FileType::Config, opt),
+        Command::Index(opt) => cat_file(be, FileType::Index, opt),
+        Command::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt),
         // special treatment for catingg blobs: read the index and use it to locate the blob
-        Command::TreeBlob(opt) => cat_blob(dbe, BlobType::Tree, opt),
-        Command::DataBlob(opt) => cat_blob(dbe, BlobType::Data, opt),
+        Command::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt),
+        Command::DataBlob(opt) => cat_blob(be, BlobType::Data, opt),
         // special treatment for cating a tree within a snapshot
-        Command::Tree(opts) => cat_tree(dbe, opts),
+        Command::Tree(opts) => cat_tree(be, opts),
     }
 }
 
-fn cat_file(be: &impl ReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
+fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
         be.find_starts_with(tpe, &[&opt.id])?.remove(0)
     })?;
-    let data = be.read_full(tpe, &id)?;
+    let data = be.read_encrypted_full(tpe, &id)?;
     println!("{}", String::from_utf8(data)?);
 
     Ok(())

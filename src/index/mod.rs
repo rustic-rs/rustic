@@ -11,17 +11,11 @@ use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
 use crate::id::Id;
 
-#[cfg(feature = "boomphf")]
 mod boom;
-#[cfg(not(feature = "boomphf"))]
-mod hashmap;
 mod indexer;
 mod indexfiles;
 
-#[cfg(feature = "boomphf")]
 use boom::BoomIndex;
-#[cfg(not(feature = "boomphf"))]
-use hashmap::HashMapIndex;
 pub use indexer::*;
 pub use indexfiles::*;
 
@@ -80,10 +74,7 @@ pub trait IndexedBackend: Clone + ReadIndex {
 #[delegate(ReadIndex, target = "index")]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
-    #[cfg(feature = "boomphf")]
     index: Rc<BoomIndex>,
-    #[cfg(not(feature = "boomphf"))]
-    index: Rc<HashMapIndex>,
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
@@ -101,12 +92,6 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
         })
     }
 
-    #[cfg(not(feature = "boomphf"))]
-    pub fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
-        Self::new(be, p)
-    }
-
-    #[cfg(feature = "boomphf")]
     pub fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
         let index = Rc::new(BoomIndex::only_full_trees(

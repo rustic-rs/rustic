@@ -4,6 +4,8 @@ use ambassador::{delegatable_trait, Delegate};
 use anyhow::{anyhow, Result};
 use derive_getters::{Dissolve, Getters};
 use derive_more::Constructor;
+use indicatif::ProgressBar;
+use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
@@ -85,8 +87,14 @@ pub struct IndexBackend<BE: DecryptReadBackend> {
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
-    pub fn new(be: &BE) -> Result<Self> {
-        let index = Rc::new(AllIndexFiles::new(be.clone()).into_iter()?.collect());
+    pub fn new(be: &BE, p: ProgressBar) -> Result<Self> {
+        v1!("reading index...");
+        let index = Rc::new(
+            AllIndexFiles::new(be.clone())
+                .into_iter(p.clone())?
+                .collect(),
+        );
+        p.finish_with_message("done");
         Ok(Self {
             be: be.clone(),
             index,
@@ -94,15 +102,17 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
     }
 
     #[cfg(not(feature = "boomphf"))]
-    pub fn only_full_trees(be: &BE) -> Result<Self> {
-        Self::new(be)
+    pub fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
+        Self::new(be, p)
     }
 
     #[cfg(feature = "boomphf")]
-    pub fn only_full_trees(be: &BE) -> Result<Self> {
+    pub fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
+        v1!("reading index...");
         let index = Rc::new(BoomIndex::only_full_trees(
-            AllIndexFiles::new(be.clone()).into_iter()?,
+            AllIndexFiles::new(be.clone()).into_iter(p.clone())?,
         ));
+        p.finish_with_message("done");
         Ok(Self {
             be: be.clone(),
             index,

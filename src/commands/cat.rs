@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use indicatif::ProgressBar;
 
+use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{BlobType, Tree};
 use crate::id::Id;
@@ -67,15 +69,15 @@ fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<(
 
 fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id)?;
-    let data = IndexBackend::new(be)?.blob_from_backend(&tpe, &id)?;
+    let data = IndexBackend::new(be, ProgressBar::hidden())?.blob_from_backend(&tpe, &id)?;
     print!("{}", String::from_utf8(data)?);
 
     Ok(())
 }
 
 fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
-    let snap = SnapshotFile::from_str(be, &opts.id, |_| true)?;
-    let index = IndexBackend::new(be)?;
+    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter())?;
+    let index = IndexBackend::new(be, progress_counter())?;
     let mut id = snap.tree;
 
     for p in opts.path.iter() {

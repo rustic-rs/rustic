@@ -15,7 +15,7 @@ mod ls;
 mod restore;
 mod snapshots;
 
-use helpers::get_key;
+use helpers::*;
 use vlog::*;
 
 #[derive(Parser)]

@@ -1,10 +1,10 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use super::{progress_bytes, progress_counter};
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use gethostname::gethostname;
-use indicatif::{ProgressBar, ProgressStyle};
 use path_absolutize::*;
 use vlog::*;
 
@@ -52,9 +52,13 @@ pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
     let hostname = gethostname();
     let parent = match (opts.force, opts.parent) {
         (true, _) => None,
-        (false, None) => SnapshotFile::latest(&be, |snap| {
-            OsString::from(&snap.hostname) == hostname && snap.paths.contains(&backup_path_str)
-        })
+        (false, None) => SnapshotFile::latest(
+            &be,
+            |snap| {
+                OsString::from(&snap.hostname) == hostname && snap.paths.contains(&backup_path_str)
+            },
+            progress_counter(),
+        )
         .ok(),
         (false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
     };
@@ -69,28 +73,25 @@ pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
         }
     };
 
-    let index = IndexBackend::only_full_trees(&be)?;
+    let index = IndexBackend::only_full_trees(&be, progress_counter())?;
 
     let parent = Parent::new(&index, parent_tree.as_ref());
     let mut archiver = Archiver::new(be, index, poly, parent)?;
     let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 
-    let p = if get_verbosity_level() == 1 {
-        v1!("determining size of backup source...");
-        ProgressBar::new(src.size()?).with_style(
-            ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10}"),
-        )
+    let p = progress_bytes();
+    let size = if get_verbosity_level() == 1 {
+        v1!("determining size of backup source..."); // this is done in src.size() below
+        src.size()?
     } else {
-        ProgressBar::hidden()
+        0
     };
 
     v1!("starting backup...");
+    p.set_length(size);
     for item in src {
         if let Err(e) = item.and_then(|(path, node)| {
-            let size = *node.meta().size();
-            archiver.add_entry(&path, node)?;
-            p.inc(size);
+            archiver.add_entry(&path, node, p.clone())?;
             Ok(())
         }) {
             // TODO: Only ignore source errors, don't ignore repo errors

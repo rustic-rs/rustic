@@ -10,6 +10,7 @@ use itertools::{
 };
 use vlog::*;
 
+use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{tree_iterator, Node, NodeType};
 use crate::id::Id;
@@ -34,10 +35,10 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    let snap = SnapshotFile::from_str(be, &opts.id, |_| true)?;
+    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter())?;
 
     let dest = LocalBackend::new(&opts.dest);
-    let index = IndexBackend::new(be)?;
+    let index = IndexBackend::new(be, progress_counter())?;
 
     v2!("1st tree walk: allocating dirs/files and collecting restore information...");
     let file_infos = allocate_and_collect(&dest, &index, snap.tree, &opts)?;

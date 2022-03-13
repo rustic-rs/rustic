@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
+use indicatif::ProgressBar;
 use vlog::*;
 
 use crate::backend::DecryptWriteBackend;
@@ -71,7 +72,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.size += size;
     }
 
-    pub fn add_entry(&mut self, path: &Path, node: Node) -> Result<()> {
+    pub fn add_entry(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
         let basepath = if node.is_dir() {
             path
         } else {
@@ -102,7 +103,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         match node.node_type() {
             NodeType::File => {
-                self.backup_file(path, node)?;
+                self.backup_file(path, node, p)?;
             }
             NodeType::Dir => {}          // is already handled, see above
             _ => self.add_node(node, 0), // all other cases: just save the given node
@@ -141,7 +142,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub fn backup_file(&mut self, path: &Path, node: Node) -> Result<()> {
+    pub fn backup_file(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
         match self.parent.is_parent(&node) {
             ParentResult::Matched(p_node) => {
                 v2!("unchanged file: {:?}", self.path.join(node.name()));
@@ -151,6 +152,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                     let mut node = node;
                     node.set_content(p_node.content().to_vec());
                     self.add_node(node, size);
+                    p.inc(size);
                     return Ok(());
                 } else {
                     ve1!(
@@ -176,13 +178,15 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         for chunk in chunk_iter {
             let chunk = chunk?;
-            filesize += chunk.len() as u64;
+            let size = chunk.len() as u64;
+            filesize += size;
             let id = hash(&chunk);
             if !self.index.has_data(&id) && self.data_packer.add(&chunk, &id, BlobType::Data)? {
                 self.data_blobs_written += 1;
-                self.data_added += filesize;
+                self.data_added += size;
             }
             content.push(id);
+            p.inc(size)
         }
         let mut node = node;
         node.set_content(content);

@@ -1,8 +1,10 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{bail, Result};
+use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use rpassword::{prompt_password_stderr, read_password_with_reader};
 use vlog::*;
 
@@ -29,4 +31,33 @@ pub fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> Result<
     };
     ve1!("password is correct");
     Ok(key)
+}
+
+pub fn progress_counter() -> ProgressBar {
+    if get_verbosity_level() == 1 {
+        ProgressBar::new(0).with_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}")
+                .unwrap(),
+        )
+    } else {
+        ProgressBar::hidden()
+    }
+}
+
+pub fn progress_bytes() -> ProgressBar {
+    if get_verbosity_level() == 1 {
+        ProgressBar::new(0).with_style(
+            ProgressStyle::default_bar()
+            .with_key("my_eta", |s| 
+                 match (s.pos(), s.len()){
+                    (0, _) => "-".to_string(),
+                    (pos,len) => format!("{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
+                })
+            .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
+            .unwrap(),
+        )
+    } else {
+        ProgressBar::hidden()
+    }
 }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
 use vlog::*;
 
@@ -63,9 +63,10 @@ impl SnapshotFile {
         be: &B,
         string: &str,
         predicate: impl FnMut(&Self) -> bool,
+        p: ProgressBar,
     ) -> Result<Self> {
         match string {
-            "latest" => Self::latest(be, predicate),
+            "latest" => Self::latest(be, predicate, p),
             _ => Self::from_id(be, string),
         }
     }
@@ -74,22 +75,16 @@ impl SnapshotFile {
     pub fn latest<B: DecryptReadBackend>(
         be: &B,
         predicate: impl FnMut(&Self) -> bool,
+        p: ProgressBar,
     ) -> Result<Self> {
         v1!("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
         let snaps = be.list(FileType::Snapshot)?;
-
-        let p = if get_verbosity_level() == 1 {
-            ProgressBar::new(snaps.len() as u64).with_style(
-                ProgressStyle::default_bar()
-                    .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}"),
-            )
-        } else {
-            ProgressBar::hidden()
-        };
+        p.set_length(snaps.len() as u64);
 
         for snap in snaps.iter().map(|id| SnapshotFile::from_backend(be, id)) {
+            p.inc(1);
             let snap = snap?;
             if !pred(&snap) {
                 continue;
@@ -100,9 +95,8 @@ impl SnapshotFile {
                     latest = Some(snap);
                 }
             }
-            p.inc(1);
         }
-        p.finish_with_message("done");
+        p.finish_with_message("done.");
         latest.ok_or_else(|| anyhow!("no snapshots found"))
     }
 

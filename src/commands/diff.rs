@@ -6,6 +6,7 @@ use itertools::{
 };
 use vlog::*;
 
+use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{tree_iterator, NodeType};
 use crate::id::Id;
@@ -35,7 +36,7 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let snap = SnapshotFile::from_backend(be, &ids[0])?;
     let snap_with = SnapshotFile::from_backend(be, &ids[1])?;
 
-    let index = IndexBackend::new(be)?;
+    let index = IndexBackend::new(be, progress_counter())?;
     let iterator1 = tree_iterator(&index, vec![snap.tree])?.filter_map(Result::ok);
     let iterator2 = tree_iterator(&index, vec![snap_with.tree])?.filter_map(Result::ok);
 

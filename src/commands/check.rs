@@ -4,6 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use vlog::*;
 
+use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{tree_iterator_once, NodeType};
 use crate::index::{AllIndexFiles, IndexBackend, IndexedBackend};
@@ -20,7 +21,7 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     v1!("checking packs...");
     check_packs(be)?;
 
-    let be = IndexBackend::new(be)?;
+    let be = IndexBackend::new(be, progress_counter())?;
 
     v1!("checking snapshots and trees...");
     check_snapshots(&be)?;
@@ -45,7 +46,7 @@ fn pack_size(blobs: &[IndexBlob]) -> u32 {
 fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     // TODO: only read index files once
     let mut packs = AllIndexFiles::new(be.clone())
-        .into_iter()?
+        .into_iter(progress_counter())?
         .map(|p| (*p.id(), pack_size(p.blobs())))
         .collect::<HashMap<_, _>>();
 

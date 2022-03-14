@@ -1,7 +1,17 @@
 [package]
-name = "rustic"
-version = "0.1.0-dev"
+name = "rustic-rs"
+version = "0.1.2-dev"
+description = """
+restic-compatible backup tool written in pure Rust
+"""
+authors = ["Alexander Weiss"]
 edition = "2021"
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+documentation = "https://docs.rs/rustic-rs"
+repository = "https://github.com/rustic/rustic"
+keywords = ["backup", "restic", "deduplication", "encryption", "cli"]
+categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,7 +25,7 @@ derive-getters = "0.2"
 lazy_static = "1.4"
 vlog = "0.1"
 #crypto
-aes256ctr_poly1305aes = { path = "../aes256ctr_poly1305aes" } 
+aes256ctr_poly1305aes = "0.1"
 sha2 = "0.10"
 rand = "0.8"
 scrypt = { version = "0.9", default-features = false }
@@ -41,13 +51,8 @@ clap = { version = "3", features = ["derive"] }
 rpassword = "5"
 prettytable-rs = {version = "0.8", default-features = false }
 bytesize = "1"
-indicatif = { path = "indicatif" } 
-#indicatif = "0.16"
+indicatif = "0.16"
 path-absolutize = "3"
 gethostname = "0.2"
 users = "0.11"
 itertools = "0.10"
-
-# usefule crates:
-# delegate -> impl methods from struct/enum element(s)
-

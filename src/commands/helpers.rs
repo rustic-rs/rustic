@@ -38,7 +38,6 @@ pub fn progress_counter() -> ProgressBar {
         ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
                 .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}")
-                .unwrap(),
         )
     } else {
         ProgressBar::hidden()
@@ -49,6 +48,7 @@ pub fn progress_bytes() -> ProgressBar {
     if get_verbosity_level() == 1 {
         ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
+            /* with indicatif 0.17
             .with_key("my_eta", |s| 
                  match (s.pos(), s.len()){
                     (0, _) => "-".to_string(),
@@ -56,6 +56,8 @@ pub fn progress_bytes() -> ProgressBar {
                 })
             .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
             .unwrap(),
+            */
+            .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12}")
         )
     } else {
         ProgressBar::hidden()

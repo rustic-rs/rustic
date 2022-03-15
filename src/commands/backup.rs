@@ -13,7 +13,7 @@ use crate::backend::{
     DecryptFullBackend, DryRunBackend, LocalSource, LocalSourceOptions, ReadSource,
 };
 use crate::index::IndexBackend;
-use crate::repo::{ConfigFile, SnapshotFile};
+use crate::repo::{ConfigFile, Id, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -37,7 +37,7 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
-    let config = ConfigFile::from_backend_no_id(be)?;
+    let config: ConfigFile = be.get_file(&Id::default())?;
 
     let be = DryRunBackend::new(be.clone(), opts.dry_run);
 

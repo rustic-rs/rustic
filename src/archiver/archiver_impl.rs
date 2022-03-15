@@ -229,7 +229,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         snap.set_size(self.size);
         snap.set_count(self.count);
 
-        let id = snap.save_to_backend(&self.be)?;
+        let id = self.be.save_file(&snap)?;
         v1!("snapshot {} successfully saved.", id);
         Ok(())
     }

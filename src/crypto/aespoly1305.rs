@@ -3,11 +3,18 @@ use aes256ctr_poly1305aes::{
     Aes256CtrPoly1305Aes,
 };
 use rand::{thread_rng, RngCore};
+use thiserror::Error;
 
 use super::CryptoKey;
 
 type Nonce = aead::Nonce<Aes256CtrPoly1305Aes>;
 type AeadKey = aead::Key<Aes256CtrPoly1305Aes>;
+
+#[derive(Error, Debug)]
+pub enum KeyError {
+    #[error("crypto error")]
+    CryptoError,
+}
 
 #[derive(Clone, Default)]
 pub struct Key(AeadKey);
@@ -28,16 +35,17 @@ impl Key {
 }
 
 impl CryptoKey for Key {
-    type CryptoError = aead::Error;
+    type CryptoError = KeyError;
 
     fn decrypt_data(&self, data: &[u8]) -> Result<Vec<u8>, Self::CryptoError> {
-        /* TODO
-                 if data.len() < 16 {
-                    return Err(CryptoError);
-                }
-        */
+        if data.len() < 16 {
+            return Err(KeyError::CryptoError);
+        }
+
         let nonce = Nonce::from_slice(&data[0..16]);
-        Aes256CtrPoly1305Aes::new(&self.0).decrypt(nonce, &data[16..])
+        Aes256CtrPoly1305Aes::new(&self.0)
+            .decrypt(nonce, &data[16..])
+            .map_err(|_| KeyError::CryptoError)
     }
 
     fn encrypt_data(&self, data: &[u8]) -> Result<Vec<u8>, Self::CryptoError> {
@@ -47,11 +55,9 @@ impl CryptoKey for Key {
         let mut res = Vec::with_capacity(data.len() + 32);
         res.extend_from_slice(&nonce);
         res.extend_from_slice(data);
-        let tag = Aes256CtrPoly1305Aes::new(&self.0).encrypt_in_place_detached(
-            &nonce,
-            &[],
-            &mut res[16..],
-        )?;
+        let tag = Aes256CtrPoly1305Aes::new(&self.0)
+            .encrypt_in_place_detached(&nonce, &[], &mut res[16..])
+            .map_err(|_| KeyError::CryptoError)?;
         res.extend_from_slice(&tag);
         Ok(res)
     }

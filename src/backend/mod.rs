@@ -2,6 +2,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::id::Id;
 
@@ -36,6 +37,10 @@ impl FileType {
             FileType::Pack => "data",
         }
     }
+}
+
+pub trait RepoFile: Serialize + DeserializeOwned + Sized {
+    const TYPE: FileType;
 }
 
 pub trait ReadBackend: Clone {

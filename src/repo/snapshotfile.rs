@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use vlog::*;
 
 use super::Id;
-use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType};
+use crate::backend::{DecryptReadBackend, FileType, RepoFile};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SnapshotFile {
@@ -32,6 +32,10 @@ pub struct SnapshotFile {
     pub id: Id,
 }
 
+impl RepoFile for SnapshotFile {
+    const TYPE: FileType = FileType::Snapshot;
+}
+
 impl Default for SnapshotFile {
     fn default() -> Self {
         Self {
@@ -53,8 +57,7 @@ impl Default for SnapshotFile {
 impl SnapshotFile {
     /// Get a SnapshotFile from the backend
     pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        let data = be.read_encrypted_full(FileType::Snapshot, id)?;
-        let mut snap: Self = serde_json::from_slice(&data)?;
+        let mut snap: Self = be.get_file(id)?;
         snap.set_id(*id);
         Ok(snap)
     }
@@ -118,12 +121,6 @@ impl SnapshotFile {
             .map(|id| SnapshotFile::from_backend(be, id))
             .collect::<Result<_, _>>()?;
         Ok(snapshots)
-    }
-
-    /// Save a SnapshotFile to the backend
-    pub fn save_to_backend<B: DecryptWriteBackend>(&self, be: &B) -> Result<Id> {
-        let data = serde_json::to_vec(&self)?;
-        Ok(be.hash_write_full(FileType::Snapshot, &data)?)
     }
 
     pub fn set_id(&mut self, id: Id) {

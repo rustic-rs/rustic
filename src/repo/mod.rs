@@ -1,10 +1,10 @@
-mod config;
-mod index;
-mod key;
-mod snapshot;
+mod configfile;
+mod indexfile;
+mod keyfile;
+mod snapshotfile;
 
 pub use super::id::*;
-pub use config::*;
-pub use index::*;
-pub use key::*;
-pub use snapshot::*;
+pub use configfile::*;
+pub use indexfile::*;
+pub use keyfile::*;
+pub use snapshotfile::*;

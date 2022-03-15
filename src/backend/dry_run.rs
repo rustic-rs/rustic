@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::io::Read;
 
 use super::{
@@ -18,7 +19,7 @@ impl<BE: DecryptFullBackend> DryRunBackend<BE> {
 }
 
 impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
-    fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+    fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
         self.be.read_encrypted_full(tpe, id)
     }
     fn read_encrypted_partial(
@@ -27,7 +28,7 @@ impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
         id: &Id,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>, Self::Error> {
+    ) -> Result<Vec<u8>> {
         self.be.read_encrypted_partial(tpe, id, offset, length)
     }
 }
@@ -64,7 +65,7 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
         self.be.key()
     }
 
-    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id, Self::Error> {
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
         match self.dry_run {
             true => Ok(Id::default()),
             false => self.be.hash_write_full(tpe, data),

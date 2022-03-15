@@ -24,7 +24,7 @@ impl<BE: DecryptReadBackend> AllIndexFiles<BE> {
             .into_iter()
             .inspect(move |_| p.inc(1))
             .flat_map(move |id| {
-                let (_, packs) = IndexFile::from_backend(&self.be, &id).unwrap().dissolve();
+                let (_, packs) = self.be.get_file::<IndexFile>(&id).unwrap().dissolve();
                 packs
             }))
     }

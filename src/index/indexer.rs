@@ -45,7 +45,7 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
 
     pub fn save(&self) -> Result<()> {
         if self.count > 0 {
-            self.file.save_to_backend(&self.be)?;
+            self.be.save_file(&self.file)?;
         }
         Ok(())
     }

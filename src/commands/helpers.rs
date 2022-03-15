@@ -1,10 +1,11 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::time::Duration;
+// use std::time::Duration; // with indicatif 0.17;
 
 use anyhow::{bail, Result};
-use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
+//use indicatif::HumanDuration; // with indicatif 0.17
 use rpassword::{prompt_password_stderr, read_password_with_reader};
 use vlog::*;
 
@@ -37,7 +38,7 @@ pub fn progress_counter() -> ProgressBar {
     if get_verbosity_level() == 1 {
         ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}")
+                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}"),
         )
     } else {
         ProgressBar::hidden()

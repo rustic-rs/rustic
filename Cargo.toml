@@ -17,6 +17,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 # macros
+async-trait = "0.1"
 anyhow = "1.0"
 ambassador = "0.2"
 thiserror = "1.0"
@@ -24,6 +25,9 @@ derive_more = "0.99"
 derive-getters = "0.2"
 lazy_static = "1.4"
 vlog = "0.1"
+# async
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
 #crypto
 aes256ctr_poly1305aes = "0.1"
 sha2 = "0.10"

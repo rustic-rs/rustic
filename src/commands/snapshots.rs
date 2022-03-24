@@ -9,8 +9,8 @@ use crate::repo::SnapshotFile;
 #[derive(Parser)]
 pub(super) struct Opts {}
 
-pub(super) fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
-    let mut snapshots = SnapshotFile::all_from_backend(be)?;
+pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
+    let mut snapshots = SnapshotFile::all_from_backend(be).await?;
     snapshots.sort();
 
     let mut table: Table = snapshots

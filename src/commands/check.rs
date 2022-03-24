@@ -2,13 +2,14 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use clap::Parser;
+use futures::{Stream, StreamExt};
 use vlog::*;
 
 use super::progress_counter;
-use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
-use crate::blob::{tree_iterator_once, NodeType};
-use crate::index::{AllIndexFiles, IndexBackend, IndexedBackend};
-use crate::repo::{IndexBlob, SnapshotFile};
+use crate::backend::{DecryptReadBackend, FileType};
+use crate::blob::{NodeType, TreeStreamer};
+use crate::index::{IndexBackend, IndexedBackend};
+use crate::repo::{IndexBlob, IndexFile, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -17,14 +18,14 @@ pub(super) struct Opts {
     read_data: bool,
 }
 
-pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
     v1!("checking packs...");
-    check_packs(be)?;
+    check_packs(be).await?;
 
-    let be = IndexBackend::new(be, progress_counter())?;
+    let be = IndexBackend::new(be, progress_counter()).await?;
 
     v1!("checking snapshots and trees...");
-    check_snapshots(&be)?;
+    check_snapshots(&be).await?;
 
     if opts.read_data {
         unimplemented!()
@@ -43,12 +44,17 @@ fn pack_size(blobs: &[IndexBlob]) -> u32 {
 }
 
 // check if packs correspond to index
-fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
+async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
+    let mut packs = HashMap::new();
+
     // TODO: only read index files once
-    let mut packs = AllIndexFiles::new(be.clone())
-        .into_iter(progress_counter())?
-        .map(|p| (*p.id(), pack_size(p.blobs())))
-        .collect::<HashMap<_, _>>();
+    let mut stream = be.stream_all::<IndexFile>(progress_counter())?;
+    while let Some(index) = stream.next().await {
+        let (_, index_packs) = index?.1.dissolve();
+        for p in index_packs {
+            packs.insert(*p.id(), pack_size(p.blobs()));
+        }
+    }
 
     for (id, size) in be.list_with_size(FileType::Pack)? {
         match packs.remove(&id) {
@@ -74,15 +80,16 @@ fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
-fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
-    let snap_ids: Vec<_> = index
-        .be()
-        .list(FileType::Snapshot)?
-        .into_iter()
-        .map(|id| Ok(SnapshotFile::from_backend(index.be(), &id)?.tree))
-        .collect::<Result<_>>()?;
+async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
+    let mut snap_trees = Vec::new();
+    let mut stream = index.be().stream_all::<SnapshotFile>(progress_counter())?;
+    snap_trees.reserve(stream.size_hint().1.unwrap());
+    while let Some(snap) = stream.next().await {
+        snap_trees.push(snap?.1.tree);
+    }
 
-    for item in tree_iterator_once(index, snap_ids)? {
+    let mut tree_streamer = TreeStreamer::new(index.clone(), snap_trees, true).await?;
+    while let Some(item) = tree_streamer.next().await {
         let (path, node) = item?;
         match node.node_type() {
             NodeType::File => {

@@ -53,11 +53,11 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(())
     }
 
-    pub fn finalize(&mut self) -> Result<()> {
-        self.save()
+    pub async fn finalize(&mut self) -> Result<()> {
+        self.save().await
     }
 
-    pub fn write_data(&mut self, data: &[u8]) -> Result<u32> {
+    pub async fn write_data(&mut self, data: &[u8]) -> Result<u32> {
         self.hasher.update(data);
         let len = self.file.write(data)?.try_into()?;
         self.size += len;
@@ -65,7 +65,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 
     // adds the blob to the packfile; returns false if it is already contained
-    pub fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<bool> {
+    pub async fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<bool> {
         // only add if this blob is not present
         if self.has(id) {
             return Ok(false);
@@ -80,20 +80,20 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             .key()
             .encrypt_data(data)
             .map_err(|_| anyhow!("crypto error"))?;
-        let len = self.write_data(&data)?;
+        let len = self.write_data(&data).await?;
         self.index.add(*id, tpe, offset, len);
         self.count += 1;
 
         // check if PackFile needs to be saved
         if self.count >= MAX_COUNT || self.size >= MAX_SIZE || self.created.elapsed()? >= MAX_AGE {
-            self.save()?;
+            self.save().await?;
             self.reset()?;
         }
         Ok(true)
     }
 
     /// writes header and length of header to packfile
-    pub fn write_header(&mut self) -> Result<()> {
+    pub async fn write_header(&mut self) -> Result<()> {
         #[derive(BinWrite)]
         struct PackHeaderLength(#[bw(little)] u32);
 
@@ -124,23 +124,23 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             .encrypt_data(&data)
             .map_err(|_| anyhow!("crypto error"))?;
         let headerlen = data.len();
-        self.write_data(&data)?;
+        self.write_data(&data).await?;
 
         // finally write length of header unencrypted to pack file
         let mut writer = Cursor::new(Vec::new());
         PackHeaderLength(headerlen.try_into()?).write_to(&mut writer)?;
         let data = writer.into_inner();
-        self.write_data(&data)?;
+        self.write_data(&data).await?;
 
         Ok(())
     }
 
-    pub fn save(&mut self) -> Result<()> {
+    pub async fn save(&mut self) -> Result<()> {
         if self.size == 0 {
             return Ok(());
         }
 
-        self.write_header()?;
+        self.write_header().await?;
 
         // compute id of packfile
         let id = self.hasher.finalize();
@@ -149,10 +149,12 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         // write file to backend
         self.file.flush()?;
         self.file.seek(SeekFrom::Start(0))?;
-        self.be.write_full(FileType::Pack, &id, &mut self.file)?;
+        self.be
+            .write_full(FileType::Pack, &id, &mut self.file)
+            .await?;
 
         let index = std::mem::replace(&mut self.index, IndexPack::new());
-        self.indexer.borrow_mut().add(index)?;
+        self.indexer.borrow_mut().add(index).await?;
         Ok(())
     }
 

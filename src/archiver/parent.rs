@@ -16,10 +16,13 @@ pub enum ParentResult<T> {
 }
 
 impl<BE: IndexedBackend> Parent<BE> {
-    pub fn new(be: &BE, tree_id: Option<&Id>) -> Self {
+    pub async fn new(be: &BE, tree_id: Option<Id>) -> Self {
         // if tree_id is given, load tre from backend. Turn errors into None.
         // TODO: print warning when loading failed
-        let tree = tree_id.map(|id| Tree::from_backend(be, id).ok()).flatten();
+        let tree = match tree_id {
+            None => None,
+            Some(id) => Tree::from_backend(be, id).await.ok(),
+        };
         Self {
             tree,
             be: be.clone(),
@@ -53,13 +56,18 @@ impl<BE: IndexedBackend> Parent<BE> {
         }
     }
 
-    pub fn sub_parent(&self, node: &Node) -> Result<Self> {
+    pub async fn sub_parent(&self, node: &Node) -> Result<Self> {
         let tree = match self.p_node(node) {
             None => None,
             Some(p_node) => {
                 if p_node.node_type() == node.node_type() {
                     // TODO: print warning when loading failed
-                    Some(Tree::from_backend(&self.be, &p_node.subtree().unwrap()).ok()).flatten()
+                    Some(
+                        Tree::from_backend(&self.be, p_node.subtree().unwrap())
+                            .await
+                            .ok(),
+                    )
+                    .flatten()
                 } else {
                     None
                 }

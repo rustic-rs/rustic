@@ -4,15 +4,11 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use derive_getters::Dissolve;
-use itertools::{
-    EitherOrBoth::{Both, Left, Right},
-    Itertools,
-};
 use vlog::*;
 
 use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
-use crate::blob::{tree_iterator, Node, NodeType};
+use crate::blob::{Node, NodeType, TreeStreamer};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
 use crate::repo::SnapshotFile;
@@ -34,17 +30,17 @@ pub(super) struct Opts {
     dest: String,
 }
 
-pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter())?;
+pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter()).await?;
 
     let dest = LocalBackend::new(&opts.dest);
-    let index = IndexBackend::new(be, progress_counter())?;
+    let index = IndexBackend::new(be, progress_counter()).await?;
 
     v2!("1st tree walk: allocating dirs/files and collecting restore information...");
     let file_infos = allocate_and_collect(&dest, &index, snap.tree, &opts)?;
 
     v2!("restoring file contents...");
-    restore_contents(be, &dest, file_infos, &opts)?;
+    restore_contents(be, &dest, file_infos, &opts).await?;
 
     v2!("2nd tree walk: setting metadata");
     restore_metadata(&dest, &index, snap.tree, &opts)?;
@@ -118,7 +114,7 @@ fn allocate_and_collect(
 
 /// restore_contents restores all files contents as described by file_infos
 /// using the ReadBackend be and writing them into the LocalBackend dest.
-fn restore_contents(
+async fn restore_contents(
     be: &impl DecryptReadBackend,
     dest: &LocalBackend,
     file_infos: FileInfos,
@@ -128,7 +124,9 @@ fn restore_contents(
     for (pack, blob) in restore_info {
         for (bl, fls) in blob {
             // read pack at blob_offset with length blob_length
-            let data = be.read_encrypted_partial(FileType::Pack, &pack, bl.offset, bl.length)?;
+            let data = be
+                .read_encrypted_partial(FileType::Pack, &pack, bl.offset, bl.length)
+                .await?;
             for fl in fls {
                 // save in file at file_start
                 if !opts.dry_run {

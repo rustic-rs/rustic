@@ -15,23 +15,28 @@ use crate::repo::find_key_in_backend;
 
 const MAX_PASSWORD_RETRIES: usize = 5;
 
-pub fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> Result<Key> {
-    let key = match password_file {
-        None => (0..MAX_PASSWORD_RETRIES)
-            .map(|_| {
+pub async fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> Result<Key> {
+    match password_file {
+        None => {
+            for _i in 0..MAX_PASSWORD_RETRIES {
                 let pass = prompt_password_stderr("enter repository password: ")?;
-                find_key_in_backend(be, &pass, None)
-            })
-            .find(Result::is_ok)
-            .unwrap_or_else(|| bail!("tried too often...aborting!"))?,
+                if let Ok(key) = find_key_in_backend(be, &pass, None).await {
+                    ve1!("password is correct");
+                    return Ok(key);
+                }
+            }
+            bail!("tried too often...aborting!");
+        }
         Some(file) => {
             let mut file = BufReader::new(File::open(file)?);
             let pass = read_password_with_reader(Some(&mut file))?;
-            find_key_in_backend(be, &pass, None)?
+            if let Ok(key) = find_key_in_backend(be, &pass, None).await {
+                ve1!("password is correct");
+                return Ok(key);
+            }
         }
-    };
-    ve1!("password is correct");
-    Ok(key)
+    }
+    bail!("incorrect password!");
 }
 
 pub fn progress_counter() -> ProgressBar {

@@ -3,6 +3,7 @@ use std::io::{copy, Read, Seek, SeekFrom};
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
 
+use async_trait::async_trait;
 use vlog::*;
 use walkdir::WalkDir;
 
@@ -28,6 +29,7 @@ impl LocalBackend {
     }
 }
 
+#[async_trait]
 impl ReadBackend for LocalBackend {
     type Error = std::io::Error;
 
@@ -60,11 +62,11 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
         fs::read(self.path(tpe, id))
     }
 
-    fn read_partial(
+    async fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -79,10 +81,16 @@ impl ReadBackend for LocalBackend {
     }
 }
 
+#[async_trait]
 impl WriteBackend for LocalBackend {
     type Error = std::io::Error;
 
-    fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error> {
+    async fn write_full(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        r: &mut (impl Read + Send + Sync),
+    ) -> Result<(), Self::Error> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()

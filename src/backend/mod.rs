@@ -2,6 +2,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::id::Id;
@@ -39,11 +40,12 @@ impl FileType {
     }
 }
 
-pub trait RepoFile: Serialize + DeserializeOwned + Sized {
+pub trait RepoFile: Serialize + DeserializeOwned + Sized + Send + Sync + 'static {
     const TYPE: FileType;
 }
 
-pub trait ReadBackend: Clone {
+#[async_trait]
+pub trait ReadBackend: Clone + Send + Sync + 'static {
     type Error: Send + Sync + std::error::Error + 'static;
 
     fn location(&self) -> &str;
@@ -57,8 +59,8 @@ pub trait ReadBackend: Clone {
             .collect())
     }
 
-    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error>;
-    fn read_partial(
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error>;
+    async fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -115,10 +117,16 @@ pub enum MapResult<T> {
     NonUnique,
 }
 
-pub trait WriteBackend: Clone {
+#[async_trait]
+pub trait WriteBackend: Clone + Send + Sync + 'static {
     type Error: Send + Sync + std::error::Error + 'static;
 
-    fn write_full(&self, tpe: FileType, id: &Id, r: &mut impl Read) -> Result<(), Self::Error>;
+    async fn write_full(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        r: &mut (impl Read + Send + Sync),
+    ) -> Result<(), Self::Error>;
 }
 
 pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {

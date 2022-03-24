@@ -1,23 +1,24 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use ambassador::{delegatable_trait, Delegate};
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use derive_getters::{Dissolve, Getters};
 use derive_more::Constructor;
+use futures::StreamExt;
 use indicatif::ProgressBar;
 use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
 use crate::id::Id;
+use crate::repo::IndexFile;
 
 mod boom;
 mod indexer;
-mod indexfiles;
 
 use boom::BoomIndex;
 pub use indexer::*;
-pub use indexfiles::*;
 
 #[derive(Debug, Clone, Constructor, Getters, Dissolve)]
 pub struct IndexEntry {
@@ -28,8 +29,10 @@ pub struct IndexEntry {
 
 impl IndexEntry {
     /// Get a blob described by IndexEntry from the backend
-    pub fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
-        Ok(be.read_encrypted_partial(FileType::Pack, &self.pack, self.offset, self.length)?)
+    pub async fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
+        Ok(be
+            .read_encrypted_partial(FileType::Pack, &self.pack, self.offset, self.length)
+            .await?)
     }
 }
 
@@ -58,15 +61,17 @@ pub trait ReadIndex {
     }
 }
 
-pub trait IndexedBackend: Clone + ReadIndex {
+#[async_trait]
+pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
     type Backend: DecryptReadBackend;
 
     fn be(&self) -> &Self::Backend;
 
-    fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Vec<u8>> {
-        self.get_id(tpe, id)
-            .map(|ie| ie.read_data(self.be()))
-            .ok_or(anyhow!("blob not found in index"))?
+    async fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Vec<u8>> {
+        match self.get_id(tpe, id) {
+            None => Err(anyhow!("blob not found in index")),
+            Some(ie) => ie.read_data(self.be()).await,
+        }
     }
 }
 
@@ -74,33 +79,31 @@ pub trait IndexedBackend: Clone + ReadIndex {
 #[delegate(ReadIndex, target = "index")]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
-    index: Rc<BoomIndex>,
+    index: Arc<BoomIndex>,
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
-    pub fn new(be: &BE, p: ProgressBar) -> Result<Self> {
+    pub async fn new(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
-        let index = Rc::new(
-            AllIndexFiles::new(be.clone())
-                .into_iter(p.clone())?
-                .collect(),
-        );
+        let index =
+            BoomIndex::full(be.stream_all::<IndexFile>(p.clone())?.map(|i| i.unwrap().1)).await;
         p.finish_with_message("done");
         Ok(Self {
             be: be.clone(),
-            index,
+            index: Arc::new(index),
         })
     }
 
-    pub fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
+    pub async fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
-        let index = Rc::new(BoomIndex::only_full_trees(
-            AllIndexFiles::new(be.clone()).into_iter(p.clone())?,
-        ));
+        let index = BoomIndex::only_full_trees(
+            be.stream_all::<IndexFile>(p.clone())?.map(|i| i.unwrap().1),
+        )
+        .await;
         p.finish_with_message("done");
         Ok(Self {
             be: be.clone(),
-            index,
+            index: Arc::new(index),
         })
     }
 }

@@ -1,10 +1,16 @@
 use std::collections::HashSet;
 use std::mem;
 use std::path::PathBuf;
+use std::pin::Pin;
 
 use anyhow::{anyhow, Result};
 use derive_getters::Getters;
+use futures::{
+    task::{Context, Poll},
+    Future, Stream,
+};
 use serde::{Deserialize, Serialize};
+use tokio::{spawn, task::JoinHandle};
 
 use crate::id::Id;
 use crate::index::IndexedBackend;
@@ -29,103 +35,104 @@ impl Tree {
         Ok(serde_json::to_vec(&self)?)
     }
 
-    pub fn from_backend(be: &impl IndexedBackend, id: &Id) -> Result<Self> {
+    pub async fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
         let data = be
-            .get_tree(id)
+            .get_tree(&id)
             .ok_or(anyhow!("blob not found in index"))?
-            .read_data(be.be())?;
+            .read_data(be.be())
+            .await?;
 
         Ok(serde_json::from_slice(&data)?)
     }
 }
 
-type TreeIterItem = Result<(PathBuf, Node)>;
-
-/// tree_iterator creates an Iterator over the trees given by ids using the backend be and the index
-/// index
-pub fn tree_iterator(
-    be: &impl IndexedBackend,
-    ids: Vec<Id>,
-) -> Result<impl Iterator<Item = TreeIterItem> + '_> {
-    TreeIterator::new(|i| Ok(Tree::from_backend(be, i)?.nodes.into_iter()), ids)
-}
-
-/// tree_iterator_once creates an Iterator over the trees given by ids using the backend be and the index
-/// index where each node is only visited once
-pub fn tree_iterator_once(
-    be: &impl IndexedBackend,
-    ids: Vec<Id>,
-) -> Result<impl Iterator<Item = TreeIterItem> + '_> {
-    let mut visited = HashSet::new();
-    TreeIterator::new(
-        move |i| {
-            if visited.insert(*i) {
-                Ok(Tree::from_backend(be, i)?.nodes.into_iter())
-            } else {
-                Ok(Vec::new().into_iter())
-            }
-        },
-        ids,
-    )
-}
-
 /// TreeIterator is a recursive iterator over a Tree, i.e. it recursively iterates over
 /// a full tree visiting subtrees
-pub struct TreeIterator<IT, F>
+pub struct TreeStreamer<BE>
 where
-    IT: Iterator<Item = Node>,
-    F: FnMut(&Id) -> Result<IT>,
+    BE: IndexedBackend + Unpin,
 {
-    open_iterators: Vec<IT>,
-    inner: IT,
+    future: Option<JoinHandle<Result<Tree>>>,
+    visited: HashSet<Id>,
+    only_once: bool,
+    open_iterators: Vec<std::vec::IntoIter<Node>>,
+    inner: std::vec::IntoIter<Node>,
     path: PathBuf,
-    getter: F,
+    be: BE,
 }
 
-impl<IT, F> TreeIterator<IT, F>
+impl<BE> TreeStreamer<BE>
 where
-    IT: Iterator<Item = Node>,
-    F: FnMut(&Id) -> Result<IT>,
+    BE: IndexedBackend + Unpin,
 {
-    fn new(mut getter: F, ids: Vec<Id>) -> Result<Self> {
+    pub async fn new(be: BE, ids: Vec<Id>, only_once: bool) -> Result<Self> {
         // TODO: empty ids vector will panic here!
-        let mut iters: Vec<_> = ids.iter().map(&mut getter).collect::<Result<_>>()?;
+        let mut iters = Vec::new();
+        for id in ids {
+            iters.push(Tree::from_backend(&be, id).await?.nodes.into_iter());
+        }
         iters.rotate_right(1);
         Ok(Self {
+            future: None,
+            visited: HashSet::new(),
+            only_once,
             inner: iters.pop().unwrap(),
             open_iterators: iters,
             path: PathBuf::new(),
-            getter,
+            be: be.clone(),
         })
     }
 }
 
-impl<IT, F> Iterator for TreeIterator<IT, F>
+type TreeStreamItem = Result<(PathBuf, Node)>;
+
+impl<BE> Stream for TreeStreamer<BE>
 where
-    IT: Iterator<Item = Node>,
-    F: FnMut(&Id) -> Result<IT>,
+    BE: IndexedBackend + Unpin,
 {
-    type Item = Result<(PathBuf, Node)>;
+    type Item = TreeStreamItem;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.inner.next() {
-                Some(node) => {
-                    let path = self.path.join(node.name());
-                    if let Some(id) = node.subtree() {
-                        let old_inner = mem::replace(&mut self.inner, (self.getter)(id).unwrap());
-                        self.open_iterators.push(old_inner);
-                        self.path.push(node.name());
-                    }
-
-                    return Some(Ok((path, node)));
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let slf = self.get_mut();
+        if let Some(mut future) = slf.future.as_mut() {
+            match Pin::new(&mut future).poll(cx) {
+                Poll::Pending => {
+                    return Poll::Pending;
                 }
-                None => match self.open_iterators.pop() {
-                    Some(it) => {
-                        self.inner = it;
-                        self.path.pop();
+                Poll::Ready(tree) => {
+                    let old_inner =
+                        mem::replace(&mut slf.inner, tree.unwrap().unwrap().nodes.into_iter());
+                    slf.open_iterators.push(old_inner);
+                    slf.future = None;
+                }
+            }
+        }
+
+        loop {
+            match slf.inner.next() {
+                Some(node) => {
+                    let path = slf.path.join(node.name());
+                    if let Some(id) = node.subtree() {
+                        if !slf.only_once || !slf.visited.contains(id) {
+                            if slf.only_once {
+                                slf.visited.insert(*id);
+                            }
+                            slf.path.push(node.name());
+                            let be = slf.be.clone();
+                            let id = id.clone();
+                            slf.future =
+                                Some(spawn(async move { Tree::from_backend(&be, id).await }));
+                        }
                     }
-                    None => return None,
+
+                    return Poll::Ready(Some(Ok((path, node))));
+                }
+                None => match slf.open_iterators.pop() {
+                    Some(it) => {
+                        slf.inner = it;
+                        slf.path.pop();
+                    }
+                    None => return Poll::Ready(None),
                 },
             }
         }

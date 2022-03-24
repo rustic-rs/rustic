@@ -51,8 +51,8 @@ impl KeyFile {
 
 impl KeyFile {
     /// Get a KeyFile from the backend
-    pub fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        let data = be.read_full(FileType::Key, id)?;
+    pub async fn from_backend<B: ReadBackend>(be: &B, id: &Id) -> Result<Self> {
+        let data = be.read_full(FileType::Key, id).await?;
         Ok(serde_json::from_slice(&data)?)
     }
 }
@@ -88,24 +88,33 @@ impl MasterKey {
     }
 }
 
-fn key_from_backend<B: ReadBackend>(be: &B, id: &Id, passwd: &impl AsRef<[u8]>) -> Result<Key> {
-    KeyFile::from_backend(be, id)?.key_from_password(passwd)
+async fn key_from_backend<B: ReadBackend>(
+    be: &B,
+    id: &Id,
+    passwd: &impl AsRef<[u8]>,
+) -> Result<Key> {
+    KeyFile::from_backend(be, id)
+        .await?
+        .key_from_password(passwd)
 }
 
 /// Find a KeyFile in the backend that fits to the given password and return the contained key.
 /// If a key hint is given, only this key is tested.
 /// This is recommended for a large number of keys.
-pub fn find_key_in_backend<B: ReadBackend>(
+pub async fn find_key_in_backend<B: ReadBackend>(
     be: &B,
     passwd: &impl AsRef<[u8]>,
     hint: Option<&Id>,
 ) -> Result<Key> {
     match hint {
-        Some(id) => key_from_backend(be, id, passwd),
-        None => be
-            .list(FileType::Key)?
-            .iter()
-            .find_map(|id| key_from_backend(be, id, passwd).ok())
-            .ok_or(anyhow!("no suitable key found!")),
+        Some(id) => key_from_backend(be, id, passwd).await,
+        None => {
+            for id in be.list(FileType::Key)? {
+                if let Ok(key) = key_from_backend(be, &id, passwd).await {
+                    return Ok(key);
+                }
+            }
+            Err(anyhow!("no suitable key found!"))
+        }
     }
 }

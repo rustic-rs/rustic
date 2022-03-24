@@ -1,8 +1,9 @@
 use boomphf::hashmap::BoomHashMap;
+use futures::{Stream, StreamExt};
 
 use super::{BlobType, IndexEntry, ReadIndex};
 use crate::id::Id;
-use crate::repo::IndexPack;
+use crate::repo::IndexFile;
 
 #[derive(Debug)]
 struct BoomEntry {
@@ -22,12 +23,12 @@ enum BoomHashSetMap {
     Map(BoomHashMap<Id, BoomEntry>),
 }
 
-fn from_iter<T>(
-    iter: T,
+async fn from_stream<T>(
+    mut stream: T,
     full_data: bool,
 ) -> (Vec<Id>, Vec<Id>, Vec<BoomEntry>, Vec<Id>, Vec<BoomEntry>)
 where
-    T: IntoIterator<Item = IndexPack>,
+    T: Stream<Item = IndexFile> + Unpin,
 {
     let mut packs = Vec::new();
     let mut tree_ids = Vec::new();
@@ -35,35 +36,37 @@ where
     let mut data_ids = Vec::new();
     let mut data_bes = Vec::new();
 
-    for i in iter {
-        let idx = packs.len();
-        packs.push(*i.id());
-        let len = i.blobs().len();
-        if i.blobs()[0].tpe() == &BlobType::Data {
-            data_ids.reserve(len);
-            if full_data {
-                data_bes.reserve(len);
-            }
-        } else {
-            tree_ids.reserve(len);
-            tree_bes.reserve(len);
-        }
-
-        for blob in i.blobs() {
-            let be = BoomEntry {
-                pack_idx: idx,
-                offset: *blob.offset(),
-                length: *blob.length(),
-            };
-            match blob.tpe() {
-                BlobType::Tree => {
-                    tree_ids.push(*blob.id());
-                    tree_bes.push(be);
+    while let Some(index) = stream.next().await {
+        for i in index.dissolve().1 {
+            let idx = packs.len();
+            packs.push(*i.id());
+            let len = i.blobs().len();
+            if i.blobs()[0].tpe() == &BlobType::Data {
+                data_ids.reserve(len);
+                if full_data {
+                    data_bes.reserve(len);
                 }
-                BlobType::Data => {
-                    data_ids.push(*blob.id());
-                    if full_data {
-                        data_bes.push(be);
+            } else {
+                tree_ids.reserve(len);
+                tree_bes.reserve(len);
+            }
+
+            for blob in i.blobs() {
+                let be = BoomEntry {
+                    pack_idx: idx,
+                    offset: *blob.offset(),
+                    length: *blob.length(),
+                };
+                match blob.tpe() {
+                    BlobType::Tree => {
+                        tree_ids.push(*blob.id());
+                        tree_bes.push(be);
+                    }
+                    BlobType::Data => {
+                        data_ids.push(*blob.id());
+                        if full_data {
+                            data_bes.push(be);
+                        }
                     }
                 }
             }
@@ -73,11 +76,11 @@ where
 }
 
 impl BoomIndex {
-    pub fn only_full_trees<T>(iter: T) -> Self
+    pub async fn only_full_trees<T>(stream: T) -> Self
     where
-        T: IntoIterator<Item = IndexPack>,
+        T: Stream<Item = IndexFile> + Unpin,
     {
-        let (packs, tree_ids, tree_bes, data_ids, _data_bes) = from_iter(iter, false);
+        let (packs, tree_ids, tree_bes, data_ids, _data_bes) = from_stream(stream, false).await;
         let len = data_ids.len();
 
         Self {
@@ -86,14 +89,12 @@ impl BoomIndex {
             data: BoomHashSetMap::Set(BoomHashMap::new(data_ids, vec![(); len])),
         }
     }
-}
 
-impl FromIterator<IndexPack> for BoomIndex {
-    fn from_iter<T>(iter: T) -> Self
+    pub async fn full<T>(stream: T) -> Self
     where
-        T: IntoIterator<Item = IndexPack>,
+        T: Stream<Item = IndexFile> + Unpin,
     {
-        let (packs, tree_ids, tree_bes, data_ids, data_bes) = from_iter(iter, true);
+        let (packs, tree_ids, tree_bes, data_ids, data_bes) = from_stream(stream, true).await;
 
         Self {
             packs,

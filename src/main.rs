@@ -10,6 +10,7 @@ mod id;
 mod index;
 mod repo;
 
-fn main() -> Result<()> {
-    commands::execute()
+#[tokio::main]
+async fn main() -> Result<()> {
+    commands::execute().await
 }

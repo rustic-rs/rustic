@@ -36,8 +36,8 @@ pub(super) struct Opts {
     source: String,
 }
 
-pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
-    let config: ConfigFile = be.get_file(&Id::default())?;
+pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
+    let config: ConfigFile = be.get_file(&Id::default()).await?;
 
     let be = DryRunBackend::new(be.clone(), opts.dry_run);
 
@@ -59,8 +59,9 @@ pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
             },
             progress_counter(),
         )
+        .await
         .ok(),
-        (false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
+        (false, Some(parent)) => SnapshotFile::from_id(&be, &parent).await.ok(),
     };
     let parent_tree = match parent {
         Some(snap) => {
@@ -73,9 +74,9 @@ pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
         }
     };
 
-    let index = IndexBackend::only_full_trees(&be, progress_counter())?;
+    let index = IndexBackend::only_full_trees(&be, progress_counter()).await?;
 
-    let parent = Parent::new(&index, parent_tree.as_ref());
+    let parent = Parent::new(&index, parent_tree).await;
     let mut archiver = Archiver::new(be, index, poly, parent)?;
     let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 
@@ -90,19 +91,22 @@ pub(super) fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
     v1!("starting backup...");
     p.set_length(size);
     for item in src {
-        if let Err(e) = item.and_then(|(path, node)| {
-            archiver.add_entry(&path, node, p.clone())?;
-            Ok(())
-        }) {
-            // TODO: Only ignore source errors, don't ignore repo errors
-            eprintln!("ignoring error {}\n", e);
+        match item {
+            Err(e) => {
+                eprintln!("ignoring error {}\n", e)
+            }
+            Ok((path, node)) => {
+                if let Err(e) = archiver.add_entry(&path, node, p.clone()).await {
+                    eprintln!("ignoring error {} for {:?}\n", e, path);
+                }
+            }
         }
     }
     p.finish_with_message("done");
     let mut snap = SnapshotFile::default();
     snap.set_paths(vec![backup_path.to_path_buf()]);
     snap.set_hostname(hostname);
-    archiver.finalize_snapshot(snap)?;
+    archiver.finalize_snapshot(snap).await?;
 
     Ok(())
 }

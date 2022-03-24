@@ -8,11 +8,11 @@ use crate::backend::{DecryptBackend, LocalBackend};
 mod backup;
 mod cat;
 mod check;
-mod diff;
+//mod diff;
 mod helpers;
 mod list;
 mod ls;
-mod restore;
+//mod restore;
 mod snapshots;
 
 use helpers::*;
@@ -50,9 +50,8 @@ enum Command {
     /// check repository
     Check(check::Opts),
 
-    /// compare two snapshots
-    Diff(diff::Opts),
-
+    //    /// compare two snapshots
+    //    Diff(diff::Opts),
     /// list repository files
     List(list::Opts),
 
@@ -61,29 +60,28 @@ enum Command {
 
     /// show snapshots
     Snapshots(snapshots::Opts),
-
-    /// restore snapshot
-    Restore(restore::Opts),
+    //    /// restore snapshot
+    //    Restore(restore::Opts),
 }
 
-pub fn execute() -> Result<()> {
+pub async fn execute() -> Result<()> {
     let args = Opts::parse();
 
     let verbosity = (1 + args.verbose - args.quiet).clamp(0, 3);
     set_verbosity_level(verbosity as usize);
 
     let be = LocalBackend::new(&args.repository);
-    let key = get_key(&be, args.password_file)?;
+    let key = get_key(&be, args.password_file).await?;
     let dbe = DecryptBackend::new(&be, key);
 
     match args.command {
-        Command::Backup(opts) => backup::execute(&dbe, opts),
-        Command::Cat(opts) => cat::execute(&dbe, opts),
-        Command::Check(opts) => check::execute(&dbe, opts),
-        Command::Diff(opts) => diff::execute(&dbe, opts),
-        Command::List(opts) => list::execute(&dbe, opts),
-        Command::Ls(opts) => ls::execute(&dbe, opts),
-        Command::Snapshots(opts) => snapshots::execute(&dbe, opts),
-        Command::Restore(opts) => restore::execute(&dbe, opts),
+        Command::Backup(opts) => backup::execute(&dbe, opts).await,
+        Command::Cat(opts) => cat::execute(&dbe, opts).await,
+        Command::Check(opts) => check::execute(&dbe, opts).await,
+        //      Command::Diff(opts) => diff::execute(&dbe, opts).await,
+        Command::List(opts) => list::execute(&dbe, opts).await,
+        Command::Ls(opts) => ls::execute(&dbe, opts).await,
+        Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,
+        //      Command::Restore(opts) => restore::execute(&dbe, opts).await,
     }
 }

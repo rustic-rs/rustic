@@ -39,18 +39,18 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
         self.created = SystemTime::now();
     }
 
-    pub fn finalize(&self) -> Result<()> {
-        self.save()
+    pub async fn finalize(&self) -> Result<()> {
+        self.save().await
     }
 
-    pub fn save(&self) -> Result<()> {
+    pub async fn save(&self) -> Result<()> {
         if self.count > 0 {
-            self.be.save_file(&self.file)?;
+            self.be.save_file(&self.file).await?;
         }
         Ok(())
     }
 
-    pub fn add(&mut self, pack: IndexPack) -> Result<()> {
+    pub async fn add(&mut self, pack: IndexPack) -> Result<()> {
         self.count += pack.blobs().len();
 
         for blob in pack.blobs() {
@@ -61,7 +61,7 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
 
         // check if IndexFile needs to be saved
         if self.count >= MAX_COUNT || self.created.elapsed()? >= MAX_AGE {
-            self.save()?;
+            self.save().await?;
             self.reset();
         }
         Ok(())

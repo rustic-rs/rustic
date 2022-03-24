@@ -43,41 +43,44 @@ struct TreeOpts {
     path: PathBuf,
 }
 
-pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Config(opt) => cat_file(be, FileType::Config, opt),
-        Command::Index(opt) => cat_file(be, FileType::Index, opt),
-        Command::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt),
+        Command::Config(opt) => cat_file(be, FileType::Config, opt).await,
+        Command::Index(opt) => cat_file(be, FileType::Index, opt).await,
+        Command::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt).await,
         // special treatment for catingg blobs: read the index and use it to locate the blob
-        Command::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt),
-        Command::DataBlob(opt) => cat_blob(be, BlobType::Data, opt),
+        Command::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt).await,
+        Command::DataBlob(opt) => cat_blob(be, BlobType::Data, opt).await,
         // special treatment for cating a tree within a snapshot
-        Command::Tree(opts) => cat_tree(be, opts),
+        Command::Tree(opts) => cat_tree(be, opts).await,
     }
 }
 
-fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
+async fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id).or_else(|_| {
         // if the given id param is not a full Id, search for a suitable one
         be.find_starts_with(tpe, &[&opt.id])?.remove(0)
     })?;
-    let data = be.read_encrypted_full(tpe, &id)?;
+    let data = be.read_encrypted_full(tpe, &id).await?;
     println!("{}", String::from_utf8(data)?);
 
     Ok(())
 }
 
-fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
+async fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id)?;
-    let data = IndexBackend::new(be, ProgressBar::hidden())?.blob_from_backend(&tpe, &id)?;
+    let data = IndexBackend::new(be, ProgressBar::hidden())
+        .await?
+        .blob_from_backend(&tpe, &id)
+        .await?;
     print!("{}", String::from_utf8(data)?);
 
     Ok(())
 }
 
-fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
-    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter())?;
-    let index = IndexBackend::new(be, progress_counter())?;
+async fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
+    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter()).await?;
+    let index = IndexBackend::new(be, progress_counter()).await?;
     let mut id = snap.tree;
 
     for p in opts.path.iter() {
@@ -86,7 +89,7 @@ fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
         if p == "/" {
             continue;
         }
-        let tree = Tree::from_backend(&index, &id)?;
+        let tree = Tree::from_backend(&index, id).await?;
 
         id = tree
             .nodes()
@@ -97,7 +100,7 @@ fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
             .unwrap();
     }
 
-    let data = index.blob_from_backend(&BlobType::Tree, &id)?;
+    let data = index.blob_from_backend(&BlobType::Tree, &id).await?;
     println!("{}", String::from_utf8(data)?);
 
     Ok(())

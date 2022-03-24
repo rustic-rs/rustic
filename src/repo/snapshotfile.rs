@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
+use futures::TryStreamExt;
 use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
 use vlog::*;
@@ -56,26 +57,26 @@ impl Default for SnapshotFile {
 
 impl SnapshotFile {
     /// Get a SnapshotFile from the backend
-    pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        let mut snap: Self = be.get_file(id)?;
+    pub async fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
+        let mut snap: Self = be.get_file(id).await?;
         snap.set_id(*id);
         Ok(snap)
     }
 
-    pub fn from_str<B: DecryptReadBackend>(
+    pub async fn from_str<B: DecryptReadBackend>(
         be: &B,
         string: &str,
         predicate: impl FnMut(&Self) -> bool,
         p: ProgressBar,
     ) -> Result<Self> {
         match string {
-            "latest" => Self::latest(be, predicate, p),
-            _ => Self::from_id(be, string),
+            "latest" => Self::latest(be, predicate, p).await,
+            _ => Self::from_id(be, string).await,
         }
     }
 
     /// Get the latest SnapshotFile from the backend
-    pub fn latest<B: DecryptReadBackend>(
+    pub async fn latest<B: DecryptReadBackend>(
         be: &B,
         predicate: impl FnMut(&Self) -> bool,
         p: ProgressBar,
@@ -83,15 +84,13 @@ impl SnapshotFile {
         v1!("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
-        let snaps = be.list(FileType::Snapshot)?;
-        p.set_length(snaps.len() as u64);
+        let mut snaps = be.stream_all::<SnapshotFile>(p.clone())?;
 
-        for snap in snaps.iter().map(|id| SnapshotFile::from_backend(be, id)) {
-            p.inc(1);
-            let snap = snap?;
+        while let Some((id, mut snap)) = snaps.try_next().await? {
             if !pred(&snap) {
                 continue;
             }
+            snap.set_id(id);
             match &latest {
                 Some(l) if l.time > snap.time => {}
                 _ => {
@@ -104,23 +103,25 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend by (part of the) id
-    pub fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
+    pub async fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
         v1!("getting snapshot...");
         let id = Id::from_hex(id).or_else(|_| {
             // if the given id param is not a full Id, search for a suitable one
             be.find_starts_with(FileType::Snapshot, &[id])?.remove(0)
         })?;
-        SnapshotFile::from_backend(be, &id)
+        SnapshotFile::from_backend(be, &id).await
     }
 
     /// Get all SnapshotFiles from the backend
-    pub fn all_from_backend<B: DecryptReadBackend>(be: &B) -> Result<Vec<Self>> {
-        let snapshots: Vec<_> = be
-            .list(FileType::Snapshot)?
-            .iter()
-            .map(|id| SnapshotFile::from_backend(be, id))
-            .collect::<Result<_, _>>()?;
-        Ok(snapshots)
+    pub async fn all_from_backend<B: DecryptReadBackend>(be: &B) -> Result<Vec<Self>> {
+        Ok(be
+            .stream_all::<SnapshotFile>(ProgressBar::hidden())?
+            .map_ok(|(id, mut snap)| {
+                snap.set_id(id);
+                snap
+            })
+            .try_collect()
+            .await?)
     }
 
     pub fn set_id(&mut self, id: Id) {

@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::fs::File;
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -171,8 +170,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             }
         }
         let f = File::open(path)?;
-        let reader = BufReader::new(f);
-        let chunk_iter = ChunkIter::new(reader, &self.poly);
+        let chunk_iter = ChunkIter::new(f, *node.meta().size() as usize, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
 

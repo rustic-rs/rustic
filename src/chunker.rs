@@ -1,5 +1,4 @@
 use std::io::{self, Read};
-use std::slice;
 
 use cdc::{Polynom64, Rabin64, RollingHash64};
 
@@ -15,20 +14,26 @@ fn default_predicate(x: u64) -> bool {
 }
 
 pub struct ChunkIter<R: Read> {
+    buf: Vec<u8>,
+    pos: usize,
     reader: R,
     predicate: fn(u64) -> bool,
     rabin: Rabin64,
+    size_hint: usize,
     min_size: usize,
     max_size: usize,
     finished: bool,
 }
 
 impl<R: Read> ChunkIter<R> {
-    pub fn new(reader: R, poly: &Polynom64) -> Self {
+    pub fn new(reader: R, size_hint: usize, poly: &Polynom64) -> Self {
         Self {
+            buf: Vec::with_capacity(4 * KB),
+            pos: 0,
             reader,
             predicate: default_predicate,
             rabin: Rabin64::new_with_polynom(6, poly),
+            size_hint,
             min_size: MIN_SIZE,
             max_size: MAX_SIZE,
             finished: false,
@@ -44,49 +49,71 @@ impl<R: Read> Iterator for ChunkIter<R> {
             return None;
         }
 
-        let mut vec = Vec::new();
+        let mut min_size = self.min_size;
+        let mut vec = Vec::with_capacity(self.size_hint.min(min_size));
+
+        // check if some bytes exist in the buffer and if yes, use them
+        let open_buf_len = self.buf.len() - self.pos;
+        if open_buf_len > 0 {
+            vec.resize(open_buf_len, 0);
+            vec.copy_from_slice(&self.buf[self.pos..]);
+            self.pos = self.buf.len();
+            min_size -= open_buf_len;
+        }
+
         let size = match (&mut self.reader)
-            .take(self.min_size as u64)
+            .take(min_size as u64)
             .read_to_end(&mut vec)
         {
             Ok(size) => size,
             Err(err) => return Some(Err(err)),
         };
 
-        if size < self.min_size {
+        // If self.min_size is not reached, we are done.
+        // Note that the read data is of size size + open_buf_len and self.min_size = minsize + open_buf_len
+        if size < min_size {
             self.finished = true;
+            vec.truncate(size + open_buf_len);
             return Some(Ok(vec));
         }
 
-        let mut index = self.min_size;
         self.rabin
-            .reset_and_prefill_window(&mut vec[self.min_size - 64..self.min_size].iter().cloned());
-
-        let mut byte = 0;
+            .reset_and_prefill_window(&mut vec[vec.len() - 64..vec.len()].iter().cloned());
 
         loop {
-            if index >= self.max_size {
-                return Some(Ok(vec));
+            if vec.len() >= self.max_size {
+                break;
             }
-            match self.reader.read(slice::from_mut(&mut byte)) {
-                Ok(0) => {
-                    self.finished = true;
-                    return Some(Ok(vec));
-                }
-                Ok(..) => {
-                    vec.push(byte);
-                    index += 1;
-                    self.rabin.slide(&byte);
-                    if (self.predicate)(self.rabin.hash) {
-                        return Some(Ok(vec));
+
+            if self.buf.len() == self.pos {
+                // TODO: use a possibly uninitialized buffer here
+                self.buf.resize(4 * KB, 0);
+                match self.reader.read(&mut self.buf[..]) {
+                    Ok(0) => {
+                        self.finished = true;
+                        break;
+                    }
+                    Ok(size) => {
+                        self.pos = 0;
+                        self.buf.truncate(size);
+                    }
+
+                    Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                    Err(e) => {
+                        return Some(Err(e));
                     }
                 }
+            }
 
-                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
-                Err(e) => {
-                    return Some(Err(e));
-                }
+            let byte = self.buf[self.pos];
+            vec.push(byte);
+            self.pos += 1;
+            self.rabin.slide(&byte);
+            if (self.predicate)(self.rabin.hash) {
+                break;
             }
         }
+        self.size_hint -= vec.len();
+        Some(Ok(vec))
     }
 }

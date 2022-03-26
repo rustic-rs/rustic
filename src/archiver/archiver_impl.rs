@@ -5,13 +5,16 @@ use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
+use futures::{stream::FuturesOrdered, StreamExt};
 use indicatif::ProgressBar;
+use tokio::spawn;
 use vlog::*;
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
+use crate::id::Id;
 use crate::index::{IndexedBackend, Indexer};
 use crate::repo::SnapshotFile;
 
@@ -174,23 +177,48 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
 
+        let mut queue = FuturesOrdered::new();
+
         for chunk in chunk_iter {
             let chunk = chunk?;
             let size = chunk.len() as u64;
             filesize += size;
-            let id = hash(&chunk);
-            if !self.index.has_data(&id)
-                && self.data_packer.add(&chunk, &id, BlobType::Data).await?
-            {
-                self.data_blobs_written += 1;
-                self.data_added += size;
+
+            queue.push(spawn(async move {
+                let id = hash(&chunk);
+                (id, chunk, size)
+            }));
+
+            if queue.len() > 8 {
+                let (id, chunk, size) = queue.next().await.unwrap()?;
+                self.process_data_junk(id, &chunk, size, &p).await?;
+                content.push(id);
             }
-            content.push(id);
-            p.inc(size)
         }
+
+        while let Some(Ok((id, chunk, size))) = queue.next().await {
+            self.process_data_junk(id, &chunk, size, &p).await?;
+            content.push(id);
+        }
+
         let mut node = node;
         node.set_content(content);
         self.add_node(node, filesize);
+        Ok(())
+    }
+
+    async fn process_data_junk(
+        &mut self,
+        id: Id,
+        chunk: &[u8],
+        size: u64,
+        p: &ProgressBar,
+    ) -> Result<()> {
+        if !self.index.has_data(&id) && self.data_packer.add(&chunk, &id, BlobType::Data).await? {
+            self.data_blobs_written += 1;
+            self.data_added += size;
+        }
+        p.inc(size);
         Ok(())
     }
 

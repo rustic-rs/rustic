@@ -85,8 +85,12 @@ pub struct IndexBackend<BE: DecryptReadBackend> {
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub async fn new(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
-        let index =
-            BoomIndex::full(be.stream_all::<IndexFile>(p.clone())?.map(|i| i.unwrap().1)).await;
+        let index = BoomIndex::full(
+            be.stream_all::<IndexFile>(p.clone())
+                .await?
+                .map(|i| i.unwrap().1),
+        )
+        .await;
         p.finish_with_message("done");
         Ok(Self {
             be: be.clone(),
@@ -97,7 +101,9 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub async fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
         let index = BoomIndex::only_full_trees(
-            be.stream_all::<IndexFile>(p.clone())?.map(|i| i.unwrap().1),
+            be.stream_all::<IndexFile>(p.clone())
+                .await?
+                .map(|i| i.unwrap().1),
         )
         .await;
         p.finish_with_message("done");

@@ -49,11 +49,12 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     type Error: Send + Sync + std::error::Error + 'static;
 
     fn location(&self) -> &str;
-    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error>;
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error>;
 
-    fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
+    async fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
         Ok(self
-            .list_with_size(tpe)?
+            .list_with_size(tpe)
+            .await?
             .into_iter()
             .map(|(id, _)| id)
             .collect())
@@ -68,45 +69,41 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         length: u32,
     ) -> Result<Vec<u8>, Self::Error>;
 
-    fn find_starts_with(
+    async fn find_starts_with(
         &self,
         tpe: FileType,
         vec: &[&str],
     ) -> Result<Vec<Result<Id, anyhow::Error>>, Self::Error> {
-        self.map_list(tpe, vec, |s, id| id.to_hex().starts_with(s))
-            .map(|res| {
-                res.into_iter()
-                    .enumerate()
-                    .map(|(i, id)| match id {
-                        MapResult::Some(id) => Ok(id),
-                        MapResult::None => Err(anyhow!("no suitable id found for {}", &vec[i])),
-                        MapResult::NonUnique => Err(anyhow!("id {} is not unique", &vec[i])),
-                    })
-                    .collect()
-            })
-    }
-
-    /// map_list
-    fn map_list<T>(
-        &self,
-        tpe: FileType,
-        vec: &[T],
-        matches: impl Fn(&T, Id) -> bool,
-    ) -> Result<Vec<MapResult<Id>>, Self::Error> {
-        let mut res = vec![MapResult::None; vec.len()];
-        for id in self.list(tpe)? {
+        let mut results = vec![MapResult::None; vec.len()];
+        for id in self.list(tpe).await? {
             for (i, v) in vec.iter().enumerate() {
-                if matches(v, id) {
-                    if res[i] == MapResult::None {
-                        res[i] = MapResult::Some(id);
+                if id.to_hex().starts_with(v) {
+                    if results[i] == MapResult::None {
+                        results[i] = MapResult::Some(id);
                     } else {
-                        res[i] = MapResult::NonUnique;
+                        results[i] = MapResult::NonUnique;
                     }
                 }
             }
         }
 
-        Ok(res)
+        Ok(results
+            .into_iter()
+            .enumerate()
+            .map(|(i, id)| match id {
+                MapResult::Some(id) => Ok(id),
+                MapResult::None => Err(anyhow!("no suitable id found for {}", &vec[i])),
+                MapResult::NonUnique => Err(anyhow!("id {} is not unique", &vec[i])),
+            })
+            .collect())
+    }
+
+    async fn find_id(&self, tpe: FileType, id: &str) -> Result<Id, anyhow::Error> {
+        Ok(match Id::from_hex(id) {
+            Ok(id) => id,
+            // if the given id param is not a full Id, search for a suitable one
+            Err(_) => self.find_starts_with(tpe, &[&id]).await?.remove(0)?,
+        })
     }
 }
 

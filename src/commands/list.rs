@@ -17,7 +17,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
     let tpe = match opts.tpe.as_str() {
         // special treatment for listing blobs: read the index and display it
         "blobs" => {
-            let mut stream = be.stream_all::<IndexFile>(ProgressBar::hidden())?;
+            let mut stream = be.stream_all::<IndexFile>(ProgressBar::hidden()).await?;
             while let Some(index) = stream.next().await {
                 for pack in index?.1.dissolve().1 {
                     for blob in pack.blobs() {
@@ -34,7 +34,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
         t => bail!("invalid type: {}", t),
     };
 
-    for id in be.list(tpe)? {
+    for id in be.list(tpe).await? {
         println!("{}", id.to_hex());
     }
 

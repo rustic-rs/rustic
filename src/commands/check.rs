@@ -48,7 +48,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     let mut packs = HashMap::new();
 
     // TODO: only read index files once
-    let mut stream = be.stream_all::<IndexFile>(progress_counter())?;
+    let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
     while let Some(index) = stream.next().await {
         let (_, index_packs) = index?.1.dissolve();
         for p in index_packs {
@@ -56,7 +56,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
         }
     }
 
-    for (id, size) in be.list_with_size(FileType::Pack)? {
+    for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
             None => eprintln!("pack {} not contained in index", id.to_hex()),
             Some(index_size) if index_size != size => eprintln!(
@@ -82,7 +82,10 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 // check if all snapshots and contained trees can be loaded and contents exist in the index
 async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
     let mut snap_trees = Vec::new();
-    let mut stream = index.be().stream_all::<SnapshotFile>(progress_counter())?;
+    let mut stream = index
+        .be()
+        .stream_all::<SnapshotFile>(progress_counter())
+        .await?;
     snap_trees.reserve(stream.size_hint().1.unwrap());
     while let Some(snap) = stream.next().await {
         snap_trees.push(snap?.1.tree);

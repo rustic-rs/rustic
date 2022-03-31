@@ -109,7 +109,7 @@ pub async fn find_key_in_backend<B: ReadBackend>(
     match hint {
         Some(id) => key_from_backend(be, id, passwd).await,
         None => {
-            for id in be.list(FileType::Key)? {
+            for id in be.list(FileType::Key).await? {
                 if let Ok(key) = key_from_backend(be, &id, passwd).await {
                     return Ok(key);
                 }

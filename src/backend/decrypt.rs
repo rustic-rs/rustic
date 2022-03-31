@@ -28,12 +28,12 @@ pub trait DecryptReadBackend: ReadBackend {
         Ok(serde_json::from_slice(&data)?)
     }
 
-    fn stream_all<F: RepoFile>(
+    async fn stream_all<F: RepoFile>(
         &self,
         p: ProgressBar,
         //    ) -> Result<impl Stream<Item = std::result::Result<F, JoinError>>> {
     ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
-        let list = self.list(F::TYPE)?;
+        let list = self.list(F::TYPE).await?;
         p.set_length(list.len() as u64);
 
         let stream: FuturesUnordered<_> = list
@@ -123,12 +123,12 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         self.backend.location()
     }
 
-    fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
-        self.backend.list(tpe)
+    async fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
+        self.backend.list(tpe).await
     }
 
-    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
-        self.backend.list_with_size(tpe)
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+        self.backend.list_with_size(tpe).await
     }
 
     async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {

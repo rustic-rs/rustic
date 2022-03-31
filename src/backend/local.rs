@@ -37,7 +37,7 @@ impl ReadBackend for LocalBackend {
         self.path.to_str().unwrap()
     }
 
-    fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
+    async fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
         let walker = WalkDir::new(self.path.join(tpe.name()))
             .into_iter()
             .filter_map(walkdir::Result::ok)
@@ -47,7 +47,7 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
         let walker = WalkDir::new(self.path.join(tpe.name()))
             .into_iter()
             .filter_map(walkdir::Result::ok)

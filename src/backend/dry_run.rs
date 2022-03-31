@@ -45,8 +45,8 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         self.be.location()
     }
 
-    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
-        self.be.list_with_size(tpe)
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+        self.be.list_with_size(tpe).await
     }
 
     async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {

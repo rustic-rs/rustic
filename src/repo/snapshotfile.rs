@@ -84,7 +84,7 @@ impl SnapshotFile {
         v1!("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
-        let mut snaps = be.stream_all::<SnapshotFile>(p.clone())?;
+        let mut snaps = be.stream_all::<SnapshotFile>(p.clone()).await?;
 
         while let Some((id, mut snap)) = snaps.try_next().await? {
             if !pred(&snap) {
@@ -105,17 +105,15 @@ impl SnapshotFile {
     /// Get a SnapshotFile from the backend by (part of the) id
     pub async fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
         v1!("getting snapshot...");
-        let id = Id::from_hex(id).or_else(|_| {
-            // if the given id param is not a full Id, search for a suitable one
-            be.find_starts_with(FileType::Snapshot, &[id])?.remove(0)
-        })?;
+        let id = be.find_id(FileType::Snapshot, id).await?;
         SnapshotFile::from_backend(be, &id).await
     }
 
     /// Get all SnapshotFiles from the backend
     pub async fn all_from_backend<B: DecryptReadBackend>(be: &B) -> Result<Vec<Self>> {
         Ok(be
-            .stream_all::<SnapshotFile>(ProgressBar::hidden())?
+            .stream_all::<SnapshotFile>(ProgressBar::hidden())
+            .await?
             .map_ok(|(id, mut snap)| {
                 snap.set_id(id);
                 snap

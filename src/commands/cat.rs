@@ -57,10 +57,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
 }
 
 async fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
-    let id = Id::from_hex(&opt.id).or_else(|_| {
-        // if the given id param is not a full Id, search for a suitable one
-        be.find_starts_with(tpe, &[&opt.id])?.remove(0)
-    })?;
+    let id = be.find_id(tpe, &opt.id).await?;
     let data = be.read_encrypted_full(tpe, &id).await?;
     println!("{}", String::from_utf8(data)?);
 

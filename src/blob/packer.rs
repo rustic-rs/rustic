@@ -44,15 +44,6 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         })
     }
 
-    pub fn reset(&mut self) -> Result<()> {
-        self.file = tempfile()?;
-        self.size = 0;
-        self.count = 0;
-        self.created = SystemTime::now();
-        self.hasher.reset();
-        Ok(())
-    }
-
     pub async fn finalize(&mut self) -> Result<()> {
         self.save().await
     }
@@ -87,7 +78,10 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         // check if PackFile needs to be saved
         if self.count >= MAX_COUNT || self.size >= MAX_SIZE || self.created.elapsed()? >= MAX_AGE {
             self.save().await?;
-            self.reset()?;
+            self.size = 0;
+            self.count = 0;
+            self.created = SystemTime::now();
+            self.hasher.reset();
         }
         Ok(true)
     }
@@ -149,9 +143,9 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         // write file to backend
         self.file.flush()?;
         self.file.seek(SeekFrom::Start(0))?;
-        self.be
-            .write_full(FileType::Pack, &id, &mut self.file)
-            .await?;
+
+        let file = std::mem::replace(&mut self.file, tempfile()?);
+        self.be.write_file(FileType::Pack, &id, file).await?;
 
         let index = std::mem::replace(&mut self.index, IndexPack::new());
         self.indexer.borrow_mut().add(index).await?;

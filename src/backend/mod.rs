@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -74,6 +75,12 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         tpe: FileType,
         vec: &[&str],
     ) -> Result<Vec<Result<Id, anyhow::Error>>, Self::Error> {
+        #[derive(Clone, Copy, PartialEq)]
+        pub enum MapResult<T> {
+            None,
+            Some(T),
+            NonUnique,
+        }
         let mut results = vec![MapResult::None; vec.len()];
         for id in self.list(tpe).await? {
             for (i, v) in vec.iter().enumerate() {
@@ -107,23 +114,10 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum MapResult<T> {
-    None,
-    Some(T),
-    NonUnique,
-}
-
 #[async_trait]
-pub trait WriteBackend: Clone + Send + Sync + 'static {
-    type Error: Send + Sync + std::error::Error + 'static;
-
-    async fn write_full(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        r: &mut (impl Read + Send + Sync),
-    ) -> Result<(), Self::Error>;
+pub trait WriteBackend: ReadBackend {
+    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error>;
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error>;
 }
 
 pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {

@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::fs::File;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -82,16 +82,17 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
 
 #[async_trait]
 impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
-    type Error = <BE as WriteBackend>::Error;
-    async fn write_full(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        r: &mut (impl Read + Send + Sync),
-    ) -> Result<(), Self::Error> {
+    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.write_full(tpe, id, r).await,
+            false => self.be.write_file(tpe, id, f).await,
+        }
+    }
+
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
+        match self.dry_run {
+            true => Ok(()),
+            false => self.be.write_bytes(tpe, id, buf).await,
         }
     }
 }

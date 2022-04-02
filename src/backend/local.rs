@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{copy, Read, Seek, SeekFrom};
+use std::io::{copy, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
 
@@ -83,21 +83,25 @@ impl ReadBackend for LocalBackend {
 
 #[async_trait]
 impl WriteBackend for LocalBackend {
-    type Error = std::io::Error;
-
-    async fn write_full(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        r: &mut (impl Read + Send + Sync),
-    ) -> Result<(), Self::Error> {
+    async fn write_file(&self, tpe: FileType, id: &Id, mut f: File) -> Result<(), Self::Error> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
             .create_new(true)
             .write(true)
             .open(&filename)?;
-        copy(r, &mut file)?;
+        copy(&mut f, &mut file)?;
+        file.sync_all()
+    }
+
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
+        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
+        let filename = self.path(tpe, id);
+        let mut file = fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&filename)?;
+        file.write_all(&buf)?;
         file.sync_all()
     }
 }

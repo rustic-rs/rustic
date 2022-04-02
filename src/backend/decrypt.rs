@@ -1,4 +1,4 @@
-use std::io::{Cursor, Read};
+use std::fs::File;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -89,7 +89,7 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
     async fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
         let data = self.key().encrypt_data(data)?;
         let id = hash(&data);
-        self.write_full(tpe, &id, &mut Cursor::new(data)).await?;
+        self.write_bytes(tpe, &id, data).await?;
         Ok(id)
     }
 }
@@ -148,15 +148,13 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
 
 #[async_trait]
 impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
-    type Error = R::Error;
+    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
+        self.backend.write_file(tpe, id, f).await?;
+        Ok(())
+    }
 
-    async fn write_full(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        r: &mut (impl Read + Send + Sync),
-    ) -> Result<(), Self::Error> {
-        self.backend.write_full(tpe, id, r).await?;
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
+        self.backend.write_bytes(tpe, id, buf).await?;
         Ok(())
     }
 }

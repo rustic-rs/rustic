@@ -8,17 +8,21 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::id::Id;
 
+pub mod choose;
 pub mod decrypt;
 pub mod dry_run;
 pub mod ignore;
 pub mod local;
 pub mod node;
+pub mod rest;
 
 pub use self::ignore::*;
+pub use choose::*;
 pub use decrypt::*;
 pub use dry_run::*;
 pub use local::*;
 use node::Node;
+pub use rest::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum FileType {

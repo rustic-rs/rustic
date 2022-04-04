@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::backend::{DecryptBackend, LocalBackend};
+use crate::backend::{ChooseBackend, DecryptBackend};
 
 mod backup;
 mod cat;
@@ -70,7 +70,8 @@ pub async fn execute() -> Result<()> {
     let verbosity = (1 + args.verbose - args.quiet).clamp(0, 3);
     set_verbosity_level(verbosity as usize);
 
-    let be = LocalBackend::new(&args.repository);
+    let be = ChooseBackend::from_url(&args.repository);
+
     let key = get_key(&be, args.password_file).await?;
     let dbe = DecryptBackend::new(&be, key);
 

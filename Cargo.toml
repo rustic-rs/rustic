@@ -50,6 +50,8 @@ boomphf = "0.5"
 # local backend
 walkdir = "2"
 ignore = "0.4"
+# rest backend
+reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }
 # commands
 clap = { version = "3", features = ["derive"] }
 rpassword = "5"

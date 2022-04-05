@@ -66,17 +66,21 @@ where
     BE: IndexedBackend + Unpin,
 {
     pub async fn new(be: BE, ids: Vec<Id>, only_once: bool) -> Result<Self> {
-        // TODO: empty ids vector will panic here!
         let mut iters = Vec::new();
         for id in ids {
-            iters.push(Tree::from_backend(&be, id).await?.nodes.into_iter());
+            let tree = Tree::from_backend(&be, id).await?;
+            iters.push(tree.nodes.into_iter());
         }
-        iters.rotate_right(1);
+        let inner = if iters.is_empty() {
+            vec![].into_iter()
+        } else {
+            iters.remove(0)
+        };
         Ok(Self {
             future: None,
             visited: HashSet::new(),
             only_once,
-            inner: iters.pop().unwrap(),
+            inner,
             open_iterators: iters,
             path: PathBuf::new(),
             be: be.clone(),
@@ -86,6 +90,7 @@ where
 
 type TreeStreamItem = Result<(PathBuf, Node)>;
 
+// TODO: This is not really parallel at the moment...
 impl<BE> Stream for TreeStreamer<BE>
 where
     BE: IndexedBackend + Unpin,

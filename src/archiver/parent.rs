@@ -17,7 +17,7 @@ pub enum ParentResult<T> {
 
 impl<BE: IndexedBackend> Parent<BE> {
     pub async fn new(be: &BE, tree_id: Option<Id>) -> Self {
-        // if tree_id is given, load tre from backend. Turn errors into None.
+        // if tree_id is given, load tree from backend. Turn errors into None.
         // TODO: print warning when loading failed
         let tree = match tree_id {
             None => None,
@@ -44,9 +44,9 @@ impl<BE: IndexedBackend> Parent<BE> {
             None => ParentResult::NotFound,
             Some(p_node) => {
                 if p_node.node_type() == node.node_type()
+                    && p_node.meta().size() == node.meta().size()
                     && p_node.meta().ctime() == node.meta().ctime()
-                    && p_node.meta().inode() > &0
-                    && p_node.meta().inode() == node.meta().inode()
+                    && (node.meta().inode() == &0 || p_node.meta().inode() == node.meta().inode())
                 {
                     ParentResult::Matched(p_node)
                 } else {

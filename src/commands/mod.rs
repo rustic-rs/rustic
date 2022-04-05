@@ -12,7 +12,7 @@ mod check;
 mod helpers;
 mod list;
 mod ls;
-//mod restore;
+mod restore;
 mod snapshots;
 
 use helpers::*;
@@ -60,8 +60,9 @@ enum Command {
 
     /// show snapshots
     Snapshots(snapshots::Opts),
-    //    /// restore snapshot
-    //    Restore(restore::Opts),
+
+    /// restore snapshot
+    Restore(restore::Opts),
 }
 
 pub async fn execute() -> Result<()> {
@@ -83,6 +84,6 @@ pub async fn execute() -> Result<()> {
         Command::List(opts) => list::execute(&dbe, opts).await,
         Command::Ls(opts) => ls::execute(&dbe, opts).await,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,
-        //      Command::Restore(opts) => restore::execute(&dbe, opts).await,
+        Command::Restore(opts) => restore::execute(&dbe, opts).await,
     }
 }

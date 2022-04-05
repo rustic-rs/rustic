@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use derive_getters::Dissolve;
+use futures::StreamExt;
 use vlog::*;
 
 use super::progress_counter;
@@ -30,84 +31,54 @@ pub(super) struct Opts {
     dest: String,
 }
 
-pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
     let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter()).await?;
 
     let dest = LocalBackend::new(&opts.dest);
     let index = IndexBackend::new(be, progress_counter()).await?;
 
     v2!("1st tree walk: allocating dirs/files and collecting restore information...");
-    let file_infos = allocate_and_collect(&dest, &index, snap.tree, &opts)?;
+    let file_infos = allocate_and_collect(&dest, index.clone(), snap.tree, &opts).await?;
 
     v2!("restoring file contents...");
     restore_contents(be, &dest, file_infos, &opts).await?;
 
     v2!("2nd tree walk: setting metadata");
-    restore_metadata(&dest, &index, snap.tree, &opts)?;
+    restore_metadata(&dest, index, snap.tree, &opts).await?;
 
     v1!("done.");
     Ok(())
 }
 
 /// allocate files, scan or remove existing files and collect restore information
-fn allocate_and_collect(
+async fn allocate_and_collect(
     dest: &LocalBackend,
-    index: &impl IndexedBackend,
+    index: impl IndexedBackend + Unpin,
     tree: Id,
     opts: &Opts,
 ) -> Result<FileInfos> {
     let mut file_infos = FileInfos::new();
 
-    // collect dirs to delete as they need to be deleted in reverse order
-    //    let mut dirs_to_delete = Vec::new();
-
-    let tree_iter = tree_iterator(index, vec![tree])?.filter_map(Result::ok);
-
-    // walk over tree in repository and compare with tree in dest
-    for file in tree_iter.merge_join_by(dest.walker(), |(path, _), j| path.cmp(j)) {
-        match file {
-            // node is only in snapshot
-            Left((path, node)) => {
-                match node.node_type() {
-                    NodeType::Dir => {
-                        dest.create_dir(&path);
-                    }
-                    NodeType::File => {
-                        // collect blobs needed for restoring
-                        let size = file_infos.add_file(&node, path.clone(), index)?;
-                        // create the file
-                        if !opts.dry_run {
-                            dest.create_file(&path, size);
-                        }
-                    }
-                    _ => {} // nothing to do for symlink, device, etc.
-                }
-            }
-            // node is in snapshot but already exists
-            // TODO: check which blobs are not needed for restore
-            Both((_path, _node), _file) => {}
-            // node exists, but is not in snapshot
-            // TODO: Delete files
-            Right(_file) => {
-                /*
+    let mut tree_streamer = TreeStreamer::new(index.clone(), vec![tree], false).await?;
+    while let Some(item) = tree_streamer.next().await {
+        let (path, node) = item?;
+        match node.node_type() {
+            NodeType::Dir => {
                 if !opts.dry_run {
-                    if node.is_tree() {
-                        dirs_to_delete.push(file)
-                    }
-                    if node.is_file() {
-                        dest.remove_file(&file);
-                    }
+                    dest.create_dir(&path);
                 }
-                */
             }
+            NodeType::File => {
+                // collect blobs needed for restoring
+                let size = file_infos.add_file(&node, path.clone(), &index)?;
+                // create the file
+                if !opts.dry_run {
+                    dest.create_file(&path, size);
+                }
+            }
+            _ => {} // nothing to do for symlink, device, etc.
         }
     }
-
-    /*
-    for dir in dirs_to_delete.iter().rev() {
-        dest.remove_dir(dir);
-    }
-    */
 
     Ok(file_infos)
 }
@@ -138,21 +109,22 @@ async fn restore_contents(
     Ok(())
 }
 
-fn restore_metadata(
+async fn restore_metadata(
     dest: &LocalBackend,
-    index: &impl IndexedBackend,
+    index: impl IndexedBackend + Unpin,
     tree: Id,
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    let tree_iter = tree_iterator(index, vec![tree])?.filter_map(Result::ok);
-    for (path, node) in tree_iter {
+    let mut tree_streamer = TreeStreamer::new(index, vec![tree], false).await?;
+    while let Some(item) = tree_streamer.next().await {
+        let (path, node) = item?;
         if !opts.dry_run {
             if let NodeType::Symlink { linktarget } = node.node_type() {
                 dest.create_symlink(&path, linktarget);
             }
+            dest.set_metadata(&path, node.meta());
         }
-        // TODO: metadata
     }
 
     Ok(())

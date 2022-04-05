@@ -1,13 +1,14 @@
 use std::fs::{self, File};
 use std::io::{copy, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::FileExt;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use vlog::*;
 use walkdir::WalkDir;
 
-use super::{FileType, Id, ReadBackend, WriteBackend};
+use super::{node::Metadata, FileType, Id, ReadBackend, WriteBackend};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -134,6 +135,17 @@ impl LocalBackend {
     pub fn create_symlink(&self, item: impl AsRef<Path>, dest: impl AsRef<Path>) {
         let filename = self.path.join(item);
         std::os::unix::fs::symlink(dest, filename).unwrap();
+    }
+
+    // TODO: uid/gid and times
+    pub fn set_metadata(&self, item: impl AsRef<Path>, meta: &Metadata) {
+        let mode = *meta.mode();
+        if mode == 0 {
+            return;
+        }
+        let filename = self.path.join(item);
+        std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))
+            .expect(&format!("error chmod {:?}", filename));
     }
 
     pub fn create_file(&self, item: impl AsRef<Path>, size: u64) {

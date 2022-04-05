@@ -12,6 +12,7 @@ mod diff;
 mod helpers;
 mod list;
 mod ls;
+mod repoinfo;
 mod restore;
 mod snapshots;
 
@@ -64,6 +65,9 @@ enum Command {
 
     /// restore snapshot
     Restore(restore::Opts),
+
+    /// show general information about repository
+    Repoinfo(repoinfo::Opts),
 }
 
 pub async fn execute() -> Result<()> {
@@ -86,5 +90,6 @@ pub async fn execute() -> Result<()> {
         Command::Ls(opts) => ls::execute(&dbe, opts).await,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,
         Command::Restore(opts) => restore::execute(&dbe, opts).await,
+        Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await,
     }
 }

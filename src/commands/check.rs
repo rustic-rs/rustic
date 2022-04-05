@@ -9,7 +9,7 @@ use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{NodeType, TreeStreamer};
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::{IndexBlob, IndexFile, SnapshotFile};
+use crate::repo::{IndexFile, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -34,15 +34,6 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     Ok(())
 }
 
-// calculate the pack size from the contained blobs
-fn pack_size(blobs: &[IndexBlob]) -> u32 {
-    let mut size = 4 + 32; // 4 + crypto overhead
-    for blob in blobs {
-        size += blob.length() + 37 // 37 = length of blob description
-    }
-    size
-}
-
 // check if packs correspond to index
 async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     let mut packs = HashMap::new();
@@ -50,9 +41,8 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     // TODO: only read index files once
     let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
     while let Some(index) = stream.next().await {
-        let (_, index_packs) = index?.1.dissolve();
-        for p in index_packs {
-            packs.insert(*p.id(), pack_size(p.blobs()));
+        for p in index?.1.dissolve().1 {
+            packs.insert(*p.id(), p.pack_size());
         }
     }
 

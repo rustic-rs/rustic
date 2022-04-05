@@ -24,6 +24,13 @@ pub use local::*;
 use node::Node;
 pub use rest::*;
 
+pub const ALL_FILE_TYPES: [FileType; 4] = [
+    FileType::Key,
+    FileType::Snapshot,
+    FileType::Index,
+    FileType::Pack,
+];
+
 #[derive(Clone, Copy, Debug)]
 pub enum FileType {
     Config,

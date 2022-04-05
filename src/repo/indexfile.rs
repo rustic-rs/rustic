@@ -55,6 +55,15 @@ impl IndexPack {
             length,
         });
     }
+
+    // calculate the pack size from the contained blobs
+    pub fn pack_size(&self) -> u32 {
+        let mut size = 4 + 32; // 4 + crypto overhead
+        for blob in &self.blobs {
+            size += blob.length() + 37 // 37 = length of blob description
+        }
+        size
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, Dissolve)]

@@ -8,7 +8,7 @@ use crate::backend::{ChooseBackend, DecryptBackend};
 mod backup;
 mod cat;
 mod check;
-//mod diff;
+mod diff;
 mod helpers;
 mod list;
 mod ls;
@@ -50,8 +50,9 @@ enum Command {
     /// check repository
     Check(check::Opts),
 
-    //    /// compare two snapshots
-    //    Diff(diff::Opts),
+    /// compare two snapshots
+    Diff(diff::Opts),
+
     /// list repository files
     List(list::Opts),
 
@@ -80,7 +81,7 @@ pub async fn execute() -> Result<()> {
         Command::Backup(opts) => backup::execute(&dbe, opts).await,
         Command::Cat(opts) => cat::execute(&dbe, opts).await,
         Command::Check(opts) => check::execute(&dbe, opts).await,
-        //      Command::Diff(opts) => diff::execute(&dbe, opts).await,
+        Command::Diff(opts) => diff::execute(&dbe, opts).await,
         Command::List(opts) => list::execute(&dbe, opts).await,
         Command::Ls(opts) => ls::execute(&dbe, opts).await,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,

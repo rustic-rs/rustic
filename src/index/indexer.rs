@@ -71,29 +71,3 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
         self.indexed.contains(id)
     }
 }
-
-/*
-impl<BE: WriteBackend> Drop for Indexer<BE> {
-    fn drop(&mut self) {
-        // ignore error when dropping Indexer
-        let _ = self.save();
-    }
-}
-*/
-/*
-impl<BE: WriteBackend> ReadIndex for Indexer<BE> {
-    fn get_id(&self, id: &Id) -> Option<IndexEntry> {
-        for pack in self.file.packs() {
-            if let Some(blob) = pack.blobs().iter().find(|b| b.id() == id) {
-                return Some(IndexEntry {
-                    pack: *pack.id(),
-                    tpe: *blob.tpe(),
-                    offset: *blob.offset(),
-                    length: *blob.length(),
-                });
-            }
-        }
-        None
-    }
-}
-*/

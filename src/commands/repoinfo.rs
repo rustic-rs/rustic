@@ -35,11 +35,13 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
 
     table.set_titles(row![b->"File type", br->"Count", br->"Total Size"]);
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+    println!();
     table.printstd();
     println!();
 
     v1!("scanning index...");
-    let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
+    let p = progress_counter();
+    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     let mut tree_count = 0;
     let mut tree_size = 0;
     let mut data_count = 0;
@@ -60,6 +62,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
             }
         }
     }
+    p.finish_with_message("done");
 
     let mut table = Table::new();
     table.add_row(row!["Tree",r->tree_count,r->ByteSize(tree_size).to_string_as(true)]);
@@ -68,6 +71,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
 
     table.set_titles(row![b->"Blob type", br->"Count", br->"Total Size"]);
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+    println!();
     table.printstd();
 
     Ok(())

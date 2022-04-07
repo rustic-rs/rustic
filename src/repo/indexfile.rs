@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use derive_getters::{Dissolve, Getters};
 use serde::{Deserialize, Serialize};
 
@@ -66,11 +68,23 @@ impl IndexPack {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Getters, Dissolve)]
+#[derive(Debug, Clone, Serialize, Deserialize, Getters, Dissolve, Eq, PartialEq)]
 pub struct IndexBlob {
     id: Id,
     #[serde(rename = "type")]
     tpe: BlobType,
     offset: u32,
     length: u32,
+}
+
+impl PartialOrd<IndexBlob> for IndexBlob {
+    fn partial_cmp(&self, other: &IndexBlob) -> Option<Ordering> {
+        self.offset.partial_cmp(&other.offset)
+    }
+}
+
+impl Ord for IndexBlob {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.offset.cmp(&other.offset)
+    }
 }

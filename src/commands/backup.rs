@@ -1,19 +1,20 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use super::{progress_bytes, progress_counter};
 use anyhow::{anyhow, Result};
+use bytesize::ByteSize;
 use clap::Parser;
 use gethostname::gethostname;
 use path_absolutize::*;
 use vlog::*;
 
+use super::{progress_bytes, progress_counter};
 use crate::archiver::{Archiver, Parent};
 use crate::backend::{
     DecryptFullBackend, DryRunBackend, LocalSource, LocalSourceOptions, ReadSource,
 };
 use crate::index::IndexBackend;
-use crate::repo::{ConfigFile, Id, SnapshotFile};
+use crate::repo::{ConfigFile, Id, SnapshotFile, StringList};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -29,6 +30,10 @@ pub(super) struct Opts {
     #[clap(long, short, conflicts_with = "parent")]
     force: bool,
 
+    /// Tags to add to backup (can be specified multiple times)
+    #[clap(long, value_name = "TAG[,TAG,..]")]
+    tag: Vec<StringList>,
+
     #[clap(flatten)]
     ignore_opts: LocalSourceOptions,
 
@@ -36,9 +41,15 @@ pub(super) struct Opts {
     source: String,
 }
 
-pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
-    let config: ConfigFile = be.get_file(&Id::default()).await?;
+pub(super) async fn execute(
+    be: &impl DecryptFullBackend,
+    opts: Opts,
+    command: String,
+) -> Result<()> {
+    let mut snap = SnapshotFile::default();
+    snap.command = Some(command);
 
+    let config: ConfigFile = be.get_file(&Id::default()).await?;
     let be = DryRunBackend::new(be.clone(), opts.dry_run);
 
     let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
@@ -48,8 +59,18 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
         .to_str()
         .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path))?
         .to_string();
+    snap.paths.add(backup_path_str.clone());
 
     let hostname = gethostname();
+    snap.hostname = hostname
+        .to_str()
+        .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
+        .to_string();
+
+    for tags in opts.tag {
+        snap.tags.add_all(tags);
+    }
+
     let parent = match (opts.force, opts.parent) {
         (true, _) => None,
         (false, None) => SnapshotFile::latest(
@@ -77,7 +98,7 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
     let index = IndexBackend::only_full_trees(&be, progress_counter()).await?;
 
     let parent = Parent::new(&index, parent_tree).await;
-    let mut archiver = Archiver::new(be, index, poly, parent)?;
+
     let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 
     let p = progress_bytes();
@@ -89,6 +110,7 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
     };
 
     v1!("starting backup...");
+    let mut archiver = Archiver::new(be, index, poly, parent, snap)?;
     p.set_length(size);
     for item in src {
         match item {
@@ -103,10 +125,33 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
         }
     }
     p.finish_with_message("done");
-    let mut snap = SnapshotFile::default();
-    snap.set_paths(vec![backup_path.to_path_buf()]);
-    snap.set_hostname(hostname);
-    archiver.finalize_snapshot(snap).await?;
+    let snap = archiver.finalize_snapshot().await?;
+
+    v1!(
+        "Files:       {} new, {} changed, {} unchanged",
+        snap.files_new.unwrap(),
+        snap.files_changed.unwrap(),
+        snap.files_unchanged.unwrap()
+    );
+    v1!(
+        "Dirs:        {} new, {} changed, {} unchanged",
+        snap.trees_new.unwrap(),
+        snap.trees_changed.unwrap(),
+        snap.trees_unchanged.unwrap()
+    );
+    v2!("Data Blobs:  {} new", snap.data_blobs_written.unwrap());
+    v2!("Tree Blobs:  {} new", snap.tree_blobs_written.unwrap());
+    v1!(
+        "Added to the repo: {}",
+        ByteSize(snap.data_added.unwrap()).to_string_as(true)
+    );
+
+    v1!(
+        "processed {} nodes, {}",
+        snap.node_count.unwrap(),
+        ByteSize(snap.size.unwrap()).to_string_as(true)
+    );
+    v1!("snapshot {} successfully saved.", snap.id);
 
     Ok(())
 }

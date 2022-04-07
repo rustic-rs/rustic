@@ -71,7 +71,13 @@ enum Command {
 }
 
 pub async fn execute() -> Result<()> {
-    let args = Opts::parse();
+    let command: Vec<_> = std::env::args_os().into_iter().collect();
+    let args = Opts::parse_from(&command);
+    let command: String = command
+        .into_iter()
+        .map(|s| s.to_string_lossy().to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
 
     let verbosity = (1 + args.verbose - args.quiet).clamp(0, 3);
     set_verbosity_level(verbosity as usize);
@@ -82,7 +88,7 @@ pub async fn execute() -> Result<()> {
     let dbe = DecryptBackend::new(&be, key);
 
     match args.command {
-        Command::Backup(opts) => backup::execute(&dbe, opts).await,
+        Command::Backup(opts) => backup::execute(&dbe, opts, command).await,
         Command::Cat(opts) => cat::execute(&dbe, opts).await,
         Command::Check(opts) => check::execute(&dbe, opts).await,
         Command::Diff(opts) => diff::execute(&dbe, opts).await,

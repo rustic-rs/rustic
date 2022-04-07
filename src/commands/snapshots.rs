@@ -4,19 +4,24 @@ use clap::Parser;
 use prettytable::{cell, format, row, Table};
 
 use crate::backend::DecryptReadBackend;
-use crate::repo::SnapshotFile;
+use crate::repo::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
-pub(super) struct Opts {}
+pub(super) struct Opts {
+    #[clap(flatten)]
+    filter: SnapshotFilter,
+}
 
-pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
+pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let mut snapshots = SnapshotFile::all_from_backend(be).await?;
     snapshots.sort();
 
     let mut table: Table = snapshots
         .into_iter()
+        .filter(|sn| sn.matches(&opts.filter))
         .map(|sn| {
-            let paths = sn.paths.into_iter().map(|p| p + "\n").collect::<String>();
+            let tags = sn.tags.formatln();
+            let paths = sn.paths.formatln();
             let time = sn.time.format("%Y-%m-%d %H:%M:%S");
             let nodes = sn
                 .node_count
@@ -26,14 +31,16 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
                 .size
                 .map(|b| ByteSize(b).to_string_as(true))
                 .unwrap_or_else(|| "?".to_string());
-            row![sn.id, time, sn.hostname, "", paths, r->nodes, r->size]
+            row![sn.id, time, sn.hostname, tags, paths, r->nodes, r->size]
         })
         .collect();
+    let count = table.len();
     table.set_titles(
         row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Nodes", br->"Size"],
     );
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
     table.printstd();
+    println!("{} snapshot(s)", count);
 
     Ok(())
 }

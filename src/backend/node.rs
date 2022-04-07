@@ -17,11 +17,7 @@ pub struct Node {
     node_type: NodeType,
     #[serde(flatten)]
     meta: Metadata,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_default_from_null",
-        skip_serializing_if = "Vec::is_empty"
-    )]
+    #[serde(default, deserialize_with = "deserialize_default_from_null")]
     content: Vec<Id>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     subtree: Option<Id>,

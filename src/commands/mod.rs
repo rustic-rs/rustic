@@ -10,6 +10,7 @@ mod cat;
 mod check;
 mod diff;
 mod helpers;
+mod key;
 mod list;
 mod ls;
 mod repoinfo;
@@ -54,6 +55,9 @@ enum Command {
     /// compare two snapshots
     Diff(diff::Opts),
 
+    /// manage keys
+    Key(key::Opts),
+
     /// list repository files
     List(list::Opts),
 
@@ -85,13 +89,14 @@ pub async fn execute() -> Result<()> {
     let be = ChooseBackend::from_url(&args.repository);
 
     let key = get_key(&be, args.password_file).await?;
-    let dbe = DecryptBackend::new(&be, key);
+    let dbe = DecryptBackend::new(&be, key.clone());
 
     match args.command {
         Command::Backup(opts) => backup::execute(&dbe, opts, command).await,
         Command::Cat(opts) => cat::execute(&dbe, opts).await,
         Command::Check(opts) => check::execute(&dbe, opts).await,
         Command::Diff(opts) => diff::execute(&dbe, opts).await,
+        Command::Key(opts) => key::execute(&dbe, key, opts).await,
         Command::List(opts) => list::execute(&dbe, opts).await,
         Command::Ls(opts) => ls::execute(&dbe, opts).await,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,

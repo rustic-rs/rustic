@@ -20,6 +20,12 @@ pub enum KeyError {
 pub struct Key(AeadKey);
 
 impl Key {
+    pub fn new() -> Self {
+        let mut key = AeadKey::default();
+        thread_rng().fill_bytes(&mut key);
+        Self(key)
+    }
+
     pub fn from_slice(key: &[u8]) -> Self {
         Self(*AeadKey::from_slice(key))
     }
@@ -31,6 +37,17 @@ impl Key {
         key[48..64].copy_from_slice(r);
 
         Self(key)
+    }
+
+    pub fn to_keys(&self) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+        let mut encrypt = vec![0; 32];
+        let mut k = vec![0; 16];
+        let mut r = vec![0; 16];
+        encrypt[0..32].copy_from_slice(&self.0[0..32]);
+        k[0..16].copy_from_slice(&self.0[32..48]);
+        r[0..16].copy_from_slice(&self.0[48..64]);
+
+        (encrypt, k, r)
     }
 }
 

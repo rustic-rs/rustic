@@ -12,6 +12,8 @@ use thiserror::Error;
     PartialEq,
     Eq,
     Hash,
+    PartialOrd,
+    Ord,
     Constructor,
     Serialize,
     Deserialize,

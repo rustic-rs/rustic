@@ -45,8 +45,6 @@ serde-aux = "3"
 # other dependencies
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
-# index
-boomphf = "0.5"
 # local backend
 walkdir = "2"
 ignore = "0.4"

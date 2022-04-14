@@ -14,10 +14,10 @@ use crate::blob::BlobType;
 use crate::id::Id;
 use crate::repo::IndexFile;
 
-mod boom;
+mod binarysorted;
 mod indexer;
 
-use boom::BoomIndex;
+use binarysorted::BinarySortedIndex;
 pub use indexer::*;
 
 #[derive(Debug, Clone, Constructor, Getters, Dissolve)]
@@ -79,13 +79,13 @@ pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
 #[delegate(ReadIndex, target = "index")]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
-    index: Arc<BoomIndex>,
+    index: Arc<BinarySortedIndex>,
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub async fn new(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
-        let index = BoomIndex::full(
+        let index = BinarySortedIndex::full(
             be.stream_all::<IndexFile>(p.clone())
                 .await?
                 .map(|i| i.unwrap().1),
@@ -100,7 +100,7 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
 
     pub async fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
         v1!("reading index...");
-        let index = BoomIndex::only_full_trees(
+        let index = BinarySortedIndex::only_full_trees(
             be.stream_all::<IndexFile>(p.clone())
                 .await?
                 .map(|i| i.unwrap().1),

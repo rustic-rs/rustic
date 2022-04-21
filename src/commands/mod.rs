@@ -13,6 +13,7 @@ mod helpers;
 mod key;
 mod list;
 mod ls;
+mod prune;
 mod repoinfo;
 mod restore;
 mod snapshots;
@@ -67,6 +68,9 @@ enum Command {
     /// show snapshots
     Snapshots(snapshots::Opts),
 
+    /// remove unused data
+    Prune(prune::Opts),
+
     /// restore snapshot
     Restore(restore::Opts),
 
@@ -100,6 +104,7 @@ pub async fn execute() -> Result<()> {
         Command::List(opts) => list::execute(&dbe, opts).await,
         Command::Ls(opts) => ls::execute(&dbe, opts).await,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,
+        Command::Prune(opts) => prune::execute(&dbe, opts).await,
         Command::Restore(opts) => restore::execute(&dbe, opts).await,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await,
     }

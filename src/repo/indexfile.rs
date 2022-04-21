@@ -7,11 +7,13 @@ use crate::backend::{FileType, RepoFile};
 use crate::blob::BlobType;
 use crate::id::Id;
 
-#[derive(Debug, Serialize, Deserialize, Getters, Dissolve)]
+#[derive(Debug, Default, Serialize, Deserialize, Getters, Dissolve)]
 pub struct IndexFile {
     #[serde(skip_serializing_if = "Option::is_none")]
     supersedes: Option<Vec<Id>>,
     packs: Vec<IndexPack>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    packs_to_delete: Vec<IndexPack>,
 }
 
 impl RepoFile for IndexFile {
@@ -23,11 +25,16 @@ impl IndexFile {
         Self {
             supersedes: None,
             packs: Vec::new(),
+            packs_to_delete: Vec::new(),
         }
     }
 
     pub fn add(&mut self, p: IndexPack) {
         self.packs.push(p);
+    }
+
+    pub fn len(&self) -> usize {
+        self.packs.iter().map(|p| p.blobs.len()).sum()
     }
 }
 
@@ -65,6 +72,12 @@ impl IndexPack {
             size += blob.length() + 37 // 37 = length of blob description
         }
         size
+    }
+
+    /// returns the blob type of the pack. Note that only packs with
+    /// identical blob types are allowed
+    pub fn blob_type(&self) -> BlobType {
+        self.blobs[0].tpe
     }
 }
 

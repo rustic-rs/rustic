@@ -10,14 +10,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, BinWrite)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, BinWrite,
+)]
 pub enum BlobType {
-    #[serde(rename = "data")]
-    #[bw(magic(0u8))]
-    Data,
     #[serde(rename = "tree")]
     #[bw(magic(1u8))]
     Tree,
+    #[serde(rename = "data")]
+    #[bw(magic(0u8))]
+    Data,
 }
 
 #[derive(Debug, PartialEq, Clone, Constructor)]

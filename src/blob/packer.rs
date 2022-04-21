@@ -65,13 +65,20 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             return Ok(false);
         }
 
-        let offset = self.size;
         let data = self
             .be
             .key()
             .encrypt_data(data)
             .map_err(|_| anyhow!("crypto error"))?;
-        let len = self.write_data(&data).await?;
+
+        self.add_raw(&data, id, tpe).await?;
+        Ok(true)
+    }
+
+    // adds the already encrypted blob to the packfile without any check
+    pub async fn add_raw(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<()> {
+        let offset = self.size;
+        let len = self.write_data(data).await?;
         self.index.add(*id, tpe, offset, len);
         self.count += 1;
 
@@ -83,7 +90,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             self.created = SystemTime::now();
             self.hasher.reset();
         }
-        Ok(true)
+        Ok(())
     }
 
     /// writes header and length of header to packfile

@@ -16,7 +16,7 @@ pub struct Indexer<BE: DecryptWriteBackend> {
     file: IndexFile,
     count: usize,
     created: SystemTime,
-    indexed: HashSet<Id>,
+    indexed: Option<HashSet<Id>>,
 }
 
 const MAX_COUNT: usize = 50_000;
@@ -29,7 +29,17 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
             file: IndexFile::new(),
             count: 0,
             created: SystemTime::now(),
-            indexed: HashSet::new(),
+            indexed: Some(HashSet::new()),
+        }
+    }
+
+    pub fn new_unindexed(be: BE) -> Self {
+        Self {
+            be,
+            file: IndexFile::new(),
+            count: 0,
+            created: SystemTime::now(),
+            indexed: None,
         }
     }
 
@@ -53,8 +63,10 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     pub async fn add(&mut self, pack: IndexPack) -> Result<()> {
         self.count += pack.blobs().len();
 
-        for blob in pack.blobs() {
-            self.indexed.insert(*blob.id());
+        if let Some(indexed) = &mut self.indexed {
+            for blob in pack.blobs() {
+                indexed.insert(*blob.id());
+            }
         }
 
         self.file.add(pack);
@@ -68,6 +80,9 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     }
 
     pub fn has(&self, id: &Id) -> bool {
-        self.indexed.contains(id)
+        match &self.indexed {
+            None => false,
+            Some(indexed) => indexed.contains(id),
+        }
     }
 }

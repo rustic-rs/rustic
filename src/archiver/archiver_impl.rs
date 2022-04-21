@@ -73,7 +73,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             path
         } else {
             path.parent()
-                .ok_or(anyhow!("file path should have a parent!"))?
+                .ok_or_else(|| anyhow!("file path should have a parent!"))?
         };
 
         self.finish_trees(basepath).await?;
@@ -113,7 +113,10 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let chunk = self.tree.serialize()?;
             let id = hash(&chunk);
 
-            let (mut node, tree, parent) = self.stack.pop().ok_or(anyhow!("tree stack empty??"))?;
+            let (mut node, tree, parent) = self
+                .stack
+                .pop()
+                .ok_or_else(|| anyhow!("tree stack empty??"))?;
 
             node.set_subtree(id);
             self.tree = tree;
@@ -148,11 +151,9 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             }
         }
 
-        if !self.index.has_tree(&id) {
-            if self.tree_packer.add(&chunk, &id, BlobType::Tree).await? {
-                *self.snap.tree_blobs_written.get_or_insert(0) += 1;
-                *self.snap.data_added.get_or_insert(0) += dirsize;
-            }
+        if !self.index.has_tree(&id) && self.tree_packer.add(&chunk, &id, BlobType::Tree).await? {
+            *self.snap.tree_blobs_written.get_or_insert(0) += 1;
+            *self.snap.data_added.get_or_insert(0) += dirsize;
         }
         self.add_node(node, dirsize);
         Ok(())
@@ -228,7 +229,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         size: u64,
         p: &ProgressBar,
     ) -> Result<()> {
-        if !self.index.has_data(&id) && self.data_packer.add(&chunk, &id, BlobType::Data).await? {
+        if !self.index.has_data(&id) && self.data_packer.add(chunk, &id, BlobType::Data).await? {
             *self.snap.data_blobs_written.get_or_insert(0) += 1;
             *self.snap.data_added.get_or_insert(0) += size;
         }

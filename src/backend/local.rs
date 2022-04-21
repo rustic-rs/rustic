@@ -151,7 +151,7 @@ impl LocalBackend {
         }
         let filename = self.path.join(item);
         std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))
-            .expect(&format!("error chmod {:?}", filename));
+            .unwrap_or_else(|_| panic!("error chmod {:?}", filename));
     }
 
     pub fn create_file(&self, item: impl AsRef<Path>, size: u64) {

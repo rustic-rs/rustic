@@ -390,7 +390,7 @@ impl Pruner {
             v1!("removing not needed unindexed pack files...");
         }
         for id in self.existing_packs.keys() {
-            be.remove(FileType::Pack, &id).await?;
+            be.remove(FileType::Pack, id).await?;
         }
 
         // process packs by index_file

@@ -38,7 +38,7 @@ impl Tree {
     pub async fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
         let data = be
             .get_tree(&id)
-            .ok_or(anyhow!("blob not found in index"))?
+            .ok_or_else(|| anyhow!("blob not found in index"))?
             .read_data(be.be())
             .await?;
 
@@ -124,7 +124,7 @@ where
                             }
                             slf.path.push(node.name());
                             let be = slf.be.clone();
-                            let id = id.clone();
+                            let id = *id;
                             slf.future =
                                 Some(spawn(async move { Tree::from_backend(&be, id).await }));
                         }

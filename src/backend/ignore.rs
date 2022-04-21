@@ -54,7 +54,7 @@ pub struct LocalSourceOptions {
 
 impl LocalSource {
     pub fn new(opts: LocalSourceOptions, backup_path: PathBuf) -> Result<Self> {
-        let mut walk_builder = WalkBuilder::new(backup_path.clone());
+        let mut walk_builder = WalkBuilder::new(backup_path);
         /*
          for path in &paths[1..] {
             wb.add(path);

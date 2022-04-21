@@ -17,6 +17,7 @@ mod prune;
 mod repoinfo;
 mod restore;
 mod snapshots;
+mod tag;
 
 use helpers::*;
 use vlog::*;
@@ -76,6 +77,9 @@ enum Command {
 
     /// show general information about repository
     Repoinfo(repoinfo::Opts),
+
+    /// change tags of snapshots
+    Tag(tag::Opts),
 }
 
 pub async fn execute() -> Result<()> {
@@ -107,5 +111,6 @@ pub async fn execute() -> Result<()> {
         Command::Prune(opts) => prune::execute(&dbe, opts).await,
         Command::Restore(opts) => restore::execute(&dbe, opts).await,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await,
+        Command::Tag(opts) => tag::execute(&dbe, opts).await,
     }
 }

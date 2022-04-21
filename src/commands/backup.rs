@@ -46,8 +46,10 @@ pub(super) async fn execute(
     opts: Opts,
     command: String,
 ) -> Result<()> {
-    let mut snap = SnapshotFile::default();
-    snap.command = Some(command);
+    let mut snap = SnapshotFile {
+        command: Some(command),
+        ..Default::default()
+    };
 
     let config: ConfigFile = be.get_file(&Id::default()).await?;
     let be = DryRunBackend::new(be.clone(), opts.dry_run);
@@ -67,9 +69,7 @@ pub(super) async fn execute(
         .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
         .to_string();
 
-    for tags in opts.tag {
-        snap.tags.add_all(tags);
-    }
+    snap.set_tags(opts.tag);
 
     let parent = match (opts.force, opts.parent) {
         (true, _) => None,

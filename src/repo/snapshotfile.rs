@@ -184,6 +184,32 @@ impl SnapshotFile {
             && self.tags.matches(&filter.tags)
             && (filter.hostnames.is_empty() || filter.hostnames.contains(&self.hostname))
     }
+
+    /// Add tag lists to snapshot. return wheter snapshot was changed
+    pub fn add_tags(&mut self, tag_lists: Vec<StringList>) -> bool {
+        let old_tags = self.tags.clone();
+        self.tags.add_all(tag_lists);
+        self.tags.sort();
+
+        old_tags == self.tags
+    }
+
+    /// Set tag lists to snapshot. return wheter snapshot was changed
+    pub fn set_tags(&mut self, tag_lists: Vec<StringList>) -> bool {
+        let old_tags = std::mem::take(&mut self.tags);
+        self.tags.add_all(tag_lists);
+        self.tags.sort();
+
+        old_tags == self.tags
+    }
+
+    /// Remove tag lists from snapshot. return wheter snapshot was changed
+    pub fn remove_tags(&mut self, tag_lists: Vec<StringList>) -> bool {
+        let old_tags = self.tags.clone();
+        self.tags.remove_all(tag_lists);
+
+        old_tags == self.tags
+    }
 }
 
 impl PartialOrd for SnapshotFile {
@@ -197,7 +223,7 @@ impl Ord for SnapshotFile {
     }
 }
 
-#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Clone, Serialize, Deserialize)]
 pub struct StringList(Vec<String>);
 
 impl FromStr for StringList {
@@ -226,10 +252,25 @@ impl StringList {
         }
     }
 
-    pub fn add_all(&mut self, sl: StringList) {
+    pub fn add_list(&mut self, sl: StringList) {
         for s in sl.0 {
             self.add(s)
         }
+    }
+
+    pub fn add_all(&mut self, string_lists: Vec<StringList>) {
+        for sl in string_lists {
+            self.add_list(sl)
+        }
+    }
+
+    pub fn remove_all(&mut self, string_lists: Vec<StringList>) {
+        self.0
+            .retain(|s| !string_lists.iter().any(|sl| sl.contains(s)));
+    }
+
+    pub fn sort(&mut self) {
+        self.0.sort_unstable();
     }
 
     pub fn formatln(&self) -> String {

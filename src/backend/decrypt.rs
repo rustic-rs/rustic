@@ -157,4 +157,9 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         self.backend.write_bytes(tpe, id, buf).await?;
         Ok(())
     }
+
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+        self.backend.remove(tpe, id).await?;
+        Ok(())
+    }
 }

@@ -118,4 +118,10 @@ impl WriteBackend for RestBackend {
         self.client.post(self.url(tpe, id)).body(buf).send().await?;
         Ok(())
     }
+
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+        v3!("removing tpe: {:?}, id: {}", &tpe, &id);
+        self.client.delete(self.url(tpe, id)).send().await?;
+        Ok(())
+    }
 }

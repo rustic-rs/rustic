@@ -120,7 +120,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         Ok(match Id::from_hex(id) {
             Ok(id) => id,
             // if the given id param is not a full Id, search for a suitable one
-            Err(_) => self.find_starts_with(tpe, &[&id]).await?.remove(0)?,
+            Err(_) => self.find_starts_with(tpe, &[id]).await?.remove(0)?,
         })
     }
 }
@@ -129,6 +129,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
 pub trait WriteBackend: ReadBackend {
     async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error>;
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error>;
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error>;
 }
 
 pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {

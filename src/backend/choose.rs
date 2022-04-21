@@ -22,7 +22,7 @@ impl ChooseBackend {
         if let Some(path) = url.strip_prefix("local:") {
             return Local(LocalBackend::new(path));
         }
-        Local(LocalBackend::new(&url))
+        Local(LocalBackend::new(url))
     }
 }
 
@@ -100,6 +100,13 @@ impl WriteBackend for ChooseBackend {
                 .write_bytes(tpe, id, buf)
                 .await
                 .map_err(|e| Error(e.into())),
+        }
+    }
+
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+        match self {
+            Local(local) => local.remove(tpe, id).await.map_err(|e| Error(e.into())),
+            Rest(rest) => rest.remove(tpe, id).await.map_err(|e| Error(e.into())),
         }
     }
 }

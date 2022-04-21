@@ -95,4 +95,11 @@ impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
             false => self.be.write_bytes(tpe, id, buf).await,
         }
     }
+
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+        match self.dry_run {
+            true => Ok(()),
+            false => self.be.remove(tpe, id).await,
+        }
+    }
 }

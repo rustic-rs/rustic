@@ -105,6 +105,12 @@ impl WriteBackend for LocalBackend {
         file.write_all(&buf)?;
         file.sync_all()
     }
+
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
+        let filename = self.path(tpe, id);
+        fs::remove_file(filename)
+    }
 }
 
 impl LocalBackend {

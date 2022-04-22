@@ -47,16 +47,16 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
     let mut data_count = 0;
     let mut data_size = 0;
     while let Some(index) = stream.next().await {
-        for pack in index?.1.dissolve().1 {
-            for blob in pack.blobs() {
-                match blob.tpe() {
+        for pack in index?.1.packs {
+            for blob in pack.blobs {
+                match blob.tpe {
                     BlobType::Tree => {
                         tree_count += 1;
-                        tree_size += *blob.length() as u64;
+                        tree_size += blob.length as u64;
                     }
                     BlobType::Data => {
                         data_count += 1;
-                        data_size += *blob.length() as u64;
+                        data_size += blob.length as u64;
                     }
                 }
             }

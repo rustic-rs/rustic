@@ -41,11 +41,11 @@ where
     let mut data_id = Vec::new();
 
     while let Some(index) = stream.next().await {
-        for i in index.dissolve().1 {
+        for p in index.packs {
             let idx = packs.len();
-            packs.push(*i.id());
-            let len = i.blobs().len();
-            if i.blobs()[0].tpe() == &BlobType::Data {
+            packs.push(p.id);
+            let len = p.blobs.len();
+            if p.blob_type() == BlobType::Data {
                 if full_data {
                     data.reserve(len);
                 } else {
@@ -55,14 +55,14 @@ where
                 tree.reserve(len);
             }
 
-            for blob in i.blobs() {
+            for blob in p.blobs {
                 let be = BinarySortedEntry {
-                    id: *blob.id(),
+                    id: blob.id,
                     pack_idx: idx,
-                    offset: *blob.offset(),
-                    length: *blob.length(),
+                    offset: blob.offset,
+                    length: blob.length,
                 };
-                match blob.tpe() {
+                match blob.tpe {
                     BlobType::Tree => {
                         tree.push(be);
                     }
@@ -70,7 +70,7 @@ where
                         if full_data {
                             data.push(be);
                         } else {
-                            data_id.push(*blob.id());
+                            data_id.push(blob.id);
                         }
                     }
                 }

@@ -41,24 +41,21 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     // TODO: only read index files once
     let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
     while let Some(index) = stream.next().await {
-        for p in index?.1.dissolve().1 {
-            packs.insert(*p.id(), p.pack_size());
+        for p in index?.1.packs {
+            packs.insert(p.id, p.pack_size());
 
             // check offsests in index
             let mut expected_offset: u32 = 0;
-            let (id, mut blobs) = p.dissolve();
+            let mut blobs = p.blobs;
             blobs.sort_unstable();
             for blob in blobs {
-                if blob.offset() != &expected_offset {
+                if blob.offset != expected_offset {
                     eprintln!(
                         "pack {}: blob {} offset in index: {}, expected: {}",
-                        id,
-                        blob.id(),
-                        blob.offset(),
-                        expected_offset
+                        p.id, blob.id, blob.offset, expected_offset
                     );
                 }
-                expected_offset += blob.length();
+                expected_offset += blob.length;
             }
         }
     }

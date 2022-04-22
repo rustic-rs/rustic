@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -57,15 +57,16 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     v1!("finding duplicate blobs...");
     for pack in index_files
         .iter()
-        .flat_map(|(_, index)| index.packs())
-        .unique_by(|p| p.id())
+        .flat_map(|(_, index)| &index.packs)
+        .unique_by(|p| p.id)
     {
-        for blob in pack.blobs() {
-            let id = *blob.id();
-            // note that duplicates are only counted up to 255. If there are more
-            // duplicates, the number is set to 255. This may imply that later on
-            // not the "best" pack is chosen to have that blob marked as used.
-            used_ids.entry(id).and_modify(|e| *e = e.saturating_add(1));
+        for blob in &pack.blobs {
+            if let Some(count) = used_ids.get_mut(&blob.id) {
+                // note that duplicates are only counted up to 255. If there are more
+                // duplicates, the number is set to 255. This may imply that later on
+                // not the "best" pack is chosen to have that blob marked as used.
+                *count = count.saturating_add(1);
+            }
         }
     }
 
@@ -79,7 +80,7 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
 
     let mut pruner = Pruner::new(used_ids, existing_packs);
     pruner.check()?;
-    pruner.decide_packs(index_files.iter().flat_map(|(_, index)| index.packs()))?;
+    pruner.decide_packs(index_files.iter().flat_map(|(_, index)| &index.packs))?;
     pruner.decide_repack(&opts.max_repack, &opts.max_unused);
     pruner.filter_index_files(index_files);
     pruner.print_stats();
@@ -188,7 +189,7 @@ impl Pruner {
 
         // search used and unused blobs within packs
         for pack in pack_iter {
-            if !processed_packs.insert(pack.id()) {
+            if !processed_packs.insert(pack.id) {
                 // ignore duplicate packs
                 continue;
             }
@@ -198,14 +199,14 @@ impl Pruner {
 
             // check if the pack has used blobs which are no duplicates
             let has_used = pack
-                .blobs()
+                .blobs
                 .iter()
-                .any(|blob| self.used_ids.get(blob.id()) == Some(&1));
+                .any(|blob| self.used_ids.get(&blob.id) == Some(&1));
 
-            for blob in pack.blobs() {
-                match self.used_ids.entry(*blob.id()) {
-                    Entry::Vacant(_) => pi.add_unused_blob(blob),
-                    Entry::Occupied(mut count) => pi.add_blob(blob, has_used, count.get_mut()),
+            for blob in &pack.blobs {
+                match self.used_ids.get_mut(&blob.id) {
+                    None => pi.add_unused_blob(blob),
+                    Some(count) => pi.add_blob(blob, has_used, count),
                 }
             }
 
@@ -217,28 +218,28 @@ impl Pruner {
             if pi.used_blobs == 0 {
                 // unused pack
                 self.stats.packs.unused += 1;
-                self.packs_remove.insert(*pack.id());
+                self.packs_remove.insert(pack.id);
                 self.stats.blobs.remove += pi.unused_blobs as u64;
                 self.stats.size.remove += pi.unused_size as u64;
 
-                self.existing_packs.remove(pack.id());
+                self.existing_packs.remove(&pack.id);
             } else {
-                if self.existing_packs.remove(pack.id()).is_none() {
-                    bail!("used pack {} does not exist!", pack.id());
+                if self.existing_packs.remove(&pack.id).is_none() {
+                    bail!("used pack {} does not exist!", pack.id);
                 }
 
                 if pi.unused_blobs == 0 {
                     // used pack
                     self.stats.packs.used += 1;
                     self.stats.packs.keep += 1;
-                    for blob in pack.blobs() {
-                        self.used_ids.remove(blob.id());
+                    for blob in &pack.blobs {
+                        self.used_ids.remove(&blob.id);
                     }
                 } else {
                     // partly used pack => candidate for repacking
                     self.stats.packs.partly_used += 1;
                     self.repack_candidates
-                        .push(RepackCandidate { id: *pack.id(), pi })
+                        .push(RepackCandidate { id: pack.id, pi })
                 }
             }
         }
@@ -290,12 +291,12 @@ impl Pruner {
         // filter out only the index files which need processing
         self.index_files
             .extend(index_files.into_iter().filter(|(_, index)| {
-                let must_modify = index.packs().iter().any(|p| {
+                let must_modify = index.packs.iter().any(|p| {
                     // index must be processed if this is a duplicate pack
                     // or the packs needs to be removed or repacked.
-                    !processed_packs.insert(*p.id())
-                        || self.packs_repack.contains(p.id())
-                        || self.packs_remove.contains(p.id())
+                    !processed_packs.insert(p.id)
+                        || self.packs_repack.contains(&p.id)
+                        || self.packs_remove.contains(&p.id)
                 });
                 any_must_modify |= must_modify;
 
@@ -405,26 +406,26 @@ impl Pruner {
         }
 
         for (index_id, index) in self.index_files {
-            for pack in index.dissolve().1 {
-                if !processed_packs.insert(*pack.id()) {
+            for pack in index.packs {
+                if !processed_packs.insert(pack.id) {
                     // ignore duplicate packs
                     continue;
                 }
 
-                if self.packs_repack.contains(pack.id()) {
+                if self.packs_repack.contains(&pack.id) {
                     // TODO: repack in parallel
-                    for blob in pack.blobs() {
-                        if self.used_ids.remove(blob.id()).is_none() {
+                    for blob in pack.blobs {
+                        if self.used_ids.remove(&blob.id).is_none() {
                             // don't save duplicate blobs
                             continue;
                         }
 
                         let data = be
-                            .read_partial(FileType::Pack, pack.id(), *blob.offset(), *blob.length())
+                            .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
                             .await?;
-                        packer.add_raw(&data, blob.id(), *blob.tpe()).await?;
+                        packer.add_raw(&data, &blob.id, blob.tpe).await?;
                     }
-                } else if !self.packs_remove.contains(pack.id()) {
+                } else if !self.packs_remove.contains(&pack.id) {
                     // keep pack: add to new index
                     indexer.borrow_mut().add(pack).await?;
                 }
@@ -501,13 +502,13 @@ impl Ord for PackInfo {
 impl PackInfo {
     fn add_unused_blob(&mut self, blob: &IndexBlob) {
         // used duplicate exists, mark as unused
-        self.unused_size += blob.length();
+        self.unused_size += blob.length;
         self.unused_blobs += 1;
     }
 
     fn add_used_blob(&mut self, blob: &IndexBlob) {
         // used duplicate exists, mark as unused
-        self.used_size += blob.length();
+        self.used_size += blob.length;
         self.used_blobs += 1;
     }
 

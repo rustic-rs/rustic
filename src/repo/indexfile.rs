@@ -1,19 +1,18 @@
 use std::cmp::Ordering;
 
-use derive_getters::{Dissolve, Getters};
 use serde::{Deserialize, Serialize};
 
 use crate::backend::{FileType, RepoFile};
 use crate::blob::BlobType;
 use crate::id::Id;
 
-#[derive(Debug, Default, Serialize, Deserialize, Getters, Dissolve)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct IndexFile {
     #[serde(skip_serializing_if = "Option::is_none")]
-    supersedes: Option<Vec<Id>>,
-    packs: Vec<IndexPack>,
+    pub(crate) supersedes: Option<Vec<Id>>,
+    pub(crate) packs: Vec<IndexPack>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    packs_to_delete: Vec<IndexPack>,
+    pub(crate) packs_to_delete: Vec<IndexPack>,
 }
 
 impl RepoFile for IndexFile {
@@ -21,14 +20,6 @@ impl RepoFile for IndexFile {
 }
 
 impl IndexFile {
-    pub fn new() -> Self {
-        Self {
-            supersedes: None,
-            packs: Vec::new(),
-            packs_to_delete: Vec::new(),
-        }
-    }
-
     pub fn add(&mut self, p: IndexPack) {
         self.packs.push(p);
     }
@@ -38,20 +29,13 @@ impl IndexFile {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Getters, Dissolve)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct IndexPack {
-    id: Id,
-    blobs: Vec<IndexBlob>,
+    pub(crate) id: Id,
+    pub(crate) blobs: Vec<IndexBlob>,
 }
 
 impl IndexPack {
-    pub fn new() -> Self {
-        Self {
-            id: Id::default(),
-            blobs: Vec::new(),
-        }
-    }
-
     pub fn set_id(&mut self, id: Id) {
         self.id = id;
     }
@@ -69,7 +53,7 @@ impl IndexPack {
     pub fn pack_size(&self) -> u32 {
         let mut size = 4 + 32; // 4 + crypto overhead
         for blob in &self.blobs {
-            size += blob.length() + 37 // 37 = length of blob description
+            size += blob.length + 37 // 37 = length of blob description
         }
         size
     }
@@ -81,13 +65,13 @@ impl IndexPack {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Getters, Dissolve, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct IndexBlob {
-    id: Id,
+    pub(crate) id: Id,
     #[serde(rename = "type")]
-    tpe: BlobType,
-    offset: u32,
-    length: u32,
+    pub(crate) tpe: BlobType,
+    pub(crate) offset: u32,
+    pub(crate) length: u32,
 }
 
 impl PartialOrd<IndexBlob> for IndexBlob {

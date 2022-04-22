@@ -38,7 +38,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             size: 0,
             count: 0,
             created: SystemTime::now(),
-            index: IndexPack::new(),
+            index: IndexPack::default(),
             indexer,
             hasher: Hasher::new(),
         })
@@ -108,11 +108,11 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
         // collect header entries
         let mut writer = Cursor::new(Vec::new());
-        for blob in self.index.blobs() {
+        for blob in &self.index.blobs {
             PackHeaderEntry {
-                tpe: *blob.tpe(),
-                len: *blob.length(),
-                id: *blob.id(),
+                tpe: blob.tpe,
+                len: blob.length,
+                id: blob.id,
             }
             .write_to(&mut writer)?;
         }
@@ -154,12 +154,12 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         let file = std::mem::replace(&mut self.file, tempfile()?);
         self.be.write_file(FileType::Pack, &id, file).await?;
 
-        let index = std::mem::replace(&mut self.index, IndexPack::new());
+        let index = std::mem::take(&mut self.index);
         self.indexer.borrow_mut().add(index).await?;
         Ok(())
     }
 
     fn has(&self, id: &Id) -> bool {
-        self.index.blobs().iter().any(|b| b.id() == id)
+        self.index.blobs.iter().any(|b| &b.id == id)
     }
 }

@@ -19,9 +19,9 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
         "blobs" => {
             let mut stream = be.stream_all::<IndexFile>(ProgressBar::hidden()).await?;
             while let Some(index) = stream.next().await {
-                for pack in index?.1.dissolve().1 {
-                    for blob in pack.blobs() {
-                        println!("{:?} {}", blob.tpe(), blob.id().to_hex());
+                for pack in index?.1.packs {
+                    for blob in pack.blobs {
+                        println!("{:?} {}", blob.tpe, blob.id.to_hex());
                     }
                 }
             }

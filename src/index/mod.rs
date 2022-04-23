@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ambassador::{delegatable_trait, Delegate};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use derive_getters::{Dissolve, Getters};
+use derive_getters::Getters;
 use derive_more::Constructor;
 use futures::StreamExt;
 use indicatif::ProgressBar;
@@ -20,7 +20,7 @@ mod indexer;
 use binarysorted::BinarySortedIndex;
 pub use indexer::*;
 
-#[derive(Debug, Clone, Constructor, Getters, Dissolve)]
+#[derive(Debug, Clone, Constructor, Getters)]
 pub struct IndexEntry {
     pack: Id,
     offset: u32,

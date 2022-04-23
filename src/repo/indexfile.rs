@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 use crate::backend::{FileType, RepoFile};
@@ -23,15 +24,13 @@ impl IndexFile {
     pub fn add(&mut self, p: IndexPack) {
         self.packs.push(p);
     }
-
-    pub fn len(&self) -> usize {
-        self.packs.iter().map(|p| p.blobs.len()).sum()
-    }
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct IndexPack {
     pub(crate) id: Id,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) time: Option<DateTime<Local>>,
     pub(crate) blobs: Vec<IndexBlob>,
 }
 

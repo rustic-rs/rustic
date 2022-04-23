@@ -6,9 +6,9 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
+use chrono::{DateTime, Local};
 use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
-use itertools::Itertools;
 use vlog::*;
 
 use super::progress_counter;
@@ -38,7 +38,7 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) -> Result<()> {
-    let mut used_ids = {
+    let used_ids = {
         // TODO: in fact, we only need trees blobs and no data blobs at all here in the IndexBackend
         let indexed_be = IndexBackend::only_full_trees(be, progress_counter()).await?;
         find_used_blobs(&indexed_be).await?
@@ -54,22 +54,6 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
         index_files.push(index?)
     }
 
-    v1!("finding duplicate blobs...");
-    for pack in index_files
-        .iter()
-        .flat_map(|(_, index)| &index.packs)
-        .unique_by(|p| p.id)
-    {
-        for blob in &pack.blobs {
-            if let Some(count) = used_ids.get_mut(&blob.id) {
-                // note that duplicates are only counted up to 255. If there are more
-                // duplicates, the number is set to 255. This may imply that later on
-                // not the "best" pack is chosen to have that blob marked as used.
-                *count = count.saturating_add(1);
-            }
-        }
-    }
-
     // list existing pack files
     v1!("geting packs from repostory...");
     let existing_packs: HashMap<_, _> = be
@@ -78,11 +62,12 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
         .into_iter()
         .collect();
 
-    let mut pruner = Pruner::new(used_ids, existing_packs);
+    let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
+    pruner.count_used_blobs();
     pruner.check()?;
-    pruner.decide_packs(index_files.iter().flat_map(|(_, index)| &index.packs))?;
+    pruner.decide_packs()?;
     pruner.decide_repack(&opts.max_repack, &opts.max_unused);
-    pruner.filter_index_files(index_files);
+    pruner.filter_index_files();
     pruner.print_stats();
 
     if !opts.dry_run {
@@ -116,7 +101,8 @@ impl FromStr for LimitOption {
 struct PackStats {
     used: u64,
     partly_used: u64,
-    unused: u64,
+    unused: u64, // this equal the packs-to-remove
+    repack: u64,
     keep: u64,
 }
 #[derive(Default)]
@@ -150,23 +136,104 @@ struct PruneStats {
     index_files: u64,
 }
 
+#[derive(Debug)]
+struct PruneIndex {
+    id: Id,
+    modified: bool,
+    packs: Vec<PrunePack>,
+    packs_to_delete: Vec<IndexPack>,
+}
+
+impl PruneIndex {
+    fn len(&self) -> usize {
+        self.packs.iter().map(|p| p.blobs.len()).sum()
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum PackToDo {
+    Keep,
+    Repack,
+    Remove,
+}
+
+#[derive(Debug)]
+struct PrunePack {
+    id: Id,
+    blob_type: BlobType,
+    to_do: PackToDo,
+    time: Option<DateTime<Local>>,
+    blobs: Vec<IndexBlob>,
+}
+
 #[derive(Default)]
 struct Pruner {
     used_ids: HashMap<Id, u8>,
     existing_packs: HashMap<Id, u32>,
     repack_candidates: Vec<RepackCandidate>,
-    packs_remove: HashSet<Id>,
-    packs_repack: HashSet<Id>,
-    index_files: Vec<(Id, IndexFile)>,
+    index_files: Vec<PruneIndex>,
     stats: PruneStats,
 }
 
 impl Pruner {
-    fn new(used_ids: HashMap<Id, u8>, existing_packs: HashMap<Id, u32>) -> Self {
+    fn new(
+        used_ids: HashMap<Id, u8>,
+        existing_packs: HashMap<Id, u32>,
+        index_files: Vec<(Id, IndexFile)>,
+    ) -> Self {
+        let mut processed_packs = HashSet::new();
+        let index_files = index_files
+            .into_iter()
+            .map(|(id, index)| {
+                let mut modified = false;
+                let packs = index
+                    .packs
+                    .into_iter()
+                    // filter out duplicate packs
+                    .filter(|p| {
+                        let no_duplicate = processed_packs.insert(p.id);
+                        modified |= !no_duplicate;
+                        no_duplicate
+                    })
+                    .map(|p| PrunePack {
+                        id: p.id,
+                        blob_type: p.blob_type(),
+                        to_do: PackToDo::Keep,
+                        time: p.time,
+                        blobs: p.blobs,
+                    })
+                    .collect();
+                let packs_to_delete = index.packs_to_delete;
+                PruneIndex {
+                    id,
+                    modified,
+                    packs,
+                    packs_to_delete,
+                }
+            })
+            .collect();
+
         Self {
             used_ids,
             existing_packs,
+            index_files,
             ..Default::default()
+        }
+    }
+
+    fn count_used_blobs(&mut self) {
+        for blob in self
+            .index_files
+            .iter()
+            .flat_map(|index| &index.packs)
+            .flat_map(|pack| &pack.blobs)
+        {
+            if let Some(count) = self.used_ids.get_mut(&blob.id) {
+                // note that duplicates are only counted up to 255. If there are more
+                // duplicates, the number is set to 255. This may imply that later on
+                // not the "best" pack is chosen to have that blob marked as used.
+                *count = count.saturating_add(1);
+            }
         }
     }
 
@@ -181,21 +248,13 @@ impl Pruner {
         Ok(())
     }
 
-    fn decide_packs<'a, I>(&mut self, pack_iter: I) -> Result<()>
-    where
-        I: IntoIterator<Item = &'a IndexPack>,
-    {
-        let mut processed_packs = HashSet::new();
-
-        // search used and unused blobs within packs
-        for pack in pack_iter {
-            if !processed_packs.insert(pack.id) {
-                // ignore duplicate packs
-                continue;
-            }
-
-            let tpe = pack.blob_type();
-            let mut pi = PackInfo::new(tpe);
+    fn decide_packs(&mut self) -> Result<()> {
+        for pack in self
+            .index_files
+            .iter_mut()
+            .flat_map(|index| index.packs.iter_mut())
+        {
+            let mut pi = PackInfo::new(pack.blob_type);
 
             // check if the pack has used blobs which are no duplicates
             let has_used = pack
@@ -218,7 +277,7 @@ impl Pruner {
             if pi.used_blobs == 0 {
                 // unused pack
                 self.stats.packs.unused += 1;
-                self.packs_remove.insert(pack.id);
+                pack.to_do = PackToDo::Remove;
                 self.stats.blobs.remove += pi.unused_blobs as u64;
                 self.stats.size.remove += pi.unused_size as u64;
 
@@ -265,7 +324,9 @@ impl Pruner {
         };
 
         self.repack_candidates.sort_unstable_by_key(|rc| rc.pi);
-        for rc in &self.repack_candidates {
+        let mut packs_repack = HashSet::new();
+
+        for rc in std::mem::take(&mut self.repack_candidates) {
             let pi = rc.pi;
             if self.stats.size.repack + (pi.unused_size + pi.used_size) as u64 >= max_repack
                 || (pi.blob_type != BlobType::Tree
@@ -273,35 +334,48 @@ impl Pruner {
             {
                 self.stats.packs.keep += 1;
             } else {
-                self.packs_repack.insert(rc.id);
+                packs_repack.insert(rc.id);
+                self.stats.packs.repack += 1;
                 self.stats.blobs.repack += (pi.unused_blobs + pi.used_blobs) as u64;
                 self.stats.blobs.repackrm += pi.unused_blobs as u64;
                 self.stats.size.repack += (pi.unused_size + pi.used_size) as u64;
                 self.stats.size.repackrm += pi.unused_size as u64;
             }
         }
+
+        // mark packs-to-repack in index_files
+        for pack in self
+            .index_files
+            .iter_mut()
+            .flat_map(|index| index.packs.iter_mut())
+        {
+            if packs_repack.contains(&pack.id) {
+                pack.to_do = PackToDo::Repack;
+            }
+        }
     }
 
-    fn filter_index_files(&mut self, index_files: Vec<(Id, IndexFile)>) {
+    fn filter_index_files(&mut self) {
         const MIN_INDEX_LEN: usize = 10_000;
 
         let mut any_must_modify = false;
-        self.stats.index_files = index_files.len() as u64;
-        let mut processed_packs = HashSet::new();
+        self.stats.index_files = self.index_files.len() as u64;
         // filter out only the index files which need processing
-        self.index_files
-            .extend(index_files.into_iter().filter(|(_, index)| {
-                let must_modify = index.packs.iter().any(|p| {
-                    // index must be processed if this is a duplicate pack
-                    // or the packs needs to be removed or repacked.
-                    !processed_packs.insert(p.id)
-                        || self.packs_repack.contains(&p.id)
-                        || self.packs_remove.contains(&p.id)
-                });
+        self.index_files = std::mem::take(&mut self.index_files)
+            .into_iter()
+            .filter(|index| {
+                // index must be processed if it has been modified
+                let must_modify = index.modified
+                    || index.packs.iter().any(|p| {
+                        // or if packs needs to be removed or repacked.
+                        p.to_do == PackToDo::Repack || p.to_do == PackToDo::Remove
+                    });
                 any_must_modify |= must_modify;
 
+                // also process index files which are too small (i.e. rebuild them)
                 must_modify || index.len() < MIN_INDEX_LEN
-            }));
+            })
+            .collect();
 
         if !any_must_modify && self.index_files.len() == 1 {
             // only one index file to process but only because it is too small
@@ -310,6 +384,7 @@ impl Pruner {
     }
 
     fn print_stats(&self) {
+        let pack_stat = &self.stats.packs;
         let blob_stat = &self.stats.blobs;
         let size_stat = &self.stats.size;
 
@@ -334,7 +409,7 @@ impl Pruner {
 
         v1!(
             "to repack: {:>10} packs, {:>10} blobs, {:>10}",
-            self.packs_repack.len(),
+            pack_stat.repack,
             blob_stat.repack,
             ByteSize(size_stat.repack).to_string_as(true)
         );
@@ -345,7 +420,7 @@ impl Pruner {
         );
         v1!(
             "to delete: {:>10} packs, {:>10} blobs, {:>10}",
-            self.packs_remove.len(),
+            pack_stat.unused,
             blob_stat.remove,
             ByteSize(size_stat.remove).to_string_as(true)
         );
@@ -381,8 +456,6 @@ impl Pruner {
     }
 
     async fn do_prune(mut self, be: &impl DecryptWriteBackend) -> Result<()> {
-        let mut indexes_remove = Vec::new();
-        let mut processed_packs = HashSet::new();
         let indexer = Rc::new(RefCell::new(Indexer::new_unindexed(be.clone())));
         let mut packer = Packer::new(be.clone(), indexer.clone())?;
 
@@ -396,7 +469,7 @@ impl Pruner {
 
         // process packs by index_file
         if !self.index_files.is_empty() {
-            if !self.packs_repack.is_empty() {
+            if self.stats.packs.repack > 0 {
                 v1!("repacking packs and rebuilding index...");
             } else {
                 v1!("rebuilding index...");
@@ -405,46 +478,49 @@ impl Pruner {
             v1!("nothing to do!");
         }
 
-        for (index_id, index) in self.index_files {
+        let mut indexes_remove = Vec::new();
+        let mut packs_remove = Vec::new();
+
+        for index in self.index_files {
             for pack in index.packs {
-                if !processed_packs.insert(pack.id) {
-                    // ignore duplicate packs
-                    continue;
-                }
-
-                if self.packs_repack.contains(&pack.id) {
-                    // TODO: repack in parallel
-                    for blob in pack.blobs {
-                        if self.used_ids.remove(&blob.id).is_none() {
-                            // don't save duplicate blobs
-                            continue;
+                match pack.to_do {
+                    PackToDo::Repack => {
+                        // TODO: repack in parallel
+                        for blob in pack.blobs {
+                            if self.used_ids.remove(&blob.id).is_none() {
+                                // don't save duplicate blobs
+                                continue;
+                            }
+                            let data = be
+                                .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
+                                .await?;
+                            packer.add_raw(&data, &blob.id, blob.tpe).await?;
                         }
-
-                        let data = be
-                            .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
-                            .await?;
-                        packer.add_raw(&data, &blob.id, blob.tpe).await?;
+                        packs_remove.push(pack.id)
                     }
-                } else if !self.packs_remove.contains(&pack.id) {
-                    // keep pack: add to new index
-                    indexer.borrow_mut().add(pack).await?;
+                    PackToDo::Keep => {
+                        // keep pack: add to new index
+                        let pack = IndexPack {
+                            id: pack.id,
+                            time: pack.time,
+                            blobs: pack.blobs,
+                        };
+                        indexer.borrow_mut().add(pack).await?;
+                    }
+                    PackToDo::Remove => packs_remove.push(pack.id),
                 }
-                // nothing to do for packs that are going to be removed
             }
-            indexes_remove.push(index_id);
+            indexes_remove.push(index.id);
         }
         packer.finalize().await?;
         indexer.borrow().finalize().await?;
 
         // TODO: parallelize removing
         // TODO: add progress bar
-        if !self.packs_remove.is_empty() || !self.packs_repack.is_empty() {
+        if !packs_remove.is_empty() {
             v1!("removing old pack files...");
         }
-        for id in self.packs_remove {
-            be.remove(FileType::Pack, &id).await?;
-        }
-        for id in self.packs_repack {
+        for id in packs_remove {
             be.remove(FileType::Pack, &id).await?;
         }
 

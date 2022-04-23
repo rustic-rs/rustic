@@ -4,6 +4,7 @@ use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
 use binrw::{io::Cursor, BinWrite};
+use chrono::Local;
 use tempfile::tempfile;
 
 use super::BlobType;
@@ -152,6 +153,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         self.file.seek(SeekFrom::Start(0))?;
 
         let file = std::mem::replace(&mut self.file, tempfile()?);
+        self.index.time = Some(Local::now());
         self.be.write_file(FileType::Pack, &id, file).await?;
 
         let index = std::mem::take(&mut self.index);

@@ -9,6 +9,7 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
+use humantime;
 use vlog::*;
 
 use super::progress_counter;
@@ -31,6 +32,14 @@ pub(super) struct Opts {
     /// only repack packs which are cacheable
     #[clap(long)]
     repack_cacheable_only: bool,
+
+    /// minimum duration (e.g. 10m) to keep packs marked for deletion
+    #[clap(long, value_name = "DURATION", default_value = "23h")]
+    keep_delete: humantime::Duration,
+
+    /// minimum duration (e.g. 90d) to keep packs before repacking or removing
+    #[clap(long, value_name = "DURATION", default_value = "0d")]
+    keep_pack: humantime::Duration,
 
     /// don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
@@ -65,8 +74,11 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
     pruner.count_used_blobs();
     pruner.check()?;
-    // TODO: Make this customizable
-    pruner.decide_packs(Duration::hours(0), Duration::hours(23))?;
+    pruner.decide_packs(
+        Duration::from_std(*opts.keep_pack)?,
+        Duration::from_std(*opts.keep_delete)?,
+        opts.repack_cacheable_only,
+    )?;
     pruner.decide_repack(&opts.max_repack, &opts.max_unused);
     pruner.filter_index_files();
     pruner.print_stats();
@@ -283,7 +295,12 @@ impl Pruner {
         Ok(())
     }
 
-    fn decide_packs(&mut self, keep_pack: Duration, keep_delete: Duration) -> Result<()> {
+    fn decide_packs(
+        &mut self,
+        keep_pack: Duration,
+        keep_delete: Duration,
+        repack_cacheable_only: bool,
+    ) -> Result<()> {
         for index in self.index_files.iter_mut() {
             // decide what to do for "normal" packs
             for pack in index.packs.iter_mut() {
@@ -336,8 +353,11 @@ impl Pruner {
                             self.used_ids.remove(&blob.id);
                         }
                     } else {
-                        if pack.time > Some(self.time - keep_pack) {
-                            // keep packs which are too young
+                        if repack_cacheable_only && !pack.blob_type.is_cacheable()
+                            || pack.time > Some(self.time - keep_pack)
+                        {
+                            // keep non-cacheable packs if requested and
+                            // packs which are too young
                             self.stats.packs.keep += 1;
                             for blob in &pack.blobs {
                                 self.used_ids.remove(&blob.id);

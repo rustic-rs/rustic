@@ -22,6 +22,15 @@ pub enum BlobType {
     Data,
 }
 
+impl BlobType {
+    pub fn is_cacheable(&self) -> bool {
+        match self {
+            BlobType::Tree => true,
+            BlobType::Data => false,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Blob {
     tpe: BlobType,

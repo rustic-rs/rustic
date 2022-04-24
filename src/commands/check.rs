@@ -9,7 +9,7 @@ use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{NodeType, TreeStreamer};
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::{IndexFile, SnapshotFile};
+use crate::repo::{IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -38,25 +38,33 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
 async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
     let mut packs = HashMap::new();
 
+    let mut process_pack = |p: IndexPack| {
+        packs.insert(p.id, p.pack_size());
+
+        // check offsests in index
+        let mut expected_offset: u32 = 0;
+        let mut blobs = p.blobs;
+        blobs.sort_unstable();
+        for blob in blobs {
+            if blob.offset != expected_offset {
+                eprintln!(
+                    "pack {}: blob {} offset in index: {}, expected: {}",
+                    p.id, blob.id, blob.offset, expected_offset
+                );
+            }
+            expected_offset += blob.length;
+        }
+    };
+
     // TODO: only read index files once
     let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
     while let Some(index) = stream.next().await {
-        for p in index?.1.packs {
-            packs.insert(p.id, p.pack_size());
-
-            // check offsests in index
-            let mut expected_offset: u32 = 0;
-            let mut blobs = p.blobs;
-            blobs.sort_unstable();
-            for blob in blobs {
-                if blob.offset != expected_offset {
-                    eprintln!(
-                        "pack {}: blob {} offset in index: {}, expected: {}",
-                        p.id, blob.id, blob.offset, expected_offset
-                    );
-                }
-                expected_offset += blob.length;
-            }
+        let index = index?.1;
+        for p in index.packs {
+            process_pack(p);
+        }
+        for p in index.packs_to_delete {
+            process_pack(p);
         }
     }
 

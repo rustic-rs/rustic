@@ -61,6 +61,14 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     }
 
     pub async fn add(&mut self, pack: IndexPack) -> Result<()> {
+        self.add_with(pack, false).await
+    }
+
+    pub async fn add_remove(&mut self, pack: IndexPack) -> Result<()> {
+        self.add_with(pack, true).await
+    }
+
+    pub async fn add_with(&mut self, pack: IndexPack, delete: bool) -> Result<()> {
         self.count += pack.blobs.len();
 
         if let Some(indexed) = &mut self.indexed {
@@ -69,7 +77,7 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
             }
         }
 
-        self.file.add(pack);
+        self.file.add(pack, delete);
 
         // check if IndexFile needs to be saved
         if self.count >= MAX_COUNT || self.created.elapsed()? >= MAX_AGE {

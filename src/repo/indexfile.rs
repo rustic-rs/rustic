@@ -21,8 +21,12 @@ impl RepoFile for IndexFile {
 }
 
 impl IndexFile {
-    pub fn add(&mut self, p: IndexPack) {
-        self.packs.push(p);
+    pub fn add(&mut self, p: IndexPack, delete: bool) {
+        if delete {
+            self.packs_to_delete.push(p);
+        } else {
+            self.packs.push(p);
+        }
     }
 }
 

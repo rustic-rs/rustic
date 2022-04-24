@@ -42,32 +42,59 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
     v1!("scanning index...");
     let p = progress_counter();
     let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
-    let mut tree_count = 0;
-    let mut tree_size = 0;
-    let mut data_count = 0;
-    let mut data_size = 0;
+
+    #[derive(Default)]
+    struct Info {
+        count: u64,
+        size: u64,
+    }
+
+    impl Info {
+        fn add(&mut self, length: u32) {
+            self.count += 1;
+            self.size += length as u64;
+        }
+    }
+
+    let mut tree = Info::default();
+    let mut data = Info::default();
+    let mut tree_delete = Info::default();
+    let mut data_delete = Info::default();
+
     while let Some(index) = stream.next().await {
-        for pack in index?.1.packs {
-            for blob in pack.blobs {
-                match blob.tpe {
-                    BlobType::Tree => {
-                        tree_count += 1;
-                        tree_size += blob.length as u64;
-                    }
-                    BlobType::Data => {
-                        data_count += 1;
-                        data_size += blob.length as u64;
-                    }
-                }
+        let index = index?.1;
+        for blob in index.packs.iter().flat_map(|pack| &pack.blobs) {
+            match blob.tpe {
+                BlobType::Tree => tree.add(blob.length),
+                BlobType::Data => data.add(blob.length),
+            }
+        }
+        for blob in index.packs_to_delete.iter().flat_map(|pack| &pack.blobs) {
+            match blob.tpe {
+                BlobType::Tree => tree_delete.add(blob.length),
+                BlobType::Data => data_delete.add(blob.length),
             }
         }
     }
     p.finish_with_message("done");
 
     let mut table = Table::new();
-    table.add_row(row!["Tree",r->tree_count,r->ByteSize(tree_size).to_string_as(true)]);
-    table.add_row(row!["Data",r->data_count,r->ByteSize(data_size).to_string_as(true)]);
-    table.add_row(row!["Total",r->tree_count + data_count,r->ByteSize(tree_size+data_size).to_string_as(true)]);
+    table.add_row(row!["Tree",r->tree.count,r->ByteSize(tree.size).to_string_as(true)]);
+    table.add_row(row!["Data",r->data.count,r->ByteSize(data.size).to_string_as(true)]);
+    if tree_delete.count > 0 {
+        table.add_row(
+            row!["Tree to delete",r->tree_delete.count,r->ByteSize(tree_delete.size).to_string_as(true)],
+        );
+    }
+    if data_delete.count > 0 {
+        table.add_row(
+            row!["Data to delete",r->data_delete.count,r->ByteSize(data_delete.size).to_string_as(true)],
+        );
+    }
+    table.add_row(
+        row!["Total",r->tree.count + data.count+tree_delete.count + data_delete.count,
+        r->ByteSize(tree.size+data.size+tree_delete.size+data_delete.size).to_string_as(true)],
+    );
 
     table.set_titles(row![b->"Blob type", br->"Count", br->"Total Size"]);
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);

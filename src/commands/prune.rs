@@ -9,7 +9,6 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
-use humantime;
 use vlog::*;
 
 use super::progress_counter;
@@ -352,22 +351,20 @@ impl Pruner {
                         for blob in &pack.blobs {
                             self.used_ids.remove(&blob.id);
                         }
-                    } else {
-                        if repack_cacheable_only && !pack.blob_type.is_cacheable()
-                            || pack.time > Some(self.time - keep_pack)
-                        {
-                            // keep non-cacheable packs if requested and
-                            // packs which are too young
-                            self.stats.packs.keep += 1;
-                            for blob in &pack.blobs {
-                                self.used_ids.remove(&blob.id);
-                            }
-                        } else {
-                            // partly used pack => candidate for repacking
-                            self.stats.packs.partly_used += 1;
-                            self.repack_candidates
-                                .push(RepackCandidate { id: pack.id, pi })
+                    } else if repack_cacheable_only && !pack.blob_type.is_cacheable()
+                        || pack.time > Some(self.time - keep_pack)
+                    {
+                        // keep non-cacheable packs if requested and
+                        // packs which are too young
+                        self.stats.packs.keep += 1;
+                        for blob in &pack.blobs {
+                            self.used_ids.remove(&blob.id);
                         }
+                    } else {
+                        // partly used pack => candidate for repacking
+                        self.stats.packs.partly_used += 1;
+                        self.repack_candidates
+                            .push(RepackCandidate { id: pack.id, pi })
                     }
                 }
             }
@@ -383,7 +380,7 @@ impl Pruner {
                             return true;
                         }
                     }
-                    return acc;
+                    acc
                 }) {
                     // if so, mark this pack for recovery
                     pack.to_do = PackToDo::Recover;

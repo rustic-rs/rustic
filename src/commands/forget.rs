@@ -1,7 +1,6 @@
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use clap::Parser;
-use humantime;
 use prettytable::{cell, format, row, Table};
 
 use crate::backend::{DecryptFullBackend, FileType};
@@ -232,7 +231,7 @@ impl KeepOptions {
                     *counter -= 1;
                     keep = true;
                     reason.push_str(reason_string);
-                    reason.push_str("\n");
+                    reason.push('\n');
                 }
                 if sn.time + Duration::from_std(*within).unwrap() > latest_time {
                     keep = true;

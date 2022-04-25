@@ -24,10 +24,10 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
-    let snapshots = SnapshotFile::all_from_backend(be).await?;
+    let snapshots = SnapshotFile::all_from_backend(be, &opts.filter).await?;
 
     let mut count = 0;
-    for sn in snapshots.into_iter().filter(|sn| sn.matches(&opts.filter)) {
+    for sn in snapshots.into_iter() {
         if modify_sn(sn, be, &opts).await? {
             count += 1;
         }

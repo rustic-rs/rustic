@@ -1,9 +1,10 @@
+use std::cmp::Ordering;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Local};
 use clap::Parser;
-use futures::TryStreamExt;
+use futures::{future, TryStreamExt};
 use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
 use vlog::*;
@@ -112,6 +113,51 @@ pub struct SnapshotFilter {
     hostnames: Vec<String>,
 }
 
+#[derive(Default)]
+pub struct SnapshotGroupCriterion {
+    hostname: bool,
+    paths: bool,
+    tags: bool,
+}
+
+impl FromStr for SnapshotGroupCriterion {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let mut crit = SnapshotGroupCriterion::default();
+        for val in s.split(',') {
+            match val {
+                "host" => crit.hostname = true,
+                "paths" => crit.paths = true,
+                "tags" => crit.tags = true,
+                "" => continue,
+                v => bail!("{} not allowed", v),
+            }
+        }
+        Ok(crit)
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct SnapshotGroup {
+    hostname: Option<String>,
+    paths: Option<StringList>,
+    tags: Option<StringList>,
+}
+
+impl SnapshotGroup {
+    pub fn from_sn(sn: &SnapshotFile, crit: &SnapshotGroupCriterion) -> Self {
+        Self {
+            hostname: crit.hostname.then(|| sn.hostname.clone()),
+            paths: crit.paths.then(|| sn.paths.clone()),
+            tags: crit.tags.then(|| sn.tags.clone()),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.hostname.is_none() && self.paths.is_none() && self.tags.is_none()
+    }
+}
+
 impl SnapshotFile {
     /// Get a SnapshotFile from the backend
     pub async fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
@@ -166,8 +212,74 @@ impl SnapshotFile {
         SnapshotFile::from_backend(be, &id).await
     }
 
-    /// Get all SnapshotFiles from the backend
-    pub async fn all_from_backend<B: DecryptReadBackend>(be: &B) -> Result<Vec<Self>> {
+    fn cmp_group(&self, crit: &SnapshotGroupCriterion, other: &Self) -> Ordering {
+        match crit.hostname {
+            false => Ordering::Equal,
+            true => self.hostname.cmp(&other.hostname),
+        }
+        .then_with(|| match crit.paths {
+            false => Ordering::Equal,
+            true => self.paths.cmp(&other.paths),
+        })
+        .then_with(|| match crit.tags {
+            false => Ordering::Equal,
+            true => self.tags.cmp(&other.tags),
+        })
+    }
+
+    fn has_group(&self, group: &SnapshotGroup) -> bool {
+        (match &group.hostname {
+            Some(val) => val == &self.hostname,
+            None => true,
+        }) && (match &group.paths {
+            Some(val) => val == &self.paths,
+            None => true,
+        }) && (match &group.tags {
+            Some(val) => val == &self.tags,
+            None => true,
+        })
+    }
+
+    /// Get SnapshotFiles which match the filter grouped by the group criterion
+    /// from the backend
+    pub async fn group_from_backend<B: DecryptReadBackend>(
+        be: &B,
+        filter: &SnapshotFilter,
+        crit: &SnapshotGroupCriterion,
+    ) -> Result<Vec<(SnapshotGroup, Vec<Self>)>> {
+        let mut snaps = Self::all_from_backend(be, filter).await?;
+        snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(crit, sn2));
+
+        let mut result = Vec::new();
+
+        if snaps.is_empty() {
+            return Ok(result);
+        }
+
+        let mut iter = snaps.into_iter();
+
+        let snap = iter.next().unwrap();
+        let mut group = SnapshotGroup::from_sn(&snap, crit);
+        let mut result_group = vec![snap];
+
+        for snap in iter {
+            if snap.has_group(&group) {
+                result_group.push(snap);
+            } else {
+                result.push((group, result_group));
+                group = SnapshotGroup::from_sn(&snap, crit);
+                result_group = vec![snap]
+            }
+        }
+        result.push((group, result_group));
+
+        Ok(result)
+    }
+
+    pub async fn all_from_backend<B: DecryptReadBackend>(
+        be: &B,
+        filter: &SnapshotFilter,
+    ) -> Result<Vec<Self>> {
         Ok(be
             .stream_all::<SnapshotFile>(ProgressBar::hidden())
             .await?
@@ -175,6 +287,7 @@ impl SnapshotFile {
                 snap.id = id;
                 snap
             })
+            .try_filter(|sn| future::ready(sn.matches(filter)))
             .try_collect()
             .await?)
     }
@@ -223,7 +336,7 @@ impl Ord for SnapshotFile {
     }
 }
 
-#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct StringList(Vec<String>);
 
 impl FromStr for StringList {

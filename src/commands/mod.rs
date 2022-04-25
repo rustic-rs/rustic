@@ -9,6 +9,7 @@ mod backup;
 mod cat;
 mod check;
 mod diff;
+mod forget;
 mod helpers;
 mod key;
 mod list;
@@ -57,6 +58,9 @@ enum Command {
     /// compare two snapshots
     Diff(diff::Opts),
 
+    /// remove snapshots from the repository
+    Forget(forget::Opts),
+
     /// manage keys
     Key(key::Opts),
 
@@ -104,6 +108,7 @@ pub async fn execute() -> Result<()> {
         Command::Cat(opts) => cat::execute(&dbe, opts).await,
         Command::Check(opts) => check::execute(&dbe, opts).await,
         Command::Diff(opts) => diff::execute(&dbe, opts).await,
+        Command::Forget(opts) => forget::execute(&dbe, opts).await,
         Command::Key(opts) => key::execute(&dbe, key, opts).await,
         Command::List(opts) => list::execute(&dbe, opts).await,
         Command::Ls(opts) => ls::execute(&dbe, opts).await,

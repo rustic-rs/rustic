@@ -1,10 +1,12 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use clap::Parser;
 use prettytable::{cell, format, row, Table};
 
 use crate::backend::{DecryptFullBackend, FileType};
-use crate::repo::{SnapshotFile, SnapshotFilter, SnapshotGroupCriterion, StringList};
+use crate::repo::{
+    SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
+};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -26,11 +28,24 @@ pub(super) struct Opts {
     /// don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
     dry_run: bool,
+
+    /// Snapshots to forget
+    ids: Vec<String>,
 }
 
 pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
-    let groups = SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?;
-
+    let groups = match opts.ids.is_empty() {
+        true => {
+            if opts.keep.is_empty() {
+                bail!("please specify either snapshot ids to forget or at least one keep policy!")
+            }
+            SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?
+        }
+        false => vec![(
+            SnapshotGroup::default(),
+            SnapshotFile::from_ids(be, &opts.ids).await?,
+        )],
+    };
     let mut forget_snaps = Vec::new();
 
     for (group, mut snapshots) in groups {
@@ -76,6 +91,7 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
             forget_snaps
         )
     } else {
+        println!("removing snapshots...");
         // TODO: delete in parallel
         for id in forget_snaps {
             be.remove(FileType::Snapshot, &id).await?;
@@ -173,6 +189,23 @@ fn equal_hour(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
 }
 
 impl KeepOptions {
+    fn is_empty(&self) -> bool {
+        let zero: humantime::Duration = "0h".parse().unwrap();
+        self.keep_tags.is_empty()
+            && self.keep_last == 0
+            && self.keep_hourly == 0
+            && self.keep_daily == 0
+            && self.keep_weekly == 0
+            && self.keep_monthly == 0
+            && self.keep_yearly == 0
+            && self.keep_within == zero
+            && self.keep_within_hourly == zero
+            && self.keep_within_daily == zero
+            && self.keep_within_weekly == zero
+            && self.keep_within_monthly == zero
+            && self.keep_within_yearly == zero
+    }
+
     fn matches(
         &mut self,
         sn: &SnapshotFile,

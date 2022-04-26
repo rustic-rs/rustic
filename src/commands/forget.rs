@@ -109,6 +109,10 @@ struct KeepOptions {
     #[clap(long, value_name = "TAGS")]
     keep_tags: Vec<StringList>,
 
+    /// keep snapshots with this ID (can be specified multiple times)
+    #[clap(long = "keep-id", value_name = "ID")]
+    keep_ids: Vec<String>,
+
     /// keep the last N snapshots
     #[clap(long, short = 'l', value_name = "N", default_value = "0")]
     keep_last: u32,
@@ -215,6 +219,22 @@ impl KeepOptions {
     ) -> Option<String> {
         let mut keep = false;
         let mut reason = String::new();
+
+        if self.keep_last > 0 {
+            keep = true;
+            self.keep_last -= 1;
+            reason.push_str("last\n");
+        }
+
+        if self
+            .keep_ids
+            .iter()
+            .any(|id| sn.id.to_hex().starts_with(id))
+        {
+            keep = true;
+            reason.push_str("id\n");
+        }
+
         if !self.keep_tags.is_empty() && sn.tags.matches(&self.keep_tags) {
             keep = true;
             reason.push_str("tags\n");

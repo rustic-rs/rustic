@@ -84,7 +84,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     async fn find_starts_with(
         &self,
         tpe: FileType,
-        vec: &[&str],
+        vec: &[String],
     ) -> Result<Vec<Result<Id, anyhow::Error>>, Self::Error> {
         #[derive(Clone, Copy, PartialEq)]
         pub enum MapResult<T> {
@@ -117,10 +117,20 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     }
 
     async fn find_id(&self, tpe: FileType, id: &str) -> Result<Id, anyhow::Error> {
-        Ok(match Id::from_hex(id) {
-            Ok(id) => id,
-            // if the given id param is not a full Id, search for a suitable one
-            Err(_) => self.find_starts_with(tpe, &[id]).await?.remove(0)?,
+        Ok(self.find_ids(tpe, &[id.to_string()]).await?.remove(0))
+    }
+
+    async fn find_ids(&self, tpe: FileType, ids: &[String]) -> Result<Vec<Id>, anyhow::Error> {
+        let long_ids: Vec<_> = ids.into_iter().map(|id| Id::from_hex(&id)).collect();
+
+        Ok(match long_ids.iter().all(Result::is_ok) {
+            true => long_ids.into_iter().map(Result::unwrap).collect(),
+            // if the given id param are not full Ids, search for a suitable one
+            false => self
+                .find_starts_with(tpe, ids)
+                .await?
+                .into_iter()
+                .collect::<Result<Vec<_>>>()?,
         })
     }
 }

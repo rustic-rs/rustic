@@ -159,11 +159,15 @@ impl SnapshotGroup {
 }
 
 impl SnapshotFile {
+    fn set_id(tuple: (Id, Self)) -> Self {
+        let (id, mut snap) = tuple;
+        snap.id = id;
+        snap
+    }
+
     /// Get a SnapshotFile from the backend
     pub async fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        let mut snap: Self = be.get_file(id).await?;
-        snap.id = *id;
-        Ok(snap)
+        Ok(Self::set_id((*id, be.get_file(id).await?)))
     }
 
     pub async fn from_str<B: DecryptReadBackend>(
@@ -210,6 +214,17 @@ impl SnapshotFile {
         v1!("getting snapshot...");
         let id = be.find_id(FileType::Snapshot, id).await?;
         SnapshotFile::from_backend(be, &id).await
+    }
+
+    /// Get a Vector of SnapshotFile from the backend by list of (parts of the) ids
+    pub async fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
+        let ids = be.find_ids(FileType::Snapshot, ids).await?;
+        Ok(be
+            .stream_list::<Self>(ids, ProgressBar::hidden())
+            .await?
+            .map_ok(Self::set_id)
+            .try_collect()
+            .await?)
     }
 
     fn cmp_group(&self, crit: &SnapshotGroupCriterion, other: &Self) -> Ordering {
@@ -283,10 +298,7 @@ impl SnapshotFile {
         Ok(be
             .stream_all::<SnapshotFile>(ProgressBar::hidden())
             .await?
-            .map_ok(|(id, mut snap)| {
-                snap.id = id;
-                snap
-            })
+            .map_ok(Self::set_id)
             .try_filter(|sn| future::ready(sn.matches(filter)))
             .try_collect()
             .await?)

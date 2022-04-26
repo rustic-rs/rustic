@@ -4,7 +4,7 @@ use clap::Parser;
 use prettytable::{cell, format, row, Table};
 
 use crate::backend::DecryptReadBackend;
-use crate::repo::{SnapshotFile, SnapshotFilter, SnapshotGroupCriterion};
+use crate::repo::{SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -14,10 +14,20 @@ pub(super) struct Opts {
     /// group snapshots by any combination of host,paths,tags
     #[clap(long, short = 'g', value_name = "CRITERION", default_value = "")]
     group_by: SnapshotGroupCriterion,
+
+    /// Snapshots to list
+    #[clap(value_name = "ID")]
+    ids: Vec<String>,
 }
 
 pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    let groups = SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?;
+    let groups = match opts.ids.is_empty() {
+        true => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?,
+        false => vec![(
+            SnapshotGroup::default(),
+            SnapshotFile::from_ids(be, &opts.ids).await?,
+        )],
+    };
 
     for (group, mut snapshots) in groups {
         if !group.is_empty() {

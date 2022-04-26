@@ -31,9 +31,16 @@ pub trait DecryptReadBackend: ReadBackend {
     async fn stream_all<F: RepoFile>(
         &self,
         p: ProgressBar,
-        //    ) -> Result<impl Stream<Item = std::result::Result<F, JoinError>>> {
     ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
         let list = self.list(F::TYPE).await?;
+        self.stream_list(list, p).await
+    }
+
+    async fn stream_list<F: RepoFile>(
+        &self,
+        list: Vec<Id>,
+        p: ProgressBar,
+    ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
         p.set_length(list.len() as u64);
 
         let stream: FuturesUnordered<_> = list

@@ -1,6 +1,8 @@
 use std::io::{self, Read};
 
-use cdc::{Polynom64, Rabin64, RollingHash64};
+use anyhow::{anyhow, Result};
+use cdc::{Polynom, Polynom64, Rabin64, RollingHash64};
+use rand::{thread_rng, Rng};
 
 const SPLITMASK: u64 = (1u64 << 20) - 1;
 const KB: usize = 1024;
@@ -116,4 +118,114 @@ impl<R: Read> Iterator for ChunkIter<R> {
         self.size_hint -= vec.len();
         Some(Ok(vec))
     }
+}
+
+/// random_poly returns an random irreducible polynomial of degree 53
+/// (largest prime number below 64-8)
+/// There are (2^53-2/53) irreducible polynomials of degree 53 in
+/// F_2[X], c.f. Michael O. Rabin (1981): "Fingerprinting by Random
+/// Polynomials", page 4. If no polynomial could be found in one
+/// million tries, an error is returned.
+pub fn random_poly() -> Result<u64> {
+    const RAND_POLY_MAX_TRIES: i32 = 1_000_000;
+
+    for _ in 0..RAND_POLY_MAX_TRIES {
+        let mut poly: u64 = thread_rng().gen();
+
+        // mask away bits above bit 53
+        poly &= (1 << 54) - 1;
+
+        // set highest and lowest bit so that the degree is 53 and the
+        // polynomial is not trivially reducible
+        poly |= (1 << 53) | 1;
+
+        if poly.irreducible() {
+            return Ok(poly);
+        }
+    }
+    Err(anyhow!("no suitable polynomial found"))
+}
+
+trait PolynomExtend {
+    fn irreducible(&self) -> bool;
+    fn gcd(&self, other: &Self) -> Self;
+    fn add(&self, other: &Self) -> Self;
+    fn mulmod(&self, other: &Self, modulo: &Self) -> Self;
+}
+
+// implementation goes along the lines of
+// https://github.com/restic/chunker/blob/master/polynomials.go
+impl PolynomExtend for Polynom64 {
+    // Irreducible returns true iff x is irreducible over F_2. This function
+    // uses Ben Or's reducibility test.
+    //
+    // For details see "Tests and Constructions of Irreducible Polynomials over
+    // Finite Fields".
+    fn irreducible(&self) -> bool {
+        for i in 1..=self.degree() / 2 {
+            if self.gcd(&qp(i, self)) != 1 {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn gcd(&self, other: &Self) -> Self {
+        if other == &0 {
+            return *self;
+        }
+
+        if self == &0 {
+            return *other;
+        }
+
+        if self.degree() < other.degree() {
+            self.gcd(&other.modulo(self))
+        } else {
+            other.gcd(&self.modulo(other))
+        }
+    }
+
+    fn add(&self, other: &Self) -> Self {
+        *self ^ *other
+    }
+
+    fn mulmod(&self, other: &Self, modulo: &Self) -> Self {
+        if self == &0 || other == &0 {
+            return 0;
+        }
+
+        let mut res: Polynom64 = 0;
+        let mut a = *self;
+        let mut b = *other;
+
+        if b & 1 > 0 {
+            res = res.add(&a).modulo(modulo);
+        }
+
+        while b != 0 {
+            a = (a << 1).modulo(modulo);
+            b >>= 1;
+            if b & 1 > 0 {
+                res = res.add(&a).modulo(modulo);
+            }
+        }
+
+        res
+    }
+}
+
+// qp computes the polynomial (x^(2^p)-x) mod g. This is needed for the
+// reducibility test.
+fn qp(p: i32, g: &Polynom64) -> Polynom64 {
+    // start with x
+    let mut res: Polynom64 = 2;
+
+    for _ in 0..p {
+        // repeatedly square res
+        res = res.mulmod(&res, g);
+    }
+
+    // add x
+    res.add(&2).modulo(g)
 }

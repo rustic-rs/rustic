@@ -11,6 +11,7 @@ mod check;
 mod diff;
 mod forget;
 mod helpers;
+mod init;
 mod key;
 mod list;
 mod ls;
@@ -61,6 +62,9 @@ enum Command {
     /// remove snapshots from the repository
     Forget(forget::Opts),
 
+    /// initialize a new repository
+    Init(init::Opts),
+
     /// manage keys
     Key(key::Opts),
 
@@ -100,22 +104,31 @@ pub async fn execute() -> Result<()> {
 
     let be = ChooseBackend::from_url(&args.repository);
 
-    let key = get_key(&be, args.password_file).await?;
-    let dbe = DecryptBackend::new(&be, key.clone());
+    let (key, dbe) = match args.command {
+        Command::Init(opts) => return init::execute(&be, opts).await,
+        _ => {
+            let key = get_key(&be, args.password_file).await?;
+            let dbe = DecryptBackend::new(&be, key.clone());
+            (key, dbe)
+        }
+    };
 
     match args.command {
-        Command::Backup(opts) => backup::execute(&dbe, opts, command).await,
-        Command::Cat(opts) => cat::execute(&dbe, opts).await,
-        Command::Check(opts) => check::execute(&dbe, opts).await,
-        Command::Diff(opts) => diff::execute(&dbe, opts).await,
-        Command::Forget(opts) => forget::execute(&dbe, opts).await,
-        Command::Key(opts) => key::execute(&dbe, key, opts).await,
-        Command::List(opts) => list::execute(&dbe, opts).await,
-        Command::Ls(opts) => ls::execute(&dbe, opts).await,
-        Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await,
-        Command::Prune(opts) => prune::execute(&dbe, opts).await,
-        Command::Restore(opts) => restore::execute(&dbe, opts).await,
-        Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await,
-        Command::Tag(opts) => tag::execute(&dbe, opts).await,
-    }
+        Command::Backup(opts) => backup::execute(&dbe, opts, command).await?,
+        Command::Cat(opts) => cat::execute(&dbe, opts).await?,
+        Command::Check(opts) => check::execute(&dbe, opts).await?,
+        Command::Diff(opts) => diff::execute(&dbe, opts).await?,
+        Command::Forget(opts) => forget::execute(&dbe, opts).await?,
+        Command::Init(_) => {} // already handled above
+        Command::Key(opts) => key::execute(&dbe, key, opts).await?,
+        Command::List(opts) => list::execute(&dbe, opts).await?,
+        Command::Ls(opts) => ls::execute(&dbe, opts).await?,
+        Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await?,
+        Command::Prune(opts) => prune::execute(&dbe, opts).await?,
+        Command::Restore(opts) => restore::execute(&dbe, opts).await?,
+        Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await?,
+        Command::Tag(opts) => tag::execute(&dbe, opts).await?,
+    };
+
+    Ok(())
 }

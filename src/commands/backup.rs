@@ -52,9 +52,10 @@ pub(super) async fn execute(
     };
 
     let config: ConfigFile = be.get_file(&Id::default()).await?;
+    let poly = config.poly()?;
+
     let be = DryRunBackend::new(be.clone(), opts.dry_run);
 
-    let poly = u64::from_str_radix(config.chunker_polynomial(), 16)?;
     let backup_path = PathBuf::from(&opts.source);
     let backup_path = backup_path.absolutize()?;
     let backup_path_str = backup_path

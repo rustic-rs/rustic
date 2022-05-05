@@ -2,6 +2,7 @@ use std::fmt;
 
 use binrw::BinWrite;
 use derive_more::{Constructor, Display};
+use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -45,6 +46,12 @@ impl Id {
                 .try_into()
                 .map_err(|_err| IdError::LengthError(s.to_string()))?,
         ))
+    }
+
+    pub fn random() -> Self {
+        let mut id = [0; 32];
+        thread_rng().fill_bytes(&mut id);
+        Self(id)
     }
 
     pub fn to_hex(self) -> String {

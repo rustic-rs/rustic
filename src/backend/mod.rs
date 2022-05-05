@@ -122,7 +122,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     }
 
     async fn find_ids(&self, tpe: FileType, ids: &[String]) -> Result<Vec<Id>, anyhow::Error> {
-        let long_ids: Vec<_> = ids.into_iter().map(|id| Id::from_hex(&id)).collect();
+        let long_ids: Vec<_> = ids.iter().map(|id| Id::from_hex(id)).collect();
 
         Ok(match long_ids.iter().all(Result::is_ok) {
             true => long_ids.into_iter().map(Result::unwrap).collect(),

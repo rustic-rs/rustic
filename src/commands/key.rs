@@ -21,22 +21,22 @@ enum Command {
 }
 
 #[derive(Parser)]
-struct AddOpts {
+pub(crate) struct AddOpts {
     /// set 'hostname' in public key information
     #[clap(long)]
-    hostname: Option<String>,
+    pub(crate) hostname: Option<String>,
 
     /// set 'username' in public key information
     #[clap(long)]
-    username: Option<String>,
+    pub(crate) username: Option<String>,
 
     /// add 'created' date in public key information
     #[clap(long)]
-    with_created: bool,
+    pub(crate) with_created: bool,
 
     /// file from which to read the new password
     #[clap(long)]
-    new_password_file: Option<String>,
+    pub(crate) new_password_file: Option<String>,
 }
 
 pub(super) async fn execute(be: &impl WriteBackend, key: Key, opts: Opts) -> Result<()> {

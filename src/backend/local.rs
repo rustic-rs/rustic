@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use vlog::*;
 use walkdir::WalkDir;
 
-use super::{node::Metadata, FileType, Id, ReadBackend, WriteBackend};
+use super::{node::Metadata, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -39,6 +39,13 @@ impl ReadBackend for LocalBackend {
     }
 
     async fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
+        if tpe == FileType::Config {
+            return Ok(match self.path.join("config").exists() {
+                true => vec![Id::default()],
+                false => Vec::new(),
+            });
+        }
+
         let walker = WalkDir::new(self.path.join(tpe.name()))
             .into_iter()
             .filter_map(walkdir::Result::ok)
@@ -49,7 +56,19 @@ impl ReadBackend for LocalBackend {
     }
 
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
-        let walker = WalkDir::new(self.path.join(tpe.name()))
+        let path = self.path.join(tpe.name());
+
+        if tpe == FileType::Config {
+            return Ok(match path.exists() {
+                true => vec![(
+                    Id::default(),
+                    path.metadata().unwrap().len().try_into().unwrap(),
+                )],
+                false => Vec::new(),
+            });
+        }
+
+        let walker = WalkDir::new(path)
             .into_iter()
             .filter_map(walkdir::Result::ok)
             .filter(|e| e.file_type().is_file())
@@ -84,6 +103,16 @@ impl ReadBackend for LocalBackend {
 
 #[async_trait]
 impl WriteBackend for LocalBackend {
+    async fn create(&self) -> Result<(), Self::Error> {
+        for tpe in ALL_FILE_TYPES {
+            fs::create_dir_all(self.path.join(tpe.name()))?;
+        }
+        for i in 0u8..=255 {
+            fs::create_dir_all(self.path.join("data").join(hex::encode([i])))?;
+        }
+        Ok(())
+    }
+
     async fn write_file(&self, tpe: FileType, id: &Id, mut f: File) -> Result<(), Self::Error> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);

@@ -24,6 +24,7 @@ pub use local::*;
 use node::Node;
 pub use rest::*;
 
+/// All FileTypes which are located in separated directories
 pub const ALL_FILE_TYPES: [FileType; 4] = [
     FileType::Key,
     FileType::Snapshot,
@@ -31,7 +32,7 @@ pub const ALL_FILE_TYPES: [FileType; 4] = [
     FileType::Pack,
 ];
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FileType {
     Config,
     Index,
@@ -137,6 +138,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
 
 #[async_trait]
 pub trait WriteBackend: ReadBackend {
+    async fn create(&self) -> Result<(), Self::Error>;
     async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error>;
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error>;
     async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error>;

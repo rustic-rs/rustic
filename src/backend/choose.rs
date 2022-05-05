@@ -77,6 +77,13 @@ impl ReadBackend for ChooseBackend {
 
 #[async_trait]
 impl WriteBackend for ChooseBackend {
+    async fn create(&self) -> Result<(), Self::Error> {
+        match self {
+            Local(local) => local.create().await.map_err(|e| Error(e.into())),
+            Rest(rest) => rest.create().await.map_err(|e| Error(e.into())),
+        }
+    }
+
     async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
         match self {
             Local(local) => local

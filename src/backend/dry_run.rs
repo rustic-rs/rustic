@@ -82,6 +82,13 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
 
 #[async_trait]
 impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
+    async fn create(&self) -> Result<(), Self::Error> {
+        match self.dry_run {
+            true => Ok(()),
+            false => self.be.create().await,
+        }
+    }
+
     async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
         match self.dry_run {
             true => Ok(()),

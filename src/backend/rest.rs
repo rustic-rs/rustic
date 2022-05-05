@@ -45,6 +45,22 @@ impl ReadBackend for RestBackend {
     }
 
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+        if tpe == FileType::Config {
+            return Ok(
+                match self
+                    .client
+                    .head(self.url.join("/config").unwrap())
+                    .send()
+                    .await?
+                    .status()
+                    .is_success()
+                {
+                    true => vec![(Id::default(), 0)],
+                    false => Vec::new(),
+                },
+            );
+        }
+
         let mut path = tpe.name().to_string();
         path.push('/');
         let url = self.url.join(&path).unwrap();
@@ -103,6 +119,14 @@ impl ReadBackend for RestBackend {
 
 #[async_trait]
 impl WriteBackend for RestBackend {
+    async fn create(&self) -> Result<(), Self::Error> {
+        self.client
+            .post(self.url.join("?create=true").unwrap())
+            .send()
+            .await?;
+        Ok(())
+    }
+
     async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         self.client

@@ -155,6 +155,11 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
 
 #[async_trait]
 impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
+    async fn create(&self) -> Result<(), Self::Error> {
+        self.backend.create().await?;
+        Ok(())
+    }
+
     async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
         self.backend.write_file(tpe, id, f).await?;
         Ok(())

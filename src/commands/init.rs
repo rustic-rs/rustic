@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::Parser;
 use rpassword::{prompt_password_stderr, read_password_with_reader};
 
@@ -21,10 +21,6 @@ pub(super) struct Opts {
 pub(super) async fn execute(be: &impl WriteBackend, opts: Opts) -> Result<()> {
     let key = Key::new();
 
-    let ids = be.list(FileType::Config).await?;
-    if !ids.is_empty() {
-        bail!("Config file already exists. Aborting.")
-    }
     be.create().await?;
 
     let key_opts = opts.key_opts;

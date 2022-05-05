@@ -13,8 +13,9 @@ use crate::archiver::{Archiver, Parent};
 use crate::backend::{
     DecryptFullBackend, DryRunBackend, LocalSource, LocalSourceOptions, ReadSource,
 };
+use crate::id::Id;
 use crate::index::IndexBackend;
-use crate::repo::{ConfigFile, Id, SnapshotFile, StringList};
+use crate::repo::{ConfigFile, SnapshotFile, StringList};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -44,6 +45,7 @@ pub(super) struct Opts {
 pub(super) async fn execute(
     be: &impl DecryptFullBackend,
     opts: Opts,
+    config_id: &Id,
     command: String,
 ) -> Result<()> {
     let mut snap = SnapshotFile {
@@ -51,7 +53,7 @@ pub(super) async fn execute(
         ..Default::default()
     };
 
-    let config: ConfigFile = be.get_file(&Id::default()).await?;
+    let config: ConfigFile = be.get_file(config_id).await?;
     let poly = config.poly()?;
 
     let be = DryRunBackend::new(be.clone(), opts.dry_run);

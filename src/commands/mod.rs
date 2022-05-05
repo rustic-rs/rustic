@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
-use crate::backend::{ChooseBackend, DecryptBackend};
+use crate::backend::{ChooseBackend, DecryptBackend, FileType, ReadBackend};
 
 mod backup;
 mod cat;
@@ -104,17 +104,22 @@ pub async fn execute() -> Result<()> {
 
     let be = ChooseBackend::from_url(&args.repository);
 
-    let (key, dbe) = match args.command {
-        Command::Init(opts) => return init::execute(&be, opts).await,
-        _ => {
+    let config_ids = be.list(FileType::Config).await?;
+
+    let (cmd, key, dbe, config_id) = match (args.command, config_ids.len()) {
+        (Command::Init(opts), 0) => return init::execute(&be, opts).await,
+        (Command::Init(_), _) => bail!("Config file already exists. Aborting."),
+        (cmd, 1) => {
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
-            (key, dbe)
+            (cmd, key, dbe, &config_ids[0])
         }
+        (_, 0) => bail!("No config file found. Is there a repo?"),
+        _ => bail!("More than one config file. Aborting."),
     };
 
-    match args.command {
-        Command::Backup(opts) => backup::execute(&dbe, opts, command).await?,
+    match cmd {
+        Command::Backup(opts) => backup::execute(&dbe, opts, config_id, command).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
         Command::Check(opts) => check::execute(&dbe, opts).await?,
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,

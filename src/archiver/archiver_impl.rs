@@ -107,7 +107,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
     pub async fn finish_trees(&mut self, path: &Path) -> Result<()> {
         while !path.starts_with(&self.path) {
             // save tree and go back to parent dir
-            let chunk = self.tree.serialize()?;
+            let mut chunk = self.tree.serialize()?;
+            chunk.push('\n' as u8); // for whatever reason, restic adds a newline, so to be compatible...
             let id = hash(&chunk);
 
             let (mut node, tree, parent) = self

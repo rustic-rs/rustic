@@ -10,7 +10,7 @@ use serde_aux::prelude::*;
 
 use crate::id::Id;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Constructor, Getters)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Constructor)]
 pub struct Node {
     name: String,
     #[serde(flatten)]
@@ -18,7 +18,7 @@ pub struct Node {
     #[serde(flatten)]
     meta: Metadata,
     #[serde(default, deserialize_with = "deserialize_default_from_null")]
-    content: Vec<Id>,
+    content: Option<Vec<Id>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     subtree: Option<Id>,
 }
@@ -69,7 +69,7 @@ impl Node {
         Self {
             name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::File,
-            content: Vec::new(),
+            content: None,
             subtree: None,
             meta,
         }
@@ -79,7 +79,7 @@ impl Node {
         Self {
             name: name.to_str().expect("no unicode").to_string(),
             node_type: NodeType::Dir,
-            content: Vec::new(),
+            content: None,
             subtree: None,
             meta,
         }
@@ -91,7 +91,7 @@ impl Node {
             node_type: NodeType::Symlink {
                 linktarget: target.to_str().expect("no unicode").to_string(),
             },
-            content: Vec::new(),
+            content: None,
             subtree: None,
             meta,
         }
@@ -106,6 +106,26 @@ impl Node {
     }
 
     pub fn set_content(&mut self, content: Vec<Id>) {
-        self.content = content;
+        self.content = Some(content);
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn node_type(&self) -> &NodeType {
+        &self.node_type
+    }
+
+    pub fn meta(&self) -> &Metadata {
+        &self.meta
+    }
+
+    pub fn content(&self) -> &Vec<Id> {
+        self.content.as_ref().unwrap()
+    }
+
+    pub fn subtree(&self) -> &Option<Id> {
+        &self.subtree
     }
 }

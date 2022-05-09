@@ -55,7 +55,6 @@ pub trait DecryptReadBackend: ReadBackend {
                 })
             })
             .collect();
-
         Ok(stream)
     }
 }

@@ -103,7 +103,7 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
         while let Some(index) = stream.next().await {
             collector.extend(index.packs);
         }
-        p.finish_with_message("done");
+        p.finish();
 
         Ok(Self::new_from_index(be, collector.into_index()))
     }

@@ -205,7 +205,7 @@ impl SnapshotFile {
                 }
             }
         }
-        p.finish_with_message("done.");
+        p.finish();
         latest.ok_or_else(|| anyhow!("no snapshots found"))
     }
 

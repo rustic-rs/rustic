@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 
@@ -87,14 +87,12 @@ async fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
             continue;
         }
         let tree = Tree::from_backend(&index, id).await?;
-
-        id = tree
+        let node = tree
             .nodes()
             .iter()
             .find(|node| node.name() == p)
-            .unwrap()
-            .subtree()
-            .unwrap();
+            .ok_or_else(|| anyhow!("{} not found", p))?;
+        id = node.subtree().ok_or_else(|| anyhow!("{} is no dir", p))?;
     }
 
     let data = index.blob_from_backend(&BlobType::Tree, &id).await?;

@@ -58,7 +58,8 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
     };
 
     v1!("- reading index...");
-    let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
+    let p = progress_counter();
+    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     while let Some(index) = stream.try_next().await? {
         let index = index.1;
         index_collector.extend(index.packs.clone());
@@ -69,6 +70,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
             process_pack(p);
         }
     }
+    p.finish();
 
     v1!("- listing packs...");
     for (id, size) in be.list_with_size(FileType::Pack).await? {
@@ -96,15 +98,20 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
 async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
+    v1!(" - reading snapshots...");
+    let p = progress_counter();
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(progress_counter())
+        .stream_all::<SnapshotFile>(p.clone())
         .await?
         .map_ok(|(_, snap)| snap.tree)
         .try_collect()
         .await?;
+    p.finish();
 
-    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees).await?;
+    v1!(" - checking trees...");
+    let mut tree_streamer =
+        TreeStreamerOnce::new(index.clone(), snap_trees, progress_counter()).await?;
     while let Some(item) = tree_streamer.try_next().await? {
         let (path, tree) = item;
         for node in tree.nodes() {

@@ -10,6 +10,7 @@ use futures::{
     task::{Context, Poll},
     Future, Stream,
 };
+use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
 use tokio::{spawn, task::JoinHandle};
 
@@ -130,34 +131,46 @@ pub struct TreeStreamerOnce<BE>
 where
     BE: IndexedBackend + Unpin,
 {
-    futures: FuturesUnordered<JoinHandle<(PathBuf, Result<Tree>)>>,
+    futures: FuturesUnordered<JoinHandle<(PathBuf, Result<Tree>, usize)>>,
     visited: HashSet<Id>,
-    pending: VecDeque<(PathBuf, Id)>,
+    pending: VecDeque<(PathBuf, Id, usize)>,
     be: BE,
+    p: ProgressBar,
+    counter: Vec<usize>,
 }
 
 impl<BE> TreeStreamerOnce<BE>
 where
     BE: IndexedBackend + Unpin,
 {
-    pub async fn new(be: BE, ids: Vec<Id>) -> Result<Self> {
+    pub async fn new(be: BE, ids: Vec<Id>, p: ProgressBar) -> Result<Self> {
+        p.set_length(ids.len() as u64);
+        let counter = vec![0; ids.len()];
         let mut streamer = Self {
             futures: FuturesUnordered::new(),
             visited: HashSet::new(),
             pending: VecDeque::new(),
             be,
+            p,
+            counter,
         };
 
-        for id in ids {
-            streamer.add_pending(PathBuf::new(), id);
+        for (count, id) in ids.into_iter().enumerate() {
+            if !streamer.add_pending(PathBuf::new(), id, count) {
+                streamer.p.inc(1);
+            }
         }
 
         Ok(streamer)
     }
 
-    fn add_pending(&mut self, path: PathBuf, id: Id) {
+    fn add_pending(&mut self, path: PathBuf, id: Id, count: usize) -> bool {
         if self.visited.insert(id) {
-            self.pending.push_back((path, id));
+            self.pending.push_back((path, id, count));
+            self.counter[count] += 1;
+            true
+        } else {
+            false
         }
     }
 }
@@ -177,28 +190,35 @@ where
 
         // fill futures queue if there is space
         while slf.futures.len() < MAX_TREE_LOADER && !slf.pending.is_empty() {
-            let (path, id) = slf.pending.pop_front().unwrap();
+            let (path, id, count) = slf.pending.pop_front().unwrap();
             let be = slf.be.clone();
-            slf.futures.push(spawn(
-                async move { (path, Tree::from_backend(&be, id).await) },
-            ));
+            slf.futures.push(spawn(async move {
+                (path, Tree::from_backend(&be, id).await, count)
+            }));
         }
 
         match Pin::new(&mut slf.futures).poll_next(cx) {
-            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err.into()))),
-            Poll::Ready(Some(Ok((path, tree)))) => {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Some(Ok((path, tree, count)))) => {
                 let tree = tree.unwrap();
                 for node in tree.nodes() {
                     if let Some(id) = node.subtree() {
                         let mut path = path.clone();
                         path.push(node.name());
-                        slf.add_pending(path, *id);
+                        slf.add_pending(path, *id, count);
                     }
+                }
+                slf.counter[count] -= 1;
+                if slf.counter[count] == 0 {
+                    slf.p.inc(1);
                 }
                 Poll::Ready(Some(Ok((path, tree))))
             }
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => Poll::Pending,
+            Poll::Ready(None) => {
+                slf.p.finish();
+                Poll::Ready(None)
+            }
+            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err.into()))),
         }
     }
 }

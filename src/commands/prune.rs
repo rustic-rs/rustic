@@ -49,7 +49,8 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     v1!("reading index...");
     let mut index_files = Vec::new();
 
-    let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
+    let p = progress_counter();
+    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
     while let Some(index) = stream.try_next().await? {
@@ -60,6 +61,7 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
 
         index_files.push(index)
     }
+    p.finish();
 
     let used_ids = {
         let indexed_be = IndexBackend::new_from_index(be, index_collector.into_index());
@@ -783,19 +785,21 @@ struct RepackCandidate {
 async fn find_used_blobs(index: &(impl IndexedBackend + Unpin)) -> Result<HashMap<Id, u8>> {
     v1!("reading snapshots...");
 
+    let p = progress_counter();
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(progress_counter())
+        .stream_all::<SnapshotFile>(p.clone())
         .await?
         .map_ok(|(_, snap)| snap.tree)
         .try_collect()
         .await?;
+    p.finish();
 
-    // TODO: Add progress bar here
     v1!("finding used blobs...");
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();
 
-    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees).await?;
+    let mut tree_streamer =
+        TreeStreamerOnce::new(index.clone(), snap_trees, progress_counter()).await?;
     while let Some(item) = tree_streamer.try_next().await? {
         let (_, tree) = item;
         for node in tree.nodes() {

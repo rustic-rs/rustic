@@ -143,24 +143,26 @@ impl WriteBackend for LocalBackend {
 }
 
 impl LocalBackend {
-    pub fn walker(&self) -> impl Iterator<Item = PathBuf> {
-        let path = self.path.clone();
-        WalkDir::new(path.clone())
-            .min_depth(1)
-            .into_iter()
-            .filter_map(walkdir::Result::ok)
-            .map(move |e| e.path().strip_prefix(path.clone()).unwrap().into())
-    }
+    /*
+        pub fn walker(&self) -> impl Iterator<Item = PathBuf> {
+            let path = self.path.clone();
+            WalkDir::new(path.clone())
+                .min_depth(1)
+                .into_iter()
+                .filter_map(walkdir::Result::ok)
+                .map(move |e| e.path().strip_prefix(path.clone()).unwrap().into())
+        }
 
-    pub fn remove_dir(&self, item: impl AsRef<Path>) {
-        let dirname = self.path.join(item);
-        fs::remove_dir(&dirname).unwrap();
-    }
+        pub fn remove_dir(&self, item: impl AsRef<Path>) {
+            let dirname = self.path.join(item);
+            fs::remove_dir(&dirname).unwrap();
+        }
 
-    pub fn remove_file(&self, item: impl AsRef<Path>) {
-        let filename = self.path.join(item);
-        fs::remove_file(&filename).unwrap();
-    }
+        pub fn remove_file(&self, item: impl AsRef<Path>) {
+            let filename = self.path.join(item);
+            fs::remove_file(&filename).unwrap();
+        }
+    */
 
     pub fn create_dir(&self, item: impl AsRef<Path>) {
         let dirname = self.path.join(item);

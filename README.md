@@ -15,8 +15,7 @@ It is not yet considered to be ready for use in a production environment.
 ## Open points:
  * [ ] Add more backends, backup-sources and restore-destinations
  * [ ] Add missing commands
- * [ ] Allow for parallel repo access
- * [ ] Parallelize the code, maybe use async code
+ * [ ] Parallelize the code even more
  * [ ] Improve error handling
  * [ ] Add tests and benchmarks
  * [ ] Add CI
@@ -27,9 +26,11 @@ It is not yet considered to be ready for use in a production environment.
 ## Comparison with restics:
 
 Improvements:
+ * Completely lock-free
  * Huge decrease in memory requirement
+ * Already much faster for some operations (but not yet fully speed optimized)
  * Can use .gitignore files
- * Snapshots save total size and node count, this is also shown in the rustic snapshots command
+ * Snapshots save much more information
  * cat tree command accepts a snapshot and path to cat the tree blob
 
 Differences:
@@ -37,12 +38,11 @@ Differences:
  * file/dir permissions have different format in go and rust (but the important information is identical)
 
 Current limitations:
- * No repo initialization implemented; create a repo with restic and use it with rustic
- * Missing commands, e.g.: init, key, mount, copy, dump, find, forget, prune
- * Backup location, backup source and restore destinations only on local file system
- * Runs only on linux
- * No parallel repo access implemented (no locking; duplicate blobs are not supported)
- * Not speed optimized (and no cache implemented)
+ * Missing commands, e.g.: mount, copy, dump, find
+ * Backup source and restore destinations only on local file system
+ * Backup backends: So far only local disc and REST backends supported (others using rclone as REST backend)
+ * Runs so far only on linux; help appreciated to add support for other OSes
+ * Not much speed optimized (and no cache implemented)
  * ... and many more
  
 

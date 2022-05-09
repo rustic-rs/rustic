@@ -9,7 +9,7 @@ use vlog::*;
 
 use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
-use crate::blob::{Node, NodeType, TreeStreamer};
+use crate::blob::{Node, NodeStreamer, NodeType};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
 use crate::repo::SnapshotFile;
@@ -59,8 +59,8 @@ async fn allocate_and_collect(
 ) -> Result<FileInfos> {
     let mut file_infos = FileInfos::new();
 
-    let mut tree_streamer = TreeStreamer::new(index.clone(), vec![tree], false).await?;
-    while let Some(item) = tree_streamer.next().await {
+    let mut node_streamer = NodeStreamer::new(index.clone(), tree).await?;
+    while let Some(item) = node_streamer.next().await {
         let (path, node) = item?;
         match node.node_type() {
             NodeType::Dir => {
@@ -116,8 +116,8 @@ async fn restore_metadata(
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    let mut tree_streamer = TreeStreamer::new(index, vec![tree], false).await?;
-    while let Some(item) = tree_streamer.next().await {
+    let mut node_streamer = NodeStreamer::new(index, tree).await?;
+    while let Some(item) = node_streamer.next().await {
         let (path, node) = item?;
         if !opts.dry_run {
             if let NodeType::Symlink { linktarget } = node.node_type() {

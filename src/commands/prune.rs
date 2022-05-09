@@ -13,7 +13,7 @@ use vlog::*;
 
 use super::progress_counter;
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType};
-use crate::blob::{BlobType, NodeType, Packer, TreeStreamer};
+use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend, Indexer};
 use crate::repo::{IndexBlob, IndexFile, IndexPack, SnapshotFile};
@@ -46,12 +46,6 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) -> Result<()> {
-    let used_ids = {
-        // TODO: in fact, we only need trees blobs and no data blobs at all here in the IndexBackend
-        let indexed_be = IndexBackend::only_full_trees(be, progress_counter()).await?;
-        find_used_blobs(&indexed_be).await?
-    };
-
     v1!("reading index...");
     let mut index_files = Vec::new();
 
@@ -61,6 +55,12 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     while let Some(index) = stream.next().await {
         index_files.push(index?)
     }
+
+    let used_ids = {
+        // TODO: in fact, we only need trees blobs and no data blobs at all here in the IndexBackend
+        let indexed_be = IndexBackend::only_full_trees(be, progress_counter()).await?;
+        find_used_blobs(&indexed_be).await?
+    };
 
     // list existing pack files
     v1!("geting packs from repostory...");
@@ -791,15 +791,17 @@ async fn find_used_blobs(index: &(impl IndexedBackend + Unpin)) -> Result<HashMa
     v1!("finding used blobs...");
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();
 
-    let mut tree_streamer = TreeStreamer::new(index.clone(), snap_trees, true).await?;
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees).await?;
     while let Some(item) = tree_streamer.try_next().await? {
-        let node = item.1;
-        match node.node_type() {
-            NodeType::File => ids.extend(node.content().iter().map(|id| (*id, 0))),
-            NodeType::Dir => {
-                ids.insert(node.subtree().unwrap(), 0);
+        let (_, tree) = item;
+        for node in tree.nodes() {
+            match node.node_type() {
+                NodeType::File => ids.extend(node.content().iter().map(|id| (*id, 0))),
+                NodeType::Dir => {
+                    ids.insert(node.subtree().unwrap(), 0);
+                }
+                _ => {} // nothing to do
             }
-            _ => {} // nothing to do
         }
     }
 

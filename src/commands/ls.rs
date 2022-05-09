@@ -4,7 +4,7 @@ use futures::StreamExt;
 
 use super::progress_counter;
 use crate::backend::DecryptReadBackend;
-use crate::blob::TreeStreamer;
+use crate::blob::NodeStreamer;
 use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
@@ -18,7 +18,7 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter()).await?;
     let index = IndexBackend::new(be, progress_counter()).await?;
 
-    let mut tree_streamer = TreeStreamer::new(index, vec![snap.tree], false).await?;
+    let mut tree_streamer = NodeStreamer::new(index, snap.tree).await?;
     while let Some(item) = tree_streamer.next().await {
         let (path, _) = item?;
         println!("{:?} ", path);

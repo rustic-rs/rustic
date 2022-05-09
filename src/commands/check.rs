@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use clap::Parser;
-use futures::{Stream, StreamExt};
+use futures::TryStreamExt;
 use vlog::*;
 
 use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType};
-use crate::blob::{NodeType, TreeStreamer};
+use crate::blob::{NodeType, TreeStreamerOnce};
 use crate::index::{IndexBackend, IndexedBackend};
 use crate::repo::{IndexFile, IndexPack, SnapshotFile};
 
@@ -58,8 +58,8 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 
     // TODO: only read index files once
     let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
-    while let Some(index) = stream.next().await {
-        let index = index?.1;
+    while let Some(index) = stream.try_next().await? {
+        let index = index.1;
         for p in index.packs {
             process_pack(p);
         }
@@ -93,41 +93,49 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
 async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
-    let mut snap_trees = Vec::new();
-    let mut stream = index
+    let snap_trees: Vec<_> = index
         .be()
         .stream_all::<SnapshotFile>(progress_counter())
+        .await?
+        .map_ok(|(_, snap)| snap.tree)
+        .try_collect()
         .await?;
-    snap_trees.reserve(stream.size_hint().1.unwrap());
-    while let Some(snap) = stream.next().await {
-        snap_trees.push(snap?.1.tree);
-    }
 
-    let mut tree_streamer = TreeStreamer::new(index.clone(), snap_trees, true).await?;
-    while let Some(item) = tree_streamer.next().await {
-        let (path, node) = item?;
-        match node.node_type() {
-            NodeType::File => {
-                for (i, id) in node.content().iter().enumerate() {
-                    if id.is_null() {
-                        eprintln!("file {:?} blob {} has null ID", path, i);
-                    }
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees).await?;
+    while let Some(item) = tree_streamer.try_next().await? {
+        let (path, tree) = item;
+        for node in tree.nodes() {
+            match node.node_type() {
+                NodeType::File => {
+                    for (i, id) in node.content().iter().enumerate() {
+                        if id.is_null() {
+                            eprintln!("file {:?} blob {} has null ID", path.join(node.name()), i);
+                        }
 
-                    if !index.has_data(id) {
-                        eprintln!("file {:?} blob {} is missig in index", path, id);
+                        if !index.has_data(id) {
+                            eprintln!(
+                                "file {:?} blob {} is missig in index",
+                                path.join(node.name()),
+                                id
+                            );
+                        }
                     }
                 }
-            }
 
-            NodeType::Dir => {
-                match node.subtree() {
-                    None => eprintln!("dir {:?} subtree does not exist", path),
-                    Some(tree) if tree.is_null() => eprintln!("dir {:?} subtree has null ID", path),
-                    _ => {} // subtree is ok
+                NodeType::Dir => {
+                    match node.subtree() {
+                        None => {
+                            eprintln!("dir {:?} subtree does not exist", path.join(node.name()))
+                        }
+                        Some(tree) if tree.is_null() => {
+                            eprintln!("dir {:?} subtree has null ID", path.join(node.name()))
+                        }
+                        _ => {} // subtree is ok
+                    }
                 }
-            }
 
-            _ => {} // nothing to check
+                _ => {} // nothing to check
+            }
         }
     }
 

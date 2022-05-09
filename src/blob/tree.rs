@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::mem;
 use std::path::PathBuf;
 use std::pin::Pin;
@@ -6,6 +6,7 @@ use std::pin::Pin;
 use anyhow::{anyhow, Result};
 use derive_getters::Getters;
 use futures::{
+    stream::FuturesUnordered,
     task::{Context, Poll},
     Future, Stream,
 };
@@ -46,56 +47,42 @@ impl Tree {
     }
 }
 
-/// TreeIterator is a recursive iterator over a Tree, i.e. it recursively iterates over
-/// a full tree visiting subtrees
-pub struct TreeStreamer<BE>
+/// NodeStreamer recursively streams all nodes of a given tree including all subtrees in-order
+pub struct NodeStreamer<BE>
 where
     BE: IndexedBackend + Unpin,
 {
     future: Option<JoinHandle<Result<Tree>>>,
-    visited: HashSet<Id>,
-    only_once: bool,
     open_iterators: Vec<std::vec::IntoIter<Node>>,
     inner: std::vec::IntoIter<Node>,
     path: PathBuf,
     be: BE,
 }
 
-impl<BE> TreeStreamer<BE>
+impl<BE> NodeStreamer<BE>
 where
     BE: IndexedBackend + Unpin,
 {
-    pub async fn new(be: BE, ids: Vec<Id>, only_once: bool) -> Result<Self> {
-        let mut iters = Vec::new();
-        for id in ids {
-            let tree = Tree::from_backend(&be, id).await?;
-            iters.push(tree.nodes.into_iter());
-        }
-        let inner = if iters.is_empty() {
-            vec![].into_iter()
-        } else {
-            iters.remove(0)
-        };
+    pub async fn new(be: BE, id: Id) -> Result<Self> {
+        let inner = Tree::from_backend(&be, id).await?.nodes.into_iter();
         Ok(Self {
             future: None,
-            visited: HashSet::new(),
-            only_once,
             inner,
-            open_iterators: iters,
+            open_iterators: Vec::new(),
             path: PathBuf::new(),
-            be: be.clone(),
+            be,
         })
     }
 }
 
-type TreeStreamItem = Result<(PathBuf, Node)>;
+type NodeStreamItem = Result<(PathBuf, Node)>;
 
 // TODO: This is not really parallel at the moment...
-impl<BE> Stream for TreeStreamer<BE>
+impl<BE> Stream for NodeStreamer<BE>
 where
     BE: IndexedBackend + Unpin,
 {
-    type Item = TreeStreamItem;
+    type Item = NodeStreamItem;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let slf = self.get_mut();
@@ -118,16 +105,10 @@ where
                 Some(node) => {
                     let path = slf.path.join(node.name());
                     if let Some(id) = node.subtree() {
-                        if !slf.only_once || !slf.visited.contains(id) {
-                            if slf.only_once {
-                                slf.visited.insert(*id);
-                            }
-                            slf.path.push(node.name());
-                            let be = slf.be.clone();
-                            let id = *id;
-                            slf.future =
-                                Some(spawn(async move { Tree::from_backend(&be, id).await }));
-                        }
+                        slf.path.push(node.name());
+                        let be = slf.be.clone();
+                        let id = *id;
+                        slf.future = Some(spawn(async move { Tree::from_backend(&be, id).await }));
                     }
 
                     return Poll::Ready(Some(Ok((path, node))));
@@ -140,6 +121,84 @@ where
                     None => return Poll::Ready(None),
                 },
             }
+        }
+    }
+}
+
+/// TreeStreamerOnce recursively visits all trees and subtrees, but each tree ID only once
+pub struct TreeStreamerOnce<BE>
+where
+    BE: IndexedBackend + Unpin,
+{
+    futures: FuturesUnordered<JoinHandle<(PathBuf, Result<Tree>)>>,
+    visited: HashSet<Id>,
+    pending: VecDeque<(PathBuf, Id)>,
+    be: BE,
+}
+
+impl<BE> TreeStreamerOnce<BE>
+where
+    BE: IndexedBackend + Unpin,
+{
+    pub async fn new(be: BE, ids: Vec<Id>) -> Result<Self> {
+        let mut streamer = Self {
+            futures: FuturesUnordered::new(),
+            visited: HashSet::new(),
+            pending: VecDeque::new(),
+            be,
+        };
+
+        for id in ids {
+            streamer.add_pending(PathBuf::new(), id);
+        }
+
+        Ok(streamer)
+    }
+
+    fn add_pending(&mut self, path: PathBuf, id: Id) {
+        if self.visited.insert(id) {
+            self.pending.push_back((path, id));
+        }
+    }
+}
+
+type TreeStreamItem = Result<(PathBuf, Tree)>;
+
+const MAX_TREE_LOADER: usize = 20;
+
+impl<BE> Stream for TreeStreamerOnce<BE>
+where
+    BE: IndexedBackend + Unpin,
+{
+    type Item = TreeStreamItem;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let slf = self.get_mut();
+
+        // fill futures queue if there is space
+        while slf.futures.len() < MAX_TREE_LOADER && !slf.pending.is_empty() {
+            let (path, id) = slf.pending.pop_front().unwrap();
+            let be = slf.be.clone();
+            slf.futures.push(spawn(
+                async move { (path, Tree::from_backend(&be, id).await) },
+            ));
+        }
+
+        match Pin::new(&mut slf.futures).poll_next(cx) {
+            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err.into()))),
+            Poll::Ready(Some(Ok((path, tree)))) => {
+                let tree = tree.unwrap();
+                for node in tree.nodes() {
+                    if let Some(id) = node.subtree() {
+                        let mut path = path.clone();
+                        path.push(node.name());
+                        slf.add_pending(path, *id);
+                    }
+                }
+                Poll::Ready(Some(Ok((path, tree))))
+            }
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
         }
     }
 }

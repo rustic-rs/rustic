@@ -5,7 +5,7 @@ use vlog::*;
 
 use super::progress_counter;
 use crate::backend::DecryptReadBackend;
-use crate::blob::{NodeType, TreeStreamer};
+use crate::blob::{NodeStreamer, NodeType};
 use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
@@ -27,8 +27,8 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
 
     let index = IndexBackend::new(be, progress_counter()).await?;
 
-    let mut tree_streamer1 = TreeStreamer::new(index.clone(), vec![snap1.tree], false).await?;
-    let mut tree_streamer2 = TreeStreamer::new(index, vec![snap2.tree], false).await?;
+    let mut tree_streamer1 = NodeStreamer::new(index.clone(), snap1.tree).await?;
+    let mut tree_streamer2 = NodeStreamer::new(index, snap2.tree).await?;
 
     let mut item1 = tree_streamer1.next().await.transpose()?;
     let mut item2 = tree_streamer2.next().await.transpose()?;

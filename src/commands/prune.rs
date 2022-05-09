@@ -8,14 +8,14 @@ use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::Parser;
-use futures::{StreamExt, TryStreamExt};
+use futures::TryStreamExt;
 use vlog::*;
 
 use super::progress_counter;
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType};
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::id::Id;
-use crate::index::{IndexBackend, IndexedBackend, Indexer};
+use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer};
 use crate::repo::{IndexBlob, IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
@@ -49,16 +49,20 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     v1!("reading index...");
     let mut index_files = Vec::new();
 
-    // TODO: only read index once; was already read in IndexBackend::new
     let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
+    let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
-    while let Some(index) = stream.next().await {
-        index_files.push(index?)
+    while let Some(index) = stream.try_next().await? {
+        index_collector.extend(index.1.packs.clone());
+        // we add the trees from packs_to_delete to the index such that searching for
+        // used blobs doesn't abort if they are already marked for deletion
+        index_collector.extend(index.1.packs_to_delete.clone());
+
+        index_files.push(index)
     }
 
     let used_ids = {
-        // TODO: in fact, we only need trees blobs and no data blobs at all here in the IndexBackend
-        let indexed_be = IndexBackend::only_full_trees(be, progress_counter()).await?;
+        let indexed_be = IndexBackend::new_from_index(be, index_collector.into_index());
         find_used_blobs(&indexed_be).await?
     };
 

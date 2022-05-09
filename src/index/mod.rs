@@ -17,7 +17,7 @@ use crate::repo::IndexFile;
 mod binarysorted;
 mod indexer;
 
-use binarysorted::BinarySortedIndex;
+pub use binarysorted::*;
 pub use indexer::*;
 
 #[derive(Debug, Clone, Constructor, Getters)]
@@ -78,38 +78,42 @@ pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
 #[delegate(ReadIndex, target = "index")]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
-    index: Arc<BinarySortedIndex>,
+    index: Arc<Index>,
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {
-    pub async fn new(be: &BE, p: ProgressBar) -> Result<Self> {
-        v1!("reading index...");
-        let index = BinarySortedIndex::full(
-            be.stream_all::<IndexFile>(p.clone())
-                .await?
-                .map(|i| i.unwrap().1),
-        )
-        .await;
-        p.finish_with_message("done");
-        Ok(Self {
+    pub fn new_from_index(be: &BE, index: Index) -> Self {
+        Self {
             be: be.clone(),
             index: Arc::new(index),
-        })
+        }
+    }
+
+    async fn new_from_collector(
+        be: &BE,
+        p: ProgressBar,
+        mut collector: IndexCollector,
+    ) -> Result<Self> {
+        v1!("reading index...");
+        let mut stream = be
+            .stream_all::<IndexFile>(p.clone())
+            .await?
+            .map(|i| i.unwrap().1);
+
+        while let Some(index) = stream.next().await {
+            collector.extend(index.packs);
+        }
+        p.finish_with_message("done");
+
+        Ok(Self::new_from_index(be, collector.into_index()))
+    }
+
+    pub async fn new(be: &BE, p: ProgressBar) -> Result<Self> {
+        Self::new_from_collector(be, p, IndexCollector::new(IndexType::Full)).await
     }
 
     pub async fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
-        v1!("reading index...");
-        let index = BinarySortedIndex::only_full_trees(
-            be.stream_all::<IndexFile>(p.clone())
-                .await?
-                .map(|i| i.unwrap().1),
-        )
-        .await;
-        p.finish_with_message("done");
-        Ok(Self {
-            be: be.clone(),
-            index: Arc::new(index),
-        })
+        Self::new_from_collector(be, p, IndexCollector::new(IndexType::FullTrees)).await
     }
 }
 

@@ -1,125 +1,109 @@
-use futures::{Stream, StreamExt};
-
 use super::{BlobType, IndexEntry, ReadIndex};
 use crate::id::Id;
-use crate::repo::IndexFile;
+use crate::repo::IndexPack;
 
 #[derive(Debug, PartialEq, Eq)]
-struct BinarySortedEntry {
+struct SortedEntry {
     id: Id,
     pack_idx: usize,
     offset: u32,
     length: u32,
 }
 
-pub(super) struct BinarySortedIndex {
-    packs: Vec<Id>,
-    tree: Vec<BinarySortedEntry>,
-    data: BinarySortedHashSetMap,
+pub(crate) enum IndexType {
+    Full,
+    FullTrees,
+    OnlyTrees,
 }
 
-enum BinarySortedHashSetMap {
+enum SortedHashSetMap {
+    None,
     Set(Vec<Id>),
-    Map(Vec<BinarySortedEntry>),
+    Map(Vec<SortedEntry>),
 }
 
-async fn from_stream<T>(
-    mut stream: T,
-    full_data: bool,
-) -> (
-    Vec<Id>,
-    Vec<BinarySortedEntry>,
-    Vec<BinarySortedEntry>,
-    Vec<Id>,
-)
-where
-    T: Stream<Item = IndexFile> + Unpin,
-{
-    let mut packs = Vec::new();
-    let mut tree = Vec::new();
-    let mut data = Vec::new();
-    let mut data_id = Vec::new();
+pub(crate) struct IndexCollector {
+    packs: Vec<Id>,
+    tree: Vec<SortedEntry>,
+    data: SortedHashSetMap,
+}
 
-    while let Some(index) = stream.next().await {
-        for p in index.packs {
-            let idx = packs.len();
-            packs.push(p.id);
+impl IndexCollector {
+    pub fn new(tpe: IndexType) -> Self {
+        let data = match tpe {
+            IndexType::OnlyTrees => SortedHashSetMap::None,
+            IndexType::FullTrees => SortedHashSetMap::Set(Vec::new()),
+            IndexType::Full => SortedHashSetMap::Map(Vec::new()),
+        };
+        Self {
+            packs: Vec::new(),
+            tree: Vec::new(),
+            data,
+        }
+    }
+
+    pub fn into_index(mut self) -> Index {
+        self.tree.sort_unstable_by_key(|e| e.id);
+        match &mut self.data {
+            SortedHashSetMap::None => {}
+            SortedHashSetMap::Set(ids) => ids.sort_unstable(),
+            SortedHashSetMap::Map(data) => data.sort_unstable_by_key(|e| e.id),
+        };
+        Index {
+            packs: self.packs,
+            tree: self.tree,
+            data: self.data,
+        }
+    }
+}
+
+impl Extend<IndexPack> for IndexCollector {
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = IndexPack>,
+    {
+        for p in iter {
+            let idx = self.packs.len();
+            self.packs.push(p.id);
             let len = p.blobs.len();
-            if p.blob_type() == BlobType::Data {
-                if full_data {
-                    data.reserve(len);
-                } else {
-                    data_id.reserve(len);
-                }
-            } else {
-                tree.reserve(len);
-            }
 
-            for blob in p.blobs {
-                let be = BinarySortedEntry {
+            match (p.blob_type(), &mut self.data) {
+                (BlobType::Tree, _) => self.tree.reserve(len),
+                (BlobType::Data, SortedHashSetMap::None) => {}
+                (BlobType::Data, SortedHashSetMap::Set(ids)) => ids.reserve(len),
+                (BlobType::Data, SortedHashSetMap::Map(data)) => data.reserve(len),
+            };
+
+            for blob in &p.blobs {
+                let be = SortedEntry {
                     id: blob.id,
                     pack_idx: idx,
                     offset: blob.offset,
                     length: blob.length,
                 };
-                match blob.tpe {
-                    BlobType::Tree => {
-                        tree.push(be);
-                    }
-                    BlobType::Data => {
-                        if full_data {
-                            data.push(be);
-                        } else {
-                            data_id.push(blob.id);
-                        }
-                    }
-                }
+                match (p.blob_type(), &mut self.data) {
+                    (BlobType::Tree, _) => self.tree.push(be),
+                    (BlobType::Data, SortedHashSetMap::None) => {}
+                    (BlobType::Data, SortedHashSetMap::Set(ids)) => ids.push(blob.id),
+                    (BlobType::Data, SortedHashSetMap::Map(data)) => data.push(be),
+                };
             }
         }
     }
-    (packs, tree, data, data_id)
 }
 
-impl BinarySortedIndex {
-    pub async fn only_full_trees<T>(stream: T) -> Self
-    where
-        T: Stream<Item = IndexFile> + Unpin,
-    {
-        let (packs, mut tree, _, mut data) = from_stream(stream, false).await;
-
-        tree.sort_unstable_by_key(|e| e.id);
-        data.sort_unstable();
-
-        Self {
-            packs,
-            tree,
-            data: BinarySortedHashSetMap::Set(data),
-        }
-    }
-
-    pub async fn full<T>(stream: T) -> Self
-    where
-        T: Stream<Item = IndexFile> + Unpin,
-    {
-        let (packs, mut tree, mut data, _) = from_stream(stream, true).await;
-
-        tree.sort_unstable_by_key(|e| e.id);
-        data.sort_unstable_by_key(|e| e.id);
-
-        Self {
-            packs,
-            tree,
-            data: BinarySortedHashSetMap::Map(data),
-        }
-    }
+pub struct Index {
+    packs: Vec<Id>,
+    tree: Vec<SortedEntry>,
+    data: SortedHashSetMap,
 }
 
-impl ReadIndex for BinarySortedIndex {
+impl ReadIndex for Index {
     fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry> {
         let vec = match (tpe, &self.data) {
             (BlobType::Tree, _) => &self.tree,
-            (BlobType::Data, BinarySortedHashSetMap::Map(data)) => data,
-            (BlobType::Data, BinarySortedHashSetMap::Set(_)) => {
+            (BlobType::Data, SortedHashSetMap::Map(data)) => data,
+            (BlobType::Data, _) => {
                 return None;
             }
         };
@@ -132,10 +116,11 @@ impl ReadIndex for BinarySortedIndex {
     fn has(&self, tpe: &BlobType, id: &Id) -> bool {
         match (tpe, &self.data) {
             (BlobType::Tree, _) => self.tree.binary_search_by_key(id, |e| e.id).is_ok(),
-            (BlobType::Data, BinarySortedHashSetMap::Map(data)) => {
+            (BlobType::Data, SortedHashSetMap::Map(data)) => {
                 data.binary_search_by_key(id, |e| e.id).is_ok()
             }
-            (BlobType::Data, BinarySortedHashSetMap::Set(data)) => data.binary_search(id).is_ok(),
+            (BlobType::Data, SortedHashSetMap::Set(data)) => data.binary_search(id).is_ok(),
+            (BlobType::Data, SortedHashSetMap::None) => false,
         }
     }
 }

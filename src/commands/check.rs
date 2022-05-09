@@ -8,7 +8,7 @@ use vlog::*;
 use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{NodeType, TreeStreamerOnce};
-use crate::index::{IndexBackend, IndexedBackend};
+use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
 use crate::repo::{IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
@@ -19,10 +19,10 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
-    v1!("checking packs...");
-    check_packs(be).await?;
+    v1!("checking packs in index and from pack list...");
+    let index_collector = check_packs(be).await?;
 
-    let be = IndexBackend::new(be, progress_counter()).await?;
+    let be = IndexBackend::new_from_index(be, index_collector.into_index());
 
     v1!("checking snapshots and trees...");
     check_snapshots(&be).await?;
@@ -35,8 +35,9 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
 }
 
 // check if packs correspond to index
-async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
+async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
     let mut packs = HashMap::new();
+    let mut index_collector = IndexCollector::new(IndexType::FullTrees);
 
     let mut process_pack = |p: IndexPack| {
         packs.insert(p.id, p.pack_size());
@@ -56,10 +57,11 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
         }
     };
 
-    // TODO: only read index files once
+    v1!("- reading index...");
     let mut stream = be.stream_all::<IndexFile>(progress_counter()).await?;
     while let Some(index) = stream.try_next().await? {
         let index = index.1;
+        index_collector.extend(index.packs.clone());
         for p in index.packs {
             process_pack(p);
         }
@@ -68,6 +70,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
         }
     }
 
+    v1!("- listing packs...");
     for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
             None => eprintln!("pack {} not contained in index", id.to_hex()),
@@ -88,7 +91,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<()> {
         );
     }
 
-    Ok(())
+    Ok(index_collector)
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index

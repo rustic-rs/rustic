@@ -30,7 +30,7 @@ impl IndexFile {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct IndexPack {
     pub(crate) id: Id,
     #[serde(skip_serializing_if = "Option::is_none")]

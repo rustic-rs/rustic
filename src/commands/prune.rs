@@ -491,21 +491,23 @@ impl Pruner {
         let blob_stat = &self.stats.blobs;
         let size_stat = &self.stats.size;
 
+        let bytes = |b| ByteSize(b).to_string_as(true);
+
         v2!(
             "used:   {:>10} blobs, {:>10}",
             blob_stat.used,
-            ByteSize(size_stat.used).to_string_as(true)
+            bytes(size_stat.used)
         );
 
         v2!(
             "unused: {:>10} blobs, {:>10}",
             blob_stat.unused,
-            ByteSize(size_stat.unused).to_string_as(true)
+            bytes(size_stat.unused)
         );
         v2!(
             "total:  {:>10} blobs, {:>10}",
             blob_stat.total(),
-            ByteSize(size_stat.total()).to_string_as(true)
+            bytes(size_stat.total())
         );
 
         v1!("");
@@ -514,40 +516,40 @@ impl Pruner {
             "to repack: {:>10} packs, {:>10} blobs, {:>10}",
             pack_stat.repack,
             blob_stat.repack,
-            ByteSize(size_stat.repack).to_string_as(true)
+            bytes(size_stat.repack)
         );
         v1!(
             "this removes:                {:>10} blobs, {:>10}",
             blob_stat.repackrm,
-            ByteSize(size_stat.repackrm).to_string_as(true)
+            bytes(size_stat.repackrm)
         );
         v1!(
             "to delete: {:>10} packs, {:>10} blobs, {:>10}",
             pack_stat.unused,
             blob_stat.remove,
-            ByteSize(size_stat.remove).to_string_as(true)
+            bytes(size_stat.remove)
         );
         if !self.existing_packs.is_empty() {
             v1!(
                 "unindexed: {:>10} packs,         ?? blobs, {:>10}",
                 self.existing_packs.len(),
-                ByteSize(size_stat.unref).to_string_as(true)
+                bytes(size_stat.unref)
             );
         }
 
         v1!(
             "total prune:                 {:>10} blobs, {:>10}",
             blob_stat.repackrm + blob_stat.remove,
-            ByteSize(size_stat.repackrm + size_stat.remove + size_stat.unref).to_string_as(true)
+            bytes(size_stat.repackrm + size_stat.remove + size_stat.unref)
         );
         v1!(
             "remaining:                   {:>10} blobs, {:>10}",
             blob_stat.total_after_prune(),
-            ByteSize(size_stat.total_after_prune()).to_string_as(true)
+            bytes(size_stat.total_after_prune())
         );
         v1!(
             "unused size after prune: {:>10} ({:.2}% of remaining size)",
-            ByteSize(size_stat.unused_after_prune()).to_string_as(true),
+            bytes(size_stat.unused_after_prune()),
             blob_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64
         );
 

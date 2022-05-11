@@ -3,7 +3,7 @@ use std::io::BufReader;
 
 use anyhow::Result;
 use clap::Parser;
-use rpassword::{prompt_password_stderr, read_password_with_reader};
+use rpassword::{prompt_password, read_password_from_bufread};
 
 use super::key::AddOpts;
 use crate::backend::{DecryptBackend, DecryptWriteBackend, FileType, WriteBackend};
@@ -27,9 +27,9 @@ pub(super) async fn execute(be: &impl WriteBackend, opts: Opts) -> Result<()> {
     let pass = match key_opts.new_password_file {
         Some(file) => {
             let mut file = BufReader::new(File::open(file)?);
-            read_password_with_reader(Some(&mut file))?
+            read_password_from_bufread(&mut file)?
         }
-        None => prompt_password_stderr("enter password for new key: ")?,
+        None => prompt_password("enter password for new key: ")?,
     };
     let keyfile = KeyFile::generate(
         key.clone(),

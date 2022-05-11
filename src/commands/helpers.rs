@@ -6,7 +6,7 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressStyle};
-use rpassword::{prompt_password_stderr, read_password_with_reader};
+use rpassword::{prompt_password, read_password_from_bufread};
 use vlog::*;
 
 use crate::backend::ReadBackend;
@@ -19,7 +19,7 @@ pub async fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> R
     match password_file {
         None => {
             for _i in 0..MAX_PASSWORD_RETRIES {
-                let pass = prompt_password_stderr("enter repository password: ")?;
+                let pass = prompt_password("enter repository password: ")?;
                 if let Ok(key) = find_key_in_backend(be, &pass, None).await {
                     ve1!("password is correct");
                     return Ok(key);
@@ -29,7 +29,7 @@ pub async fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> R
         }
         Some(file) => {
             let mut file = BufReader::new(File::open(file)?);
-            let pass = read_password_with_reader(Some(&mut file))?;
+            let pass = read_password_from_bufread(&mut file)?;
             if let Ok(key) = find_key_in_backend(be, &pass, None).await {
                 ve1!("password is correct");
                 return Ok(key);

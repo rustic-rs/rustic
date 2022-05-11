@@ -32,7 +32,7 @@ futures = "0.3"
 aes256ctr_poly1305aes = "0.1"
 sha2 = "0.10"
 rand = "0.8"
-scrypt = { version = "0.9", default-features = false }
+scrypt = { version = "0.10", default-features = false }
 # chunker
 cdc = "0.1"
 # serialization
@@ -52,7 +52,7 @@ ignore = "0.4"
 reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }
 # commands
 clap = { version = "3", features = ["derive"] }
-rpassword = "5"
+rpassword = "6"
 prettytable-rs = {version = "0.8", default-features = false }
 bytesize = "1"
 indicatif = "0.17.0-rc.10"

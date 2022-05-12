@@ -67,7 +67,7 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     };
 
     // list existing pack files
-    v1!("geting packs from repostory...");
+    v1!("geting packs from repository...");
     let existing_packs: HashMap<_, _> = be
         .list_with_size(FileType::Pack)
         .await?
@@ -159,6 +159,7 @@ impl SizeStats {
 #[derive(Default)]
 struct PruneStats {
     packs_to_delete: DeleteStats,
+    size_to_delete: DeleteStats,
     packs: PackStats,
     blobs: SizeStats,
     size: SizeStats,
@@ -194,6 +195,15 @@ struct PrunePack {
     to_do: PackToDo,
     time: Option<DateTime<Local>>,
     blobs: Vec<IndexBlob>,
+}
+
+impl PrunePack {
+    pub fn pack_size(&self) -> u32 {
+        self.blobs.iter().fold(
+            4 + 32,                             // 4 + crypto overhead
+            |acc, blob| acc + blob.length + 37, // 37 = length of blob description);
+        )
+    }
 }
 
 struct Pruner {
@@ -389,12 +399,15 @@ impl Pruner {
                     // if so, mark this pack for recovery
                     pack.to_do = PackToDo::Recover;
                     self.stats.packs_to_delete.recover += 1;
+                    self.stats.size_to_delete.recover += pack.pack_size() as u64;
                 } else if self.time - pack.time.expect("packs_to_delete has no time") >= keep_delete
                 {
                     pack.to_do = PackToDo::Remove;
                     self.stats.packs_to_delete.remove += 1;
+                    self.stats.size_to_delete.remove += pack.pack_size() as u64;
                 } else {
                     self.stats.packs_to_delete.keep += 1;
+                    self.stats.size_to_delete.keep += pack.pack_size() as u64;
                 }
 
                 self.existing_packs.remove(&pack.id);
@@ -551,27 +564,35 @@ impl Pruner {
             size_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64 * 100.0
         );
 
+        v1!("");
+
+        v1!(
+            "packs marked for deletion: {:>10}, {:>10}",
+            self.stats.packs_to_delete.total(),
+            bytes(self.stats.size_to_delete.total()),
+        );
+        v1!(
+            " - complete deletion:      {:>10}, {:>10}",
+            self.stats.packs_to_delete.remove,
+            bytes(self.stats.size_to_delete.remove),
+        );
+        v1!(
+            " - keep marked:            {:>10}, {:>10}",
+            self.stats.packs_to_delete.keep,
+            bytes(self.stats.size_to_delete.keep),
+        );
+        v1!(
+            " - recover:                {:>10}, {:>10}",
+            self.stats.packs_to_delete.recover,
+            bytes(self.stats.size_to_delete.recover),
+        );
+
+        v2!("");
+
         v2!(
             "index files to rebuild: {} / {}",
             self.index_files.len(),
             self.stats.index_files
-        );
-
-        v1!(
-            "packs marked for deletion: {:>10}",
-            self.stats.packs_to_delete.total(),
-        );
-        v1!(
-            " - complete deletion:      {:>10}",
-            self.stats.packs_to_delete.remove,
-        );
-        v1!(
-            " - keep marked:            {:>10}",
-            self.stats.packs_to_delete.keep,
-        );
-        v1!(
-            " - recover:                {:>10}",
-            self.stats.packs_to_delete.recover,
         );
     }
 

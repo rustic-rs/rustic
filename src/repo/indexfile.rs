@@ -54,11 +54,10 @@ impl IndexPack {
 
     // calculate the pack size from the contained blobs
     pub fn pack_size(&self) -> u32 {
-        let mut size = 4 + 32; // 4 + crypto overhead
-        for blob in &self.blobs {
-            size += blob.length + 37 // 37 = length of blob description
-        }
-        size
+        self.blobs.iter().fold(
+            4 + 32,                             // 4 + crypto overhead
+            |acc, blob| acc + blob.length + 37, // 37 = length of blob description);
+        )
     }
 
     /// returns the blob type of the pack. Note that only packs with

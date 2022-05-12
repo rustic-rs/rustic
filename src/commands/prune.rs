@@ -548,7 +548,7 @@ impl Pruner {
         v1!(
             "unused size after prune: {:>10} ({:.2}% of remaining size)",
             bytes(size_stat.unused_after_prune()),
-            blob_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64
+            size_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64 * 100.0
         );
 
         v2!(

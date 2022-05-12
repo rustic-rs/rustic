@@ -1,7 +1,5 @@
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Result};
@@ -578,7 +576,7 @@ impl Pruner {
     }
 
     async fn do_prune(mut self, be: &impl DecryptWriteBackend) -> Result<()> {
-        let indexer = Rc::new(RefCell::new(Indexer::new_unindexed(be.clone())));
+        let indexer = Indexer::new_unindexed(be.clone()).into_shared();
         let mut packer = Packer::new(be.clone(), indexer.clone())?;
 
         // remove unreferenced packs first
@@ -590,14 +588,10 @@ impl Pruner {
         }
 
         // process packs by index_file
-        if !self.index_files.is_empty() {
-            if self.stats.packs.repack > 0 {
-                v1!("repacking packs and rebuilding index...");
-            } else {
-                v1!("rebuilding index...");
-            }
-        } else {
-            v1!("nothing to do!");
+        match (self.index_files.is_empty(), self.stats.packs.repack > 0) {
+            (true, _) => v1!("nothing to do!"),
+            (false, true) => v1!("repacking packs and rebuilding index..."),
+            (false, false) => v1!("rebuilding index..."),
         }
 
         let mut indexes_remove = Vec::new();
@@ -621,13 +615,13 @@ impl Pruner {
                                 .await?;
                             packer.add_raw(&data, &blob.id, blob.tpe).await?;
                         }
-                        // mark pack for removal
+                        // mark original pack for removal
                         let pack = IndexPack {
                             id: pack.id,
                             time: Some(self.time),
                             blobs: pack.blobs,
                         };
-                        indexer.borrow_mut().add_remove(pack).await?;
+                        indexer.write().await.add_remove(pack).await?;
                     }
                     PackToDo::Keep => {
                         // keep pack: add to new index
@@ -636,7 +630,7 @@ impl Pruner {
                             time: pack.time,
                             blobs: pack.blobs,
                         };
-                        indexer.borrow_mut().add(pack).await?;
+                        indexer.write().await.add(pack).await?;
                     }
                     PackToDo::Remove => {
                         // remove pack: add to new index in section packs_to_delete
@@ -645,7 +639,7 @@ impl Pruner {
                             time: Some(self.time),
                             blobs: pack.blobs,
                         };
-                        indexer.borrow_mut().add_remove(pack).await?;
+                        indexer.write().await.add_remove(pack).await?;
                     }
                 }
             }
@@ -661,7 +655,7 @@ impl Pruner {
                             time: pack.time,
                             blobs: pack.blobs,
                         };
-                        indexer.borrow_mut().add_remove(pack).await?;
+                        indexer.write().await.add_remove(pack).await?;
                     }
                     PackToDo::Recover => {
                         // recover pack: add to new index in section packs
@@ -670,7 +664,7 @@ impl Pruner {
                             time: Some(self.time),
                             blobs: pack.blobs,
                         };
-                        indexer.borrow_mut().add(pack).await?;
+                        indexer.write().await.add(pack).await?;
                     }
                     PackToDo::Remove => {
                         // delete pack
@@ -681,7 +675,7 @@ impl Pruner {
             indexes_remove.push(index.id);
         }
         packer.finalize().await?;
-        indexer.borrow().finalize().await?;
+        indexer.write().await.finalize().await?;
 
         // TODO: parallelize removing
         // TODO: add progress bar

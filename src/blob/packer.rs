@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use binrw::{io::Cursor, BinWrite};
 use chrono::Local;
 use tempfile::tempfile;
+use tokio::{spawn, task::JoinHandle};
 
 use super::BlobType;
 use crate::backend::{DecryptWriteBackend, FileType};
@@ -29,10 +30,16 @@ pub struct Packer<BE: DecryptWriteBackend> {
     index: IndexPack,
     indexer: SharedIndexer<BE>,
     hasher: Hasher,
+    file_writer: FileWriter<BE>,
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
     pub fn new(be: BE, indexer: SharedIndexer<BE>) -> Result<Self> {
+        let file_writer = FileWriter {
+            future: None,
+            be: be.clone(),
+            indexer: indexer.clone(),
+        };
         Ok(Self {
             be,
             file: tempfile()?,
@@ -42,11 +49,13 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             index: IndexPack::default(),
             indexer,
             hasher: Hasher::new(),
+            file_writer,
         })
     }
 
     pub async fn finalize(&mut self) -> Result<()> {
-        self.save().await
+        self.save().await?;
+        self.file_writer.finalize().await
     }
 
     pub async fn write_data(&mut self, data: &[u8]) -> Result<u32> {
@@ -62,10 +71,12 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         if self.has(id) {
             return Ok(false);
         }
-        if self.indexer.borrow().has(id) {
-            return Ok(false);
+        {
+            let indexer = self.indexer.read().await;
+            if indexer.has(id) {
+                return Ok(false);
+            }
         }
-
         let data = self
             .be
             .key()
@@ -152,16 +163,47 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         self.file.flush()?;
         self.file.seek(SeekFrom::Start(0))?;
 
-        let file = std::mem::replace(&mut self.file, tempfile()?);
-        self.index.time = Some(Local::now());
-        self.be.write_file(FileType::Pack, &id, file).await?;
-
         let index = std::mem::take(&mut self.index);
-        self.indexer.borrow_mut().add(index).await?;
+        let file = std::mem::replace(&mut self.file, tempfile()?);
+
+        self.file_writer.add(index, file, id).await?;
+
         Ok(())
     }
 
     fn has(&self, id: &Id) -> bool {
         self.index.blobs.iter().any(|b| &b.id == id)
+    }
+}
+
+struct FileWriter<BE: DecryptWriteBackend> {
+    future: Option<JoinHandle<Result<()>>>,
+    be: BE,
+    indexer: SharedIndexer<BE>,
+}
+
+impl<BE: DecryptWriteBackend> FileWriter<BE> {
+    async fn add(&mut self, mut index: IndexPack, file: File, id: Id) -> Result<()> {
+        if let Some(fut) = self.future.take() {
+            fut.await??;
+        }
+
+        let be = self.be.clone();
+        let indexer = self.indexer.clone();
+        self.future = Some(spawn(async move {
+            be.write_file(FileType::Pack, &id, file).await?;
+            index.time = Some(Local::now());
+            indexer.write().await.add(index).await?;
+            Ok(())
+        }));
+
+        Ok(())
+    }
+
+    async fn finalize(&mut self) -> Result<()> {
+        if let Some(fut) = self.future.take() {
+            return fut.await?;
+        }
+        Ok(())
     }
 }

@@ -1,15 +1,15 @@
-use std::cell::RefCell;
 use std::collections::HashSet;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
+use tokio::sync::RwLock;
 
 use crate::backend::DecryptWriteBackend;
 use crate::id::Id;
 use crate::repo::{IndexFile, IndexPack};
 
-pub type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
+pub type SharedIndexer<BE> = Arc<RwLock<Indexer<BE>>>;
 
 pub struct Indexer<BE: DecryptWriteBackend> {
     be: BE,
@@ -47,6 +47,10 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
         self.file = IndexFile::default();
         self.count = 0;
         self.created = SystemTime::now();
+    }
+
+    pub fn into_shared(self) -> SharedIndexer<BE> {
+        Arc::new(RwLock::new(self))
     }
 
     pub async fn finalize(&self) -> Result<()> {

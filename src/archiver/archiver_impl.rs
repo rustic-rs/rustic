@@ -1,7 +1,5 @@
-use std::cell::RefCell;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
@@ -16,12 +14,10 @@ use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::id::Id;
-use crate::index::{IndexedBackend, Indexer};
+use crate::index::{IndexedBackend, Indexer, SharedIndexer};
 use crate::repo::SnapshotFile;
 
 use super::{Parent, ParentResult};
-
-type SharedIndexer<BE> = Rc<RefCell<Indexer<BE>>>;
 
 pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     path: PathBuf,
@@ -45,7 +41,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         parent: Parent<I>,
         mut snap: SnapshotFile,
     ) -> Result<Self> {
-        let indexer = Rc::new(RefCell::new(Indexer::new(be.clone())));
+        let indexer = Indexer::new(be.clone()).into_shared();
         snap.backup_start = Some(Local::now());
         Ok(Self {
             path: PathBuf::from("/"),
@@ -249,8 +245,10 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         self.data_packer.finalize().await?;
         self.tree_packer.finalize().await?;
-        self.indexer.borrow().finalize().await?;
-
+        {
+            let indexer = self.indexer.write().await;
+            indexer.finalize().await?;
+        }
         self.snap.backup_end = Some(Local::now());
         let id = self.be.save_file(&self.snap).await?;
         self.snap.id = id;

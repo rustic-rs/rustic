@@ -33,9 +33,11 @@ impl IndexFile {
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct IndexPack {
     pub(crate) id: Id,
+    pub(crate) blobs: Vec<IndexBlob>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) time: Option<DateTime<Local>>,
-    pub(crate) blobs: Vec<IndexBlob>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) size: Option<u32>,
 }
 
 impl IndexPack {
@@ -54,10 +56,12 @@ impl IndexPack {
 
     // calculate the pack size from the contained blobs
     pub fn pack_size(&self) -> u32 {
-        self.blobs.iter().fold(
-            4 + 32,                             // 4 + crypto overhead
-            |acc, blob| acc + blob.length + 37, // 37 = length of blob description);
-        )
+        self.size.unwrap_or_else(|| {
+            self.blobs.iter().fold(
+                4 + 32,                             // 4 + crypto overhead
+                |acc, blob| acc + blob.length + 37, // 37 = length of blob description);
+            )
+        })
     }
 
     /// returns the blob type of the pack. Note that only packs with

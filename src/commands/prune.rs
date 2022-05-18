@@ -241,17 +241,20 @@ impl PrunePack {
     }
 
     fn set_todo(&mut self, todo: PackToDo, pi: &PackInfo, stats: &mut PruneStats) {
-        stats.blobs.used += pi.used_blobs as u64;
-        stats.blobs.unused += pi.unused_blobs as u64;
-        stats.size.used += pi.used_size as u64;
-        stats.size.unused += pi.unused_size as u64;
-
         match todo {
             PackToDo::Undecided => panic!("not possible"),
             PackToDo::Keep => {
+                stats.blobs.used += pi.used_blobs as u64;
+                stats.blobs.unused += pi.unused_blobs as u64;
+                stats.size.used += pi.used_size as u64;
+                stats.size.unused += pi.unused_size as u64;
                 stats.packs.keep += 1;
             }
             PackToDo::Repack => {
+                stats.blobs.used += pi.used_blobs as u64;
+                stats.blobs.unused += pi.unused_blobs as u64;
+                stats.size.used += pi.used_size as u64;
+                stats.size.unused += pi.unused_size as u64;
                 stats.packs.repack += 1;
                 stats.blobs.repack += (pi.unused_blobs + pi.used_blobs) as u64;
                 stats.blobs.repackrm += pi.unused_blobs as u64;
@@ -260,6 +263,8 @@ impl PrunePack {
             }
 
             PackToDo::MarkDelete => {
+                stats.blobs.unused += pi.unused_blobs as u64;
+                stats.size.unused += pi.unused_size as u64;
                 stats.blobs.remove += pi.unused_blobs as u64;
                 stats.size.remove += pi.unused_size as u64;
             }
@@ -745,20 +750,16 @@ impl Pruner {
         packer.finalize().await?;
         indexer.write().await.finalize().await?;
 
-        // TODO: parallelize removing
-        // TODO: add progress bar
         if !packs_remove.is_empty() {
             v1!("removing old pack files...");
-            for id in packs_remove {
-                be.remove(FileType::Pack, &id).await?;
-            }
+            be.delete_list(FileType::Pack, packs_remove, progress_counter())
+                .await?;
         }
 
         if !indexes_remove.is_empty() {
             v1!("removing old index files...");
-            for id in indexes_remove {
-                be.remove(FileType::Index, &id).await?;
-            }
+            be.delete_list(FileType::Index, indexes_remove, progress_counter())
+                .await?;
         }
 
         Ok(())

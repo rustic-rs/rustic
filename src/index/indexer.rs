@@ -58,7 +58,7 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     }
 
     pub async fn save(&self) -> Result<()> {
-        if self.count > 0 {
+        if (self.file.packs.len() + self.file.packs_to_delete.len()) > 0 {
             self.be.save_file(&self.file).await?;
         }
         Ok(())

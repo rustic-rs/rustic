@@ -67,7 +67,12 @@ impl IndexPack {
     /// returns the blob type of the pack. Note that only packs with
     /// identical blob types are allowed
     pub fn blob_type(&self) -> BlobType {
-        self.blobs[0].tpe
+        // TODO: This is a hack to support packs without blobs (e.g. when deleting unreferenced files)
+        if self.blobs.is_empty() {
+            BlobType::Data
+        } else {
+            self.blobs[0].tpe
+        }
     }
 }
 

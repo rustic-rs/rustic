@@ -3,6 +3,7 @@ use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use clap::Parser;
 use prettytable::{cell, format, row, Table};
 
+use super::progress_counter;
 use crate::backend::{DecryptFullBackend, FileType};
 use crate::repo::{
     SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
@@ -85,16 +86,17 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
         table.printstd();
         println!();
     }
-    if opts.dry_run {
-        println!(
-            "would have deleted the following snapshots:\n {:?}",
+
+    match (forget_snaps.is_empty(), opts.dry_run) {
+        (true, _) => println!("nothing to remove"),
+        (false, true) => println!(
+            "would have removed the following snapshots:\n {:?}",
             forget_snaps
-        )
-    } else {
-        println!("removing snapshots...");
-        // TODO: delete in parallel
-        for id in forget_snaps {
-            be.remove(FileType::Snapshot, &id).await?;
+        ),
+        (false, false) => {
+            println!("removing snapshots...");
+            be.delete_list(FileType::Snapshot, forget_snaps, progress_counter())
+                .await?;
         }
     }
 
@@ -109,7 +111,7 @@ struct KeepOptions {
     #[clap(long, value_name = "TAGS")]
     keep_tags: Vec<StringList>,
 
-    /// keep snapshots with this ID (can be specified multiple times)
+    /// keep snapshots ids that start with ID (can be specified multiple times)
     #[clap(long = "keep-id", value_name = "ID")]
     keep_ids: Vec<String>,
 
@@ -245,7 +247,7 @@ impl KeepOptions {
             reason.push_str("within\n");
         }
 
-        let keep_checks = vec![
+        let keep_checks = [
             (
                 equal_hour as fn(&SnapshotFile, &SnapshotFile) -> bool,
                 &mut self.keep_hourly,

@@ -2,7 +2,7 @@ use std::fs::File;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::stream::FuturesUnordered;
+use futures::{stream::FuturesUnordered, TryStreamExt};
 use indicatif::ProgressBar;
 use tokio::{spawn, task::JoinHandle};
 
@@ -68,6 +68,24 @@ pub trait DecryptWriteBackend: WriteBackend {
     async fn save_file<F: RepoFile>(&self, file: &F) -> Result<Id> {
         let data = serde_json::to_vec(file)?;
         Ok(self.hash_write_full(F::TYPE, &data).await?)
+    }
+
+    async fn delete_list(&self, tpe: FileType, list: Vec<Id>, p: ProgressBar) -> Result<()> {
+        p.set_length(list.len() as u64);
+        list.into_iter()
+            .map(|id| {
+                let be = self.clone();
+                let p = p.clone();
+                spawn(async move {
+                    be.remove(tpe, &id).await.unwrap();
+                    p.inc(1);
+                })
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_collect()
+            .await?;
+        p.finish();
+        Ok(())
     }
 }
 

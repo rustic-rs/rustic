@@ -40,6 +40,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         poly: u64,
         parent: Parent<I>,
         mut snap: SnapshotFile,
+        zstd: Option<i32>,
     ) -> Result<Self> {
         let indexer = Indexer::new(be.clone()).into_shared();
         snap.backup_start = Some(Local::now());
@@ -49,8 +50,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             parent,
             stack: Vec::new(),
             index,
-            data_packer: Packer::new(be.clone(), indexer.clone())?,
-            tree_packer: Packer::new(be.clone(), indexer.clone())?,
+            data_packer: Packer::new(be.clone(), indexer.clone(), zstd)?,
+            tree_packer: Packer::new(be.clone(), indexer.clone(), zstd)?,
             be,
             poly,
             indexer,

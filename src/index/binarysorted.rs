@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use super::{BlobType, IndexEntry, ReadIndex};
 use crate::id::Id;
 use crate::repo::IndexPack;
@@ -8,6 +10,7 @@ struct SortedEntry {
     pack_idx: usize,
     offset: u32,
     length: u32,
+    uncompressed_length: Option<NonZeroU32>,
 }
 
 pub(crate) enum IndexType {
@@ -80,6 +83,7 @@ impl Extend<IndexPack> for IndexCollector {
                     pack_idx: idx,
                     offset: blob.offset,
                     length: blob.length,
+                    uncompressed_length: blob.uncompressed_length,
                 };
                 match (p.blob_type(), &mut self.data) {
                     (BlobType::Tree, _) => self.tree.push(be),
@@ -109,7 +113,12 @@ impl ReadIndex for Index {
         };
         vec.binary_search_by_key(id, |e| e.id).ok().map(|index| {
             let be = &vec[index];
-            IndexEntry::new(self.packs[be.pack_idx], be.offset, be.length)
+            IndexEntry::new(
+                self.packs[be.pack_idx],
+                be.offset,
+                be.length,
+                be.uncompressed_length,
+            )
         })
     }
 

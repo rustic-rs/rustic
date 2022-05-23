@@ -7,6 +7,7 @@ use derive_getters::Dissolve;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use tokio::spawn;
 use vlog::*;
+use zstd::decode_all;
 
 use super::progress_counter;
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
@@ -117,6 +118,11 @@ async fn restore_contents(
                     .await
                     .unwrap();
 
+                let data = match bl.compressed {
+                    false => data,
+                    true => decode_all(&*data).unwrap(),
+                };
+
                 if !dry_run {
                     // save into needed files in parallel
                     for (name, start) in name_dests {
@@ -170,6 +176,7 @@ type Filenames = Vec<PathBuf>;
 struct BlobLocation {
     offset: u32,
     length: u32,
+    compressed: bool,
 }
 
 #[derive(Debug)]
@@ -200,6 +207,7 @@ impl FileInfos {
                 let bl = BlobLocation {
                     offset: *ie.offset(),
                     length: *ie.length(),
+                    compressed: ie.uncompressed_length().is_some(),
                 };
 
                 let pack = self.r.entry(*ie.pack()).or_insert_with(HashMap::new);
@@ -209,7 +217,7 @@ impl FileInfos {
                     file_start: file_pos,
                 });
 
-                file_pos += *ie.length() as u64 - 32; // blob crypto overhead
+                file_pos += ie.data_length() as u64;
             }
         }
         Ok(file_pos)

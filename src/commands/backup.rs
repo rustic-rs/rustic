@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use clap::Parser;
 use gethostname::gethostname;
@@ -11,7 +11,8 @@ use vlog::*;
 use super::{progress_bytes, progress_counter};
 use crate::archiver::{Archiver, Parent};
 use crate::backend::{
-    DecryptFullBackend, DryRunBackend, LocalSource, LocalSourceOptions, ReadSource,
+    DecryptFullBackend, DecryptWriteBackend, DryRunBackend, LocalSource, LocalSourceOptions,
+    ReadSource,
 };
 use crate::id::Id;
 use crate::index::IndexBackend;
@@ -55,8 +56,13 @@ pub(super) async fn execute(
 
     let config: ConfigFile = be.get_file(config_id).await?;
     let poly = config.poly()?;
-
-    let be = DryRunBackend::new(be.clone(), opts.dry_run);
+    let zstd = match config.version {
+        1 => None,
+        2 => Some(0),
+        _ => bail!("config version not supported!"),
+    };
+    let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
+    be.set_zstd(zstd);
 
     let backup_path = PathBuf::from(&opts.source);
     let backup_path = backup_path.absolutize()?;
@@ -113,7 +119,7 @@ pub(super) async fn execute(
     };
 
     v1!("starting backup...");
-    let mut archiver = Archiver::new(be, index, poly, parent, snap)?;
+    let mut archiver = Archiver::new(be, index, poly, parent, snap, zstd)?;
     p.set_length(size);
     for item in src {
         match item {

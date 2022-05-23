@@ -46,7 +46,7 @@ pub(super) async fn execute(be: &impl WriteBackend, opts: Opts) -> Result<()> {
     let dbe = DecryptBackend::new(be, key);
     let repo_id = Id::random();
     let chunker_poly = chunker::random_poly()?;
-    let config = ConfigFile::new(1, repo_id, chunker_poly);
+    let config = ConfigFile::new(2, repo_id, chunker_poly);
     dbe.save_file(&config).await?;
     println!("repository {} successfully created.", repo_id);
 

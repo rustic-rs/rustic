@@ -1,3 +1,4 @@
+use std::num::NonZeroU32;
 use std::sync::Arc;
 
 use ambassador::{delegatable_trait, Delegate};
@@ -8,11 +9,12 @@ use derive_more::Constructor;
 use futures::StreamExt;
 use indicatif::ProgressBar;
 use vlog::*;
+use zstd::decode_all;
 
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
 use crate::id::Id;
-use crate::repo::IndexFile;
+use crate::repo::{IndexBlob, IndexFile};
 
 mod binarysorted;
 mod indexer;
@@ -25,13 +27,35 @@ pub struct IndexEntry {
     pack: Id,
     offset: u32,
     length: u32,
+    uncompressed_length: Option<NonZeroU32>,
 }
 
 impl IndexEntry {
+    pub fn from_index_blob(blob: &IndexBlob, pack: Id) -> Self {
+        Self {
+            pack,
+            offset: blob.offset,
+            length: blob.length,
+            uncompressed_length: blob.uncompressed_length,
+        }
+    }
+
     /// Get a blob described by IndexEntry from the backend
     pub async fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
-        be.read_encrypted_partial(FileType::Pack, &self.pack, self.offset, self.length)
-            .await
+        let data = be
+            .read_encrypted_partial(FileType::Pack, &self.pack, self.offset, self.length)
+            .await?;
+        Ok(match self.uncompressed_length {
+            None => data,
+            Some(_) => decode_all(&*data)?,
+        })
+    }
+
+    pub fn data_length(&self) -> u32 {
+        match self.uncompressed_length {
+            None => self.length - 32, // crypto overhead
+            Some(length) => length.get(),
+        }
     }
 }
 

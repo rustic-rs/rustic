@@ -1,10 +1,11 @@
 use std::fs::File;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use indicatif::ProgressBar;
 use tokio::{spawn, task::JoinHandle};
+use zstd::stream::{copy_encode, decode_all};
 
 use super::{FileType, Id, ReadBackend, RepoFile, WriteBackend};
 use crate::crypto::{hash, CryptoKey};
@@ -87,12 +88,15 @@ pub trait DecryptWriteBackend: WriteBackend {
         p.finish();
         Ok(())
     }
+
+    fn set_zstd(&mut self, zstd: Option<i32>);
 }
 
 #[derive(Clone)]
 pub struct DecryptBackend<R, C> {
     backend: R,
     key: C,
+    zstd: Option<i32>,
 }
 
 impl<R: ReadBackend, C: CryptoKey> DecryptBackend<R, C> {
@@ -100,6 +104,7 @@ impl<R: ReadBackend, C: CryptoKey> DecryptBackend<R, C> {
         Self {
             backend: be.clone(),
             key,
+            zstd: None,
         }
     }
 }
@@ -111,19 +116,35 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
         &self.key
     }
     async fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
-        let data = self.key().encrypt_data(data)?;
+        let data = match self.zstd {
+            Some(level) => {
+                let mut out = vec![2_u8];
+                copy_encode(data, &mut out, level)?;
+                self.key().encrypt_data(&out)?
+            }
+            None => self.key().encrypt_data(data)?,
+        };
         let id = hash(&data);
         self.write_bytes(tpe, &id, data).await?;
         Ok(id)
+    }
+
+    fn set_zstd(&mut self, zstd: Option<i32>) {
+        self.zstd = zstd;
     }
 }
 
 #[async_trait]
 impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
     async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
-        Ok(self
+        let decrypted = self
             .key
-            .decrypt_data(&self.backend.read_full(tpe, id).await?)?)
+            .decrypt_data(&self.backend.read_full(tpe, id).await?)?;
+        Ok(match decrypted[0] {
+            0x5b | 0x7b => decrypted,
+            2 => decode_all(&decrypted[1..])?,
+            _ => bail!("not supported"),
+        })
     }
 
     async fn read_encrypted_partial(

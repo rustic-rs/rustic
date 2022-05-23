@@ -129,7 +129,7 @@ pub async fn execute() -> Result<()> {
         Command::List(opts) => list::execute(&dbe, opts).await?,
         Command::Ls(opts) => ls::execute(&dbe, opts).await?,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await?,
-        Command::Prune(opts) => prune::execute(&dbe, opts).await?,
+        Command::Prune(opts) => prune::execute(&dbe, opts, config_id).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await?,
         Command::Tag(opts) => tag::execute(&dbe, opts).await?,

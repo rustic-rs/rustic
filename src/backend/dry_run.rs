@@ -78,6 +78,13 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
             false => self.be.hash_write_full(tpe, data).await,
         }
     }
+
+    fn set_zstd(&mut self, zstd: Option<i32>) {
+        match self.dry_run {
+            true => {}
+            false => self.be.set_zstd(zstd),
+        }
+    }
 }
 
 #[async_trait]

@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::num::NonZeroU32;
 
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
@@ -45,12 +46,20 @@ impl IndexPack {
         self.id = id;
     }
 
-    pub fn add(&mut self, id: Id, tpe: BlobType, offset: u32, length: u32) {
+    pub fn add(
+        &mut self,
+        id: Id,
+        tpe: BlobType,
+        offset: u32,
+        length: u32,
+        uncompressed_length: Option<NonZeroU32>,
+    ) {
         self.blobs.push(IndexBlob {
             id,
             tpe,
             offset,
             length,
+            uncompressed_length,
         });
     }
 
@@ -58,8 +67,14 @@ impl IndexPack {
     pub fn pack_size(&self) -> u32 {
         self.size.unwrap_or_else(|| {
             self.blobs.iter().fold(
-                4 + 32,                             // 4 + crypto overhead
-                |acc, blob| acc + blob.length + 37, // 37 = length of blob description);
+                4 + 32, // 4 + crypto overhead
+                |acc, blob| {
+                    acc + blob.length
+                        + match blob.uncompressed_length {
+                            None => 37,    // 37 = length of blob description for uncompressed blobs
+                            Some(_) => 41, // 41 = length of blob description for compressed blobs
+                        }
+                },
             )
         })
     }
@@ -83,6 +98,8 @@ pub struct IndexBlob {
     pub(crate) tpe: BlobType,
     pub(crate) offset: u32,
     pub(crate) length: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) uncompressed_length: Option<NonZeroU32>,
 }
 
 impl PartialOrd<IndexBlob> for IndexBlob {

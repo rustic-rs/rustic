@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
+use std::num::NonZeroU32;
 use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
@@ -7,6 +8,7 @@ use binrw::{io::Cursor, BinWrite};
 use chrono::Local;
 use tempfile::tempfile;
 use tokio::{spawn, task::JoinHandle};
+use zstd::encode_all;
 
 use super::BlobType;
 use crate::backend::{DecryptWriteBackend, FileType};
@@ -31,10 +33,11 @@ pub struct Packer<BE: DecryptWriteBackend> {
     indexer: SharedIndexer<BE>,
     hasher: Hasher,
     file_writer: FileWriter<BE>,
+    zstd: Option<i32>,
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
-    pub fn new(be: BE, indexer: SharedIndexer<BE>) -> Result<Self> {
+    pub fn new(be: BE, indexer: SharedIndexer<BE>, zstd: Option<i32>) -> Result<Self> {
         let file_writer = FileWriter {
             future: None,
             be: be.clone(),
@@ -50,6 +53,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             indexer,
             hasher: Hasher::new(),
             file_writer,
+            zstd,
         })
     }
 
@@ -77,21 +81,39 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
                 return Ok(false);
             }
         }
-        let data = self
-            .be
-            .key()
-            .encrypt_data(data)
-            .map_err(|_| anyhow!("crypto error"))?;
 
-        self.add_raw(&data, id, tpe).await?;
+        // compress if requested
+        let data_len: u32 = data.len().try_into()?;
+        let key = self.be.key();
+
+        let (data, uncompressed_length) = match self.zstd {
+            None => (
+                key.encrypt_data(data)
+                    .map_err(|_| anyhow!("crypto error"))?,
+                None,
+            ),
+            Some(level) => (
+                key.encrypt_data(&encode_all(&*data, level)?)
+                    .map_err(|_| anyhow!("crypto error"))?,
+                NonZeroU32::new(data_len),
+            ),
+        };
+
+        self.add_raw(&data, id, tpe, uncompressed_length).await?;
         Ok(true)
     }
 
-    // adds the already encrypted blob to the packfile without any check
-    pub async fn add_raw(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<()> {
+    // adds the already compressed/encrypted blob to the packfile without any check
+    pub async fn add_raw(
+        &mut self,
+        data: &[u8],
+        id: &Id,
+        tpe: BlobType,
+        uncompressed_length: Option<NonZeroU32>,
+    ) -> Result<()> {
         let offset = self.size;
         let len = self.write_data(data).await?;
-        self.index.add(*id, tpe, offset, len);
+        self.index.add(*id, tpe, offset, len, uncompressed_length);
         self.count += 1;
 
         // check if PackFile needs to be saved
@@ -112,21 +134,46 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
         #[derive(BinWrite)]
         struct PackHeaderEntry {
-            tpe: BlobType,
+            tpe: u8,
             #[bw(little)]
             len: u32,
+            id: Id,
+        }
+
+        #[derive(BinWrite)]
+        struct PackHeaderEntryComp {
+            tpe: u8,
+            #[bw(little)]
+            len: u32,
+            #[bw(little)]
+            len_data: u32,
             id: Id,
         }
 
         // collect header entries
         let mut writer = Cursor::new(Vec::new());
         for blob in &self.index.blobs {
-            PackHeaderEntry {
-                tpe: blob.tpe,
-                len: blob.length,
-                id: blob.id,
-            }
-            .write_to(&mut writer)?;
+            match blob.uncompressed_length {
+                None => PackHeaderEntry {
+                    tpe: match blob.tpe {
+                        BlobType::Data => 0b00,
+                        BlobType::Tree => 0b01,
+                    },
+                    len: blob.length,
+                    id: blob.id,
+                }
+                .write_to(&mut writer)?,
+                Some(len) => PackHeaderEntryComp {
+                    tpe: match blob.tpe {
+                        BlobType::Data => 0b10,
+                        BlobType::Tree => 0b11,
+                    },
+                    len: blob.length,
+                    len_data: len.get(),
+                    id: blob.id,
+                }
+                .write_to(&mut writer)?,
+            };
         }
 
         // encrypt and write to pack file

@@ -14,7 +14,7 @@ use crate::backend::{DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer};
-use crate::repo::{IndexBlob, IndexFile, IndexPack, SnapshotFile};
+use crate::repo::{ConfigFile, IndexBlob, IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -43,9 +43,22 @@ pub(super) struct Opts {
     dry_run: bool,
 }
 
-pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) -> Result<()> {
+pub(super) async fn execute(
+    be: &(impl DecryptFullBackend + Unpin),
+    opts: Opts,
+    config_id: &Id,
+) -> Result<()> {
     v1!("reading index...");
     let mut index_files = Vec::new();
+
+    let config: ConfigFile = be.get_file(config_id).await?;
+    let zstd = match config.version {
+        1 => None,
+        2 => Some(0),
+        _ => bail!("config version not supported!"),
+    };
+    let mut be = be.clone();
+    be.set_zstd(zstd);
 
     let p = progress_counter();
     let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
@@ -62,7 +75,7 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     p.finish();
 
     let used_ids = {
-        let indexed_be = IndexBackend::new_from_index(be, index_collector.into_index());
+        let indexed_be = IndexBackend::new_from_index(&be, index_collector.into_index());
         find_used_blobs(&indexed_be).await?
     };
 
@@ -88,7 +101,7 @@ pub(super) async fn execute(be: &(impl DecryptFullBackend + Unpin), opts: Opts) 
     pruner.print_stats();
 
     if !opts.dry_run {
-        pruner.do_prune(be).await?;
+        pruner.do_prune(&be).await?;
     }
     Ok(())
 }
@@ -673,7 +686,8 @@ impl Pruner {
 
     async fn do_prune(mut self, be: &impl DecryptWriteBackend) -> Result<()> {
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
-        let mut packer = Packer::new(be.clone(), indexer.clone())?;
+        // packer without zstd configuration; packed blobs are simply copied
+        let mut packer = Packer::new(be.clone(), indexer.clone(), None)?;
 
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
@@ -718,7 +732,9 @@ impl Pruner {
                             let data = be
                                 .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
                                 .await?;
-                            packer.add_raw(&data, &blob.id, blob.tpe).await?;
+                            packer
+                                .add_raw(&data, &blob.id, blob.tpe, blob.uncompressed_length)
+                                .await?;
                         }
                         // mark original pack for removal
                         let pack = pack.into_index_pack_with_time(self.time);

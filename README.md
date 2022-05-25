@@ -6,45 +6,45 @@
 [![Crates.io Downloads][downloads-image]][crate-link]
 
 Rustic is a backup tool that provides fast, encrypted, deduplicated backups.
-It can read the [restic][1] repo format desribed in the [design document][2] and writes a
-compatible repo format which can also be read by restic.
+It reads and writes the [restic][1] repo format desribed in the [design document][2]
+and can therefore be used as a complete replacement for restic.
 
-Note that rustic currently is in an alpha release and misses functionalities and tests.
+<img src="https://github.com/rustic-rs/rustic/blob/main/screenshots/rustic.png">
+
+Note that rustic currently is in an beta release and misses tests.
 It is not yet considered to be ready for use in a production environment.
 
-## Open points:
- * [ ] Add more backends, backup-sources and restore-destinations
- * [ ] Add missing commands
- * [ ] Parallelize the code even more
- * [ ] Improve error handling
- * [ ] Add tests and benchmarks
- * [ ] Add CI
+## Have a question?
 
-## Open issues:
- * [ ] restore does not yet restore metadata
+Look at the [FAQ][3] or open an issue!
 
 ## Comparison with restics:
 
 Improvements:
  * Completely lock-free
  * Huge decrease in memory requirement
- * Already much faster for some operations (but not yet fully speed optimized)
- * Can use .gitignore files
+ * Already much faster than restic for most operations (but not yet fully speed optimized)
+ * Can use `.gitignore` files
  * Snapshots save much more information
+ * New command `repo-info`
  * cat tree command accepts a snapshot and path to cat the tree blob
 
 Differences:
  * backup uses glob patterns to include/exclude instead of exclude files
- * file/dir permissions have different format in go and rust (but the important information is identical)
 
 Current limitations:
- * Missing commands, e.g.: mount, copy, dump, find
  * Backup source and restore destinations only on local file system
  * Backup backends: So far only local disc and REST backends supported (others using rclone as REST backend)
  * Runs so far only on linux; help appreciated to add support for other OSes
- * Not much speed optimized (and no cache implemented)
- * ... and many more
  
+## Open points:
+ * [ ] Add tests and benchmarks
+ * [ ] Add CI
+ * [ ] Implement a local cache
+ * [ ] Add more backends, backup-sources and restore-destinations
+ * [ ] Add missing commands: copy, dump, find, mount
+ * [ ] Improve error handling
+ * [ ] Parallelize the code even more and optimize for speed where useful
 
 ## License
 
@@ -77,3 +77,4 @@ dual licensed as above, without any additional terms or conditions.
 
 [1]: https://github.com/restic/restic
 [2]: https://github.com/restic/restic/blob/master/doc/design.rst
+[3]: https://github.com/rustic-rs/rustic/blob/main/FAQ.md

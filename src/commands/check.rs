@@ -42,11 +42,20 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
     let mut process_pack = |p: IndexPack| {
         packs.insert(p.id, p.pack_size());
 
+        let blob_type = p.blob_type();
+
         // check offsests in index
         let mut expected_offset: u32 = 0;
         let mut blobs = p.blobs;
         blobs.sort_unstable();
         for blob in blobs {
+            if blob.tpe != blob_type {
+                eprintln!(
+                    "pack {}: blob {} blob type does not match: {:?}, expected: {:?}",
+                    p.id, blob.id, blob.tpe, blob_type
+                );
+            }
+
             if blob.offset != expected_offset {
                 eprintln!(
                     "pack {}: blob {} offset in index: {}, expected: {}",

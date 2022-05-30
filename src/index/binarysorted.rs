@@ -85,7 +85,7 @@ impl Extend<IndexPack> for IndexCollector {
                     length: blob.length,
                     uncompressed_length: blob.uncompressed_length,
                 };
-                match (p.blob_type(), &mut self.data) {
+                match (blob.tpe, &mut self.data) {
                     (BlobType::Tree, _) => self.tree.push(be),
                     (BlobType::Data, SortedHashSetMap::None) => {}
                     (BlobType::Data, SortedHashSetMap::Set(ids)) => ids.push(blob.id),

@@ -40,7 +40,7 @@ impl Tree {
     pub async fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
         let data = be
             .get_tree(&id)
-            .ok_or_else(|| anyhow!("blob not found in index"))?
+            .ok_or_else(|| anyhow!("blob {} not found in index", id.to_hex()))?
             .read_data(be.be())
             .await?;
 

@@ -12,7 +12,61 @@ use vlog::*;
 use super::Id;
 use crate::backend::{DecryptReadBackend, FileType, RepoFile};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// This is an extended version of the summaryOutput structure of restic in
+/// restic/internal/ui/backup$/json.go
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SnapshotSummary {
+    pub files_new: u64,
+    pub files_changed: u64,
+    pub files_unmodified: u64,
+    pub dirs_new: u64,
+    pub dirs_changed: u64,
+    pub dirs_unmodified: u64,
+    pub data_blobs: u64,
+    pub tree_blobs: u64,
+    pub data_added: u64,
+    pub data_files_added: u64,
+    pub data_trees_added: u64,
+    pub total_files_processed: u64,
+    pub total_dirs_processed: u64,
+    pub total_bytes_processed: u64,
+    pub total_dirsize_processed: u64,
+    pub total_duration: f64, // in seconds
+
+    pub command: String,
+    pub backup_start: DateTime<Local>,
+    pub backup_end: DateTime<Local>,
+    pub backup_duration: f64, // in seconds
+}
+
+impl Default for SnapshotSummary {
+    fn default() -> Self {
+        Self {
+            files_new: 0,
+            files_changed: 0,
+            files_unmodified: 0,
+            dirs_new: 0,
+            dirs_changed: 0,
+            dirs_unmodified: 0,
+            data_blobs: 0,
+            tree_blobs: 0,
+            data_added: 0,
+            data_files_added: 0,
+            data_trees_added: 0,
+            total_files_processed: 0,
+            total_dirs_processed: 0,
+            total_bytes_processed: 0,
+            total_dirsize_processed: 0,
+            total_duration: 0.0,
+            command: String::new(),
+            backup_start: Local::now(),
+            backup_end: Local::now(),
+            backup_duration: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SnapshotFile {
     pub time: DateTime<Local>,
     pub tree: Id,
@@ -29,35 +83,7 @@ pub struct SnapshotFile {
     pub tags: StringList,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub command: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub backup_start: Option<DateTime<Local>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub backup_end: Option<DateTime<Local>>,
-
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub files_new: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub files_changed: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub files_unchanged: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub trees_new: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub trees_changed: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub trees_unchanged: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub data_blobs_written: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tree_blobs_written: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub data_added: Option<u64>,
-
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub node_count: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub size: Option<u64>,
+    pub summary: Option<SnapshotSummary>,
 
     #[serde(skip)]
     pub id: Id,
@@ -78,83 +104,9 @@ impl Default for SnapshotFile {
             uid: 0,
             gid: 0,
             tags: StringList::default(),
-            node_count: None,
-            size: None,
-            command: None,
-            backup_start: None,
-            backup_end: None,
-            files_new: Some(0),
-            files_changed: Some(0),
-            files_unchanged: Some(0),
-            trees_new: Some(0),
-            trees_changed: Some(0),
-            trees_unchanged: Some(0),
-            data_blobs_written: Some(0),
-            tree_blobs_written: Some(0),
-            data_added: Some(0),
-
+            summary: None,
             id: Id::default(),
         }
-    }
-}
-
-#[derive(Parser)]
-pub struct SnapshotFilter {
-    /// Path list to filter (can be specified multiple times)
-    #[clap(long = "filter-paths")]
-    paths: Vec<StringList>,
-
-    /// Tag list to filter (can be specified multiple times)
-    #[clap(long = "filter-tags")]
-    tags: Vec<StringList>,
-
-    /// Hostname to filter (can be specified multiple times)
-    #[clap(long = "filter-host", value_name = "HOSTNAME")]
-    hostnames: Vec<String>,
-}
-
-#[derive(Default)]
-pub struct SnapshotGroupCriterion {
-    hostname: bool,
-    paths: bool,
-    tags: bool,
-}
-
-impl FromStr for SnapshotGroupCriterion {
-    type Err = anyhow::Error;
-    fn from_str(s: &str) -> Result<Self> {
-        let mut crit = SnapshotGroupCriterion::default();
-        for val in s.split(',') {
-            match val {
-                "host" => crit.hostname = true,
-                "paths" => crit.paths = true,
-                "tags" => crit.tags = true,
-                "" => continue,
-                v => bail!("{} not allowed", v),
-            }
-        }
-        Ok(crit)
-    }
-}
-
-#[derive(Default, Debug)]
-pub struct SnapshotGroup {
-    hostname: Option<String>,
-    paths: Option<StringList>,
-    tags: Option<StringList>,
-}
-
-impl SnapshotGroup {
-    pub fn from_sn(sn: &SnapshotFile, crit: &SnapshotGroupCriterion) -> Self {
-        Self {
-            hostname: crit.hostname.then(|| sn.hostname.clone()),
-            paths: crit.paths.then(|| sn.paths.clone()),
-            tags: crit.tags.then(|| sn.tags.clone()),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.hostname.is_none() && self.paths.is_none() && self.tags.is_none()
     }
 }
 
@@ -337,6 +289,13 @@ impl SnapshotFile {
     }
 }
 
+impl PartialEq<SnapshotFile> for SnapshotFile {
+    fn eq(&self, other: &SnapshotFile) -> bool {
+        self.time.eq(&other.time)
+    }
+}
+impl Eq for SnapshotFile {}
+
 impl PartialOrd for SnapshotFile {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.time.partial_cmp(&other.time)
@@ -345,6 +304,66 @@ impl PartialOrd for SnapshotFile {
 impl Ord for SnapshotFile {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.time.cmp(&other.time)
+    }
+}
+
+#[derive(Parser)]
+pub struct SnapshotFilter {
+    /// Path list to filter (can be specified multiple times)
+    #[clap(long = "filter-paths")]
+    paths: Vec<StringList>,
+
+    /// Tag list to filter (can be specified multiple times)
+    #[clap(long = "filter-tags")]
+    tags: Vec<StringList>,
+
+    /// Hostname to filter (can be specified multiple times)
+    #[clap(long = "filter-host", value_name = "HOSTNAME")]
+    hostnames: Vec<String>,
+}
+
+#[derive(Default)]
+pub struct SnapshotGroupCriterion {
+    hostname: bool,
+    paths: bool,
+    tags: bool,
+}
+
+impl FromStr for SnapshotGroupCriterion {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let mut crit = SnapshotGroupCriterion::default();
+        for val in s.split(',') {
+            match val {
+                "host" => crit.hostname = true,
+                "paths" => crit.paths = true,
+                "tags" => crit.tags = true,
+                "" => continue,
+                v => bail!("{} not allowed", v),
+            }
+        }
+        Ok(crit)
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct SnapshotGroup {
+    hostname: Option<String>,
+    paths: Option<StringList>,
+    tags: Option<StringList>,
+}
+
+impl SnapshotGroup {
+    pub fn from_sn(sn: &SnapshotFile, crit: &SnapshotGroupCriterion) -> Self {
+        Self {
+            hostname: crit.hostname.then(|| sn.hostname.clone()),
+            paths: crit.paths.then(|| sn.paths.clone()),
+            tags: crit.tags.then(|| sn.tags.clone()),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.hostname.is_none() && self.paths.is_none() && self.tags.is_none()
     }
 }
 

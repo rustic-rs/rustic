@@ -15,7 +15,7 @@ use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
-use crate::repo::SnapshotFile;
+use crate::repo::{SnapshotFile, SnapshotSummary};
 
 use super::{Parent, ParentResult};
 
@@ -31,6 +31,7 @@ pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     be: BE,
     poly: u64,
     snap: SnapshotFile,
+    summary: SnapshotSummary,
 }
 
 impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
@@ -43,7 +44,9 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         zstd: Option<i32>,
     ) -> Result<Self> {
         let indexer = Indexer::new(be.clone()).into_shared();
-        snap.backup_start = Some(Local::now());
+        let mut summary = snap.summary.take().unwrap();
+        summary.backup_start = Local::now();
+
         Ok(Self {
             path: PathBuf::from("/"),
             tree: Tree::new(),
@@ -56,13 +59,20 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             poly,
             indexer,
             snap,
+            summary,
         })
     }
 
-    pub fn add_node(&mut self, node: Node, size: u64) {
+    pub fn add_file(&mut self, node: Node, size: u64) {
         self.tree.add(node);
-        *self.snap.node_count.get_or_insert(0) += 1;
-        *self.snap.size.get_or_insert(0) += size;
+        self.summary.total_files_processed += 1;
+        self.summary.total_bytes_processed += size;
+    }
+
+    pub fn add_dir(&mut self, node: Node, size: u64) {
+        self.tree.add(node);
+        self.summary.total_dirs_processed += 1;
+        self.summary.total_dirsize_processed += size;
     }
 
     pub async fn add_entry(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
@@ -99,7 +109,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 self.backup_file(path, node, p).await?;
             }
             NodeType::Dir => {}          // is already handled, see above
-            _ => self.add_node(node, 0), // all other cases: just save the given node
+            _ => self.add_file(node, 0), // all other cases: just save the given node
         }
         Ok(())
     }
@@ -134,39 +144,41 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         match self.parent.is_parent(&node) {
             ParentResult::Matched(p_node) if node.subtree() == p_node.subtree() => {
                 v2!("unchanged tree: {:?}", self.path);
-                self.add_node(node, dirsize);
-                *self.snap.trees_unchanged.get_or_insert(0) += 1;
+                self.add_dir(node, dirsize);
+                self.summary.dirs_unmodified += 1;
                 return Ok(());
             }
             ParentResult::NotFound => {
                 v2!("new       tree: {:?} {}", self.path, dirsize_bytes);
-                *self.snap.trees_new.get_or_insert(0) += 1;
+                self.summary.dirs_new += 1;
             }
             _ => {
                 // "Matched" trees where the subree id does not match or unmach
                 v2!("changed   tree: {:?} {}", self.path, dirsize_bytes);
-                *self.snap.trees_changed.get_or_insert(0) += 1;
+                self.summary.dirs_changed += 1;
             }
         }
 
         if !self.index.has_tree(&id) && self.tree_packer.add(&chunk, &id, BlobType::Tree).await? {
-            *self.snap.tree_blobs_written.get_or_insert(0) += 1;
-            *self.snap.data_added.get_or_insert(0) += dirsize;
+            self.summary.tree_blobs += 1;
+            self.summary.data_added += dirsize;
+            self.summary.data_trees_added += dirsize;
         }
-        self.add_node(node, dirsize);
+        self.add_dir(node, dirsize);
         Ok(())
     }
 
     pub async fn backup_file(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
+        let filename = self.path.join(node.name());
         match self.parent.is_parent(&node) {
             ParentResult::Matched(p_node) => {
-                v2!("unchanged file: {:?}", self.path.join(node.name()));
-                *self.snap.files_unchanged.get_or_insert(0) += 1;
+                v2!("unchanged file: {:?}", filename);
+                self.summary.files_unmodified += 1;
                 if p_node.content().iter().all(|id| self.index.has_data(id)) {
                     let size = *p_node.meta().size();
                     let mut node = node;
                     node.set_content(p_node.content().to_vec());
-                    self.add_node(node, size);
+                    self.add_file(node, size);
                     p.inc(size);
                     return Ok(());
                 } else {
@@ -177,12 +189,12 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 }
             }
             ParentResult::NotMatched => {
-                v2!("changed   file: {:?}", self.path.join(node.name()));
-                *self.snap.files_changed.get_or_insert(0) += 1;
+                v2!("changed   file: {:?}", filename);
+                self.summary.files_changed += 1;
             }
             ParentResult::NotFound => {
-                v2!("new       file: {:?}", self.path.join(node.name()));
-                *self.snap.files_new.get_or_insert(0) += 1;
+                v2!("new       file: {:?}", filename);
+                self.summary.files_new += 1;
             }
         }
         let f = File::open(path)?;
@@ -216,7 +228,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         let mut node = node;
         node.set_content(content);
-        self.add_node(node, filesize);
+        self.add_file(node, filesize);
         Ok(())
     }
 
@@ -228,8 +240,9 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         p: &ProgressBar,
     ) -> Result<()> {
         if !self.index.has_data(&id) && self.data_packer.add(chunk, &id, BlobType::Data).await? {
-            *self.snap.data_blobs_written.get_or_insert(0) += 1;
-            *self.snap.data_added.get_or_insert(0) += size;
+            self.summary.data_blobs += 1;
+            self.summary.data_added += size;
+            self.summary.data_files_added += size;
         }
         p.inc(size);
         Ok(())
@@ -251,7 +264,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let indexer = self.indexer.write().await;
             indexer.finalize().await?;
         }
-        self.snap.backup_end = Some(Local::now());
+        let end_time = Local::now();
+        self.summary.backup_duration = (end_time - self.summary.backup_start)
+            .to_std()?
+            .as_secs_f64();
+        self.summary.total_duration = (end_time - self.snap.time).to_std()?.as_secs_f64();
+        self.summary.backup_end = end_time;
+        self.snap.summary = Some(self.summary);
         let id = self.be.save_file(&self.snap).await?;
         self.snap.id = id;
 

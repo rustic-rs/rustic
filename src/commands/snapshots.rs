@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use bytesize::ByteSize;
 use clap::Parser;
@@ -33,6 +35,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
             SnapshotFile::from_ids(be, &opts.ids).await?,
         )],
     };
+    let bytes = |b| ByteSize(b).to_string_as(true);
 
     for (group, mut snapshots) in groups {
         if !group.is_empty() {
@@ -52,19 +55,21 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
                     let tags = sn.tags.formatln();
                     let paths = sn.paths.formatln();
                     let time = sn.time.format("%Y-%m-%d %H:%M:%S");
-                    let nodes = sn
-                        .node_count
-                        .map(|c| c.to_string())
-                        .unwrap_or_else(|| "?".to_string());
-                    let size = sn
-                        .size
-                        .map(|b| ByteSize(b).to_string_as(true))
-                        .unwrap_or_else(|| "?".to_string());
-                    row![sn.id, time, sn.hostname, tags, paths, r->nodes, r->size]
+                    let (files, dirs, size) = sn
+                        .summary
+                        .map(|s| {
+                            (
+                                s.total_files_processed.to_string(),
+                                s.total_dirs_processed.to_string(),
+                                bytes(s.total_bytes_processed),
+                            )
+                        })
+                        .unwrap_or_else(|| ("?".to_string(), "?".to_string(), "?".to_string()));
+                    row![sn.id, time, sn.hostname, tags, paths, r->files, r->dirs, r->size]
                 })
                 .collect();
             table.set_titles(
-                row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Nodes", br->"Size"],
+                row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Files",br->"Dirs", br->"Size"],
             );
             table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
             table.printstd();
@@ -77,88 +82,61 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
 
 fn display_snap(sn: SnapshotFile) {
     let mut table = Table::new();
+    let bytes = |b| ByteSize(b).to_string_as(true);
 
     table.add_row(row![b->"Snapshot", b->sn.id.to_hex()]);
     table.add_row(row![b->"Time", sn.time.format("%Y-%m-%d %H:%M:%S")]);
     table.add_row(row![b->"Host", sn.hostname]);
     table.add_row(row![b->"Tags", sn.tags.formatln()]);
     table.add_row(row![b->"Paths", sn.paths.formatln()]);
-    table.add_row(row![]);
-    table.add_row(row![b->"Command", sn.command.unwrap_or_else(|| "?".to_string())]);
+    if let Some(summary) = sn.summary {
+        table.add_row(row![]);
+        table.add_row(row![b->"Command", summary.command]);
 
-    let source = format!(
-        "size: {} / nodes: {}",
-        sn.size
-            .map(|b| ByteSize(b).to_string_as(true))
-            .unwrap_or_else(|| "?".to_string()),
-        sn.node_count
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-    );
-    table.add_row(row![b->"Source", source]);
+        let source = format!(
+            "files: {} / dirs: {} / size: {}",
+            summary.total_files_processed,
+            summary.total_dirs_processed,
+            bytes(summary.total_bytes_processed)
+        );
+        table.add_row(row![b->"Source", source]);
 
-    table.add_row(row![]);
+        table.add_row(row![]);
 
-    let files = format!(
-        "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
-        sn.files_new
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        sn.files_changed
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        sn.files_unchanged
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-    );
-    table.add_row(row![b->"Files", files]);
+        let files = format!(
+            "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
+            summary.files_new, summary.files_changed, summary.files_unmodified,
+        );
+        table.add_row(row![b->"Files", files]);
 
-    let trees = format!(
-        "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
-        sn.trees_new
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        sn.trees_changed
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        sn.trees_unchanged
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-    );
-    table.add_row(row![b->"Trees", trees]);
+        let trees = format!(
+            "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
+            summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified,
+        );
+        table.add_row(row![b->"Dirs", trees]);
 
-    table.add_row(row![]);
+        table.add_row(row![]);
 
-    let written = format!(
-        "total: {} / tree blobs: {} / data blobs: {}",
-        sn.data_added
-            .map(|b| ByteSize(b).to_string_as(true))
-            .unwrap_or_else(|| "?".to_string()),
-        sn.tree_blobs_written
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        sn.data_blobs_written
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string()),
-    );
-    table.add_row(row![b->"Added to repo", written]);
+        let written = format!(
+            "data:  {:>10} blobs / {}\ntree:  {:>10} blobs / {}\ntotal: {:>10} blobs / {}",
+            summary.data_blobs,
+            bytes(summary.data_files_added),
+            summary.tree_blobs,
+            bytes(summary.data_trees_added),
+            summary.tree_blobs + summary.data_blobs,
+            bytes(summary.data_added),
+        );
+        table.add_row(row![b->"Added to repo", written]);
 
-    let duration = format!(
-        "Start: {} / End: {} / Duration: {}",
-        sn.backup_start
-            .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        sn.backup_end
-            .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
-            .unwrap_or_else(|| "?".to_string()),
-        match (sn.backup_start, sn.backup_end) {
-            (Some(start), Some(end)) =>
-                format_duration((end - start).to_std().unwrap()).to_string(),
-            _ => "?".to_string(),
-        },
-    );
-    table.add_row(row![b->"Duration", duration]);
-
+        let duration = format!(
+            "backup start: {} / backup end: {} / backup duration: {}\ntotal duration: {}",
+            summary.backup_start.format("%Y-%m-%d %H:%M:%S"),
+            summary.backup_end.format("%Y-%m-%d %H:%M:%S"),
+            format_duration(Duration::from_secs_f64(summary.backup_duration)),
+            format_duration(Duration::from_secs_f64(summary.total_duration))
+        );
+        table.add_row(row![b->"Duration", duration]);
+    }
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
     table.printstd();
     println!();

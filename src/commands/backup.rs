@@ -16,7 +16,7 @@ use crate::backend::{
 };
 use crate::id::Id;
 use crate::index::IndexBackend;
-use crate::repo::{ConfigFile, SnapshotFile, StringList};
+use crate::repo::{ConfigFile, SnapshotFile, SnapshotSummary, StringList};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -50,7 +50,10 @@ pub(super) async fn execute(
     command: String,
 ) -> Result<()> {
     let mut snap = SnapshotFile {
-        command: Some(command),
+        summary: Some(SnapshotSummary {
+            command,
+            ..Default::default()
+        }),
         ..Default::default()
     };
 
@@ -135,30 +138,29 @@ pub(super) async fn execute(
     }
     p.finish_with_message("done");
     let snap = archiver.finalize_snapshot().await?;
+    let summary = snap.summary.unwrap();
+    let bytes = |b| ByteSize(b).to_string_as(true);
 
     v1!(
         "Files:       {} new, {} changed, {} unchanged",
-        snap.files_new.unwrap(),
-        snap.files_changed.unwrap(),
-        snap.files_unchanged.unwrap()
+        summary.files_new,
+        summary.files_changed,
+        summary.files_unmodified
     );
     v1!(
         "Dirs:        {} new, {} changed, {} unchanged",
-        snap.trees_new.unwrap(),
-        snap.trees_changed.unwrap(),
-        snap.trees_unchanged.unwrap()
+        summary.dirs_new,
+        summary.dirs_changed,
+        summary.dirs_unmodified
     );
-    v2!("Data Blobs:  {} new", snap.data_blobs_written.unwrap());
-    v2!("Tree Blobs:  {} new", snap.tree_blobs_written.unwrap());
-    v1!(
-        "Added to the repo: {}",
-        ByteSize(snap.data_added.unwrap()).to_string_as(true)
-    );
+    v2!("Data Blobs:  {} new", summary.data_blobs);
+    v2!("Tree Blobs:  {} new", summary.tree_blobs);
+    v1!("Added to the repo: {}", bytes(summary.data_added));
 
     v1!(
-        "processed {} nodes, {}",
-        snap.node_count.unwrap(),
-        ByteSize(snap.size.unwrap()).to_string_as(true)
+        "processed {} files, {}",
+        summary.total_files_processed,
+        bytes(summary.total_bytes_processed)
     );
     v1!("snapshot {} successfully saved.", snap.id);
 

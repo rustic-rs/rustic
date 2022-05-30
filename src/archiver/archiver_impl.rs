@@ -159,10 +159,17 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             }
         }
 
-        if !self.index.has_tree(&id) && self.tree_packer.add(&chunk, &id, BlobType::Tree).await? {
-            self.summary.tree_blobs += 1;
-            self.summary.data_added += dirsize;
-            self.summary.data_trees_added += dirsize;
+        if !self.index.has_tree(&id) {
+            match self.data_packer.add(&chunk, &id, BlobType::Tree).await? {
+                0 => {}
+                packed_size => {
+                    self.summary.tree_blobs += 1;
+                    self.summary.data_added += dirsize;
+                    self.summary.data_added_packed += packed_size;
+                    self.summary.data_added_trees += dirsize;
+                    self.summary.data_added_trees_packed += packed_size;
+                }
+            }
         }
         self.add_dir(node, dirsize);
         Ok(())
@@ -239,10 +246,17 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         size: u64,
         p: &ProgressBar,
     ) -> Result<()> {
-        if !self.index.has_data(&id) && self.data_packer.add(chunk, &id, BlobType::Data).await? {
-            self.summary.data_blobs += 1;
-            self.summary.data_added += size;
-            self.summary.data_files_added += size;
+        if !self.index.has_data(&id) {
+            match self.tree_packer.add(chunk, &id, BlobType::Data).await? {
+                0 => {}
+                packed_size => {
+                    self.summary.data_blobs += 1;
+                    self.summary.data_added += size;
+                    self.summary.data_added_packed += packed_size;
+                    self.summary.data_added_files += size;
+                    self.summary.data_added_files_packed += packed_size;
+                }
+            }
         }
         p.inc(size);
         Ok(())

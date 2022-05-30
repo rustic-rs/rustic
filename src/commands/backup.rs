@@ -155,7 +155,11 @@ pub(super) async fn execute(
     );
     v2!("Data Blobs:  {} new", summary.data_blobs);
     v2!("Tree Blobs:  {} new", summary.tree_blobs);
-    v1!("Added to the repo: {}", bytes(summary.data_added));
+    v1!(
+        "Added to the repo: {} (raw: {})",
+        bytes(summary.data_added_packed),
+        bytes(summary.data_added)
+    );
 
     v1!(
         "processed {} files, {}",

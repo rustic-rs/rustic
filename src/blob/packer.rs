@@ -69,16 +69,16 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(len)
     }
 
-    // adds the blob to the packfile; returns false if it is already contained
-    pub async fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<bool> {
+    // adds the blob to the packfile; returns the actually added size
+    pub async fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<u64> {
         // only add if this blob is not present
         if self.has(id) {
-            return Ok(false);
+            return Ok(0);
         }
         {
             let indexer = self.indexer.read().await;
             if indexer.has(id) {
-                return Ok(false);
+                return Ok(0);
             }
         }
 
@@ -100,7 +100,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         };
 
         self.add_raw(&data, id, tpe, uncompressed_length).await?;
-        Ok(true)
+        Ok(data.len().try_into()?)
     }
 
     // adds the already compressed/encrypted blob to the packfile without any check

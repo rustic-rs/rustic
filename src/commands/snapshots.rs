@@ -118,18 +118,24 @@ fn display_snap(sn: SnapshotFile) {
         table.add_row(row![]);
 
         let written = format!(
-            "data:  {:>10} blobs / {}\ntree:  {:>10} blobs / {}\ntotal: {:>10} blobs / {}",
+            "data:  {:>10} blobs / raw: {:>10} / packed: {:>10}\n\
+            tree:  {:>10} blobs / raw: {:>10} / packed: {:>10}\n\
+            total: {:>10} blobs / raw: {:>10} / packed: {:>10}",
             summary.data_blobs,
-            bytes(summary.data_files_added),
+            bytes(summary.data_added_files),
+            bytes(summary.data_added_files_packed),
             summary.tree_blobs,
-            bytes(summary.data_trees_added),
+            bytes(summary.data_added_trees),
+            bytes(summary.data_added_trees_packed),
             summary.tree_blobs + summary.data_blobs,
             bytes(summary.data_added),
+            bytes(summary.data_added_packed),
         );
         table.add_row(row![b->"Added to repo", written]);
 
         let duration = format!(
-            "backup start: {} / backup end: {} / backup duration: {}\ntotal duration: {}",
+            "backup start: {} / backup end: {} / backup duration: {}\n\
+            total duration: {}",
             summary.backup_start.format("%Y-%m-%d %H:%M:%S"),
             summary.backup_end.format("%Y-%m-%d %H:%M:%S"),
             format_duration(Duration::from_secs_f64(summary.backup_duration)),

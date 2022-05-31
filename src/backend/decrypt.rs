@@ -71,6 +71,24 @@ pub trait DecryptWriteBackend: WriteBackend {
         Ok(self.hash_write_full(F::TYPE, &data).await?)
     }
 
+    async fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
+        p.set_length(list.len() as u64);
+        list.into_iter()
+            .map(|file| {
+                let be = self.clone();
+                let p = p.clone();
+                spawn(async move {
+                    be.save_file(&file).await.unwrap();
+                    p.inc(1);
+                })
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_collect()
+            .await?;
+        p.finish();
+        Ok(())
+    }
+
     async fn delete_list(&self, tpe: FileType, list: Vec<Id>, p: ProgressBar) -> Result<()> {
         p.set_length(list.len() as u64);
         list.into_iter()

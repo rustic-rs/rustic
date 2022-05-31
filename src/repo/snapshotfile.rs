@@ -238,7 +238,7 @@ impl SnapshotFile {
         self.tags.add_all(tag_lists);
         self.tags.sort();
 
-        old_tags == self.tags
+        old_tags != self.tags
     }
 
     /// Set tag lists to snapshot. return wheter snapshot was changed
@@ -247,7 +247,7 @@ impl SnapshotFile {
         self.tags.add_all(tag_lists);
         self.tags.sort();
 
-        old_tags == self.tags
+        old_tags != self.tags
     }
 
     /// Remove tag lists from snapshot. return wheter snapshot was changed
@@ -255,7 +255,7 @@ impl SnapshotFile {
         let old_tags = self.tags.clone();
         self.tags.remove_all(tag_lists);
 
-        old_tags == self.tags
+        old_tags != self.tags
     }
 }
 

@@ -4,6 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Local};
 use clap::Parser;
+use derivative::Derivative;
 use futures::{future, TryStreamExt};
 use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
@@ -14,7 +15,8 @@ use crate::backend::{DecryptReadBackend, FileType, RepoFile};
 
 /// This is an extended version of the summaryOutput structure of restic in
 /// restic/internal/ui/backup$/json.go
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Derivative)]
+#[derivative(Default)]
 pub struct SnapshotSummary {
     pub files_new: u64,
     pub files_changed: u64,
@@ -37,44 +39,20 @@ pub struct SnapshotSummary {
     pub total_duration: f64, // in seconds
 
     pub command: String,
+    #[derivative(Default(value = "Local::now()"))]
     pub backup_start: DateTime<Local>,
+    #[derivative(Default(value = "Local::now()"))]
     pub backup_end: DateTime<Local>,
     pub backup_duration: f64, // in seconds
 }
 
-impl Default for SnapshotSummary {
-    fn default() -> Self {
-        Self {
-            files_new: 0,
-            files_changed: 0,
-            files_unmodified: 0,
-            dirs_new: 0,
-            dirs_changed: 0,
-            dirs_unmodified: 0,
-            data_blobs: 0,
-            tree_blobs: 0,
-            data_added: 0,
-            data_added_packed: 0,
-            data_added_files: 0,
-            data_added_files_packed: 0,
-            data_added_trees: 0,
-            data_added_trees_packed: 0,
-            total_files_processed: 0,
-            total_dirs_processed: 0,
-            total_bytes_processed: 0,
-            total_dirsize_processed: 0,
-            total_duration: 0.0,
-            command: String::new(),
-            backup_start: Local::now(),
-            backup_end: Local::now(),
-            backup_duration: 0.0,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Derivative)]
+#[derivative(Default)]
 pub struct SnapshotFile {
+    #[derivative(Default(value = "Local::now()"))]
     pub time: DateTime<Local>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent: Option<Id>,
     pub tree: Id,
     pub paths: StringList,
     #[serde(default)]
@@ -87,6 +65,8 @@ pub struct SnapshotFile {
     pub gid: u32,
     #[serde(default)]
     pub tags: StringList,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original: Option<Id>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<SnapshotSummary>,
@@ -99,27 +79,11 @@ impl RepoFile for SnapshotFile {
     const TYPE: FileType = FileType::Snapshot;
 }
 
-impl Default for SnapshotFile {
-    fn default() -> Self {
-        Self {
-            time: Local::now(),
-            tree: Id::default(),
-            paths: StringList::default(),
-            hostname: String::default(),
-            username: String::default(),
-            uid: 0,
-            gid: 0,
-            tags: StringList::default(),
-            summary: None,
-            id: Id::default(),
-        }
-    }
-}
-
 impl SnapshotFile {
     fn set_id(tuple: (Id, Self)) -> Self {
         let (id, mut snap) = tuple;
         snap.id = id;
+        snap.original.get_or_insert(id);
         snap
     }
 

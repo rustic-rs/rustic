@@ -85,10 +85,19 @@ fn display_snap(sn: SnapshotFile) {
     let bytes = |b| ByteSize(b).to_string_as(true);
 
     table.add_row(row![b->"Snapshot", b->sn.id.to_hex()]);
+    // note that if original was not set, it is set to sn.id by the load process
+    if sn.original != Some(sn.id) {
+        table.add_row(row![b->"Original ID", sn.original.unwrap().to_hex()]);
+    }
     table.add_row(row![b->"Time", sn.time.format("%Y-%m-%d %H:%M:%S")]);
     table.add_row(row![b->"Host", sn.hostname]);
     table.add_row(row![b->"Tags", sn.tags.formatln()]);
     table.add_row(row![b->"Paths", sn.paths.formatln()]);
+    let parent = match sn.parent {
+        None => "no parent snapshot".to_string(),
+        Some(p) => p.to_hex(),
+    };
+    table.add_row(row![b->"Parent", parent]);
     if let Some(summary) = sn.summary {
         table.add_row(row![]);
         table.add_row(row![b->"Command", summary.command]);

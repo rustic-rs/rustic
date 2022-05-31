@@ -1,8 +1,8 @@
-use std::ffi::OsString;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
+use chrono::Local;
 use clap::Parser;
 use gethostname::gethostname;
 use path_absolutize::*;
@@ -49,14 +49,7 @@ pub(super) async fn execute(
     config_id: &Id,
     command: String,
 ) -> Result<()> {
-    let mut snap = SnapshotFile {
-        summary: Some(SnapshotSummary {
-            command,
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-
+    let time = Local::now();
     let config: ConfigFile = be.get_file(config_id).await?;
     let poly = config.poly()?;
     let zstd = match config.version {
@@ -73,30 +66,26 @@ pub(super) async fn execute(
         .to_str()
         .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path))?
         .to_string();
-    snap.paths.add(backup_path_str.clone());
 
     let hostname = gethostname();
-    snap.hostname = hostname
+    let hostname = hostname
         .to_str()
         .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
         .to_string();
-
-    snap.set_tags(opts.tag);
 
     let parent = match (opts.force, opts.parent) {
         (true, _) => None,
         (false, None) => SnapshotFile::latest(
             &be,
-            |snap| {
-                OsString::from(&snap.hostname) == hostname && snap.paths.contains(&backup_path_str)
-            },
+            |snap| snap.hostname == hostname && snap.paths.contains(&backup_path_str),
             progress_counter(),
         )
         .await
         .ok(),
         (false, Some(parent)) => SnapshotFile::from_id(&be, &parent).await.ok(),
     };
-    let parent_tree = match parent {
+
+    let parent_tree = match &parent {
         Some(snap) => {
             v1!("using parent {}", snap.id);
             Some(snap.tree)
@@ -106,6 +95,19 @@ pub(super) async fn execute(
             None
         }
     };
+
+    let mut snap = SnapshotFile {
+        time,
+        parent: parent.map(|sn| sn.id),
+        hostname,
+        summary: Some(SnapshotSummary {
+            command,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    snap.paths.add(backup_path_str.clone());
+    snap.set_tags(opts.tag);
 
     let index = IndexBackend::only_full_trees(&be, progress_counter()).await?;
 

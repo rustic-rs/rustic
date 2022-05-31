@@ -18,12 +18,13 @@ categories = ["command-line-utilities"]
 [dependencies]
 # macros
 async-trait = "0.1"
-anyhow = "1.0"
+anyhow = "1"
 ambassador = "0.2"
-thiserror = "1.0"
+thiserror = "1"
 derive_more = "0.99"
+derivative = "2"
 derive-getters = "0.2"
-lazy_static = "1.4"
+lazy_static = "1"
 vlog = "0.1"
 # async
 tokio = { version = "1", features = ["full"] }

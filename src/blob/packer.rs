@@ -25,6 +25,7 @@ const MAX_AGE: Duration = Duration::from_secs(300);
 
 pub struct Packer<BE: DecryptWriteBackend> {
     be: BE,
+    blob_type: BlobType,
     file: File,
     size: u32,
     count: u32,
@@ -37,7 +38,12 @@ pub struct Packer<BE: DecryptWriteBackend> {
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
-    pub fn new(be: BE, indexer: SharedIndexer<BE>, zstd: Option<i32>) -> Result<Self> {
+    pub fn new(
+        be: BE,
+        blob_type: BlobType,
+        indexer: SharedIndexer<BE>,
+        zstd: Option<i32>,
+    ) -> Result<Self> {
         let file_writer = FileWriter {
             future: None,
             be: be.clone(),
@@ -45,6 +51,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         };
         Ok(Self {
             be,
+            blob_type,
             file: tempfile()?,
             size: 0,
             count: 0,
@@ -70,7 +77,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 
     // adds the blob to the packfile; returns the actually added size
-    pub async fn add(&mut self, data: &[u8], id: &Id, tpe: BlobType) -> Result<u64> {
+    pub async fn add(&mut self, data: &[u8], id: &Id) -> Result<u64> {
         // only add if this blob is not present
         if self.has(id) {
             return Ok(0);
@@ -99,7 +106,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             ),
         };
 
-        self.add_raw(&data, id, tpe, uncompressed_length).await?;
+        self.add_raw(&data, id, uncompressed_length).await?;
         Ok(data.len().try_into()?)
     }
 
@@ -108,12 +115,12 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         &mut self,
         data: &[u8],
         id: &Id,
-        tpe: BlobType,
         uncompressed_length: Option<NonZeroU32>,
     ) -> Result<()> {
         let offset = self.size;
         let len = self.write_data(data).await?;
-        self.index.add(*id, tpe, offset, len, uncompressed_length);
+        self.index
+            .add(*id, self.blob_type, offset, len, uncompressed_length);
         self.count += 1;
 
         // check if PackFile needs to be saved

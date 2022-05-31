@@ -53,8 +53,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             parent,
             stack: Vec::new(),
             index,
-            data_packer: Packer::new(be.clone(), indexer.clone(), zstd)?,
-            tree_packer: Packer::new(be.clone(), indexer.clone(), zstd)?,
+            data_packer: Packer::new(be.clone(), BlobType::Data, indexer.clone(), zstd)?,
+            tree_packer: Packer::new(be.clone(), BlobType::Tree, indexer.clone(), zstd)?,
             be,
             poly,
             indexer,
@@ -160,7 +160,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
 
         if !self.index.has_tree(&id) {
-            match self.data_packer.add(&chunk, &id, BlobType::Tree).await? {
+            match self.tree_packer.add(&chunk, &id).await? {
                 0 => {}
                 packed_size => {
                     self.summary.tree_blobs += 1;
@@ -247,7 +247,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         p: &ProgressBar,
     ) -> Result<()> {
         if !self.index.has_data(&id) {
-            match self.tree_packer.add(chunk, &id, BlobType::Data).await? {
+            match self.data_packer.add(chunk, &id).await? {
                 0 => {}
                 packed_size => {
                     self.summary.data_blobs += 1;
@@ -268,7 +268,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let chunk = self.tree.serialize()?;
         let id = hash(&chunk);
         if !self.index.has_tree(&id) {
-            self.tree_packer.add(&chunk, &id, BlobType::Tree).await?;
+            self.tree_packer.add(&chunk, &id).await?;
         }
         self.snap.tree = id;
 

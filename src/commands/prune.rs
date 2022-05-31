@@ -687,7 +687,8 @@ impl Pruner {
     async fn do_prune(mut self, be: &impl DecryptWriteBackend) -> Result<()> {
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
         // packer without zstd configuration; packed blobs are simply copied
-        let mut packer = Packer::new(be.clone(), indexer.clone(), None)?;
+        let mut tree_packer = Packer::new(be.clone(), BlobType::Tree, indexer.clone(), None)?;
+        let mut data_packer = Packer::new(be.clone(), BlobType::Data, indexer.clone(), None)?;
 
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
@@ -732,9 +733,12 @@ impl Pruner {
                             let data = be
                                 .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
                                 .await?;
-                            packer
-                                .add_raw(&data, &blob.id, blob.tpe, blob.uncompressed_length)
-                                .await?;
+                            match blob.tpe {
+                                BlobType::Data => &mut data_packer,
+                                BlobType::Tree => &mut tree_packer,
+                            }
+                            .add_raw(&data, &blob.id, blob.uncompressed_length)
+                            .await?;
                         }
                         // mark original pack for removal
                         let pack = pack.into_index_pack_with_time(self.time);
@@ -763,7 +767,8 @@ impl Pruner {
             }
             indexes_remove.push(index.id);
         }
-        packer.finalize().await?;
+        tree_packer.finalize().await?;
+        data_packer.finalize().await?;
         indexer.write().await.finalize().await?;
 
         if !packs_remove.is_empty() {

@@ -1,14 +1,13 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
-use bytesize::ByteSize;
 use chrono::Local;
 use clap::Parser;
 use gethostname::gethostname;
 use path_absolutize::*;
 use vlog::*;
 
-use super::{progress_bytes, progress_counter};
+use super::{bytes, progress_bytes, progress_counter};
 use crate::archiver::{Archiver, Parent};
 use crate::backend::{
     DecryptFullBackend, DecryptWriteBackend, DryRunBackend, LocalSource, LocalSourceOptions,
@@ -141,7 +140,6 @@ pub(super) async fn execute(
     p.finish_with_message("done");
     let snap = archiver.finalize_snapshot().await?;
     let summary = snap.summary.unwrap();
-    let bytes = |b| ByteSize(b).to_string_as(true);
 
     v1!(
         "Files:       {} new, {} changed, {} unchanged",

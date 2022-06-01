@@ -9,7 +9,7 @@ use clap::Parser;
 use futures::TryStreamExt;
 use vlog::*;
 
-use super::progress_counter;
+use super::{bytes, progress_counter};
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType};
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::id::Id;
@@ -589,8 +589,6 @@ impl Pruner {
         let pack_stat = &self.stats.packs;
         let blob_stat = &self.stats.blobs;
         let size_stat = &self.stats.size;
-
-        let bytes = |b| ByteSize(b).to_string_as(true);
 
         v2!(
             "used:   {:>10} blobs, {:>10}",

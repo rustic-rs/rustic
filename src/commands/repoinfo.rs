@@ -1,11 +1,10 @@
 use anyhow::Result;
-use bytesize::ByteSize;
 use clap::Parser;
 use futures::TryStreamExt;
 use prettytable::{cell, format, row, Table};
 use vlog::*;
 
-use super::progress_counter;
+use super::{bytes, progress_counter};
 use crate::backend::{DecryptReadBackend, ALL_FILE_TYPES};
 use crate::blob::BlobType;
 use crate::index::IndexEntry;
@@ -24,15 +23,11 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
         let list = be.list_with_size(tpe).await?;
         let count = list.len();
         let size = list.iter().map(|f| f.1 as u64).sum();
-        table.add_row(row![
-            format!("{:?}", tpe),
-            r->count,
-            r->ByteSize(size).to_string_as(true)
-        ]);
+        table.add_row(row![format!("{:?}", tpe), r->count, r->bytes(size)]);
         total_count += count;
         total_size += size;
     }
-    table.add_row(row!["Total",r->total_count,r->ByteSize(total_size).to_string_as(true)]);
+    table.add_row(row!["Total",r->total_count,r->bytes(total_size)]);
 
     table.set_titles(row![b->"File type", br->"Count", br->"Total Size"]);
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
@@ -88,7 +83,6 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
     p.finish_with_message("done");
 
     let mut table = Table::new();
-    let bytes = |b| ByteSize(b).to_string_as(true);
 
     table.add_row(row!["Tree",r->tree.count,r->bytes(tree.data_size), r->bytes(tree.size)]);
     table.add_row(row!["Data",r->data.count,r->bytes(data.data_size),r->bytes(data.size)]);

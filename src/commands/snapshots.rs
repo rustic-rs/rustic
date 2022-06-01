@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use bytesize::ByteSize;
 use clap::Parser;
 use humantime::format_duration;
 use prettytable::{cell, format, row, Table};
 
+use super::bytes;
 use crate::backend::DecryptReadBackend;
 use crate::repo::{SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion};
 
@@ -35,7 +35,6 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
             SnapshotFile::from_ids(be, &opts.ids).await?,
         )],
     };
-    let bytes = |b| ByteSize(b).to_string_as(true);
 
     for (group, mut snapshots) in groups {
         if !group.is_empty() {
@@ -82,7 +81,6 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
 
 fn display_snap(sn: SnapshotFile) {
     let mut table = Table::new();
-    let bytes = |b| ByteSize(b).to_string_as(true);
 
     table.add_row(row![b->"Snapshot", b->sn.id.to_hex()]);
     // note that if original was not set, it is set to sn.id by the load process

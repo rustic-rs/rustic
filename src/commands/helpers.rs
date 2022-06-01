@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{bail, Result};
+use bytesize::ByteSize;
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressStyle};
 use rpassword::{prompt_password, read_password_from_bufread};
@@ -14,6 +15,10 @@ use crate::crypto::Key;
 use crate::repo::find_key_in_backend;
 
 const MAX_PASSWORD_RETRIES: usize = 5;
+
+pub fn bytes(b: u64) -> String {
+    ByteSize(b).to_string_as(true)
+}
 
 pub async fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> Result<Key> {
     match password_file {

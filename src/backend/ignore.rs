@@ -1,16 +1,20 @@
 use std::fs::{read_link, File};
+#[cfg(not(windows))]
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use bytesize::ByteSize;
-use chrono::{Local, TimeZone, Utc};
+#[cfg(not(windows))]
+use chrono::TimeZone;
+use chrono::{DateTime, Local, Utc};
 use clap::Parser;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
 use log::*;
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
+#[cfg(not(windows))]
 use users::{Groups, Users, UsersCache};
 
 use super::{node::Metadata, node::NodeType, Node, ReadSource};
@@ -20,6 +24,7 @@ pub struct LocalSource {
     walker: Walk,
     with_atime: bool,
     ignore_devid: bool,
+    #[cfg(not(windows))]
     cache: UsersCache,
 }
 
@@ -141,6 +146,7 @@ impl LocalSource {
             walker,
             with_atime: opts.with_atime,
             ignore_devid: opts.ignore_devid,
+            #[cfg(not(windows))]
             cache: UsersCache::new(),
         })
     }
@@ -175,10 +181,82 @@ impl Iterator for LocalSource {
             }
             item => item,
         }
-        .map(|e| map_entry(e?, self.with_atime, self.ignore_devid, &self.cache))
+        .map(|e| {
+            map_entry(
+                e?,
+                self.with_atime,
+                self.ignore_devid,
+                #[cfg(not(windows))]
+                &self.cache,
+            )
+        })
     }
 }
 
+#[cfg(windows)]
+fn map_entry(entry: DirEntry, with_atime: bool, _ignore_devid: bool) -> Result<(PathBuf, Node)> {
+    let name = entry.file_name();
+    let m = entry.metadata()?;
+
+    // TODO: Set them to suitable values
+    let uid = None;
+    let gid = None;
+    let user = None;
+    let group = None;
+
+    let size = if m.is_dir() { 0 } else { m.len() };
+    let mode = None;
+    let inode = 0;
+    let device_id = 0;
+    let links = 0;
+
+    let mtime = m
+        .modified()
+        .ok()
+        .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local));
+    let atime = if with_atime {
+        m.accessed()
+            .ok()
+            .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local))
+    } else {
+        // TODO: Use None here?
+        mtime
+    };
+    let ctime = m
+        .created()
+        .ok()
+        .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local));
+
+    let meta = Metadata {
+        size,
+        mtime,
+        atime,
+        ctime,
+        mode,
+        uid,
+        gid,
+        user,
+        group,
+        inode,
+        device_id,
+        links,
+    };
+
+    let node = if m.is_dir() {
+        Node::new_node(name, NodeType::Dir, meta)
+    } else if m.is_symlink() {
+        let target = read_link(entry.path())?;
+        let node_type = NodeType::Symlink {
+            linktarget: target.to_str().expect("no unicode").to_string(),
+        };
+        Node::new_node(name, node_type, meta)
+    } else {
+        Node::new_node(name, NodeType::File, meta)
+    };
+    Ok((entry.path().to_path_buf(), node))
+}
+
+#[cfg(not(windows))]
 // map_entry: turn entry into (Path, Node)
 fn map_entry(
     entry: DirEntry,
@@ -194,18 +272,19 @@ fn map_entry(
     let user = cache
         .get_user_by_uid(uid)
         .map(|u| u.name().to_str().unwrap().to_string());
+
     let group = cache
         .get_group_by_gid(gid)
         .map(|g| g.name().to_str().unwrap().to_string());
 
-    let mtime = Utc
-        .timestamp_opt(m.mtime(), m.mtime_nsec().try_into()?)
-        .single()
-        .map(|dt| dt.with_timezone(&Local));
+    let mtime = m
+        .modified()
+        .ok()
+        .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local));
     let atime = if with_atime {
-        Utc.timestamp_opt(m.atime(), m.atime_nsec().try_into()?)
-            .single()
-            .map(|dt| dt.with_timezone(&Local))
+        m.accessed()
+            .ok()
+            .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local))
     } else {
         // TODO: Use None here?
         mtime
@@ -214,8 +293,9 @@ fn map_entry(
         .timestamp_opt(m.ctime(), m.ctime_nsec().try_into()?)
         .single()
         .map(|dt| dt.with_timezone(&Local));
+
     let size = if m.is_dir() { 0 } else { m.len() };
-    let mode = map_mode_to_go(m.mode());
+    let mode = mapper::map_mode_to_go(m.mode());
     let inode = m.ino();
     let device_id = if ignore_devid { 0 } else { m.dev() };
     let links = if m.is_dir() { 0 } else { m.nlink() };
@@ -260,97 +340,100 @@ fn map_entry(
     Ok((entry.path().to_path_buf(), node))
 }
 
-const MODE_PERM: u32 = 0o777; // permission bits
+#[cfg(not(windows))]
+pub mod mapper {
+    const MODE_PERM: u32 = 0o777; // permission bits
 
-// consts from https://pkg.go.dev/io/fs#ModeType
-const GO_MODE_DIR: u32 = 0b10000000000000000000000000000000;
-const GO_MODE_SYMLINK: u32 = 0b00001000000000000000000000000000;
-const GO_MODE_DEVICE: u32 = 0b00000100000000000000000000000000;
-const GO_MODE_FIFO: u32 = 0b00000010000000000000000000000000;
-const GO_MODE_SOCKET: u32 = 0b00000001000000000000000000000000;
-const GO_MODE_SETUID: u32 = 0b00000000100000000000000000000000;
-const GO_MODE_SETGID: u32 = 0b00000000010000000000000000000000;
-const GO_MODE_CHARDEV: u32 = 0b00000000001000000000000000000000;
-const GO_MODE_STICKY: u32 = 0b00000000000100000000000000000000;
-const GO_MODE_IRREG: u32 = 0b00000000000010000000000000000000;
+    // consts from https://pkg.go.dev/io/fs#ModeType
+    const GO_MODE_DIR: u32 = 0b10000000000000000000000000000000;
+    const GO_MODE_SYMLINK: u32 = 0b00001000000000000000000000000000;
+    const GO_MODE_DEVICE: u32 = 0b00000100000000000000000000000000;
+    const GO_MODE_FIFO: u32 = 0b00000010000000000000000000000000;
+    const GO_MODE_SOCKET: u32 = 0b00000001000000000000000000000000;
+    const GO_MODE_SETUID: u32 = 0b00000000100000000000000000000000;
+    const GO_MODE_SETGID: u32 = 0b00000000010000000000000000000000;
+    const GO_MODE_CHARDEV: u32 = 0b00000000001000000000000000000000;
+    const GO_MODE_STICKY: u32 = 0b00000000000100000000000000000000;
+    const GO_MODE_IRREG: u32 = 0b00000000000010000000000000000000;
 
-// consts from man page inode(7)
-const S_IFFORMAT: u32 = 0o170000; // File mask
-const S_IFSOCK: u32 = 0o140000; // socket
-const S_IFLNK: u32 = 0o120000; // symbolic link
-const S_IFREG: u32 = 0o100000; // regular file
-const S_IFBLK: u32 = 0o060000; // block device
-const S_IFDIR: u32 = 0o040000; // directory
-const S_IFCHR: u32 = 0o020000; // character device
-const S_IFIFO: u32 = 0o010000; // FIFO
+    // consts from man page inode(7)
+    const S_IFFORMAT: u32 = 0o170000; // File mask
+    const S_IFSOCK: u32 = 0o140000; // socket
+    const S_IFLNK: u32 = 0o120000; // symbolic link
+    const S_IFREG: u32 = 0o100000; // regular file
+    const S_IFBLK: u32 = 0o060000; // block device
+    const S_IFDIR: u32 = 0o040000; // directory
+    const S_IFCHR: u32 = 0o020000; // character device
+    const S_IFIFO: u32 = 0o010000; // FIFO
 
-const S_ISUID: u32 = 0o4000; // set-user-ID bit (see execve(2))
-const S_ISGID: u32 = 0o2000; // set-group-ID bit (see below)
-const S_ISVTX: u32 = 0o1000; // sticky bit (see below)
+    const S_ISUID: u32 = 0o4000; // set-user-ID bit (see execve(2))
+    const S_ISGID: u32 = 0o2000; // set-group-ID bit (see below)
+    const S_ISVTX: u32 = 0o1000; // sticky bit (see below)
 
-/// map `st_mode` from POSIX (`inode(7)`) to golang's definition (<https://pkg.go.dev/io/fs#ModeType>)
-/// Note, that it only sets the bits `os.ModePerm | os.ModeType | os.ModeSetuid | os.ModeSetgid | os.ModeSticky`
-/// to stay compatible with the restic implementation
-fn map_mode_to_go(mode: u32) -> u32 {
-    let mut go_mode = mode & MODE_PERM;
+    /// map `st_mode` from POSIX (`inode(7)`) to golang's definition (<https://pkg.go.dev/io/fs#ModeType>)
+    /// Note, that it only sets the bits `os.ModePerm | os.ModeType | os.ModeSetuid | os.ModeSetgid | os.ModeSticky`
+    /// to stay compatible with the restic implementation
+    pub fn map_mode_to_go(mode: u32) -> u32 {
+        let mut go_mode = mode & MODE_PERM;
 
-    match mode & S_IFFORMAT {
-        S_IFSOCK => go_mode |= GO_MODE_SOCKET,
-        S_IFLNK => go_mode |= GO_MODE_SYMLINK,
-        S_IFBLK => go_mode |= GO_MODE_DEVICE,
-        S_IFDIR => go_mode |= GO_MODE_DIR,
-        S_IFCHR => go_mode |= GO_MODE_CHARDEV & GO_MODE_DEVICE, // no idea why go sets both for char devices...
-        S_IFIFO => go_mode |= GO_MODE_FIFO,
-        // note that POSIX specifies regular files, whereas golang specifies irregular files
-        S_IFREG => {}
-        _ => go_mode |= GO_MODE_IRREG,
-    };
+        match mode & S_IFFORMAT {
+            S_IFSOCK => go_mode |= GO_MODE_SOCKET,
+            S_IFLNK => go_mode |= GO_MODE_SYMLINK,
+            S_IFBLK => go_mode |= GO_MODE_DEVICE,
+            S_IFDIR => go_mode |= GO_MODE_DIR,
+            S_IFCHR => go_mode |= GO_MODE_CHARDEV & GO_MODE_DEVICE, // no idea why go sets both for char devices...
+            S_IFIFO => go_mode |= GO_MODE_FIFO,
+            // note that POSIX specifies regular files, whereas golang specifies irregular files
+            S_IFREG => {}
+            _ => go_mode |= GO_MODE_IRREG,
+        };
 
-    if mode & S_ISUID > 0 {
-        go_mode |= GO_MODE_SETUID;
-    }
-    if mode & S_ISGID > 0 {
-        go_mode |= GO_MODE_SETGID;
-    }
-    if mode & S_ISVTX > 0 {
-        go_mode |= GO_MODE_STICKY;
-    }
+        if mode & S_ISUID > 0 {
+            go_mode |= GO_MODE_SETUID;
+        }
+        if mode & S_ISGID > 0 {
+            go_mode |= GO_MODE_SETGID;
+        }
+        if mode & S_ISVTX > 0 {
+            go_mode |= GO_MODE_STICKY;
+        }
 
-    go_mode
-}
-
-/// map golangs mode definition (<https://pkg.go.dev/io/fs#ModeType>) to `st_mode` from POSIX (`inode(7)`)
-/// This is the inverse function to [`map_mode_to_go`]
-pub fn map_mode_from_go(go_mode: u32) -> u32 {
-    let mut mode = go_mode & MODE_PERM;
-
-    if go_mode & GO_MODE_SOCKET > 0 {
-        mode |= S_IFSOCK;
-    } else if go_mode & GO_MODE_SYMLINK > 0 {
-        mode |= S_IFLNK;
-    } else if go_mode & GO_MODE_DEVICE > 0 && go_mode & GO_MODE_CHARDEV == 0 {
-        mode |= S_IFBLK;
-    } else if go_mode & GO_MODE_DIR > 0 {
-        mode |= S_IFDIR;
-    } else if go_mode & (GO_MODE_CHARDEV | GO_MODE_DEVICE) > 0 {
-        mode |= S_IFCHR;
-    } else if go_mode & GO_MODE_FIFO > 0 {
-        mode |= S_IFIFO;
-    } else if go_mode & GO_MODE_IRREG > 0 {
-        // note that POSIX specifies regular files, whereas golang specifies irregular files
-    } else {
-        mode |= S_IFREG;
+        go_mode
     }
 
-    if go_mode & GO_MODE_SETUID > 0 {
-        mode |= S_ISUID;
-    }
-    if go_mode & GO_MODE_SETGID > 0 {
-        mode |= S_ISGID;
-    }
-    if go_mode & GO_MODE_STICKY > 0 {
-        mode |= S_ISVTX;
-    }
+    /// map golangs mode definition (<https://pkg.go.dev/io/fs#ModeType>) to `st_mode` from POSIX (`inode(7)`)
+    /// This is the inverse function to [`map_mode_to_go`]
+    pub fn map_mode_from_go(go_mode: u32) -> u32 {
+        let mut mode = go_mode & MODE_PERM;
 
-    mode
+        if go_mode & GO_MODE_SOCKET > 0 {
+            mode |= S_IFSOCK;
+        } else if go_mode & GO_MODE_SYMLINK > 0 {
+            mode |= S_IFLNK;
+        } else if go_mode & GO_MODE_DEVICE > 0 && go_mode & GO_MODE_CHARDEV == 0 {
+            mode |= S_IFBLK;
+        } else if go_mode & GO_MODE_DIR > 0 {
+            mode |= S_IFDIR;
+        } else if go_mode & (GO_MODE_CHARDEV | GO_MODE_DEVICE) > 0 {
+            mode |= S_IFCHR;
+        } else if go_mode & GO_MODE_FIFO > 0 {
+            mode |= S_IFIFO;
+        } else if go_mode & GO_MODE_IRREG > 0 {
+            // note that POSIX specifies regular files, whereas golang specifies irregular files
+        } else {
+            mode |= S_IFREG;
+        }
+
+        if go_mode & GO_MODE_SETUID > 0 {
+            mode |= S_ISUID;
+        }
+        if go_mode & GO_MODE_SETGID > 0 {
+            mode |= S_ISGID;
+        }
+        if go_mode & GO_MODE_STICKY > 0 {
+            mode |= S_ISVTX;
+        }
+
+        mode
+    }
 }

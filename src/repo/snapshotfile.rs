@@ -46,6 +46,24 @@ pub struct SnapshotSummary {
     pub backup_duration: f64, // in seconds
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Derivative)]
+#[derivative(Default)]
+pub enum DeleteOption {
+    #[derivative(Default)]
+    NotSet,
+    Never,
+    After(DateTime<Local>),
+}
+
+impl DeleteOption {
+    fn is_not_set(&self) -> bool {
+        match self {
+            Self::NotSet => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Derivative)]
 #[derivative(Default)]
 pub struct SnapshotFile {
@@ -67,6 +85,8 @@ pub struct SnapshotFile {
     pub tags: StringList,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub original: Option<Id>,
+    #[serde(default, skip_serializing_if = "DeleteOption::is_not_set")]
+    pub delete: DeleteOption,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<SnapshotSummary>,
@@ -256,6 +276,23 @@ impl SnapshotFile {
         self.tags.remove_all(tag_lists);
 
         old_tags != self.tags
+    }
+
+    /// Returns whether a snapshot must be deleted now
+    pub fn must_delete(&self, now: DateTime<Local>) -> bool {
+        match self.delete {
+            DeleteOption::After(time) if time < now => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether a snapshot must be kept now
+    pub fn must_keep(&self, now: DateTime<Local>) -> bool {
+        match self.delete {
+            DeleteOption::Never => true,
+            DeleteOption::After(time) if time >= now => true,
+            _ => false,
+        }
     }
 }
 

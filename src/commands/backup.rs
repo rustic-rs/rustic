@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
-use chrono::Local;
+use chrono::{Duration, Local};
 use clap::Parser;
 use gethostname::gethostname;
 use path_absolutize::*;
@@ -15,7 +15,7 @@ use crate::backend::{
 };
 use crate::id::Id;
 use crate::index::IndexBackend;
-use crate::repo::{ConfigFile, SnapshotFile, SnapshotSummary, StringList};
+use crate::repo::{ConfigFile, DeleteOption, SnapshotFile, SnapshotSummary, StringList};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -34,6 +34,14 @@ pub(super) struct Opts {
     /// Tags to add to backup (can be specified multiple times)
     #[clap(long, value_name = "TAG[,TAG,..]")]
     tag: Vec<StringList>,
+
+    /// Mark snapshot as uneraseable
+    #[clap(long, conflicts_with = "delete-after")]
+    delete_never: bool,
+
+    /// Mark snapshot to be deleted after given duration (e.g. 10d)
+    #[clap(long, value_name = "DURATION")]
+    delete_after: Option<humantime::Duration>,
 
     #[clap(flatten)]
     ignore_opts: LocalSourceOptions,
@@ -95,10 +103,17 @@ pub(super) async fn execute(
         }
     };
 
+    let delete = match (opts.delete_never, opts.delete_after) {
+        (true, _) => DeleteOption::Never,
+        (_, Some(d)) => DeleteOption::After(time + Duration::from_std(*d)?),
+        (false, None) => DeleteOption::NotSet,
+    };
+
     let mut snap = SnapshotFile {
         time,
         parent: parent.map(|sn| sn.id),
         hostname,
+        delete,
         summary: Some(SnapshotSummary {
             command,
             ..Default::default()

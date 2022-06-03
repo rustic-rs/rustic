@@ -1,6 +1,7 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use clap::Parser;
+use derivative::Derivative;
 use prettytable::{cell, format, row, Table};
 
 use super::progress_counter;
@@ -36,12 +37,7 @@ pub(super) struct Opts {
 
 pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
     let groups = match opts.ids.is_empty() {
-        true => {
-            if opts.keep.is_empty() {
-                bail!("please specify either snapshot ids to forget or at least one keep policy!")
-            }
-            SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?
-        }
+        true => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?,
         false => vec![(
             SnapshotGroup::default(),
             SnapshotFile::from_ids(be, &opts.ids).await?,
@@ -60,16 +56,29 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
 
         let mut iter = snapshots.iter().peekable();
         let mut last = None;
+        let now = Local::now();
+        // snapshots that have no reason to be kept are removed. The only exception
+        // is if no IDs are explicitely given and no keep option is set. In this
+        // case, the default is to keep the snapshots.
+        let default_keep = opts.ids.is_empty() && opts.keep == KeepOptions::default();
 
         while let Some(sn) = iter.next() {
-            let (action, reason) =
-                match group_keep.matches(sn, last, iter.peek().is_some(), latest_time) {
-                    None => {
-                        forget_snaps.push(sn.id);
-                        ("remove", "".to_string())
+            let (action, reason) = {
+                if sn.must_delete(now) {
+                    forget_snaps.push(sn.id);
+                    ("remove", "snapshot".to_string())
+                } else {
+                    match group_keep.matches(sn, last, iter.peek().is_some(), latest_time, now) {
+                        None if default_keep => ("keep", "".to_string()),
+                        None => {
+                            forget_snaps.push(sn.id);
+                            ("remove", "".to_string())
+                        }
+                        Some(reason) => ("keep", reason),
                     }
-                    Some(reason) => ("keep", reason),
-                };
+                }
+            };
+
             let tags = sn.tags.formatln();
             let paths = sn.paths.formatln();
             let time = sn.time.format("%Y-%m-%d %H:%M:%S");
@@ -105,7 +114,8 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
     Ok(())
 }
 
-#[derive(Clone, Parser)]
+#[derive(Clone, PartialEq, Derivative, Parser)]
+#[derivative(Default)]
 struct KeepOptions {
     /// keep snapshots with this taglist (can be specified multiple times)
     #[clap(long, value_name = "TAGS")]
@@ -141,91 +151,79 @@ struct KeepOptions {
 
     /// keep snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0h")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within: humantime::Duration,
 
     /// keep hourly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0h")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_hourly: humantime::Duration,
 
     /// keep daily snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0d")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_daily: humantime::Duration,
 
     /// keep weekly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0w")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_weekly: humantime::Duration,
 
     /// keep monthly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0m")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_monthly: humantime::Duration,
 
     /// keep yearly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0y")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_yearly: humantime::Duration,
 }
 
+fn always_false(_sn1: &SnapshotFile, _sn2: &SnapshotFile) -> bool {
+    false
+}
+
 fn equal_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
-    let t1 = sn1.time;
-    let t2 = sn2.time;
+    let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year()
 }
 
 fn equal_month(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
-    let t1 = sn1.time;
-    let t2 = sn2.time;
+    let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.month() == t2.month()
 }
 
 fn equal_week(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
-    let t1 = sn1.time;
-    let t2 = sn2.time;
+    let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.iso_week().week() == t2.iso_week().week()
 }
 
 fn equal_day(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
-    let t1 = sn1.time;
-    let t2 = sn2.time;
+    let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.ordinal() == t2.ordinal()
 }
 
 fn equal_hour(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
-    let t1 = sn1.time;
-    let t2 = sn2.time;
+    let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.ordinal() == t2.ordinal() && t1.hour() == t2.hour()
 }
 
 impl KeepOptions {
-    fn is_empty(&self) -> bool {
-        let zero: humantime::Duration = "0h".parse().unwrap();
-        self.keep_tags.is_empty()
-            && self.keep_last == 0
-            && self.keep_hourly == 0
-            && self.keep_daily == 0
-            && self.keep_weekly == 0
-            && self.keep_monthly == 0
-            && self.keep_yearly == 0
-            && self.keep_within == zero
-            && self.keep_within_hourly == zero
-            && self.keep_within_daily == zero
-            && self.keep_within_weekly == zero
-            && self.keep_within_monthly == zero
-            && self.keep_within_yearly == zero
-    }
-
     fn matches(
         &mut self,
         sn: &SnapshotFile,
         last: Option<&SnapshotFile>,
         has_next: bool,
         latest_time: DateTime<Local>,
+        now: DateTime<Local>,
     ) -> Option<String> {
         let mut keep = false;
         let mut reason = String::new();
 
-        if self.keep_last > 0 {
+        if sn.must_keep(now) {
             keep = true;
-            self.keep_last -= 1;
-            reason.push_str("last\n");
+            reason.push_str("snapshot\n");
         }
 
         if self
@@ -242,56 +240,63 @@ impl KeepOptions {
             reason.push_str("tags\n");
         }
 
-        if sn.time + Duration::from_std(*self.keep_within).unwrap() > latest_time {
-            keep = true;
-            reason.push_str("within\n");
-        }
-
         let keep_checks = [
             (
-                equal_hour as fn(&SnapshotFile, &SnapshotFile) -> bool,
+                always_false as fn(&SnapshotFile, &SnapshotFile) -> bool,
+                &mut self.keep_last,
+                "last",
+                self.keep_within,
+                "within",
+            ),
+            (
+                equal_hour,
                 &mut self.keep_hourly,
-                self.keep_within_hourly,
                 "hourly",
+                self.keep_within_hourly,
+                "within hourly",
             ),
             (
                 equal_day,
                 &mut self.keep_daily,
-                self.keep_within_daily,
                 "daily",
+                self.keep_within_daily,
+                "within daily",
             ),
             (
                 equal_week,
                 &mut self.keep_weekly,
-                self.keep_within_weekly,
                 "weekly",
+                self.keep_within_weekly,
+                "within weekly",
             ),
             (
                 equal_month,
                 &mut self.keep_monthly,
-                self.keep_within_monthly,
                 "monthly",
+                self.keep_within_monthly,
+                "within monthly",
             ),
             (
                 equal_year,
                 &mut self.keep_yearly,
-                self.keep_within_yearly,
                 "yearly",
+                self.keep_within_yearly,
+                "within yearly",
             ),
         ];
 
-        for (check_fun, counter, within, reason_string) in keep_checks {
+        for (check_fun, counter, reason1, within, reason2) in keep_checks {
             if !has_next || last.is_none() || !check_fun(sn, last.unwrap()) {
                 if *counter > 0 {
                     *counter -= 1;
                     keep = true;
-                    reason.push_str(reason_string);
+                    reason.push_str(reason1);
                     reason.push('\n');
                 }
                 if sn.time + Duration::from_std(*within).unwrap() > latest_time {
                     keep = true;
-                    reason.push_str(reason_string);
-                    reason.push_str(" within\n");
+                    reason.push_str(reason2);
+                    reason.push('\n');
                 }
             }
         }

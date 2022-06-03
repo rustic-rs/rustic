@@ -7,7 +7,9 @@ use prettytable::{cell, format, row, Table};
 
 use super::bytes;
 use crate::backend::DecryptReadBackend;
-use crate::repo::{SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion};
+use crate::repo::{
+    DeleteOption, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion,
+};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -90,6 +92,12 @@ fn display_snap(sn: SnapshotFile) {
     table.add_row(row![b->"Time", sn.time.format("%Y-%m-%d %H:%M:%S")]);
     table.add_row(row![b->"Host", sn.hostname]);
     table.add_row(row![b->"Tags", sn.tags.formatln()]);
+    let delete = match sn.delete {
+        DeleteOption::NotSet => "not set".to_string(),
+        DeleteOption::Never => "never".to_string(),
+        DeleteOption::After(t) => format!("after {}", t.format("%Y-%m-%d %H:%M:%S")),
+    };
+    table.add_row(row![b->"Delete", delete]);
     table.add_row(row![b->"Paths", sn.paths.formatln()]);
     let parent = match sn.parent {
         None => "no parent snapshot".to_string(),

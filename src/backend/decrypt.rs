@@ -159,8 +159,8 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
             .key
             .decrypt_data(&self.backend.read_full(tpe, id).await?)?;
         Ok(match decrypted[0] {
-            0x5b | 0x7b => decrypted,
-            2 => decode_all(&decrypted[1..])?,
+            b'{' | b'[' => decrypted,          // not compressed
+            2 => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
             _ => bail!("not supported"),
         })
     }

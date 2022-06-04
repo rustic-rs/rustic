@@ -1,0 +1,10 @@
+Changes in version 0.2
+- new commands: init, forget, prune, repoinfo, tag, key
+- allow parallel lock-free repo access including prune
+- added REST backend
+- add compression support
+- most operations are now parallelized (using async rust)
+- added more statistical information to snapshots
+- now uses the same JSON format for trees/nodes as restic
+- better progress bars
+- various small fixes

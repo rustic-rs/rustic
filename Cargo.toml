@@ -1,6 +1,6 @@
 [package]
 name = "rustic-rs"
-version = "0.1.2-dev"
+version = "0.2.0-rc1"
 description = """
 restic-compatible backup tool written in pure Rust
 """

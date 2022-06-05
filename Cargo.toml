@@ -9,7 +9,7 @@ edition = "2021"
 license = "Apache-2.0 OR MIT"
 readme = "README.md"
 documentation = "https://docs.rs/rustic-rs"
-repository = "https://github.com/rustic/rustic"
+repository = "https://github.com/rustic-rs/rustic"
 keywords = ["backup", "restic", "deduplication", "encryption", "cli"]
 categories = ["command-line-utilities"]
 

@@ -3,8 +3,10 @@ Changes in version 0.2
 - allow parallel lock-free repo access including prune
 - added REST backend
 - add compression support
+- add support for other unix OSes, e.g. macOS
 - most operations are now parallelized (using async rust)
 - added more statistical information to snapshots
+- allow to mark snapshots as uneraseable or to be deleted at given time
 - now uses the same JSON format for trees/nodes as restic
 - better progress bars
 - various small fixes

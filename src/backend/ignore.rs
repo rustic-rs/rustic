@@ -1,5 +1,5 @@
 use std::fs::{read_link, File};
-use std::os::linux::fs::MetadataExt;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
@@ -155,8 +155,8 @@ fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(P
     let name = entry.file_name().to_os_string();
     let m = entry.metadata()?;
 
-    let uid = m.st_uid();
-    let gid = m.st_gid();
+    let uid = m.uid();
+    let gid = m.gid();
     let user = cache
         .get_user_by_uid(uid)
         .map(|u| u.name().to_str().unwrap().to_string());
@@ -164,28 +164,19 @@ fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(P
         .get_group_by_gid(gid)
         .map(|g| g.name().to_str().unwrap().to_string());
 
-    let mtime = Some(
-        Utc.timestamp(m.st_mtime(), m.st_mtime_nsec().try_into()?)
-            .into(),
-    );
+    let mtime = Some(Utc.timestamp(m.mtime(), m.mtime_nsec().try_into()?).into());
     let atime = if with_atime {
-        Some(
-            Utc.timestamp(m.st_atime(), m.st_atime_nsec().try_into()?)
-                .into(),
-        )
+        Some(Utc.timestamp(m.atime(), m.atime_nsec().try_into()?).into())
     } else {
         // TODO: Use None here?
         mtime
     };
-    let ctime = Some(
-        Utc.timestamp(m.st_ctime(), m.st_ctime_nsec().try_into()?)
-            .into(),
-    );
+    let ctime = Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into());
     let size = if m.is_dir() { 0 } else { m.len() };
-    let mode = map_mode_to_go(m.st_mode());
-    let inode = m.st_ino();
-    let device_id = m.st_dev();
-    let links = if m.is_dir() { 0 } else { m.st_nlink() };
+    let mode = map_mode_to_go(m.mode());
+    let inode = m.ino();
+    let device_id = m.dev();
+    let links = if m.is_dir() { 0 } else { m.nlink() };
 
     let meta = Metadata {
         size,

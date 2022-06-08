@@ -118,7 +118,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         while !path.starts_with(&self.path) {
             // save tree and go back to parent dir
             let mut chunk = self.tree.serialize()?;
-            chunk.push('\n' as u8); // for whatever reason, restic adds a newline, so to be compatible...
+            chunk.push(b'\n'); // for whatever reason, restic adds a newline, so to be compatible...
             let id = hash(&chunk);
 
             let (mut node, tree, parent) = self

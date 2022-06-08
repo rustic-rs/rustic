@@ -143,7 +143,7 @@ impl ReadSource for LocalSource {
 impl Iterator for LocalSource {
     type Item = Result<(PathBuf, Node)>;
 
-    fn next(&mut self) -> std::option::Option<Self::Item> {
+    fn next(&mut self) -> Option<Self::Item> {
         self.walker
             .next()
             .map(|e| map_entry(e?, self.with_atime, &self.cache))

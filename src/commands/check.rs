@@ -84,7 +84,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
     v1!("- listing packs...");
     for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
-            None => eprintln!("pack {} not contained in index", id.to_hex()),
+            None => eprintln!("pack {} not referenced in index", id.to_hex()),
             Some(index_size) if index_size != size => eprintln!(
                 "pack {}: size computed by index: {}, actual size: {}",
                 id.to_hex(),

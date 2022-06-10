@@ -408,12 +408,12 @@ impl Pruner {
         keep_delete: Duration,
         repack_cacheable_only: bool,
     ) -> Result<()> {
-        for (index_num, index) in self.index_files.iter_mut().enumerate() {
-            // first process all marked packs then the unmarked ones:
-            // - first processed packs are more likely to have all blobs seen as unused
-            // - if marked packs which used blob but these blobs are all present in other
-            //   unmarked packs, we want to perform the deletion!
-            for mark_case in [true, false] {
+        // first process all marked packs then the unmarked ones:
+        // - first processed packs are more likely to have all blobs seen as unused
+        // - if marked packs have used blob but these blobs are all present in
+        //   unmarked packs, we want to perform the deletion!
+        for mark_case in [true, false] {
+            for (index_num, index) in self.index_files.iter_mut().enumerate() {
                 for (pack_num, pack) in index
                     .packs
                     .iter_mut()
@@ -434,13 +434,13 @@ impl Pruner {
                                 pack.set_todo(PackToDo::MarkDelete, &pi, &mut self.stats);
                             }
                         }
-                        (false, _, 0) => {
+                        (false, 1.., 0) => {
                             // used pack
                             self.stats.packs.used += 1;
                             pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
                         }
 
-                        (false, _, _) => {
+                        (false, 1.., 1..) => {
                             // partly used pack
                             self.stats.packs.partly_used += 1;
 
@@ -462,7 +462,7 @@ impl Pruner {
                                 pack.set_todo(PackToDo::KeepMarked, &pi, &mut self.stats);
                             }
                         }
-                        (true, _, _) => {
+                        (true, 1.., _) => {
                             // needed blobs; mark this pack for recovery
                             pack.set_todo(PackToDo::Recover, &pi, &mut self.stats);
                         }

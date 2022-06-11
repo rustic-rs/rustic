@@ -129,9 +129,8 @@ pub(super) async fn execute(
 
     let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 
-    let p = progress_bytes();
     let size = if get_verbosity_level() == 1 {
-        v1!("determining size of backup source..."); // this is done in src.size() below
+        v1!("determining size of backup source...");
         src.size()?
     } else {
         0
@@ -139,6 +138,7 @@ pub(super) async fn execute(
 
     v1!("starting backup...");
     let mut archiver = Archiver::new(be, index, poly, parent, snap, zstd)?;
+    let p = progress_bytes();
     p.set_length(size);
     for item in src {
         match item {

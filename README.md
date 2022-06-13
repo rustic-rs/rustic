@@ -35,11 +35,10 @@ Differences:
 Current limitations:
  * Backup source and restore destinations only on local file system
  * Backup backends: So far only local disc and REST backends supported (others using rclone as REST backend)
- * Runs so far only on linux; help appreciated to add support for other OSes
+ * Runs so far only on Linux and MacOS, Windows support is WIP
  
 ## Open points:
  * [ ] Add tests and benchmarks
- * [ ] Add CI
  * [ ] Implement a local cache
  * [ ] Add more backends, backup-sources and restore-destinations
  * [ ] Add missing commands: copy, dump, find, mount

@@ -51,6 +51,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           profile: minimal
           override: true
+          target: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v1
       - name: Cargo build
         uses: actions-rs/cargo@v1

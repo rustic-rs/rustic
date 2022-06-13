@@ -1,7 +1,5 @@
 on:
   push:
-    tags:
-      - "v*.*.*"
 
 jobs:
   publish:
@@ -52,6 +50,13 @@ jobs:
           profile: minimal
           override: true
           target: ${{ matrix.job.target }}
+      - name: install compiler
+        shell: bash
+        run: |
+          if [[ ${{ matrix.job.target }} == x86_64-unknown-linux-musl ]]; then
+              sudo apt update
+              sudo apt-get install -y musl-tools
+          fi
       - uses: Swatinem/rust-cache@v1
       - name: Cargo build
         uses: actions-rs/cargo@v1
@@ -83,7 +88,7 @@ jobs:
           "$GCC_PREFIX"strip $BINARY_NAME
 
           ########## create tar.gz ##########
-          RELEASE_NAME=rustic-rs${GITHUB_REF/refs\/tags\//}-${{ matrix.job.os-name }}-${{ matrix.job.architecture }}
+          RELEASE_NAME=rustic-rs${GITHUB_REF_NAME}-${{ matrix.job.target}}
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
 
           ########## create sha256 ##########
@@ -94,6 +99,7 @@ jobs:
           fi
       - name: Releasing assets
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             target/${{ matrix.job.target }}/release/rustic-rs-*.tar.gz

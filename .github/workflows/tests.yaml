@@ -18,11 +18,12 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
           command: test
 
-  test_macost:
+  test_macos:
     name: Test on MacOS
     runs-on: macos-latest
     steps:
@@ -33,6 +34,7 @@ jobs:
           toolchain: stable
           overrideo: true
           target: x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
           command: test

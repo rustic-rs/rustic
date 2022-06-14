@@ -88,7 +88,7 @@ jobs:
           "$GCC_PREFIX"strip $BINARY_NAME
 
           ########## create tar.gz ##########
-          RELEASE_NAME=rustic-rs${GITHUB_REF_NAME}-${{ matrix.job.target}}
+          RELEASE_NAME=rustic-rs$GITHUB_REF_NAME-${{ matrix.job.target }}
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
 
           ########## create sha256 ##########

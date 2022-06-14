@@ -15,8 +15,17 @@ pub struct RestBackend {
 
 impl RestBackend {
     pub fn new(url: &str) -> Self {
+        let url = if url.ends_with('/') {
+            Url::parse(url).unwrap()
+        } else {
+            // add a trailing '/' if there is none
+            let mut url = url.to_string();
+            url.push('/');
+            Url::parse(&url).unwrap()
+        };
+
         Self {
-            url: Url::parse(url).unwrap(),
+            url,
             client: Client::new(),
         }
     }
@@ -49,7 +58,7 @@ impl ReadBackend for RestBackend {
             return Ok(
                 match self
                     .client
-                    .head(self.url.join("/config").unwrap())
+                    .head(self.url.join("config").unwrap())
                     .send()
                     .await?
                     .status()

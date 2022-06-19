@@ -40,16 +40,15 @@ impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
 
 #[async_trait]
 impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
-    type Error = <BE as ReadBackend>::Error;
     fn location(&self) -> &str {
         self.be.location()
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         self.be.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
         self.be.read_full(tpe, id).await
     }
 
@@ -59,7 +58,7 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         id: &Id,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>, Self::Error> {
+    ) -> Result<Vec<u8>> {
         self.be.read_partial(tpe, id, offset, length).await
     }
 }
@@ -89,28 +88,28 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
 
 #[async_trait]
 impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
-    async fn create(&self) -> Result<(), Self::Error> {
+    async fn create(&self) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
             false => self.be.create().await,
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
+    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
             false => self.be.write_file(tpe, id, f).await,
         }
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
             false => self.be.write_bytes(tpe, id, buf).await,
         }
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
             false => self.be.remove(tpe, id).await,

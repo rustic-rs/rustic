@@ -4,6 +4,7 @@ use std::os::unix::fs::FileExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
+use anyhow::Result;
 use async_trait::async_trait;
 use vlog::*;
 use walkdir::WalkDir;
@@ -32,13 +33,11 @@ impl LocalBackend {
 
 #[async_trait]
 impl ReadBackend for LocalBackend {
-    type Error = std::io::Error;
-
     fn location(&self) -> &str {
         self.path.to_str().unwrap()
     }
 
-    async fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
+    async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
         if tpe == FileType::Config {
             return Ok(match self.path.join("config").exists() {
                 true => vec![Id::default()],
@@ -55,7 +54,7 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         let path = self.path.join(tpe.name());
 
         if tpe == FileType::Config {
@@ -94,8 +93,8 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
-        fs::read(self.path(tpe, id))
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+        Ok(fs::read(self.path(tpe, id))?)
     }
 
     async fn read_partial(
@@ -104,7 +103,7 @@ impl ReadBackend for LocalBackend {
         id: &Id,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>, Self::Error> {
+    ) -> Result<Vec<u8>> {
         let mut file = File::open(self.path(tpe, id))?;
         file.seek(SeekFrom::Start(offset.try_into().unwrap()))?;
         let mut vec = vec![0; length.try_into().unwrap()];
@@ -115,7 +114,7 @@ impl ReadBackend for LocalBackend {
 
 #[async_trait]
 impl WriteBackend for LocalBackend {
-    async fn create(&self) -> Result<(), Self::Error> {
+    async fn create(&self) -> Result<()> {
         for tpe in ALL_FILE_TYPES {
             fs::create_dir_all(self.path.join(tpe.name()))?;
         }
@@ -125,7 +124,7 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, mut f: File) -> Result<(), Self::Error> {
+    async fn write_file(&self, tpe: FileType, id: &Id, mut f: File) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
@@ -133,10 +132,11 @@ impl WriteBackend for LocalBackend {
             .write(true)
             .open(&filename)?;
         copy(&mut f, &mut file)?;
-        file.sync_all()
+        file.sync_all()?;
+        Ok(())
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
@@ -144,13 +144,15 @@ impl WriteBackend for LocalBackend {
             .write(true)
             .open(&filename)?;
         file.write_all(&buf)?;
-        file.sync_all()
+        file.sync_all()?;
+        Ok(())
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
-        fs::remove_file(filename)
+        fs::remove_file(filename)?;
+        Ok(())
     }
 }
 

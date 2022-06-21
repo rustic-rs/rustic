@@ -730,7 +730,13 @@ impl Pruner {
                                 continue;
                             }
                             let data = be
-                                .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
+                                .read_partial(
+                                    FileType::Pack,
+                                    &pack.id,
+                                    blob.tpe.is_cacheable(),
+                                    blob.offset,
+                                    blob.length,
+                                )
                                 .await?;
                             match blob.tpe {
                                 BlobType::Data => &mut data_packer,

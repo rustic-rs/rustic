@@ -114,7 +114,7 @@ async fn restore_contents(
             stream.push(spawn(async move {
                 // read pack at blob_offset with length blob_length
                 let data = be
-                    .read_encrypted_partial(FileType::Pack, &pack, bl.offset, bl.length)
+                    .read_encrypted_partial(FileType::Pack, &pack, false, bl.offset, bl.length)
                     .await
                     .unwrap();
 

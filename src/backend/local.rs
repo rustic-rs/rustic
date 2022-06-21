@@ -101,6 +101,7 @@ impl ReadBackend for LocalBackend {
         &self,
         tpe: FileType,
         id: &Id,
+        _cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
@@ -124,7 +125,13 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, mut f: File) -> Result<()> {
+    async fn write_file(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        _cacheable: bool,
+        mut f: File,
+    ) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()

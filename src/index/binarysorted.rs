@@ -114,6 +114,7 @@ impl ReadIndex for Index {
         vec.binary_search_by_key(id, |e| e.id).ok().map(|index| {
             let be = &vec[index];
             IndexEntry::new(
+                *tpe,
                 self.packs[be.pack_idx],
                 be.offset,
                 be.length,

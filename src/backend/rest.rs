@@ -107,6 +107,7 @@ impl ReadBackend for RestBackend {
         &self,
         tpe: FileType,
         id: &Id,
+        _cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
@@ -135,7 +136,7 @@ impl WriteBackend for RestBackend {
         Ok(())
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<()> {
+    async fn write_file(&self, tpe: FileType, id: &Id, _cacheable: bool, f: File) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         self.client
             .post(self.url(tpe, id))

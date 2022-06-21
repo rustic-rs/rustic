@@ -20,6 +20,7 @@ pub trait DecryptReadBackend: ReadBackend {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>>;
@@ -169,12 +170,16 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
-        Ok(self
-            .key
-            .decrypt_data(&self.backend.read_partial(tpe, id, offset, length).await?)?)
+        Ok(self.key.decrypt_data(
+            &self
+                .backend
+                .read_partial(tpe, id, cacheable, offset, length)
+                .await?,
+        )?)
     }
 }
 
@@ -200,10 +205,13 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
-        self.backend.read_partial(tpe, id, offset, length).await
+        self.backend
+            .read_partial(tpe, id, cacheable, offset, length)
+            .await
     }
 }
 
@@ -213,8 +221,8 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         self.backend.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<()> {
-        self.backend.write_file(tpe, id, f).await
+    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
+        self.backend.write_file(tpe, id, cacheable, f).await
     }
 
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {

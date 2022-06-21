@@ -53,12 +53,13 @@ impl ReadBackend for ChooseBackend {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
         match self {
-            Local(local) => local.read_partial(tpe, id, offset, length).await,
-            Rest(rest) => rest.read_partial(tpe, id, offset, length).await,
+            Local(local) => local.read_partial(tpe, id, cacheable, offset, length).await,
+            Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length).await,
         }
     }
 }
@@ -72,10 +73,10 @@ impl WriteBackend for ChooseBackend {
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<()> {
+    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
         match self {
-            Local(local) => local.write_file(tpe, id, f).await,
-            Rest(rest) => rest.write_file(tpe, id, f).await,
+            Local(local) => local.write_file(tpe, id, cacheable, f).await,
+            Rest(rest) => rest.write_file(tpe, id, cacheable, f).await,
         }
     }
 

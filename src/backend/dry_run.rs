@@ -29,11 +29,12 @@ impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
         self.be
-            .read_encrypted_partial(tpe, id, offset, length)
+            .read_encrypted_partial(tpe, id, cacheable, offset, length)
             .await
     }
 }
@@ -56,10 +57,13 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
-        self.be.read_partial(tpe, id, offset, length).await
+        self.be
+            .read_partial(tpe, id, cacheable, offset, length)
+            .await
     }
 }
 
@@ -95,10 +99,10 @@ impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<()> {
+    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.write_file(tpe, id, f).await,
+            false => self.be.write_file(tpe, id, cacheable, f).await,
         }
     }
 

@@ -48,6 +48,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             future: None,
             be: be.clone(),
             indexer: indexer.clone(),
+            cacheable: blob_type.is_cacheable(),
         };
         Ok(Self {
             be,
@@ -234,6 +235,7 @@ struct FileWriter<BE: DecryptWriteBackend> {
     future: Option<JoinHandle<Result<()>>>,
     be: BE,
     indexer: SharedIndexer<BE>,
+    cacheable: bool,
 }
 
 impl<BE: DecryptWriteBackend> FileWriter<BE> {
@@ -244,8 +246,9 @@ impl<BE: DecryptWriteBackend> FileWriter<BE> {
 
         let be = self.be.clone();
         let indexer = self.indexer.clone();
+        let cacheable = self.cacheable;
         self.future = Some(spawn(async move {
-            be.write_file(FileType::Pack, &id, file).await?;
+            be.write_file(FileType::Pack, &id, cacheable, file).await?;
             index.time = Some(Local::now());
             indexer.write().await.add(index).await?;
             Ok(())

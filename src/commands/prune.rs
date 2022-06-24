@@ -46,13 +46,12 @@ pub(super) struct Opts {
 pub(super) async fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     opts: Opts,
-    config_id: &Id,
+    config: ConfigFile,
     ignore_snaps: Vec<Id>,
 ) -> Result<()> {
     v1!("reading index...");
     let mut index_files = Vec::new();
 
-    let config: ConfigFile = be.get_file(config_id).await?;
     let zstd = match config.version {
         1 => None,
         2 => Some(0),

@@ -39,7 +39,6 @@ Current limitations:
  
 ## Open points:
  * [ ] Add tests and benchmarks
- * [ ] Implement a local cache
  * [ ] Add more backends, backup-sources and restore-destinations
  * [ ] Add missing commands: copy, dump, find, mount
  * [ ] Improve error handling

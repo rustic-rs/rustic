@@ -8,6 +8,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::id::Id;
 
+pub mod cache;
 pub mod choose;
 pub mod decrypt;
 pub mod dry_run;
@@ -17,6 +18,7 @@ pub mod node;
 pub mod rest;
 
 pub use self::ignore::*;
+pub use cache::*;
 pub use choose::*;
 pub use decrypt::*;
 pub use dry_run::*;
@@ -49,6 +51,13 @@ impl FileType {
             FileType::Index => "index",
             FileType::Key => "keys",
             FileType::Pack => "data",
+        }
+    }
+
+    pub fn is_cacheable(&self) -> bool {
+        match self {
+            FileType::Config | FileType::Key => false,
+            FileType::Snapshot | FileType::Index | FileType::Pack => true,
         }
     }
 }

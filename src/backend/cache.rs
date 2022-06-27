@@ -18,15 +18,8 @@ pub struct CachedBackend<BE: WriteBackend> {
 }
 
 impl<BE: WriteBackend> CachedBackend<BE> {
-    pub fn new(be: BE, id: Id, create: bool) -> Self {
-        Self {
-            be,
-            cache: Cache::new(id, create).unwrap(),
-        }
-    }
-
-    pub fn cache(&self) -> &Option<Cache> {
-        &self.cache
+    pub fn new(be: BE, cache: Option<Cache>) -> Self {
+        Self { be, cache }
     }
 }
 
@@ -136,13 +129,26 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn new(id: Id, create: bool) -> Result<Option<Self>> {
-        let mut path = cache_dir().ok_or_else(|| anyhow!("no cache dir"))?;
-        path.push("restic");
+    pub fn new(id: Id, path: Option<PathBuf>, create: bool) -> Result<Option<Self>> {
+        let mut path = path.unwrap_or(cache_dir().ok_or_else(|| anyhow!("no cache dir"))?);
+
+        // first try if a restic cache dir exists and if yes, use it
+        let mut path_restic = path.clone();
+        path_restic.push("restic");
+        if path_restic.exists() && cachedir::is_tagged(&path_restic)? {
+            path_restic.push(id.to_hex());
+            if path_restic.exists() {
+                return Ok(Some(Self { path: path_restic }));
+            }
+        }
+
+        // else use rustic cache dir
+        path.push("rustic");
+
         if create {
             fs::create_dir_all(&path)?;
             cachedir::ensure_tag(&path)?;
-        } else if !cachedir::is_tagged(&path)? {
+        } else if !path.exists() || !cachedir::is_tagged(&path)? {
             return Ok(None);
         }
 
@@ -152,6 +158,10 @@ impl Cache {
         }
 
         Ok(Some(Self { path }))
+    }
+
+    pub fn location(&self) -> &str {
+        self.path.to_str().unwrap()
     }
 
     fn dir(&self, tpe: FileType, id: &Id) -> PathBuf {

@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
 use crate::backend::{
-    CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType, ReadBackend,
+    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType, ReadBackend,
 };
 use crate::repo::ConfigFile;
 
@@ -48,6 +48,11 @@ struct Opts {
     /// always used.
     #[clap(long)]
     no_cache: bool,
+
+    /// Use this thir as cache dir. If not given, rustic searches for restic cache dirs
+    /// and rustic cache dirs
+    #[clap(long, parse(from_os_str), conflicts_with = "no-cache")]
+    cache_dir: Option<PathBuf>,
 
     #[clap(subcommand)]
     command: Command,
@@ -121,8 +126,12 @@ pub async fn execute() -> Result<()> {
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
-            let be_cached = CachedBackend::new(be.clone(), config.id, !args.no_cache);
-            let cache = be_cached.cache().clone();
+            let cache = Cache::new(config.id, args.cache_dir, !args.no_cache)?;
+            match &cache {
+                None => v1!("using no cache"),
+                Some(cache) => v1!("using cache at {}", cache.location()),
+            }
+            let be_cached = CachedBackend::new(be.clone(), cache.clone());
             let dbe = DecryptBackend::new(&be_cached, key.clone());
             (cmd, key, dbe, cache, be, config)
         }

@@ -24,6 +24,10 @@ impl<BE: WriteBackend> CachedBackend<BE> {
             cache: Cache::new(id, create).unwrap(),
         }
     }
+
+    pub fn cache(&self) -> &Option<Cache> {
+        &self.cache
+    }
 }
 
 #[async_trait]
@@ -127,7 +131,7 @@ impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
 }
 
 #[derive(Clone)]
-struct Cache {
+pub struct Cache {
     path: PathBuf,
 }
 
@@ -160,7 +164,7 @@ impl Cache {
         self.path.join(tpe.name()).join(&hex_id[0..2]).join(&hex_id)
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<HashMap<Id, u32>> {
+    pub async fn list_with_size(&self, tpe: FileType) -> Result<HashMap<Id, u32>> {
         let path = self.path.join(tpe.name());
 
         let walker = WalkDir::new(path)
@@ -192,6 +196,7 @@ impl Cache {
     // TODO: this function is yet only called from list_with_size. This cleans up
     // index and snapshot files.
     // It should also be called when reading the index to clean up pack files.
+
     pub async fn remove_not_in_list(&self, tpe: FileType, list: &Vec<(Id, u32)>) -> Result<()> {
         let mut list_cache = self.list_with_size(tpe).await?;
         // remove present files from the cache list
@@ -210,7 +215,7 @@ impl Cache {
         Ok(())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    pub async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
         v3!("cache reading tpe: {:?}, id: {}", &tpe, &id);
         let data = fs::read(self.path(tpe, id))?;
         v3!("cache hit!");

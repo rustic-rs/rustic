@@ -114,16 +114,17 @@ pub async fn execute() -> Result<()> {
 
     let config_ids = be.list(FileType::Config).await?;
 
-    let (cmd, key, dbe, config) = match (args.command, config_ids.len()) {
+    let (cmd, key, dbe, cache, be, config) = match (args.command, config_ids.len()) {
         (Command::Init(opts), 0) => return init::execute(&be, opts).await,
         (Command::Init(_), _) => bail!("Config file already exists. Aborting."),
         (cmd, 1) => {
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
-            let be = CachedBackend::new(be, config.id, !args.no_cache);
-            let dbe = DecryptBackend::new(&be, key.clone());
-            (cmd, key, dbe, config)
+            let be_cached = CachedBackend::new(be.clone(), config.id, !args.no_cache);
+            let cache = be_cached.cache().clone();
+            let dbe = DecryptBackend::new(&be_cached, key.clone());
+            (cmd, key, dbe, cache, be, config)
         }
         (_, 0) => bail!("No config file found. Is there a repo?"),
         _ => bail!("More than one config file. Aborting."),
@@ -132,7 +133,7 @@ pub async fn execute() -> Result<()> {
     match cmd {
         Command::Backup(opts) => backup::execute(&dbe, opts, config, command).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
-        Command::Check(opts) => check::execute(&dbe, opts).await?,
+        Command::Check(opts) => check::execute(&dbe, &cache, &be, opts).await?,
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,
         Command::Forget(opts) => forget::execute(&dbe, opts, config).await?,
         Command::Init(_) => {} // already handled above

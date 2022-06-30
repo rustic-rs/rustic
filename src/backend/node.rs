@@ -29,7 +29,10 @@ pub enum NodeType {
     File,
     Dir,
     Symlink { linktarget: String },
-    Device { device: u64 },
+    Dev { device: u64 },
+    Chardev { device: u64 },
+    Fifo,
+    Socket,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]

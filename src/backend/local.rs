@@ -71,10 +71,22 @@ impl ReadBackend for LocalBackend {
         let walker = WalkDir::new(path)
             .into_iter()
             .filter_map(walkdir::Result::ok)
-            .filter(|e| e.file_type().is_file())
+            .filter(|e| {
+                // only use files with length of 64 which are valid hex
+                // TODO: maybe add an option which warns if other files exist?
+                e.file_type().is_file()
+                    && e.file_name().len() == 64
+                    && e.file_name().is_ascii()
+                    && e.file_name()
+                        .to_str()
+                        .unwrap()
+                        .chars()
+                        .into_iter()
+                        .all(|c| ('0'..='9').contains(&c) || ('a'..='f').contains(&c))
+            })
             .map(|e| {
                 (
-                    Id::from_hex(&e.file_name().to_string_lossy()).unwrap(),
+                    Id::from_hex(e.file_name().to_str().unwrap()).unwrap(),
                     e.metadata().unwrap().len().try_into().unwrap(),
                 )
             });

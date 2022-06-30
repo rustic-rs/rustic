@@ -6,6 +6,7 @@ use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
+#[cfg(not(windows))]
 use users::{Groups, Users, UsersCache};
 
 use super::{node::Metadata, Node, ReadSource};

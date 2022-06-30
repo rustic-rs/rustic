@@ -51,7 +51,7 @@ zstd = "0.11"
 walkdir = "2"
 ignore = "0.4"
 # rest backend
-reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }
+reqwest = {version = "0.11", default-features = false, features = ["json", "native-tls-vendored", "stream"] }
 # commands
 clap = { version = "3", features = ["derive"] }
 rpassword = "6"
@@ -61,5 +61,7 @@ indicatif = "0.17.0-rc.10"
 path-absolutize = "3"
 gethostname = "0.2"
 humantime = "2"
-users = "0.11"
 itertools = "0.10"
+
+[target.'cfg(not(windows))'.dependencies]
+users = "0.11"

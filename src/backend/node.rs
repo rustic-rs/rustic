@@ -28,9 +28,17 @@ pub struct Node {
 pub enum NodeType {
     File,
     Dir,
-    Symlink { linktarget: String },
-    Dev { device: u64 },
-    Chardev { device: u64 },
+    Symlink {
+        linktarget: String,
+    },
+    Dev {
+        #[serde(default)]
+        device: u64,
+    },
+    Chardev {
+        #[serde(default)]
+        device: u64,
+    },
     Fifo,
     Socket,
 }

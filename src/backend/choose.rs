@@ -1,7 +1,7 @@
 use std::fs::File;
 
+use anyhow::Result;
 use async_trait::async_trait;
-use thiserror::Error;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
 use super::{LocalBackend, RestBackend};
@@ -26,14 +26,8 @@ impl ChooseBackend {
     }
 }
 
-#[derive(Error, Debug)]
-#[error(transparent)]
-pub struct Error(#[from] anyhow::Error);
-
 #[async_trait]
 impl ReadBackend for ChooseBackend {
-    type Error = Error;
-
     fn location(&self) -> &str {
         match self {
             Local(local) => local.location(),
@@ -41,17 +35,17 @@ impl ReadBackend for ChooseBackend {
         }
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         match self {
-            Local(local) => local.list_with_size(tpe).await.map_err(|e| Error(e.into())),
-            Rest(rest) => rest.list_with_size(tpe).await.map_err(|e| Error(e.into())),
+            Local(local) => local.list_with_size(tpe).await,
+            Rest(rest) => rest.list_with_size(tpe).await,
         }
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
         match self {
-            Local(local) => local.read_full(tpe, id).await.map_err(|e| Error(e.into())),
-            Rest(rest) => rest.read_full(tpe, id).await.map_err(|e| Error(e.into())),
+            Local(local) => local.read_full(tpe, id).await,
+            Rest(rest) => rest.read_full(tpe, id).await,
         }
     }
 
@@ -59,61 +53,44 @@ impl ReadBackend for ChooseBackend {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>, Self::Error> {
+    ) -> Result<Vec<u8>> {
         match self {
-            Local(local) => local
-                .read_partial(tpe, id, offset, length)
-                .await
-                .map_err(|e| Error(e.into())),
-            Rest(rest) => rest
-                .read_partial(tpe, id, offset, length)
-                .await
-                .map_err(|e| Error(e.into())),
+            Local(local) => local.read_partial(tpe, id, cacheable, offset, length).await,
+            Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length).await,
         }
     }
 }
 
 #[async_trait]
 impl WriteBackend for ChooseBackend {
-    async fn create(&self) -> Result<(), Self::Error> {
+    async fn create(&self) -> Result<()> {
         match self {
-            Local(local) => local.create().await.map_err(|e| Error(e.into())),
-            Rest(rest) => rest.create().await.map_err(|e| Error(e.into())),
+            Local(local) => local.create().await,
+            Rest(rest) => rest.create().await,
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
+    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
         match self {
-            Local(local) => local
-                .write_file(tpe, id, f)
-                .await
-                .map_err(|e| Error(e.into())),
-            Rest(rest) => rest
-                .write_file(tpe, id, f)
-                .await
-                .map_err(|e| Error(e.into())),
+            Local(local) => local.write_file(tpe, id, cacheable, f).await,
+            Rest(rest) => rest.write_file(tpe, id, cacheable, f).await,
         }
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
         match self {
-            Local(local) => local
-                .write_bytes(tpe, id, buf)
-                .await
-                .map_err(|e| Error(e.into())),
-            Rest(rest) => rest
-                .write_bytes(tpe, id, buf)
-                .await
-                .map_err(|e| Error(e.into())),
+            Local(local) => local.write_bytes(tpe, id, buf).await,
+            Rest(rest) => rest.write_bytes(tpe, id, buf).await,
         }
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
         match self {
-            Local(local) => local.remove(tpe, id).await.map_err(|e| Error(e.into())),
-            Rest(rest) => rest.remove(tpe, id).await.map_err(|e| Error(e.into())),
+            Local(local) => local.remove(tpe, id).await,
+            Rest(rest) => rest.remove(tpe, id).await,
         }
     }
 }

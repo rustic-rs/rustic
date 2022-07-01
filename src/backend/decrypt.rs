@@ -20,6 +20,7 @@ pub trait DecryptReadBackend: ReadBackend {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>>;
@@ -169,32 +170,34 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
     ) -> Result<Vec<u8>> {
-        Ok(self
-            .key
-            .decrypt_data(&self.backend.read_partial(tpe, id, offset, length).await?)?)
+        Ok(self.key.decrypt_data(
+            &self
+                .backend
+                .read_partial(tpe, id, cacheable, offset, length)
+                .await?,
+        )?)
     }
 }
 
 #[async_trait]
 impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
-    type Error = R::Error;
-
     fn location(&self) -> &str {
         self.backend.location()
     }
 
-    async fn list(&self, tpe: FileType) -> Result<Vec<Id>, Self::Error> {
+    async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
         self.backend.list(tpe).await
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>, Self::Error> {
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         self.backend.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>, Self::Error> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
         self.backend.read_full(tpe, id).await
     }
 
@@ -202,32 +205,31 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         &self,
         tpe: FileType,
         id: &Id,
+        cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>, Self::Error> {
-        self.backend.read_partial(tpe, id, offset, length).await
+    ) -> Result<Vec<u8>> {
+        self.backend
+            .read_partial(tpe, id, cacheable, offset, length)
+            .await
     }
 }
 
 #[async_trait]
 impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
-    async fn create(&self) -> Result<(), Self::Error> {
-        self.backend.create().await?;
-        Ok(())
+    async fn create(&self) -> Result<()> {
+        self.backend.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, f: File) -> Result<(), Self::Error> {
-        self.backend.write_file(tpe, id, f).await?;
-        Ok(())
+    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
+        self.backend.write_file(tpe, id, cacheable, f).await
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<(), Self::Error> {
-        self.backend.write_bytes(tpe, id, buf).await?;
-        Ok(())
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
+        self.backend.write_bytes(tpe, id, buf).await
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<(), Self::Error> {
-        self.backend.remove(tpe, id).await?;
-        Ok(())
+    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+        self.backend.remove(tpe, id).await
     }
 }

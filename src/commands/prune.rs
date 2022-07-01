@@ -46,13 +46,12 @@ pub(super) struct Opts {
 pub(super) async fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     opts: Opts,
-    config_id: &Id,
+    config: ConfigFile,
     ignore_snaps: Vec<Id>,
 ) -> Result<()> {
     v1!("reading index...");
     let mut index_files = Vec::new();
 
-    let config: ConfigFile = be.get_file(config_id).await?;
     let zstd = match config.version {
         1 => None,
         2 => Some(0),
@@ -730,7 +729,13 @@ impl Pruner {
                                 continue;
                             }
                             let data = be
-                                .read_partial(FileType::Pack, &pack.id, blob.offset, blob.length)
+                                .read_partial(
+                                    FileType::Pack,
+                                    &pack.id,
+                                    blob.tpe.is_cacheable(),
+                                    blob.offset,
+                                    blob.length,
+                                )
                                 .await?;
                             match blob.tpe {
                                 BlobType::Data => &mut data_packer,

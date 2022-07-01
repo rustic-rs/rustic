@@ -2,11 +2,12 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use clap::Parser;
-use futures::TryStreamExt;
+use futures::{stream::FuturesUnordered, TryStreamExt};
+use tokio::spawn;
 use vlog::*;
 
-use super::progress_counter;
-use crate::backend::{DecryptReadBackend, FileType};
+use super::{progress_bytes, progress_counter};
+use crate::backend::{Cache, DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{NodeType, TreeStreamerOnce};
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
 use crate::repo::{IndexFile, IndexPack, SnapshotFile};
@@ -18,9 +19,32 @@ pub(super) struct Opts {
     read_data: bool,
 }
 
-pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
+pub(super) async fn execute(
+    be: &(impl DecryptReadBackend + Unpin),
+    cache: &Option<Cache>,
+    raw_be: &impl ReadBackend,
+    opts: Opts,
+) -> Result<()> {
+    if let Some(cache) = &cache {
+        v1!("checking snapshots and index in cache...");
+        for file_type in [FileType::Snapshot, FileType::Index] {
+            // list files in order to clean up the cache
+            //
+            // This lists files here and later when reading index / checking snapshots
+            // TODO: Only list the files once...
+            let _ = be.list_with_size(file_type).await?;
+
+            check_cache_files(cache, raw_be, file_type).await?;
+        }
+    }
+
     v1!("checking packs in index and from pack list...");
     let index_collector = check_packs(be).await?;
+
+    if let Some(cache) = &cache {
+        v1!("checking packs in cache...");
+        check_cache_files(cache, raw_be, FileType::Pack).await?;
+    }
 
     let be = IndexBackend::new_from_index(be, index_collector.into_index());
 
@@ -31,6 +55,49 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
         unimplemented!()
     }
 
+    Ok(())
+}
+
+async fn check_cache_files(
+    cache: &Cache,
+    be: &impl ReadBackend,
+    file_type: FileType,
+) -> Result<()> {
+    let files = cache.list_with_size(file_type).await?;
+
+    if files.is_empty() {
+        return Ok(());
+    }
+
+    let p = progress_bytes();
+    let total_size = files.iter().map(|(_, size)| *size as u64).sum();
+    p.set_length(total_size);
+
+    let stream: FuturesUnordered<_> = files
+        .into_iter()
+        .map(|(id, size)| {
+            let cache = cache.clone();
+            let be = be.clone();
+            let p = p.clone();
+            spawn(async move {
+                // Read file from cache and from backend and compare
+                // TODO: Use (Async)Readers and compare using them!
+                let data_cached = cache.read_full(file_type, &id).await.unwrap();
+                let data = be.read_full(file_type, &id).await.unwrap();
+                if data_cached != data {
+                    eprintln!(
+                        "Cached file Type: {:?}, Id: {} is not identical to backend!",
+                        file_type, id
+                    );
+                }
+                p.inc(size as u64);
+            })
+        })
+        .collect();
+
+    stream.try_collect().await?;
+
+    p.finish();
     Ok(())
 }
 

@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
-use crate::backend::{ChooseBackend, DecryptBackend, FileType, ReadBackend};
+use crate::backend::{
+    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType, ReadBackend,
+};
+use crate::repo::ConfigFile;
 
 mod backup;
 mod cat;
@@ -40,6 +43,16 @@ struct Opts {
 
     #[clap(long, short = 'q', parse(from_occurrences), conflicts_with = "verbose")]
     quiet: i8,
+
+    /// Don't create a cache dir for the repo. Note that existing cache dirs will be
+    /// always used.
+    #[clap(long)]
+    no_cache: bool,
+
+    /// Use this thir as cache dir. If not given, rustic searches for restic cache dirs
+    /// and rustic cache dirs
+    #[clap(long, parse(from_os_str), conflicts_with = "no-cache")]
+    cache_dir: Option<PathBuf>,
 
     #[clap(subcommand)]
     command: Command,
@@ -106,30 +119,38 @@ pub async fn execute() -> Result<()> {
 
     let config_ids = be.list(FileType::Config).await?;
 
-    let (cmd, key, dbe, config_id) = match (args.command, config_ids.len()) {
+    let (cmd, key, dbe, cache, be, config) = match (args.command, config_ids.len()) {
         (Command::Init(opts), 0) => return init::execute(&be, opts).await,
         (Command::Init(_), _) => bail!("Config file already exists. Aborting."),
         (cmd, 1) => {
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
-            (cmd, key, dbe, &config_ids[0])
+            let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
+            let cache = Cache::new(config.id, args.cache_dir, !args.no_cache)?;
+            match &cache {
+                None => v1!("using no cache"),
+                Some(cache) => v1!("using cache at {}", cache.location()),
+            }
+            let be_cached = CachedBackend::new(be.clone(), cache.clone());
+            let dbe = DecryptBackend::new(&be_cached, key.clone());
+            (cmd, key, dbe, cache, be, config)
         }
         (_, 0) => bail!("No config file found. Is there a repo?"),
         _ => bail!("More than one config file. Aborting."),
     };
 
     match cmd {
-        Command::Backup(opts) => backup::execute(&dbe, opts, config_id, command).await?,
+        Command::Backup(opts) => backup::execute(&dbe, opts, config, command).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
-        Command::Check(opts) => check::execute(&dbe, opts).await?,
+        Command::Check(opts) => check::execute(&dbe, &cache, &be, opts).await?,
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,
-        Command::Forget(opts) => forget::execute(&dbe, opts, config_id).await?,
+        Command::Forget(opts) => forget::execute(&dbe, opts, config).await?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(&dbe, key, opts).await?,
         Command::List(opts) => list::execute(&dbe, opts).await?,
         Command::Ls(opts) => ls::execute(&dbe, opts).await?,
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await?,
-        Command::Prune(opts) => prune::execute(&dbe, opts, config_id, vec![]).await?,
+        Command::Prune(opts) => prune::execute(&dbe, opts, config, vec![]).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await?,
         Command::Tag(opts) => tag::execute(&dbe, opts).await?,

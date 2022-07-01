@@ -198,6 +198,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c58ec36aac5066d5ca17df51b3e70279f5670a72102f5752cb7e7c856adfc70"
 
 [[package]]
+name = "cachedir"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e236bf5873ea57ec2877445297f4da008916bfae51567131acfc54a073d694f3"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -408,7 +417,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fd78930633bd1c6e35c4b42b1df7b0cbc6bc191146e512bb3bedf243fcc3901"
 dependencies = [
  "libc",
- "redox_users",
+ "redox_users 0.3.5",
+ "winapi",
+]
+
+[[package]]
+name = "dirs"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b1d1d91c932ef41c0f2663aa8b0ca0342d444d842c06914aa0a7e352d0bada6"
+dependencies = [
+ "libc",
+ "redox_users 0.4.3",
  "winapi",
 ]
 
@@ -1161,6 +1190,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "redox_users"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b033d837a7cf162d7993aded9304e30a83213c648b6e389db233191f891e5c2b"
+dependencies = [
+ "getrandom 0.2.7",
+ "redox_syscall 0.2.13",
+ "thiserror",
+]
+
+[[package]]
 name = "regex"
 version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1285,12 +1325,14 @@ dependencies = [
  "base64",
  "binrw",
  "bytesize",
+ "cachedir",
  "cdc",
  "chrono",
  "clap",
  "derivative",
  "derive-getters",
  "derive_more",
+ "dirs 4.0.0",
  "futures",
  "gethostname",
  "hex",
@@ -1543,7 +1585,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edd106a334b7657c10b7c540a0106114feadeb4dc314513e97df481d5d966f42"
 dependencies = [
  "byteorder",
- "dirs",
+ "dirs 1.0.5",
  "winapi",
 ]
 

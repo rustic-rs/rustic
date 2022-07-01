@@ -6,9 +6,8 @@ use prettytable::{cell, format, row, Table};
 
 use super::{progress_counter, prune};
 use crate::backend::{DecryptFullBackend, FileType};
-use crate::id::Id;
 use crate::repo::{
-    SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
+    ConfigFile, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
 };
 
 #[derive(Parser)]
@@ -46,7 +45,7 @@ pub(super) struct Opts {
 pub(super) async fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     mut opts: Opts,
-    config_id: &Id,
+    config: ConfigFile,
 ) -> Result<()> {
     opts.dry_run = opts.prune_opts.dry_run;
     let groups = match opts.ids.is_empty() {
@@ -123,7 +122,7 @@ pub(super) async fn execute(
     }
 
     if opts.prune {
-        prune::execute(be, opts.prune_opts, config_id, forget_snaps).await?;
+        prune::execute(be, opts.prune_opts, config, forget_snaps).await?;
     }
 
     Ok(())

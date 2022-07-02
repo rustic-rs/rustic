@@ -11,7 +11,7 @@ use futures::{
     Future, Stream,
 };
 use indicatif::ProgressBar;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tokio::{spawn, task::JoinHandle};
 
 use crate::id::Id;
@@ -21,7 +21,17 @@ use super::Node;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Tree {
+    #[serde(deserialize_with = "deserialize_null_default")]
     nodes: Vec<Node>,
+}
+
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    T: Default + Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    let opt = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
 }
 
 impl Tree {

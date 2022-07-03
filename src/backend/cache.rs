@@ -129,35 +129,17 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn new(id: Id, path: Option<PathBuf>, create: bool) -> Result<Option<Self>> {
-        let mut path = path.unwrap_or(cache_dir().ok_or_else(|| anyhow!("no cache dir"))?);
-
-        // first try if a restic cache dir exists and if yes, use it
-        let mut path_restic = path.clone();
-        path_restic.push("restic");
-        if path_restic.exists() && cachedir::is_tagged(&path_restic)? {
-            path_restic.push(id.to_hex());
-            if path_restic.exists() {
-                return Ok(Some(Self { path: path_restic }));
-            }
-        }
-
-        // else use rustic cache dir
-        path.push("rustic");
-
-        if create {
-            fs::create_dir_all(&path)?;
-            cachedir::ensure_tag(&path)?;
-        } else if !path.exists() || !cachedir::is_tagged(&path)? {
-            return Ok(None);
-        }
-
+    pub fn new(id: Id, path: Option<PathBuf>) -> Result<Self> {
+        let mut path = path.unwrap_or({
+            let mut dir = cache_dir().ok_or_else(|| anyhow!("no cache dir"))?;
+            dir.push("rustic");
+            dir
+        });
+        fs::create_dir_all(&path)?;
+        cachedir::ensure_tag(&path)?;
         path.push(id.to_hex());
-        if !create && !path.exists() {
-            return Ok(None);
-        }
-
-        Ok(Some(Self { path }))
+        fs::create_dir_all(&path)?;
+        Ok(Self { path })
     }
 
     pub fn location(&self) -> &str {

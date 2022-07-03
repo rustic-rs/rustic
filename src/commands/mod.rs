@@ -126,7 +126,9 @@ pub async fn execute() -> Result<()> {
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
-            let cache = Cache::new(config.id, args.cache_dir, !args.no_cache)?;
+            let cache = (!args.no_cache)
+                .then(|| Cache::new(config.id, args.cache_dir).ok())
+                .flatten();
             match &cache {
                 None => v1!("using no cache"),
                 Some(cache) => v1!("using cache at {}", cache.location()),

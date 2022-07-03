@@ -47,6 +47,7 @@ serde-aux = "3"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
 zstd = "0.11"
+jemallocator-global = "0.3"
 # local backend
 walkdir = "2"
 ignore = "0.4"

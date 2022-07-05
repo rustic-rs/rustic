@@ -1,5 +1,5 @@
 use std::fs::{read_link, File};
-use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
@@ -192,11 +192,21 @@ fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(P
         device_id,
         links,
     };
+    let filetype = m.file_type();
+
     let node = if m.is_dir() {
         Node::new_dir(name, meta)
     } else if m.is_symlink() {
         let target = read_link(entry.path())?;
         Node::new_symlink(name, target, meta)
+    } else if filetype.is_block_device() {
+        Node::new_dev(name, meta, m.rdev())
+    } else if filetype.is_char_device() {
+        Node::new_chardev(name, meta, m.rdev())
+    } else if filetype.is_fifo() {
+        Node::new_fifo(name, meta)
+    } else if filetype.is_socket() {
+        Node::new_socket(name, meta)
     } else {
         Node::new_file(name, meta)
     };

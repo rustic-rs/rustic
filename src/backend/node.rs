@@ -108,6 +108,46 @@ impl Node {
         }
     }
 
+    pub fn new_dev(name: OsString, meta: Metadata, device: u64) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Dev { device },
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_chardev(name: OsString, meta: Metadata, device: u64) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Chardev { device },
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_fifo(name: OsString, meta: Metadata) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Fifo,
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_socket(name: OsString, meta: Metadata) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Socket,
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
     pub fn is_dir(&self) -> bool {
         self.node_type == NodeType::Dir
     }

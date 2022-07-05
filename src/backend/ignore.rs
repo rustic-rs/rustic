@@ -271,3 +271,38 @@ fn map_mode_to_go(mode: u32) -> u32 {
 
     go_mode
 }
+
+/// map gloangs mode definition (https://pkg.go.dev/io/fs#ModeType) to t_mode from POSIX (inode(7))
+/// This is the inverse function to map_mode_to_go()
+pub fn map_mode_from_go(go_mode: u32) -> u32 {
+    let mut mode = go_mode & MODE_PERM;
+
+    if go_mode & GO_MODE_SOCKET > 0 {
+        mode |= S_IFSOCK
+    } else if go_mode & GO_MODE_SYMLINK > 0 {
+        mode |= S_IFLNK
+    } else if go_mode & GO_MODE_DEVICE > 0 && go_mode & GO_MODE_CHARDEV == 0 {
+        mode |= S_IFBLK;
+    } else if go_mode & GO_MODE_DIR > 0 {
+        mode |= S_IFDIR;
+    } else if go_mode & (GO_MODE_CHARDEV | GO_MODE_DEVICE) > 0 {
+        mode |= S_IFCHR;
+    } else if go_mode & GO_MODE_FIFO > 0 {
+        mode |= S_IFIFO;
+    } else if go_mode & GO_MODE_IRREG > 0 {
+    } else {
+        mode |= S_IFREG;
+    }
+
+    if go_mode & GO_MODE_SETUID > 0 {
+        mode |= S_ISUID;
+    }
+    if go_mode & GO_MODE_SETGID > 0 {
+        mode |= S_ISGID;
+    }
+    if go_mode & GO_MODE_STICKY > 0 {
+        mode |= S_ISVTX;
+    }
+
+    mode
+}

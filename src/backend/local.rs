@@ -10,7 +10,7 @@ use vlog::*;
 use walkdir::WalkDir;
 
 use super::node::{Metadata, Node, NodeType};
-use super::{FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
+use super::{map_mode_from_go, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -193,11 +193,8 @@ impl LocalBackend {
 
     // TODO: uid/gid and times
     pub fn set_metadata(&self, item: impl AsRef<Path>, meta: &Metadata) {
-        let mode = *meta.mode();
-        if mode == 0 {
-            return;
-        }
         let filename = self.path.join(item);
+        let mode = map_mode_from_go(*meta.mode());
         std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))
             .unwrap_or_else(|_| panic!("error chmod {:?}", filename));
     }

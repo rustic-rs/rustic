@@ -1,15 +1,16 @@
 use std::fs::{self, File};
 use std::io::{copy, Read, Seek, SeekFrom, Write};
-use std::os::unix::fs::FileExt;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use nix::sys::stat::{mknod, Mode, SFlag};
 use vlog::*;
 use walkdir::WalkDir;
 
-use super::{node::Metadata, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
+use super::node::{Metadata, Node, NodeType};
+use super::{FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -190,11 +191,6 @@ impl LocalBackend {
         fs::create_dir(&dirname).unwrap();
     }
 
-    pub fn create_symlink(&self, item: impl AsRef<Path>, dest: impl AsRef<Path>) {
-        let filename = self.path.join(item);
-        std::os::unix::fs::symlink(dest, filename).unwrap();
-    }
-
     // TODO: uid/gid and times
     pub fn set_metadata(&self, item: impl AsRef<Path>, meta: &Metadata) {
         let mode = *meta.mode();
@@ -210,6 +206,37 @@ impl LocalBackend {
         let filename = self.path.join(item);
         let f = fs::File::create(filename).unwrap();
         f.set_len(size).unwrap();
+    }
+
+    pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) {
+        let filename = self.path.join(item);
+
+        match node.node_type() {
+            NodeType::Symlink { linktarget } => {
+                symlink(linktarget, filename).unwrap();
+            }
+            NodeType::Dev { device } => {
+                #[cfg(not(target_os = "macos"))]
+                let device = *device;
+                #[cfg(target_os = "macos")]
+                let device = *device as i32;
+                mknod(&filename, SFlag::S_IFBLK, Mode::empty(), device).unwrap();
+            }
+            NodeType::Chardev { device } => {
+                #[cfg(not(target_os = "macos"))]
+                let device = *device;
+                #[cfg(target_os = "macos")]
+                let device = *device as i32;
+                mknod(&filename, SFlag::S_IFCHR, Mode::empty(), device).unwrap();
+            }
+            NodeType::Fifo => {
+                mknod(&filename, SFlag::S_IFIFO, Mode::empty(), 0).unwrap();
+            }
+            NodeType::Socket => {
+                mknod(&filename, SFlag::S_IFSOCK, Mode::empty(), 0).unwrap();
+            }
+            _ => {}
+        }
     }
 
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) {

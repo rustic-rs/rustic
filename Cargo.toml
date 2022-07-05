@@ -50,6 +50,7 @@ zstd = "0.11"
 # local backend
 walkdir = "2"
 ignore = "0.4"
+nix = "0.24"
 # rest backend
 reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }
 # cache

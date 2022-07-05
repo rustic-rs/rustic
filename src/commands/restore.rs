@@ -150,9 +150,7 @@ async fn restore_metadata(
     let mut node_streamer = NodeStreamer::new(index, tree).await?;
     while let Some((path, node)) = node_streamer.try_next().await? {
         if !opts.dry_run {
-            if let NodeType::Symlink { linktarget } = node.node_type() {
-                dest.create_symlink(&path, linktarget);
-            }
+            dest.create_special(&path, &node);
             dest.set_metadata(&path, node.meta());
         }
     }

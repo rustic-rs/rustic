@@ -53,10 +53,10 @@ pub struct Metadata {
     pub atime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ctime: Option<DateTime<Local>>,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub uid: u32,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub gid: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uid: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gid: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

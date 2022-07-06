@@ -193,11 +193,9 @@ impl LocalBackend {
         fs::create_dir(&dirname).unwrap();
     }
 
-    // TODO: times
     pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) {
         let filename = self.path.join(item);
 
-        // set uid/gid
         let user = meta
             .user
             .as_ref()
@@ -212,6 +210,15 @@ impl LocalBackend {
             .and_then(|name| Group::from_name(name).unwrap());
         // use gid from group if valid, else from saved gid (if saved)
         let gid = group.map(|g| g.gid).or_else(|| meta.gid.map(Gid::from_raw));
+
+        chown(&filename, uid, gid).unwrap();
+    }
+
+    pub fn set_uid_gid(&self, item: impl AsRef<Path>, meta: &Metadata) {
+        let filename = self.path.join(item);
+
+        let uid = meta.uid.map(Uid::from_raw);
+        let gid = meta.gid.map(Gid::from_raw);
 
         chown(&filename, uid, gid).unwrap();
     }

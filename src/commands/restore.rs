@@ -26,6 +26,10 @@ pub(super) struct Opts {
     #[clap(long)]
     delete: bool,
 
+    /// use numeric ids instead of user/groug when restoring uid/gui
+    #[clap(long)]
+    numeric_id: bool,
+
     /// snapshot to restore
     id: String,
 
@@ -151,7 +155,11 @@ async fn restore_metadata(
     while let Some((path, node)) = node_streamer.try_next().await? {
         if !opts.dry_run {
             dest.create_special(&path, &node);
-            dest.set_user_group(&path, node.meta());
+            if opts.numeric_id {
+                dest.set_uid_gid(&path, node.meta());
+            } else {
+                dest.set_user_group(&path, node.meta());
+            }
             dest.set_permission(&path, node.meta());
         }
     }

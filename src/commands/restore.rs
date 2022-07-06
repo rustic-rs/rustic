@@ -161,6 +161,7 @@ async fn restore_metadata(
                 dest.set_user_group(&path, node.meta());
             }
             dest.set_permission(&path, node.meta());
+            dest.set_times(&path, node.meta())
         }
     }
 

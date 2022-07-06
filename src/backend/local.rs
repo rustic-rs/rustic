@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use filetime::{set_file_atime, set_file_mtime, FileTime};
 use nix::sys::stat::{mknod, Mode, SFlag};
 use nix::unistd::chown;
 use nix::unistd::{Gid, Group, Uid, User};
@@ -191,6 +192,16 @@ impl LocalBackend {
     pub fn create_dir(&self, item: impl AsRef<Path>) {
         let dirname = self.path.join(item);
         fs::create_dir(&dirname).unwrap();
+    }
+
+    pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) {
+        let filename = self.path.join(item);
+        if let Some(mtime) = meta.mtime.map(|t| FileTime::from_system_time(t.into())) {
+            set_file_mtime(&filename, mtime).unwrap();
+        }
+        if let Some(atime) = meta.atime.map(|t| FileTime::from_system_time(t.into())) {
+            set_file_atime(&filename, atime).unwrap();
+        }
     }
 
     pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) {

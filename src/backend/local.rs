@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use async_trait::async_trait;
 use nix::sys::stat::{mknod, Mode, SFlag};
+use nix::unistd::chown;
+use nix::unistd::{Gid, Group, Uid, User};
 use vlog::*;
 use walkdir::WalkDir;
 
@@ -191,9 +193,32 @@ impl LocalBackend {
         fs::create_dir(&dirname).unwrap();
     }
 
-    // TODO: uid/gid and times
-    pub fn set_metadata(&self, item: impl AsRef<Path>, meta: &Metadata) {
+    // TODO: times
+    pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) {
         let filename = self.path.join(item);
+
+        // set uid/gid
+        let user = meta
+            .user
+            .as_ref()
+            .and_then(|name| User::from_name(name).unwrap());
+
+        // use uid from user if valid, else from saved uid (if saved)
+        let uid = user.map(|u| u.uid).or_else(|| meta.uid.map(Uid::from_raw));
+
+        let group = meta
+            .group
+            .as_ref()
+            .and_then(|name| Group::from_name(name).unwrap());
+        // use gid from group if valid, else from saved gid (if saved)
+        let gid = group.map(|g| g.gid).or_else(|| meta.gid.map(Gid::from_raw));
+
+        chown(&filename, uid, gid).unwrap();
+    }
+
+    pub fn set_permission(&self, item: impl AsRef<Path>, meta: &Metadata) {
+        let filename = self.path.join(item);
+
         let mode = map_mode_from_go(*meta.mode());
         std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))
             .unwrap_or_else(|_| panic!("error chmod {:?}", filename));

@@ -151,7 +151,8 @@ async fn restore_metadata(
     while let Some((path, node)) = node_streamer.try_next().await? {
         if !opts.dry_run {
             dest.create_special(&path, &node);
-            dest.set_metadata(&path, node.meta());
+            dest.set_user_group(&path, node.meta());
+            dest.set_permission(&path, node.meta());
         }
     }
 

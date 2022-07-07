@@ -76,7 +76,7 @@ impl<R: Read> Iterator for ChunkIter<R> {
         if size < min_size {
             self.finished = true;
             vec.truncate(size + open_buf_len);
-            return Some(Ok(vec));
+            return if vec.is_empty() { None } else { Some(Ok(vec)) };
         }
 
         self.rabin
@@ -228,4 +228,34 @@ fn qp(p: i32, g: &Polynom64) -> Polynom64 {
 
     // add x
     res.add(&2).modulo(g)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn chunk_empty() {
+        let empty: Vec<u8> = vec![];
+        let mut reader = Cursor::new(empty);
+
+        let poly = random_poly().unwrap();
+        let chunker = ChunkIter::new(&mut reader, 0, &poly);
+
+        let chunks: Vec<_> = chunker.into_iter().collect();
+        assert_eq!(0, chunks.len());
+    }
+
+    #[test]
+    fn chunk_empty_wrong_hint() {
+        let empty: Vec<u8> = vec![];
+        let mut reader = Cursor::new(empty);
+
+        let poly = random_poly().unwrap();
+        let chunker = ChunkIter::new(&mut reader, 100, &poly);
+
+        let chunks: Vec<_> = chunker.into_iter().collect();
+        assert_eq!(0, chunks.len());
+    }
 }

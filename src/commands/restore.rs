@@ -154,14 +154,20 @@ async fn restore_metadata(
     let mut node_streamer = NodeStreamer::new(index, tree).await?;
     while let Some((path, node)) = node_streamer.try_next().await? {
         if !opts.dry_run {
-            dest.create_special(&path, &node);
+            dest.create_special(&path, &node)
+                .unwrap_or_else(|_| eprintln!("restore {:?}: creating special file failed.", path));
             if opts.numeric_id {
-                dest.set_uid_gid(&path, node.meta());
+                dest.set_uid_gid(&path, node.meta())
+                    .unwrap_or_else(|_| eprintln!("restore {:?}: setting UID/GID failed.", path));
             } else {
-                dest.set_user_group(&path, node.meta());
+                dest.set_user_group(&path, node.meta()).unwrap_or_else(|_| {
+                    eprintln!("restore {:?}: setting User/Group failed.", path)
+                });
             }
-            dest.set_permission(&path, node.meta());
+            dest.set_permission(&path, node.meta())
+                .unwrap_or_else(|_| eprintln!("restore {:?}: chmod failed.", path));
             dest.set_times(&path, node.meta())
+                .unwrap_or_else(|_| eprintln!("restore {:?}: setting file times failed.", path));
         }
     }
 

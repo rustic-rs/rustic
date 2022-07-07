@@ -45,18 +45,18 @@ pub enum NodeType {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]
 pub struct Metadata {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub mode: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mtime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub atime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ctime: Option<DateTime<Local>>,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub uid: u32,
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub gid: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uid: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gid: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -102,6 +102,46 @@ impl Node {
             node_type: NodeType::Symlink {
                 linktarget: target.to_str().expect("no unicode").to_string(),
             },
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_dev(name: OsString, meta: Metadata, device: u64) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Dev { device },
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_chardev(name: OsString, meta: Metadata, device: u64) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Chardev { device },
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_fifo(name: OsString, meta: Metadata) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Fifo,
+            content: None,
+            subtree: None,
+            meta,
+        }
+    }
+
+    pub fn new_socket(name: OsString, meta: Metadata) -> Self {
+        Self {
+            name: name.to_str().expect("no unicode").to_string(),
+            node_type: NodeType::Socket,
             content: None,
             subtree: None,
             meta,

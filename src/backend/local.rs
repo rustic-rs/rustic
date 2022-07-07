@@ -1,15 +1,19 @@
 use std::fs::{self, File};
 use std::io::{copy, Read, Seek, SeekFrom, Write};
-use std::os::unix::fs::FileExt;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use filetime::{set_file_atime, set_file_mtime, FileTime};
+use nix::sys::stat::{mknod, Mode, SFlag};
+use nix::unistd::chown;
+use nix::unistd::{Gid, Group, Uid, User};
 use vlog::*;
 use walkdir::WalkDir;
 
-use super::{node::Metadata, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
+use super::node::{Metadata, Node, NodeType};
+use super::{map_mode_from_go, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -190,26 +194,95 @@ impl LocalBackend {
         fs::create_dir(&dirname).unwrap();
     }
 
-    pub fn create_symlink(&self, item: impl AsRef<Path>, dest: impl AsRef<Path>) {
+    pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path.join(item);
-        std::os::unix::fs::symlink(dest, filename).unwrap();
+        if let Some(mtime) = meta.mtime.map(|t| FileTime::from_system_time(t.into())) {
+            set_file_mtime(&filename, mtime)?;
+        }
+        if let Some(atime) = meta.atime.map(|t| FileTime::from_system_time(t.into())) {
+            set_file_atime(&filename, atime)?;
+        }
+        Ok(())
     }
 
-    // TODO: uid/gid and times
-    pub fn set_metadata(&self, item: impl AsRef<Path>, meta: &Metadata) {
-        let mode = *meta.mode();
-        if mode == 0 {
-            return;
-        }
+    pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path.join(item);
-        std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))
-            .unwrap_or_else(|_| panic!("error chmod {:?}", filename));
+
+        let user = meta
+            .user
+            .as_ref()
+            .and_then(|name| User::from_name(name).unwrap());
+
+        // use uid from user if valid, else from saved uid (if saved)
+        let uid = user.map(|u| u.uid).or_else(|| meta.uid.map(Uid::from_raw));
+
+        let group = meta
+            .group
+            .as_ref()
+            .and_then(|name| Group::from_name(name).unwrap());
+        // use gid from group if valid, else from saved gid (if saved)
+        let gid = group.map(|g| g.gid).or_else(|| meta.gid.map(Gid::from_raw));
+
+        chown(&filename, uid, gid)?;
+        Ok(())
+    }
+
+    pub fn set_uid_gid(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
+        let filename = self.path.join(item);
+
+        let uid = meta.uid.map(Uid::from_raw);
+        let gid = meta.gid.map(Gid::from_raw);
+
+        chown(&filename, uid, gid)?;
+        Ok(())
+    }
+
+    pub fn set_permission(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
+        let filename = self.path.join(item);
+
+        if let Some(mode) = meta.mode() {
+            let mode = map_mode_from_go(*mode);
+            std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))?;
+        }
+        Ok(())
     }
 
     pub fn create_file(&self, item: impl AsRef<Path>, size: u64) {
         let filename = self.path.join(item);
         let f = fs::File::create(filename).unwrap();
         f.set_len(size).unwrap();
+    }
+
+    pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> Result<()> {
+        let filename = self.path.join(item);
+
+        match node.node_type() {
+            NodeType::Symlink { linktarget } => {
+                symlink(linktarget, filename)?;
+            }
+            NodeType::Dev { device } => {
+                #[cfg(not(target_os = "macos"))]
+                let device = *device;
+                #[cfg(target_os = "macos")]
+                let device = *device as i32;
+                mknod(&filename, SFlag::S_IFBLK, Mode::empty(), device)?;
+            }
+            NodeType::Chardev { device } => {
+                #[cfg(not(target_os = "macos"))]
+                let device = *device;
+                #[cfg(target_os = "macos")]
+                let device = *device as i32;
+                mknod(&filename, SFlag::S_IFCHR, Mode::empty(), device)?;
+            }
+            NodeType::Fifo => {
+                mknod(&filename, SFlag::S_IFIFO, Mode::empty(), 0)?;
+            }
+            NodeType::Socket => {
+                mknod(&filename, SFlag::S_IFSOCK, Mode::empty(), 0)?;
+            }
+            _ => {}
+        }
+        Ok(())
     }
 
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) {

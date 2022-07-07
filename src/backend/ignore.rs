@@ -1,5 +1,5 @@
 use std::fs::{read_link, File};
-use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
@@ -183,20 +183,30 @@ fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(P
         mtime,
         atime,
         ctime,
-        mode,
-        uid,
-        gid,
+        mode: Some(mode),
+        uid: Some(uid),
+        gid: Some(gid),
         user,
         group,
         inode,
         device_id,
         links,
     };
+    let filetype = m.file_type();
+
     let node = if m.is_dir() {
         Node::new_dir(name, meta)
     } else if m.is_symlink() {
         let target = read_link(entry.path())?;
         Node::new_symlink(name, target, meta)
+    } else if filetype.is_block_device() {
+        Node::new_dev(name, meta, m.rdev())
+    } else if filetype.is_char_device() {
+        Node::new_chardev(name, meta, m.rdev())
+    } else if filetype.is_fifo() {
+        Node::new_fifo(name, meta)
+    } else if filetype.is_socket() {
+        Node::new_socket(name, meta)
     } else {
         Node::new_file(name, meta)
     };
@@ -207,15 +217,15 @@ const MODE_PERM: u32 = 0o777; // permission bits
 
 // consts from https://pkg.go.dev/io/fs#ModeType
 const GO_MODE_DIR: u32 = 0b10000000000000000000000000000000;
-const GO_MODE_SYMLINK: u32 = 0b00000100000000000000000000000000;
-const GO_MODE_DEVICE: u32 = 0b00000010000000000000000000000000;
-const GO_MODE_FIFO: u32 = 0b00000001000000000000000000000000;
-const GO_MODE_SOCKET: u32 = 0b00000000100000000000000000000000;
-const GO_MODE_SETUID: u32 = 0b00000000010000000000000000000000;
-const GO_MODE_SETGID: u32 = 0b00000000001000000000000000000000;
-const GO_MODE_CHARDEV: u32 = 0b00000000000100000000000000000000;
-const GO_MODE_STICKY: u32 = 0b00000000000010000000000000000000;
-const GO_MODE_IRREG: u32 = 0b00000000000001000000000000000000;
+const GO_MODE_SYMLINK: u32 = 0b00001000000000000000000000000000;
+const GO_MODE_DEVICE: u32 = 0b00000100000000000000000000000000;
+const GO_MODE_FIFO: u32 = 0b00000010000000000000000000000000;
+const GO_MODE_SOCKET: u32 = 0b00000001000000000000000000000000;
+const GO_MODE_SETUID: u32 = 0b00000000100000000000000000000000;
+const GO_MODE_SETGID: u32 = 0b00000000010000000000000000000000;
+const GO_MODE_CHARDEV: u32 = 0b00000000001000000000000000000000;
+const GO_MODE_STICKY: u32 = 0b00000000000100000000000000000000;
+const GO_MODE_IRREG: u32 = 0b00000000000010000000000000000000;
 
 // consts from man page inode(7)
 const S_IFFORMAT: u32 = 0o170000; // File mask
@@ -242,7 +252,7 @@ fn map_mode_to_go(mode: u32) -> u32 {
         S_IFLNK => go_mode |= GO_MODE_SYMLINK,
         S_IFBLK => go_mode |= GO_MODE_DEVICE,
         S_IFDIR => go_mode |= GO_MODE_DIR,
-        S_IFCHR => go_mode |= GO_MODE_CHARDEV,
+        S_IFCHR => go_mode |= GO_MODE_CHARDEV & GO_MODE_DEVICE, // no idea why go sets both for char devices...
         S_IFIFO => go_mode |= GO_MODE_FIFO,
         // note that POSIX specifies regular files, whereas golang specifies irregular files
         S_IFREG => {}
@@ -260,4 +270,39 @@ fn map_mode_to_go(mode: u32) -> u32 {
     }
 
     go_mode
+}
+
+/// map gloangs mode definition (https://pkg.go.dev/io/fs#ModeType) to t_mode from POSIX (inode(7))
+/// This is the inverse function to map_mode_to_go()
+pub fn map_mode_from_go(go_mode: u32) -> u32 {
+    let mut mode = go_mode & MODE_PERM;
+
+    if go_mode & GO_MODE_SOCKET > 0 {
+        mode |= S_IFSOCK
+    } else if go_mode & GO_MODE_SYMLINK > 0 {
+        mode |= S_IFLNK
+    } else if go_mode & GO_MODE_DEVICE > 0 && go_mode & GO_MODE_CHARDEV == 0 {
+        mode |= S_IFBLK;
+    } else if go_mode & GO_MODE_DIR > 0 {
+        mode |= S_IFDIR;
+    } else if go_mode & (GO_MODE_CHARDEV | GO_MODE_DEVICE) > 0 {
+        mode |= S_IFCHR;
+    } else if go_mode & GO_MODE_FIFO > 0 {
+        mode |= S_IFIFO;
+    } else if go_mode & GO_MODE_IRREG > 0 {
+    } else {
+        mode |= S_IFREG;
+    }
+
+    if go_mode & GO_MODE_SETUID > 0 {
+        mode |= S_ISUID;
+    }
+    if go_mode & GO_MODE_SETGID > 0 {
+        mode |= S_ISGID;
+    }
+    if go_mode & GO_MODE_STICKY > 0 {
+        mode |= S_ISVTX;
+    }
+
+    mode
 }

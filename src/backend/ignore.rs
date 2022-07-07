@@ -183,7 +183,7 @@ fn map_entry(entry: DirEntry, with_atime: bool, cache: &UsersCache) -> Result<(P
         mtime,
         atime,
         ctime,
-        mode,
+        mode: Some(mode),
         uid: Some(uid),
         gid: Some(gid),
         user,

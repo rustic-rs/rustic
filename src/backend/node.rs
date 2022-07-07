@@ -45,8 +45,8 @@ pub enum NodeType {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]
 pub struct Metadata {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub mode: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mtime: Option<DateTime<Local>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

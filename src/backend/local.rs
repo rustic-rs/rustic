@@ -240,8 +240,10 @@ impl LocalBackend {
     pub fn set_permission(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path.join(item);
 
-        let mode = map_mode_from_go(*meta.mode());
-        std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))?;
+        if let Some(mode) = meta.mode() {
+            let mode = map_mode_from_go(*mode);
+            std::fs::set_permissions(&filename, fs::Permissions::from_mode(mode))?;
+        }
         Ok(())
     }
 

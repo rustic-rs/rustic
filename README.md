@@ -1,4 +1,4 @@
-# rustic - a restic-compatible backup tool written in pure Rust
+# rustic - fast, encrypted, deduplicated backups powered by pure Rust
 
 [![crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]

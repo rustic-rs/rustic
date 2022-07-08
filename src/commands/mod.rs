@@ -30,28 +30,33 @@ use vlog::*;
 #[derive(Parser)]
 #[clap(about, version)]
 struct Opts {
-    /// repository
+    /// Repository to use
     #[clap(short, long)]
     repository: String,
 
-    /// file to read the password from
-    #[clap(short, long, parse(from_os_str))]
+    /// File to read the password from
+    #[clap(short, long, global = true, parse(from_os_str))]
     password_file: Option<PathBuf>,
-
-    #[clap(long, short = 'v', parse(from_occurrences))]
+    /// Increase verbosity (can be used multiple times)
+    #[clap(long, short = 'v', global = true, parse(from_occurrences))]
     verbose: i8,
 
-    #[clap(long, short = 'q', parse(from_occurrences), conflicts_with = "verbose")]
+    /// Don't be verbose at all
+    #[clap(
+        long,
+        short = 'q',
+        global = true,
+        parse(from_occurrences),
+        conflicts_with = "verbose"
+    )]
     quiet: i8,
 
-    /// Don't create a cache dir for the repo. Note that existing cache dirs will be
-    /// always used.
-    #[clap(long)]
+    /// Don't use a cache.
+    #[clap(long, global = true)]
     no_cache: bool,
 
-    /// Use this thir as cache dir. If not given, rustic searches for restic cache dirs
-    /// and rustic cache dirs
-    #[clap(long, parse(from_os_str), conflicts_with = "no-cache")]
+    /// Use this dir as cache dir. If not given, rustic searches for rustic cache dirs
+    #[clap(long, global = true, parse(from_os_str), conflicts_with = "no-cache")]
     cache_dir: Option<PathBuf>,
 
     #[clap(subcommand)]
@@ -60,46 +65,46 @@ struct Opts {
 
 #[derive(Subcommand)]
 enum Command {
-    /// backup to the repository
+    /// Backup to the repository
     Backup(backup::Opts),
 
-    /// cat repository files and blobs
+    /// Cat repository files and blobs
     Cat(cat::Opts),
 
-    /// check repository
+    /// Check repository
     Check(check::Opts),
 
-    /// compare two snapshots
+    /// Compare two snapshots
     Diff(diff::Opts),
 
-    /// remove snapshots from the repository
+    /// Remove snapshots from the repository
     Forget(forget::Opts),
 
-    /// initialize a new repository
+    /// Initialize a new repository
     Init(init::Opts),
 
-    /// manage keys
+    /// Manage keys
     Key(key::Opts),
 
-    /// list repository files
+    /// List repository files
     List(list::Opts),
 
-    /// ls snapshots
+    /// Ls snapshots
     Ls(ls::Opts),
 
-    /// show snapshots
+    /// Show snapshots
     Snapshots(snapshots::Opts),
 
-    /// remove unused data
+    /// Remove unused data
     Prune(prune::Opts),
 
-    /// restore snapshot
+    /// Restore snapshot
     Restore(restore::Opts),
 
-    /// show general information about repository
+    /// Show general information about repository
     Repoinfo(repoinfo::Opts),
 
-    /// change tags of snapshots
+    /// Change tags of snapshots
     Tag(tag::Opts),
 }
 

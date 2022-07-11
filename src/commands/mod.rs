@@ -4,7 +4,8 @@ use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
 use crate::backend::{
-    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType, ReadBackend,
+    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
+    HotColdBackend, ReadBackend,
 };
 use crate::repo::ConfigFile;
 
@@ -33,6 +34,10 @@ struct Opts {
     /// Repository to use
     #[clap(short, long)]
     repository: String,
+
+    /// Repository to use as hot storage
+    #[clap(long)]
+    repo_hot: Option<String>,
 
     /// File to read the password from
     #[clap(short, long, global = true, parse(from_os_str))]
@@ -121,6 +126,7 @@ pub async fn execute() -> Result<()> {
     set_verbosity_level(verbosity as usize);
 
     let be = ChooseBackend::from_url(&args.repository);
+    let be_hot = args.repo_hot.map(|repo| ChooseBackend::from_url(&repo));
 
     let config_ids = be.list(FileType::Config).await?;
 
@@ -128,6 +134,7 @@ pub async fn execute() -> Result<()> {
         (Command::Init(opts), 0) => return init::execute(&be, opts).await,
         (Command::Init(_), _) => bail!("Config file already exists. Aborting."),
         (cmd, 1) => {
+            let be = HotColdBackend::new(be, be_hot);
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;

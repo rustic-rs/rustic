@@ -113,10 +113,10 @@ impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
         }
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.remove(tpe, id).await,
+            false => self.be.remove(tpe, id, cacheable).await,
         }
     }
 }

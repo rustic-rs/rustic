@@ -87,10 +87,10 @@ impl WriteBackend for ChooseBackend {
         }
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
         match self {
-            Local(local) => local.remove(tpe, id).await,
-            Rest(rest) => rest.remove(tpe, id).await,
+            Local(local) => local.remove(tpe, id, cacheable).await,
+            Rest(rest) => rest.remove(tpe, id, cacheable).await,
         }
     }
 }

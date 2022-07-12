@@ -116,8 +116,13 @@ pub(super) async fn execute(
         ),
         (false, false) => {
             println!("removing snapshots...");
-            be.delete_list(FileType::Snapshot, forget_snaps.clone(), progress_counter())
-                .await?;
+            be.delete_list(
+                FileType::Snapshot,
+                true,
+                forget_snaps.clone(),
+                progress_counter(),
+            )
+            .await?;
         }
     }
 

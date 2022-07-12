@@ -117,11 +117,13 @@ impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
         self.be.write_bytes(tpe, id, buf).await
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
         if let Some(cache) = &self.cache {
-            let _ = cache.remove(tpe, id).await;
+            if cacheable || tpe.is_cacheable() {
+                let _ = cache.remove(tpe, id).await;
+            }
         }
-        self.be.remove(tpe, id).await
+        self.be.remove(tpe, id, cacheable).await
     }
 }
 

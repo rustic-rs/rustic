@@ -159,7 +159,7 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+    async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         fs::remove_file(filename)?;

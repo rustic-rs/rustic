@@ -152,7 +152,7 @@ impl WriteBackend for RestBackend {
         Ok(())
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+    async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         v3!("removing tpe: {:?}, id: {}", &tpe, &id);
         self.client.delete(self.url(tpe, id)).send().await?;
         Ok(())

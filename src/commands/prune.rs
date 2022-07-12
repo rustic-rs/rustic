@@ -710,7 +710,8 @@ impl Pruner {
         }
 
         let mut indexes_remove = Vec::new();
-        let mut packs_remove = Vec::new();
+        let mut tree_packs_remove = Vec::new();
+        let mut data_packs_remove = Vec::new();
 
         for index in self.index_files {
             for pack in index.packs.into_iter() {
@@ -765,7 +766,10 @@ impl Pruner {
                     }
                     PackToDo::Delete => {
                         // delete pack
-                        packs_remove.push(pack.id)
+                        match pack.blob_type {
+                            BlobType::Data => data_packs_remove.push(pack.id),
+                            BlobType::Tree => tree_packs_remove.push(pack.id),
+                        }
                     }
                 }
             }
@@ -775,15 +779,21 @@ impl Pruner {
         data_packer.finalize().await?;
         indexer.write().await.finalize().await?;
 
-        if !packs_remove.is_empty() {
-            v1!("removing old pack files...");
-            be.delete_list(FileType::Pack, packs_remove, progress_counter())
+        if !data_packs_remove.is_empty() {
+            v1!("removing old data pack files...");
+            be.delete_list(FileType::Pack, false, data_packs_remove, progress_counter())
+                .await?;
+        }
+
+        if !tree_packs_remove.is_empty() {
+            v1!("removing old tree pack files...");
+            be.delete_list(FileType::Pack, true, tree_packs_remove, progress_counter())
                 .await?;
         }
 
         if !indexes_remove.is_empty() {
             v1!("removing old index files...");
-            be.delete_list(FileType::Index, indexes_remove, progress_counter())
+            be.delete_list(FileType::Index, true, indexes_remove, progress_counter())
                 .await?;
         }
 

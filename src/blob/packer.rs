@@ -215,12 +215,8 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         self.index.set_id(id);
 
         // write file to backend
-        self.file.flush()?;
-        self.file.seek(SeekFrom::Start(0))?;
-
         let index = std::mem::take(&mut self.index);
         let file = std::mem::replace(&mut self.file, tempfile()?);
-
         self.file_writer.add(index, file, id).await?;
 
         Ok(())
@@ -239,21 +235,21 @@ struct FileWriter<BE: DecryptWriteBackend> {
 }
 
 impl<BE: DecryptWriteBackend> FileWriter<BE> {
-    async fn add(&mut self, mut index: IndexPack, file: File, id: Id) -> Result<()> {
-        if let Some(fut) = self.future.take() {
-            fut.await??;
-        }
-
+    async fn add(&mut self, mut index: IndexPack, mut file: File, id: Id) -> Result<()> {
         let be = self.be.clone();
         let indexer = self.indexer.clone();
         let cacheable = self.cacheable;
-        self.future = Some(spawn(async move {
+        let new_future = spawn(async move {
+            file.seek(SeekFrom::Start(0))?;
             be.write_file(FileType::Pack, &id, cacheable, file).await?;
             index.time = Some(Local::now());
             indexer.write().await.add(index).await?;
             Ok(())
-        }));
+        });
 
+        if let Some(fut) = self.future.replace(new_future) {
+            fut.await??;
+        }
         Ok(())
     }
 

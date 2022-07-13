@@ -56,8 +56,8 @@ impl FileType {
 
     pub fn is_cacheable(&self) -> bool {
         match self {
-            FileType::Config | FileType::Key => false,
-            FileType::Snapshot | FileType::Index | FileType::Pack => true,
+            FileType::Config | FileType::Key | FileType::Pack => false,
+            FileType::Snapshot | FileType::Index => true,
         }
     }
 }

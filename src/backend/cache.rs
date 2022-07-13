@@ -67,7 +67,9 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
     ) -> Result<Vec<u8>> {
         match (&self.cache, cacheable || tpe.is_cacheable()) {
             (None, _) | (Some(_), false) => {
-                self.be.read_partial(tpe, id, false, offset, length).await
+                self.be
+                    .read_partial(tpe, id, cacheable, offset, length)
+                    .await
             }
             (Some(cache), true) => match cache.read_partial(tpe, id, offset, length).await {
                 Ok(res) => Ok(res),

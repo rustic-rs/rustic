@@ -14,6 +14,10 @@ use crate::repo::{IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
+    /// don't verify the data saved in the cache
+    #[clap(long, conflicts_with = "no-cache")]
+    trust_cache: bool,
+
     /// read all data blobs
     #[clap(long)]
     read_data: bool,
@@ -25,25 +29,29 @@ pub(super) async fn execute(
     raw_be: &impl ReadBackend,
     opts: Opts,
 ) -> Result<()> {
-    if let Some(cache) = &cache {
-        v1!("checking snapshots and index in cache...");
-        for file_type in [FileType::Snapshot, FileType::Index] {
-            // list files in order to clean up the cache
-            //
-            // This lists files here and later when reading index / checking snapshots
-            // TODO: Only list the files once...
-            let _ = be.list_with_size(file_type).await?;
+    if !opts.trust_cache {
+        if let Some(cache) = &cache {
+            v1!("checking snapshots and index in cache...");
+            for file_type in [FileType::Snapshot, FileType::Index] {
+                // list files in order to clean up the cache
+                //
+                // This lists files here and later when reading index / checking snapshots
+                // TODO: Only list the files once...
+                let _ = be.list_with_size(file_type).await?;
 
-            check_cache_files(cache, raw_be, file_type).await?;
+                check_cache_files(cache, raw_be, file_type).await?;
+            }
         }
     }
 
     v1!("checking packs in index and from pack list...");
     let index_collector = check_packs(be).await?;
 
-    if let Some(cache) = &cache {
-        v1!("checking packs in cache...");
-        check_cache_files(cache, raw_be, FileType::Pack).await?;
+    if !opts.trust_cache {
+        if let Some(cache) = &cache {
+            v1!("checking packs in cache...");
+            check_cache_files(cache, raw_be, FileType::Pack).await?;
+        }
     }
 
     let be = IndexBackend::new_from_index(be, index_collector.into_index());

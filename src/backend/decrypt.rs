@@ -2,7 +2,7 @@ use std::fs::File;
 
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use futures::{stream::FuturesUnordered, TryStreamExt};
+use futures::{stream, stream::FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use tokio::{spawn, task::JoinHandle};
 use zstd::stream::{copy_encode, decode_all};
@@ -74,36 +74,33 @@ pub trait DecryptWriteBackend: WriteBackend {
 
     async fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
         p.set_length(list.len() as u64);
-        list.into_iter()
-            .map(|file| {
-                let be = self.clone();
-                let p = p.clone();
-                spawn(async move {
-                    be.save_file(&file).await.unwrap();
-                    p.inc(1);
-                })
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_collect()
-            .await?;
+        stream::iter(list.into_iter().map(|file| {
+            let be = self.clone();
+            let p = p.clone();
+            (file, be, p)
+        }))
+        .for_each_concurrent(5, |(file, be, p)| async move {
+            be.save_file(&file).await.unwrap();
+            p.inc(1);
+        })
+        .await;
         p.finish();
         Ok(())
     }
 
     async fn delete_list(&self, tpe: FileType, list: Vec<Id>, p: ProgressBar) -> Result<()> {
         p.set_length(list.len() as u64);
-        list.into_iter()
-            .map(|id| {
-                let be = self.clone();
-                let p = p.clone();
-                spawn(async move {
-                    be.remove(tpe, &id).await.unwrap();
-                    p.inc(1);
-                })
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_collect()
-            .await?;
+        stream::iter(list.into_iter().map(|id| {
+            let be = self.clone();
+            let p = p.clone();
+            (id, be, p)
+        }))
+        .for_each_concurrent(20, |(id, be, p)| async move {
+            be.remove(tpe, &id).await.unwrap();
+            p.inc(1);
+        })
+        .await;
+
         p.finish();
         Ok(())
     }

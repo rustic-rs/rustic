@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use clap::Parser;
-use futures::{stream::FuturesUnordered, TryStreamExt};
-use tokio::spawn;
+use futures::{stream, StreamExt, TryStreamExt};
 use vlog::*;
 
 use super::{progress_bytes, progress_counter};
@@ -81,29 +80,26 @@ async fn check_cache_files(
     let total_size = files.iter().map(|(_, size)| *size as u64).sum();
     p.set_length(total_size);
 
-    let stream: FuturesUnordered<_> = files
-        .into_iter()
-        .map(|(id, size)| {
-            let cache = cache.clone();
-            let be = be.clone();
-            let p = p.clone();
-            spawn(async move {
-                // Read file from cache and from backend and compare
-                // TODO: Use (Async)Readers and compare using them!
-                let data_cached = cache.read_full(file_type, &id).await.unwrap();
-                let data = be.read_full(file_type, &id).await.unwrap();
-                if data_cached != data {
-                    eprintln!(
-                        "Cached file Type: {:?}, Id: {} is not identical to backend!",
-                        file_type, id
-                    );
-                }
-                p.inc(size as u64);
-            })
-        })
-        .collect();
-
-    stream.try_collect().await?;
+    stream::iter(files.into_iter().map(|file| {
+        let cache = cache.clone();
+        let be = be.clone();
+        let p = p.clone();
+        (file, cache, be, p)
+    }))
+    .for_each_concurrent(5, |((id, size), cache, be, p)| async move {
+        // Read file from cache and from backend and compare
+        // TODO: Use (Async)Readers and compare using them!
+        let data_cached = cache.read_full(file_type, &id).await.unwrap();
+        let data = be.read_full(file_type, &id).await.unwrap();
+        if data_cached != data {
+            eprintln!(
+                "Cached file Type: {:?}, Id: {} is not identical to backend!",
+                file_type, id
+            );
+        }
+        p.inc(size as u64);
+    })
+    .await;
 
     p.finish();
     Ok(())

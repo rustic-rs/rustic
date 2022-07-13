@@ -101,8 +101,9 @@ async fn restore_contents(
     v1!("processing blobs...");
     let p = progress_counter();
     p.set_length(restore_info.iter().map(|(_, blob)| blob.len() as u64).sum());
-    let stream = FuturesUnordered::new();
+    let mut stream = FuturesUnordered::new();
 
+    const MAX_READER: usize = 20;
     for (pack, blob) in restore_info {
         for (bl, fls) in blob {
             let p = p.clone();
@@ -113,6 +114,10 @@ async fn restore_contents(
                 .iter()
                 .map(|fl| (filenames[fl.file_idx].clone(), fl.file_start))
                 .collect();
+
+            while stream.len() > MAX_READER {
+                stream.try_next().await?;
+            }
 
             // TODO: error handling!
             stream.push(spawn(async move {

@@ -9,6 +9,8 @@ pub struct ConfigFile {
     pub version: u32,
     pub id: Id,
     pub chunker_polynomial: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_hot: Option<bool>,
 }
 
 impl RepoFile for ConfigFile {
@@ -21,6 +23,7 @@ impl ConfigFile {
             version,
             id,
             chunker_polynomial: format!("{:x}", poly),
+            is_hot: None,
         }
     }
 

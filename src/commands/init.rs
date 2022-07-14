@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 use rpassword::{prompt_password, read_password_from_bufread};
 
@@ -18,10 +18,17 @@ pub(super) struct Opts {
     key_opts: AddOpts,
 }
 
-pub(super) async fn execute(be: &impl WriteBackend, opts: Opts) -> Result<()> {
-    let key = Key::new();
+pub(super) async fn execute(
+    be: &impl WriteBackend,
+    hot_be: &Option<impl WriteBackend>,
+    opts: Opts,
+    config_ids: Vec<Id>,
+) -> Result<()> {
+    if !config_ids.is_empty() {
+        bail!("Config file already exists. Aborting.");
+    }
 
-    be.create().await?;
+    let key = Key::new();
 
     let key_opts = opts.key_opts;
     let pass = match key_opts.new_password_file {
@@ -40,14 +47,27 @@ pub(super) async fn execute(be: &impl WriteBackend, opts: Opts) -> Result<()> {
     )?;
     let data = serde_json::to_vec(&keyfile)?;
     let id = hash(&data);
-    be.write_bytes(FileType::Key, &id, data).await?;
+    be.create().await?;
+    be.write_bytes(FileType::Key, &id, data.clone()).await?;
+
+    if let Some(hot_be) = hot_be {
+        hot_be.create().await?;
+        hot_be.write_bytes(FileType::Key, &id, data).await?;
+    }
     println!("key {} successfully added.", id);
 
-    let dbe = DecryptBackend::new(be, key);
     let repo_id = Id::random();
     let chunker_poly = chunker::random_poly()?;
-    let config = ConfigFile::new(2, repo_id, chunker_poly);
+    let mut config = ConfigFile::new(2, repo_id, chunker_poly);
+
+    let dbe = DecryptBackend::new(be, key.clone());
     dbe.save_file(&config).await?;
+
+    if let Some(hot_be) = hot_be {
+        let dbe = DecryptBackend::new(hot_be, key);
+        config.is_hot = Some(true);
+        dbe.save_file(&config).await?;
+    }
     println!("repository {} successfully created.", repo_id);
 
     Ok(())

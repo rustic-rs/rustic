@@ -131,13 +131,17 @@ pub async fn execute() -> Result<()> {
     let config_ids = be.list(FileType::Config).await?;
 
     let (cmd, key, dbe, cache, be, be_hot, config) = match (args.command, config_ids.len()) {
-        (Command::Init(opts), 0) => return init::execute(&be, opts).await,
-        (Command::Init(_), _) => bail!("Config file already exists. Aborting."),
+        (Command::Init(opts), _) => return init::execute(&be, &be_hot, opts, config_ids).await,
         (cmd, 1) => {
             let be = HotColdBackend::new(be, be_hot.clone());
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
+            match (config.is_hot == Some(true), be_hot.is_some()) {
+                (true, false) => bail!("repository is a hot repository!\nPlease use as --repo-hot in combination with the normal repo. Aborting."),
+                (false, true) => bail!("repo-hot is not a hot repository! Aborting."),
+                _ => {}
+            }
             let cache = (!args.no_cache)
                 .then(|| Cache::new(config.id, args.cache_dir).ok())
                 .flatten();

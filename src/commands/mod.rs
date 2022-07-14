@@ -4,7 +4,8 @@ use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
 use crate::backend::{
-    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType, ReadBackend,
+    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
+    HotColdBackend, ReadBackend,
 };
 use crate::repo::ConfigFile;
 
@@ -33,6 +34,10 @@ struct Opts {
     /// Repository to use
     #[clap(short, long)]
     repository: String,
+
+    /// Repository to use as hot storage
+    #[clap(long)]
+    repo_hot: Option<String>,
 
     /// File to read the password from
     #[clap(short, long, global = true, parse(from_os_str))]
@@ -121,16 +126,31 @@ pub async fn execute() -> Result<()> {
     set_verbosity_level(verbosity as usize);
 
     let be = ChooseBackend::from_url(&args.repository);
+    let be_hot = args.repo_hot.map(|repo| ChooseBackend::from_url(&repo));
 
     let config_ids = be.list(FileType::Config).await?;
 
-    let (cmd, key, dbe, cache, be, config) = match (args.command, config_ids.len()) {
-        (Command::Init(opts), 0) => return init::execute(&be, opts).await,
-        (Command::Init(_), _) => bail!("Config file already exists. Aborting."),
+    let (cmd, key, dbe, cache, be, be_hot, config) = match (args.command, config_ids.len()) {
+        (Command::Init(opts), _) => return init::execute(&be, &be_hot, opts, config_ids).await,
         (cmd, 1) => {
+            let be = HotColdBackend::new(be, be_hot.clone());
+            if let Some(be_hot) = &be_hot {
+                let mut keys = be.list_with_size(FileType::Key).await?;
+                keys.sort_unstable_by_key(|key| key.0);
+                let mut hot_keys = be_hot.list_with_size(FileType::Key).await?;
+                hot_keys.sort_unstable_by_key(|key| key.0);
+                if keys != hot_keys {
+                    bail!("keys from repo and repo-hot do not match. Aborting.");
+                }
+            }
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
+            match (config.is_hot == Some(true), be_hot.is_some()) {
+                (true, false) => bail!("repository is a hot repository!\nPlease use as --repo-hot in combination with the normal repo. Aborting."),
+                (false, true) => bail!("repo-hot is not a hot repository! Aborting."),
+                _ => {}
+            }
             let cache = (!args.no_cache)
                 .then(|| Cache::new(config.id, args.cache_dir).ok())
                 .flatten();
@@ -140,7 +160,7 @@ pub async fn execute() -> Result<()> {
             }
             let be_cached = CachedBackend::new(be.clone(), cache.clone());
             let dbe = DecryptBackend::new(&be_cached, key.clone());
-            (cmd, key, dbe, cache, be, config)
+            (cmd, key, dbe, cache, be, be_hot, config)
         }
         (_, 0) => bail!("No config file found. Is there a repo?"),
         _ => bail!("More than one config file. Aborting."),
@@ -149,7 +169,7 @@ pub async fn execute() -> Result<()> {
     match cmd {
         Command::Backup(opts) => backup::execute(&dbe, opts, config, command).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
-        Command::Check(opts) => check::execute(&dbe, &cache, &be, opts).await?,
+        Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,
         Command::Forget(opts) => forget::execute(&dbe, opts, config).await?,
         Command::Init(_) => {} // already handled above
@@ -159,7 +179,7 @@ pub async fn execute() -> Result<()> {
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await?,
         Command::Prune(opts) => prune::execute(&dbe, opts, config, vec![]).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,
-        Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await?,
+        Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts).await?,
         Command::Tag(opts) => tag::execute(&dbe, opts).await?,
     };
 

@@ -88,7 +88,13 @@ pub trait DecryptWriteBackend: WriteBackend {
         Ok(())
     }
 
-    async fn delete_list(&self, tpe: FileType, list: Vec<Id>, p: ProgressBar) -> Result<()> {
+    async fn delete_list(
+        &self,
+        tpe: FileType,
+        cacheable: bool,
+        list: Vec<Id>,
+        p: ProgressBar,
+    ) -> Result<()> {
         p.set_length(list.len() as u64);
         stream::iter(list.into_iter().map(|id| {
             let be = self.clone();
@@ -96,7 +102,7 @@ pub trait DecryptWriteBackend: WriteBackend {
             (id, be, p)
         }))
         .for_each_concurrent(20, |(id, be, p)| async move {
-            be.remove(tpe, &id).await.unwrap();
+            be.remove(tpe, &id, cacheable).await.unwrap();
             p.inc(1);
         })
         .await;
@@ -226,7 +232,7 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         self.backend.write_bytes(tpe, id, buf).await
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
-        self.backend.remove(tpe, id).await
+    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
+        self.backend.remove(tpe, id, cacheable).await
     }
 }

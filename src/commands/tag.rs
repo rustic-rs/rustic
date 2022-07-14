@@ -79,7 +79,7 @@ pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<
             be.save_list(snapshots, progress_counter()).await?;
 
             println!("deleting old snapshots...");
-            be.delete_list(FileType::Snapshot, old_snap_ids, progress_counter())
+            be.delete_list(FileType::Snapshot, true, old_snap_ids, progress_counter())
                 .await?;
         }
     }

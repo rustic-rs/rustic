@@ -12,6 +12,7 @@ pub mod cache;
 pub mod choose;
 pub mod decrypt;
 pub mod dry_run;
+pub mod hotcold;
 pub mod ignore;
 pub mod local;
 pub mod node;
@@ -22,6 +23,7 @@ pub use cache::*;
 pub use choose::*;
 pub use decrypt::*;
 pub use dry_run::*;
+pub use hotcold::*;
 pub use local::*;
 use node::Node;
 pub use rest::*;
@@ -145,7 +147,7 @@ pub trait WriteBackend: ReadBackend {
     async fn create(&self) -> Result<()>;
     async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()>;
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()>;
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()>;
+    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
 }
 
 pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {

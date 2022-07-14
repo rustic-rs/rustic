@@ -7,7 +7,8 @@ use vlog::*;
 
 use super::{progress_bytes, progress_counter};
 use crate::backend::{Cache, DecryptReadBackend, FileType, ReadBackend};
-use crate::blob::{NodeType, TreeStreamerOnce};
+use crate::blob::{BlobType, NodeType, TreeStreamerOnce};
+use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
 use crate::repo::{IndexFile, IndexPack, SnapshotFile};
 
@@ -25,6 +26,7 @@ pub(super) struct Opts {
 pub(super) async fn execute(
     be: &(impl DecryptReadBackend + Unpin),
     cache: &Option<Cache>,
+    hot_be: &Option<impl ReadBackend>,
     raw_be: &impl ReadBackend,
     opts: Opts,
 ) -> Result<()> {
@@ -43,8 +45,15 @@ pub(super) async fn execute(
         }
     }
 
+    if let Some(hot_be) = hot_be {
+        v1!("checking snapshots and index in hot repo...");
+        for file_type in [FileType::Snapshot, FileType::Index] {
+            check_hot_files(raw_be, hot_be, file_type).await?;
+        }
+    }
+
     v1!("checking packs in index and from pack list...");
-    let index_collector = check_packs(be).await?;
+    let index_collector = check_packs(be, hot_be).await?;
 
     if !opts.trust_cache {
         if let Some(cache) = &cache {
@@ -60,6 +69,39 @@ pub(super) async fn execute(
 
     if opts.read_data {
         unimplemented!()
+    }
+
+    Ok(())
+}
+
+async fn check_hot_files(
+    be: &impl ReadBackend,
+    be_hot: &impl ReadBackend,
+    file_type: FileType,
+) -> Result<()> {
+    let mut files = be
+        .list_with_size(file_type)
+        .await?
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+
+    let files_hot = be_hot.list_with_size(file_type).await?;
+
+    for (id, size_hot) in files_hot {
+        match files.remove(&id) {
+            None => eprintln!("hot file {} does not exist in repo", id.to_hex()),
+            Some(size) if size != size_hot => eprintln!(
+                "file {}: hot size: {}, actual size: {}",
+                id.to_hex(),
+                size_hot,
+                size
+            ),
+            _ => {} //everything ok
+        }
+    }
+
+    for (id, _) in files {
+        eprintln!("hot file {} is missing!", id.to_hex());
     }
 
     Ok(())
@@ -106,14 +148,21 @@ async fn check_cache_files(
 }
 
 // check if packs correspond to index
-async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
+async fn check_packs(
+    be: &impl DecryptReadBackend,
+    hot_be: &Option<impl ReadBackend>,
+) -> Result<IndexCollector> {
     let mut packs = HashMap::new();
+    let mut tree_packs = HashMap::new();
     let mut index_collector = IndexCollector::new(IndexType::FullTrees);
 
     let mut process_pack = |p: IndexPack| {
-        packs.insert(p.id, p.pack_size());
-
         let blob_type = p.blob_type();
+        let pack_size = p.pack_size();
+        packs.insert(p.id, pack_size);
+        if hot_be.is_some() && blob_type == BlobType::Tree {
+            tree_packs.insert(p.id, pack_size);
+        }
 
         // check offsests in index
         let mut expected_offset: u32 = 0;
@@ -152,7 +201,18 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
     }
     p.finish();
 
+    if let Some(hot_be) = hot_be {
+        v1!("- listing packs in hot repo...");
+        check_packs_list(hot_be, tree_packs).await?;
+    }
+
     v1!("- listing packs...");
+    check_packs_list(be, packs).await?;
+
+    Ok(index_collector)
+}
+
+async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
     for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
             None => eprintln!("pack {} not referenced in index", id.to_hex()),
@@ -172,8 +232,7 @@ async fn check_packs(be: &impl DecryptReadBackend) -> Result<IndexCollector> {
             id.to_hex()
         );
     }
-
-    Ok(index_collector)
+    Ok(())
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index

@@ -134,6 +134,15 @@ pub async fn execute() -> Result<()> {
         (Command::Init(opts), _) => return init::execute(&be, &be_hot, opts, config_ids).await,
         (cmd, 1) => {
             let be = HotColdBackend::new(be, be_hot.clone());
+            if let Some(be_hot) = &be_hot {
+                let mut keys = be.list_with_size(FileType::Key).await?;
+                keys.sort_unstable_by_key(|key| key.0);
+                let mut hot_keys = be_hot.list_with_size(FileType::Key).await?;
+                hot_keys.sort_unstable_by_key(|key| key.0);
+                if keys != hot_keys {
+                    bail!("keys from repo and repo-hot do not match. Aborting.");
+                }
+            }
             let key = get_key(&be, args.password_file).await?;
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;

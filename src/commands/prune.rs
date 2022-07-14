@@ -34,6 +34,11 @@ pub(super) struct Opts {
     #[clap(long, value_name = "DURATION", default_value = "23h")]
     keep_delete: humantime::Duration,
 
+    /// delete files immediately instead of marking them. This also removes all already marked files.
+    /// WARNING: Only use if you are sure the repository is not accessed by parallel processes!
+    #[clap(long)]
+    instant_delete: bool,
+
     /// minimum duration (e.g. 90d) to keep packs before repacking or removing
     #[clap(long, value_name = "DURATION", default_value = "0d")]
     keep_pack: humantime::Duration,
@@ -97,11 +102,11 @@ pub(super) async fn execute(
     )?;
     pruner.decide_repack(&opts.max_repack, &opts.max_unused);
     pruner.check_existing_packs()?;
-    pruner.filter_index_files();
+    pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
 
     if !opts.dry_run {
-        pruner.do_prune(&be).await?;
+        pruner.do_prune(&be, opts.instant_delete).await?;
     }
     Ok(())
 }
@@ -555,7 +560,7 @@ impl Pruner {
         Ok(())
     }
 
-    fn filter_index_files(&mut self) {
+    fn filter_index_files(&mut self, instant_delete: bool) {
         const MIN_INDEX_LEN: usize = 10_000;
 
         let mut any_must_modify = false;
@@ -565,10 +570,9 @@ impl Pruner {
             // index must be processed if it has been modified
             // or if any pack is not kept
             let must_modify = index.modified
-                || index
-                    .packs
-                    .iter()
-                    .any(|p| p.to_do != PackToDo::Keep && p.to_do != PackToDo::KeepMarked);
+                || index.packs.iter().any(|p| {
+                    p.to_do != PackToDo::Keep && (instant_delete || p.to_do != PackToDo::KeepMarked)
+                });
 
             any_must_modify |= must_modify;
 
@@ -682,7 +686,7 @@ impl Pruner {
         );
     }
 
-    async fn do_prune(mut self, be: &impl DecryptWriteBackend) -> Result<()> {
+    async fn do_prune(mut self, be: &impl DecryptWriteBackend, instant_delete: bool) -> Result<()> {
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
         // packer without zstd configuration; packed blobs are simply copied
         let mut tree_packer = Packer::new(be.clone(), BlobType::Tree, indexer.clone(), None)?;
@@ -690,15 +694,23 @@ impl Pruner {
 
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
-            v1!("marking not needed unindexed pack files for deletion...");
-            for (id, size) in self.existing_packs {
-                let pack = IndexPack {
-                    id,
-                    size: Some(size),
-                    time: Some(Local::now()),
-                    blobs: Vec::new(),
-                };
-                indexer.write().await.add_remove(pack).await?;
+            if instant_delete {
+                v1!("removing not needed unindexed pack files...");
+                let existing_packs: Vec<_> =
+                    self.existing_packs.into_iter().map(|(id, _)| id).collect();
+                be.delete_list(FileType::Pack, true, existing_packs, progress_counter())
+                    .await?;
+            } else {
+                v1!("marking not needed unindexed pack files for deletion...");
+                for (id, size) in self.existing_packs {
+                    let pack = IndexPack {
+                        id,
+                        size: Some(size),
+                        time: Some(Local::now()),
+                        blobs: Vec::new(),
+                    };
+                    indexer.write().await.add_remove(pack).await?;
+                }
             }
         }
 
@@ -712,6 +724,14 @@ impl Pruner {
         let mut indexes_remove = Vec::new();
         let mut tree_packs_remove = Vec::new();
         let mut data_packs_remove = Vec::new();
+
+        let mut delete_pack = |pack: PrunePack| {
+            // delete pack
+            match pack.blob_type {
+                BlobType::Data => data_packs_remove.push(pack.id),
+                BlobType::Tree => tree_packs_remove.push(pack.id),
+            }
+        };
 
         for index in self.index_files {
             for pack in index.packs.into_iter() {
@@ -745,32 +765,38 @@ impl Pruner {
                             .add_raw(&data, &blob.id, blob.uncompressed_length)
                             .await?;
                         }
-                        // mark original pack for removal
-                        let pack = pack.into_index_pack_with_time(self.time);
-                        indexer.write().await.add_remove(pack).await?;
+                        if instant_delete {
+                            delete_pack(pack);
+                        } else {
+                            // mark pack for removal
+                            let pack = pack.into_index_pack_with_time(self.time);
+                            indexer.write().await.add_remove(pack).await?;
+                        }
                     }
                     PackToDo::MarkDelete => {
-                        // remove pack: add to new index in section packs_to_delete
-                        let pack = pack.into_index_pack_with_time(self.time);
-                        indexer.write().await.add_remove(pack).await?;
+                        if instant_delete {
+                            delete_pack(pack);
+                        } else {
+                            // mark pack for removal
+                            let pack = pack.into_index_pack_with_time(self.time);
+                            indexer.write().await.add_remove(pack).await?;
+                        }
                     }
                     PackToDo::KeepMarked => {
-                        // keep pack: add to new index
-                        let pack = pack.into_index_pack();
-                        indexer.write().await.add_remove(pack).await?;
+                        if instant_delete {
+                            delete_pack(pack);
+                        } else {
+                            // keep pack: add to new index
+                            let pack = pack.into_index_pack();
+                            indexer.write().await.add_remove(pack).await?;
+                        }
                     }
                     PackToDo::Recover => {
                         // recover pack: add to new index in section packs
                         let pack = pack.into_index_pack_with_time(self.time);
                         indexer.write().await.add(pack).await?;
                     }
-                    PackToDo::Delete => {
-                        // delete pack
-                        match pack.blob_type {
-                            BlobType::Data => data_packs_remove.push(pack.id),
-                            BlobType::Tree => tree_packs_remove.push(pack.id),
-                        }
-                    }
+                    PackToDo::Delete => delete_pack(pack),
                 }
             }
             indexes_remove.push(index.id);

@@ -166,7 +166,7 @@ pub async fn execute() -> Result<()> {
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await?,
         Command::Prune(opts) => prune::execute(&dbe, opts, config, vec![]).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,
-        Command::Repoinfo(opts) => repoinfo::execute(&dbe, opts).await?,
+        Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts).await?,
         Command::Tag(opts) => tag::execute(&dbe, opts).await?,
     };
 

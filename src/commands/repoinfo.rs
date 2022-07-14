@@ -5,7 +5,7 @@ use prettytable::{cell, format, row, Table};
 use vlog::*;
 
 use super::{bytes, progress_counter};
-use crate::backend::{DecryptReadBackend, ALL_FILE_TYPES};
+use crate::backend::{DecryptReadBackend, ReadBackend, ALL_FILE_TYPES};
 use crate::blob::BlobType;
 use crate::index::IndexEntry;
 use crate::repo::IndexFile;
@@ -13,27 +13,15 @@ use crate::repo::IndexFile;
 #[derive(Parser)]
 pub(super) struct Opts;
 
-pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result<()> {
-    v1!("scanning files...");
-
-    let mut table = Table::new();
-    let mut total_count = 0;
-    let mut total_size = 0;
-    for tpe in ALL_FILE_TYPES {
-        let list = be.list_with_size(tpe).await?;
-        let count = list.len();
-        let size = list.iter().map(|f| f.1 as u64).sum();
-        table.add_row(row![format!("{:?}", tpe), r->count, r->bytes(size)]);
-        total_count += count;
-        total_size += size;
+pub(super) async fn execute(
+    be: &impl DecryptReadBackend,
+    hot_be: &Option<impl ReadBackend>,
+    _opts: Opts,
+) -> Result<()> {
+    fileinfo("repository files", be).await?;
+    if let Some(hot_be) = hot_be {
+        fileinfo("hot repository files", hot_be).await?;
     }
-    table.add_row(row!["Total",r->total_count,r->bytes(total_size)]);
-
-    table.set_titles(row![b->"File type", br->"Count", br->"Total Size"]);
-    table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-    println!();
-    table.printstd();
-    println!();
 
     v1!("scanning index...");
     let p = progress_counter();
@@ -103,5 +91,30 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, _opts: Opts) -> Result
     println!();
     table.printstd();
 
+    Ok(())
+}
+
+async fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
+    v1!("scanning files...");
+
+    let mut table = Table::new();
+    let mut total_count = 0;
+    let mut total_size = 0;
+    for tpe in ALL_FILE_TYPES {
+        let list = be.list_with_size(tpe).await?;
+        let count = list.len();
+        let size = list.iter().map(|f| f.1 as u64).sum();
+        table.add_row(row![format!("{:?}", tpe), r->count, r->bytes(size)]);
+        total_count += count;
+        total_size += size;
+    }
+    println!("{}", text);
+    table.add_row(row!["Total",r->total_count,r->bytes(total_size)]);
+
+    table.set_titles(row![b->"File type", br->"Count", br->"Total Size"]);
+    table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+    println!();
+    table.printstd();
+    println!();
     Ok(())
 }

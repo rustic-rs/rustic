@@ -16,6 +16,7 @@ pub mod hotcold;
 pub mod ignore;
 pub mod local;
 pub mod node;
+pub mod rclone;
 pub mod rest;
 
 pub use self::ignore::*;
@@ -26,6 +27,7 @@ pub use dry_run::*;
 pub use hotcold::*;
 pub use local::*;
 use node::Node;
+pub use rclone::*;
 pub use rest::*;
 
 /// All FileTypes which are located in separated directories

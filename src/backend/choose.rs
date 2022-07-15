@@ -4,25 +4,29 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
-use super::{LocalBackend, RestBackend};
+use super::{LocalBackend, RcloneBackend, RestBackend};
 
 #[derive(Clone)]
 pub enum ChooseBackend {
     Local(LocalBackend),
     Rest(RestBackend),
+    Rclone(RcloneBackend),
 }
 
-use ChooseBackend::{Local, Rest};
+use ChooseBackend::{Local, Rclone, Rest};
 
 impl ChooseBackend {
-    pub fn from_url(url: &str) -> Self {
+    pub fn from_url(url: &str) -> Result<Self> {
+        if let Some(path) = url.strip_prefix("rclone:") {
+            return Ok(Rclone(RcloneBackend::new(path)?));
+        }
         if let Some(path) = url.strip_prefix("rest:") {
-            return Rest(RestBackend::new(path));
+            return Ok(Rest(RestBackend::new(path)));
         }
         if let Some(path) = url.strip_prefix("local:") {
-            return Local(LocalBackend::new(path));
+            return Ok(Local(LocalBackend::new(path)));
         }
-        Local(LocalBackend::new(url))
+        Ok(Local(LocalBackend::new(url)))
     }
 }
 
@@ -32,6 +36,7 @@ impl ReadBackend for ChooseBackend {
         match self {
             Local(local) => local.location(),
             Rest(rest) => rest.location(),
+            Rclone(rclone) => rclone.location(),
         }
     }
 
@@ -39,6 +44,7 @@ impl ReadBackend for ChooseBackend {
         match self {
             Local(local) => local.list_with_size(tpe).await,
             Rest(rest) => rest.list_with_size(tpe).await,
+            Rclone(rclone) => rclone.list_with_size(tpe).await,
         }
     }
 
@@ -46,6 +52,7 @@ impl ReadBackend for ChooseBackend {
         match self {
             Local(local) => local.read_full(tpe, id).await,
             Rest(rest) => rest.read_full(tpe, id).await,
+            Rclone(rclone) => rclone.read_full(tpe, id).await,
         }
     }
 
@@ -60,6 +67,11 @@ impl ReadBackend for ChooseBackend {
         match self {
             Local(local) => local.read_partial(tpe, id, cacheable, offset, length).await,
             Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length).await,
+            Rclone(rclone) => {
+                rclone
+                    .read_partial(tpe, id, cacheable, offset, length)
+                    .await
+            }
         }
     }
 }
@@ -70,6 +82,7 @@ impl WriteBackend for ChooseBackend {
         match self {
             Local(local) => local.create().await,
             Rest(rest) => rest.create().await,
+            Rclone(rclone) => rclone.create().await,
         }
     }
 
@@ -77,6 +90,7 @@ impl WriteBackend for ChooseBackend {
         match self {
             Local(local) => local.write_file(tpe, id, cacheable, f).await,
             Rest(rest) => rest.write_file(tpe, id, cacheable, f).await,
+            Rclone(rclone) => rclone.write_file(tpe, id, cacheable, f).await,
         }
     }
 
@@ -84,6 +98,7 @@ impl WriteBackend for ChooseBackend {
         match self {
             Local(local) => local.write_bytes(tpe, id, buf).await,
             Rest(rest) => rest.write_bytes(tpe, id, buf).await,
+            Rclone(rclone) => rclone.write_bytes(tpe, id, buf).await,
         }
     }
 
@@ -91,6 +106,7 @@ impl WriteBackend for ChooseBackend {
         match self {
             Local(local) => local.remove(tpe, id, cacheable).await,
             Rest(rest) => rest.remove(tpe, id, cacheable).await,
+            Rclone(rclone) => rclone.remove(tpe, id, cacheable).await,
         }
     }
 }

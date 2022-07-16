@@ -10,7 +10,7 @@ use futures::{future, TryStreamExt};
 use vlog::*;
 
 use super::{bytes, progress_counter};
-use crate::backend::{DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType};
+use crate::backend::{DecryptFullBackend, DecryptReadBackend, FileType};
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer};
@@ -43,6 +43,15 @@ pub(super) struct Opts {
     #[clap(long, value_name = "DURATION", default_value = "0d")]
     keep_pack: humantime::Duration,
 
+    /// simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting
+    #[clap(long)]
+    fast_repack: bool,
+
+    /// repack packs containing uncompressed blobs. This cannot be used with --fast-repack.
+    /// Implies --max-unused=0.
+    #[clap(long, conflicts_with = "fast-repack")]
+    repack_uncompressed: bool,
+
     /// don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
     pub(crate) dry_run: bool,
@@ -54,16 +63,12 @@ pub(super) async fn execute(
     config: ConfigFile,
     ignore_snaps: Vec<Id>,
 ) -> Result<()> {
+    if config.version < 2 && opts.repack_uncompressed {
+        bail!("--repack-uncompressed makes no sense for v1 repo!");
+    }
+
     v1!("reading index...");
     let mut index_files = Vec::new();
-
-    let zstd = match config.version {
-        1 => None,
-        2 => Some(0),
-        _ => bail!("config version not supported!"),
-    };
-    let mut be = be.clone();
-    be.set_zstd(zstd);
 
     let p = progress_counter();
     let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
@@ -80,7 +85,7 @@ pub(super) async fn execute(
     p.finish();
 
     let used_ids = {
-        let indexed_be = IndexBackend::new_from_index(&be, index_collector.into_index());
+        let indexed_be = IndexBackend::new_from_index(&be.clone(), index_collector.into_index());
         find_used_blobs(&indexed_be, ignore_snaps).await?
     };
 
@@ -99,14 +104,15 @@ pub(super) async fn execute(
         Duration::from_std(*opts.keep_pack)?,
         Duration::from_std(*opts.keep_delete)?,
         opts.repack_cacheable_only,
+        opts.repack_uncompressed,
     )?;
-    pruner.decide_repack(&opts.max_repack, &opts.max_unused);
+    pruner.decide_repack(&opts.max_repack, &opts.max_unused, opts.repack_uncompressed);
     pruner.check_existing_packs()?;
     pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
 
     if !opts.dry_run {
-        pruner.do_prune(&be, opts.instant_delete).await?;
+        pruner.do_prune(be, opts, config).await?;
     }
     Ok(())
 }
@@ -301,6 +307,12 @@ impl PrunePack {
         }
         self.to_do = todo;
     }
+
+    fn is_compressed(&self) -> bool {
+        self.blobs
+            .iter()
+            .all(|blob| blob.uncompressed_length.is_some())
+    }
 }
 
 struct Pruner {
@@ -412,6 +424,7 @@ impl Pruner {
         keep_pack: Duration,
         keep_delete: Duration,
         repack_cacheable_only: bool,
+        repack_uncompressed: bool,
     ) -> Result<()> {
         // first process all marked packs then the unmarked ones:
         // - first processed packs are more likely to have all blobs seen as unused
@@ -442,7 +455,11 @@ impl Pruner {
                         (false, 1.., 0) => {
                             // used pack
                             self.stats.packs.used += 1;
-                            pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
+                            if too_young || !repack_uncompressed || pack.is_compressed() {
+                                pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
+                            } else {
+                                self.repack_candidates.push((pi, index_num, pack_num));
+                            }
                         }
 
                         (false, 1.., 1..) => {
@@ -479,14 +496,20 @@ impl Pruner {
         Ok(())
     }
 
-    fn decide_repack(&mut self, max_repack: &LimitOption, max_unused: &LimitOption) {
-        let max_unused = match max_unused {
-            LimitOption::Unlimited => u64::MAX,
-            LimitOption::Size(size) => size.as_u64(),
+    fn decide_repack(
+        &mut self,
+        max_repack: &LimitOption,
+        max_unused: &LimitOption,
+        repack_uncompressed: bool,
+    ) {
+        let max_unused = match (repack_uncompressed, max_unused) {
+            (true, _) => 0,
+            (false, LimitOption::Unlimited) => u64::MAX,
+            (false, LimitOption::Size(size)) => size.as_u64(),
             // if percentag is given, we want to have
             // unused <= p/100 * size_after = p/100 * (size_used + unused)
             // which equals (1 - p/100) * unused <= p/100 * size_used
-            LimitOption::Percentage(p) => (p * self.stats.size.used) / (100 - p),
+            (false, LimitOption::Percentage(p)) => (p * self.stats.size.used) / (100 - p),
         };
 
         let max_repack = match max_repack {
@@ -686,15 +709,27 @@ impl Pruner {
         );
     }
 
-    async fn do_prune(mut self, be: &impl DecryptWriteBackend, instant_delete: bool) -> Result<()> {
+    async fn do_prune(
+        mut self,
+        be: &impl DecryptFullBackend,
+        opts: Opts,
+        config: ConfigFile,
+    ) -> Result<()> {
+        let zstd = match config.version {
+            1 => None,
+            2 => Some(0),
+            _ => bail!("config version not supported!"),
+        };
+        let mut be = be.clone();
+        be.set_zstd(zstd);
+
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
-        // packer without zstd configuration; packed blobs are simply copied
-        let mut tree_packer = Packer::new(be.clone(), BlobType::Tree, indexer.clone(), None)?;
-        let mut data_packer = Packer::new(be.clone(), BlobType::Data, indexer.clone(), None)?;
+        let mut tree_packer = Packer::new(be.clone(), BlobType::Tree, indexer.clone(), zstd)?;
+        let mut data_packer = Packer::new(be.clone(), BlobType::Data, indexer.clone(), zstd)?;
 
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
-            if instant_delete {
+            if opts.instant_delete {
                 v1!("removing not needed unindexed pack files...");
                 let existing_packs: Vec<_> =
                     self.existing_packs.into_iter().map(|(id, _)| id).collect();
@@ -749,23 +784,41 @@ impl Pruner {
                                 // don't save duplicate blobs
                                 continue;
                             }
-                            let data = be
-                                .read_partial(
-                                    FileType::Pack,
-                                    &pack.id,
-                                    blob.tpe.is_cacheable(),
-                                    blob.offset,
-                                    blob.length,
-                                )
+                            if opts.fast_repack {
+                                let data = be
+                                    .read_partial(
+                                        FileType::Pack,
+                                        &pack.id,
+                                        blob.tpe.is_cacheable(),
+                                        blob.offset,
+                                        blob.length,
+                                    )
+                                    .await?;
+                                match blob.tpe {
+                                    BlobType::Data => &mut data_packer,
+                                    BlobType::Tree => &mut tree_packer,
+                                }
+                                .add_raw(&data, &blob.id, blob.uncompressed_length)
                                 .await?;
-                            match blob.tpe {
-                                BlobType::Data => &mut data_packer,
-                                BlobType::Tree => &mut tree_packer,
+                            } else {
+                                let data = be
+                                    .read_encrypted_partial(
+                                        FileType::Pack,
+                                        &pack.id,
+                                        blob.tpe.is_cacheable(),
+                                        blob.offset,
+                                        blob.length,
+                                    )
+                                    .await?;
+                                match blob.tpe {
+                                    BlobType::Data => &mut data_packer,
+                                    BlobType::Tree => &mut tree_packer,
+                                }
+                                .add(&data, &blob.id)
+                                .await?;
                             }
-                            .add_raw(&data, &blob.id, blob.uncompressed_length)
-                            .await?;
                         }
-                        if instant_delete {
+                        if opts.instant_delete {
                             delete_pack(pack);
                         } else {
                             // mark pack for removal
@@ -774,7 +827,7 @@ impl Pruner {
                         }
                     }
                     PackToDo::MarkDelete => {
-                        if instant_delete {
+                        if opts.instant_delete {
                             delete_pack(pack);
                         } else {
                             // mark pack for removal
@@ -783,7 +836,7 @@ impl Pruner {
                         }
                     }
                     PackToDo::KeepMarked => {
-                        if instant_delete {
+                        if opts.instant_delete {
                             delete_pack(pack);
                         } else {
                             // keep pack: add to new index

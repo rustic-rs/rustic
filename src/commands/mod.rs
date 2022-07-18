@@ -125,8 +125,11 @@ pub async fn execute() -> Result<()> {
     let verbosity = (1 + args.verbose - args.quiet).clamp(0, 3);
     set_verbosity_level(verbosity as usize);
 
-    let be = ChooseBackend::from_url(&args.repository);
-    let be_hot = args.repo_hot.map(|repo| ChooseBackend::from_url(&repo));
+    let be = ChooseBackend::from_url(&args.repository)?;
+    let be_hot = args
+        .repo_hot
+        .map(|repo| ChooseBackend::from_url(&repo))
+        .transpose()?;
 
     let config_ids = be.list(FileType::Config).await?;
 

@@ -6,6 +6,8 @@ use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::Parser;
+use derive_more::Add;
+use enum_map::EnumMap;
 use futures::{future, TryStreamExt};
 use vlog::*;
 
@@ -163,14 +165,13 @@ struct PackStats {
     repack: u64,
     keep: u64,
 }
-#[derive(Default)]
+#[derive(Default, Clone, Copy, Add)]
 struct SizeStats {
     used: u64,
     unused: u64,
     remove: u64,
     repack: u64,
     repackrm: u64,
-    unref: u64,
 }
 
 impl SizeStats {
@@ -190,9 +191,19 @@ struct PruneStats {
     packs_to_delete: DeleteStats,
     size_to_delete: DeleteStats,
     packs: PackStats,
-    blobs: SizeStats,
-    size: SizeStats,
+    blobs: EnumMap<BlobType, SizeStats>,
+    size: EnumMap<BlobType, SizeStats>,
+    size_unref: u64,
     index_files: u64,
+}
+
+impl PruneStats {
+    fn total_blobs(&self) -> SizeStats {
+        self.blobs[BlobType::Tree] + self.blobs[BlobType::Data]
+    }
+    fn total_size(&self) -> SizeStats {
+        self.size[BlobType::Tree] + self.size[BlobType::Data]
+    }
 }
 
 #[derive(Debug)]
@@ -270,32 +281,33 @@ impl PrunePack {
     }
 
     fn set_todo(&mut self, todo: PackToDo, pi: &PackInfo, stats: &mut PruneStats) {
+        let tpe = self.blob_type;
         match todo {
             PackToDo::Undecided => panic!("not possible"),
             PackToDo::Keep => {
-                stats.blobs.used += pi.used_blobs as u64;
-                stats.blobs.unused += pi.unused_blobs as u64;
-                stats.size.used += pi.used_size as u64;
-                stats.size.unused += pi.unused_size as u64;
+                stats.blobs[tpe].used += pi.used_blobs as u64;
+                stats.blobs[tpe].unused += pi.unused_blobs as u64;
+                stats.size[tpe].used += pi.used_size as u64;
+                stats.size[tpe].unused += pi.unused_size as u64;
                 stats.packs.keep += 1;
             }
             PackToDo::Repack => {
-                stats.blobs.used += pi.used_blobs as u64;
-                stats.blobs.unused += pi.unused_blobs as u64;
-                stats.size.used += pi.used_size as u64;
-                stats.size.unused += pi.unused_size as u64;
+                stats.blobs[tpe].used += pi.used_blobs as u64;
+                stats.blobs[tpe].unused += pi.unused_blobs as u64;
+                stats.size[tpe].used += pi.used_size as u64;
+                stats.size[tpe].unused += pi.unused_size as u64;
                 stats.packs.repack += 1;
-                stats.blobs.repack += (pi.unused_blobs + pi.used_blobs) as u64;
-                stats.blobs.repackrm += pi.unused_blobs as u64;
-                stats.size.repack += (pi.unused_size + pi.used_size) as u64;
-                stats.size.repackrm += pi.unused_size as u64;
+                stats.blobs[tpe].repack += (pi.unused_blobs + pi.used_blobs) as u64;
+                stats.blobs[tpe].repackrm += pi.unused_blobs as u64;
+                stats.size[tpe].repack += (pi.unused_size + pi.used_size) as u64;
+                stats.size[tpe].repackrm += pi.unused_size as u64;
             }
 
             PackToDo::MarkDelete => {
-                stats.blobs.unused += pi.unused_blobs as u64;
-                stats.size.unused += pi.unused_size as u64;
-                stats.blobs.remove += pi.unused_blobs as u64;
-                stats.size.remove += pi.unused_size as u64;
+                stats.blobs[tpe].unused += pi.unused_blobs as u64;
+                stats.size[tpe].unused += pi.unused_size as u64;
+                stats.blobs[tpe].remove += pi.unused_blobs as u64;
+                stats.size[tpe].remove += pi.unused_size as u64;
             }
             PackToDo::Recover => {
                 stats.packs_to_delete.recover += 1;
@@ -514,13 +526,13 @@ impl Pruner {
             // if percentag is given, we want to have
             // unused <= p/100 * size_after = p/100 * (size_used + unused)
             // which equals (1 - p/100) * unused <= p/100 * size_used
-            (false, LimitOption::Percentage(p)) => (p * self.stats.size.used) / (100 - p),
+            (false, LimitOption::Percentage(p)) => (p * self.stats.total_size().used) / (100 - p),
         };
 
         let max_repack = match max_repack {
             LimitOption::Unlimited => u64::MAX,
             LimitOption::Size(size) => size.as_u64(),
-            LimitOption::Percentage(p) => (p * self.stats.size.total()),
+            LimitOption::Percentage(p) => (p * self.stats.total_size().total()),
         };
 
         self.repack_candidates.sort_unstable_by_key(|rc| rc.0);
@@ -528,10 +540,11 @@ impl Pruner {
         for (pi, index_num, pack_num) in std::mem::take(&mut self.repack_candidates) {
             let pack = &mut self.index_files[index_num].packs[pack_num];
 
-            let repack_size_new = self.stats.size.repack + (pi.unused_size + pi.used_size) as u64;
+            let repack_size_new =
+                self.stats.total_size().repack + (pi.unused_size + pi.used_size) as u64;
             if repack_size_new >= max_repack
                 || (pi.blob_type != BlobType::Tree
-                    && self.stats.size.unused_after_prune() < max_unused)
+                    && self.stats.total_size().unused_after_prune() < max_unused)
             {
                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
             } else {
@@ -582,7 +595,7 @@ impl Pruner {
 
         // all remaining packs in existing_packs are unreferenced packs
         for size in self.existing_packs.values() {
-            self.stats.size.unref += *size as u64;
+            self.stats.size_unref += *size as u64;
         }
 
         Ok(())
@@ -619,8 +632,8 @@ impl Pruner {
 
     fn print_stats(&self) {
         let pack_stat = &self.stats.packs;
-        let blob_stat = &self.stats.blobs;
-        let size_stat = &self.stats.size;
+        let blob_stat = self.stats.total_blobs();
+        let size_stat = self.stats.total_size();
 
         v2!(
             "used:   {:>10} blobs, {:>10}",
@@ -662,14 +675,14 @@ impl Pruner {
             v1!(
                 "unindexed: {:>10} packs,         ?? blobs, {:>10}",
                 self.existing_packs.len(),
-                bytes(size_stat.unref)
+                bytes(self.stats.size_unref)
             );
         }
 
         v1!(
             "total prune:                 {:>10} blobs, {:>10}",
             blob_stat.repackrm + blob_stat.remove,
-            bytes(size_stat.repackrm + size_stat.remove + size_stat.unref)
+            bytes(size_stat.repackrm + size_stat.remove + self.stats.size_unref)
         );
         v1!(
             "remaining:                   {:>10} blobs, {:>10}",
@@ -738,7 +751,7 @@ impl Pruner {
             indexer.clone(),
             zstd,
             DEFAULT_TREE_SIZE,
-            0,
+            self.stats.size[BlobType::Tree].total_after_prune(),
         )?;
         let mut data_repacker = Repacker::new(
             be.clone(),
@@ -746,7 +759,7 @@ impl Pruner {
             indexer.clone(),
             zstd,
             default_packsize,
-            self.stats.size.total_after_prune(),
+            self.stats.size[BlobType::Data].total_after_prune(),
         )?;
 
         // mark unreferenced packs for deletion

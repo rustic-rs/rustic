@@ -4,13 +4,15 @@ use serde::{Deserialize, Serialize};
 use crate::backend::{FileType, RepoFile};
 use crate::id::Id;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigFile {
     pub version: u32,
     pub id: Id,
     pub chunker_polynomial: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_hot: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compression: Option<i32>,
 }
 
 impl RepoFile for ConfigFile {
@@ -24,6 +26,7 @@ impl ConfigFile {
             id,
             chunker_polynomial: format!("{:x}", poly),
             is_hot: None,
+            compression: None,
         }
     }
 

@@ -12,6 +12,7 @@ use crate::repo::ConfigFile;
 mod backup;
 mod cat;
 mod check;
+mod config;
 mod diff;
 mod forget;
 mod helpers;
@@ -75,6 +76,9 @@ enum Command {
 
     /// Cat repository files and blobs
     Cat(cat::Opts),
+
+    /// Change repo configuration
+    Config(config::Opts),
 
     /// Check repository
     Check(check::Opts),
@@ -171,6 +175,7 @@ pub async fn execute() -> Result<()> {
 
     match cmd {
         Command::Backup(opts) => backup::execute(&dbe, opts, config, command).await?,
+        Command::Config(opts) => config::execute(&dbe, opts, config).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,

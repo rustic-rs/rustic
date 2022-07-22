@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use chrono::{Duration, Local};
 use clap::Parser;
 use gethostname::gethostname;
@@ -57,11 +57,7 @@ pub(super) async fn execute(
 ) -> Result<()> {
     let time = Local::now();
     let poly = config.poly()?;
-    let zstd = match config.version {
-        1 => None,
-        2 => Some(0),
-        _ => bail!("config version not supported!"),
-    };
+    let zstd = config.zstd()?;
     let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
     be.set_zstd(zstd);
 

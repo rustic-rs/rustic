@@ -29,6 +29,8 @@ pub(crate) struct IndexCollector {
     packs: Vec<Id>,
     tree: Vec<SortedEntry>,
     data: SortedHashSetMap,
+    total_tree_size: u64,
+    total_data_size: u64,
 }
 
 impl IndexCollector {
@@ -42,6 +44,8 @@ impl IndexCollector {
             packs: Vec::new(),
             tree: Vec::new(),
             data,
+            total_tree_size: 0,
+            total_data_size: 0,
         }
     }
 
@@ -56,6 +60,8 @@ impl IndexCollector {
             packs: self.packs,
             tree: self.tree,
             data: self.data,
+            total_tree_size: self.total_tree_size,
+            total_data_size: self.total_data_size,
         }
     }
 }
@@ -69,6 +75,12 @@ impl Extend<IndexPack> for IndexCollector {
             let idx = self.packs.len();
             self.packs.push(p.id);
             let len = p.blobs.len();
+            let blob_type = p.blob_type();
+
+            match blob_type {
+                BlobType::Tree => self.total_tree_size += p.pack_size() as u64,
+                BlobType::Data => self.total_data_size += p.pack_size() as u64,
+            }
 
             match (p.blob_type(), &mut self.data) {
                 (BlobType::Tree, _) => self.tree.reserve(len),
@@ -100,6 +112,8 @@ pub struct Index {
     packs: Vec<Id>,
     tree: Vec<SortedEntry>,
     data: SortedHashSetMap,
+    total_tree_size: u64,
+    total_data_size: u64,
 }
 
 impl ReadIndex for Index {
@@ -121,6 +135,13 @@ impl ReadIndex for Index {
                 be.uncompressed_length,
             )
         })
+    }
+
+    fn total_size(&self, tpe: &BlobType) -> u64 {
+        match tpe {
+            BlobType::Tree => self.total_tree_size,
+            BlobType::Data => self.total_data_size,
+        }
     }
 
     fn has(&self, tpe: &BlobType, id: &Id) -> bool {

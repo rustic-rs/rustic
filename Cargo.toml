@@ -34,8 +34,9 @@ aes256ctr_poly1305aes = "0.1"
 sha2 = "0.10"
 rand = "0.8"
 scrypt = { version = "0.10", default-features = false }
-# chunker
+# chunker / packer
 cdc = "0.1"
+integer-sqrt = "0.1"
 # serialization
 base64 = "0.13"
 binrw = "0.9"

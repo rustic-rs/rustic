@@ -10,7 +10,7 @@ use tokio::spawn;
 use vlog::*;
 
 use crate::backend::DecryptWriteBackend;
-use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
+use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree, DEFAULT_TREE_SIZE};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::id::Id;
@@ -42,19 +42,36 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         parent: Parent<I>,
         mut snap: SnapshotFile,
         zstd: Option<i32>,
+        default_data_size: u32,
     ) -> Result<Self> {
         let indexer = Indexer::new(be.clone()).into_shared();
         let mut summary = snap.summary.take().unwrap();
         summary.backup_start = Local::now();
 
+        let data_packer = Packer::new(
+            be.clone(),
+            BlobType::Data,
+            indexer.clone(),
+            zstd,
+            default_data_size,
+            index.total_size(&BlobType::Data),
+        )?;
+        let tree_packer = Packer::new(
+            be.clone(),
+            BlobType::Tree,
+            indexer.clone(),
+            zstd,
+            DEFAULT_TREE_SIZE,
+            index.total_size(&BlobType::Tree),
+        )?;
         Ok(Self {
             path: PathBuf::from("/"),
             tree: Tree::new(),
             parent,
             stack: Vec::new(),
             index,
-            data_packer: Packer::new(be.clone(), BlobType::Data, indexer.clone(), zstd)?,
-            tree_packer: Packer::new(be.clone(), BlobType::Tree, indexer.clone(), zstd)?,
+            data_packer,
+            tree_packer,
             be,
             poly,
             indexer,

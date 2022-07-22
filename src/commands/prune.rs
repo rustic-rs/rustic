@@ -11,7 +11,7 @@ use vlog::*;
 
 use super::{bytes, progress_counter};
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, FileType};
-use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
+use crate::blob::{BlobType, NodeType, Repacker, TreeStreamerOnce, DEFAULT_TREE_SIZE};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer};
 use crate::repo::{ConfigFile, IndexBlob, IndexFile, IndexPack, SnapshotFile};
@@ -51,6 +51,11 @@ pub(super) struct Opts {
     /// Implies --max-unused=0.
     #[clap(long, conflicts_with = "fast-repack")]
     repack_uncompressed: bool,
+
+    /// Default packsize. rustic tries to always produce packs greater than this value.
+    /// Note that for large repos, packs can get even larger. Does only apply to data packs.
+    #[clap(long, value_name = "SIZE", default_value = "50M")]
+    default_packsize: ByteSize,
 
     /// don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
@@ -720,8 +725,25 @@ impl Pruner {
         be.set_zstd(zstd);
 
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
-        let mut tree_packer = Packer::new(be.clone(), BlobType::Tree, indexer.clone(), zstd)?;
-        let mut data_packer = Packer::new(be.clone(), BlobType::Data, indexer.clone(), zstd)?;
+
+        let default_packsize: u32 = opts.default_packsize.as_u64().try_into()?;
+        // TODO: use size of data/tree blobs after prune here
+        let mut tree_repacker = Repacker::new(
+            be.clone(),
+            BlobType::Tree,
+            indexer.clone(),
+            zstd,
+            DEFAULT_TREE_SIZE,
+            0,
+        )?;
+        let mut data_repacker = Repacker::new(
+            be.clone(),
+            BlobType::Data,
+            indexer.clone(),
+            zstd,
+            default_packsize,
+            self.stats.size.total_after_prune(),
+        )?;
 
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
@@ -780,38 +802,15 @@ impl Pruner {
                                 // don't save duplicate blobs
                                 continue;
                             }
+
+                            let repacker = match blob.tpe {
+                                BlobType::Data => &mut data_repacker,
+                                BlobType::Tree => &mut tree_repacker,
+                            };
                             if opts.fast_repack {
-                                let data = be
-                                    .read_partial(
-                                        FileType::Pack,
-                                        &pack.id,
-                                        blob.tpe.is_cacheable(),
-                                        blob.offset,
-                                        blob.length,
-                                    )
-                                    .await?;
-                                match blob.tpe {
-                                    BlobType::Data => &mut data_packer,
-                                    BlobType::Tree => &mut tree_packer,
-                                }
-                                .add_raw(&data, &blob.id, blob.uncompressed_length)
-                                .await?;
+                                repacker.add_fast(&pack.id, blob).await?;
                             } else {
-                                let data = be
-                                    .read_encrypted_partial(
-                                        FileType::Pack,
-                                        &pack.id,
-                                        blob.tpe.is_cacheable(),
-                                        blob.offset,
-                                        blob.length,
-                                    )
-                                    .await?;
-                                match blob.tpe {
-                                    BlobType::Data => &mut data_packer,
-                                    BlobType::Tree => &mut tree_packer,
-                                }
-                                .add(&data, &blob.id)
-                                .await?;
+                                repacker.add(&pack.id, blob).await?;
                             }
                         }
                         if opts.instant_delete {
@@ -850,8 +849,8 @@ impl Pruner {
             }
             indexes_remove.push(index.id);
         }
-        tree_packer.finalize().await?;
-        data_packer.finalize().await?;
+        tree_repacker.finalize().await?;
+        data_repacker.finalize().await?;
         indexer.write().await.finalize().await?;
 
         if !data_packs_remove.is_empty() {

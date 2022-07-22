@@ -1,0 +1,32 @@
+name: Security audit
+
+on:
+  schedule:
+    # Runs at 00:00 UTC everyday
+    - cron: '0 0 * * *'
+  push:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      # Ensure that the latest version of Cargo is installed
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/audit-check@v1
+        with:
+          # Ignore RUSTSEC-2020-0071, this is not called by chrono and no direct call in rustic 
+          args: --ignore RUSTSEC-2020-0071
+          token: ${{ secrets.GITHUB_TOKEN }}
+

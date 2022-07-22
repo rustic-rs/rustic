@@ -31,11 +31,11 @@ pub(super) async fn execute(
 pub(super) struct ConfigOpts {
     /// set compression level, 0 equals no compression
     #[clap(long, value_name = "LEVEL")]
-    set_compression: Option<i32>,
+    pub set_compression: Option<i32>,
 
     /// set repository version
     #[clap(long, value_name = "VERSION")]
-    set_version: Option<u32>,
+    pub set_version: Option<u32>,
 }
 
 impl ConfigOpts {

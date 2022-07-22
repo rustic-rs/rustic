@@ -10,6 +10,7 @@ use rand::distributions::{Alphanumeric, DistString};
 use rand::thread_rng;
 use sha1::{Digest, Sha1};
 use tempfile::{Builder, TempDir};
+use tokio::task::spawn_blocking;
 use vlog::*;
 
 use super::{FileType, Id, ReadBackend, RestBackend, WriteBackend};
@@ -82,13 +83,24 @@ impl RcloneBackend {
             match line.find(SEARCHSTRING) {
                 Some(result) => {
                     if let Some(url) = line.get(result + SEARCHSTRING.len()..) {
-                        break url.to_string();
+                        break url.trim_end().to_string();
                     }
                 }
                 None if !line.is_empty() => v1!("rclone output: {line}"),
                 _ => {}
             }
         };
+
+        spawn_blocking(move || loop {
+            let mut line = String::new();
+            if stderr.read_line(&mut line).unwrap() == 0 {
+                break;
+            }
+            if !line.is_empty() {
+                v3!("rclone output: {line}");
+            }
+        });
+
         if !url.starts_with("http://") {
             bail!("url must start with http://! url: {url}");
         }

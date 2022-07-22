@@ -139,7 +139,7 @@ impl WriteBackend for LocalBackend {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
-            .create_new(true)
+            .create(true)
             .write(true)
             .open(&filename)?;
         copy(&mut f, &mut file)?;
@@ -151,7 +151,7 @@ impl WriteBackend for LocalBackend {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
-            .create_new(true)
+            .create(true)
             .write(true)
             .open(&filename)?;
         file.write_all(&buf)?;

@@ -5,6 +5,7 @@ use anyhow::{bail, Result};
 use clap::Parser;
 use rpassword::{prompt_password, read_password_from_bufread};
 
+use super::config::ConfigOpts;
 use super::key::AddOpts;
 use crate::backend::{DecryptBackend, DecryptWriteBackend, FileType, WriteBackend};
 use crate::chunker;
@@ -16,6 +17,9 @@ use crate::repo::{ConfigFile, KeyFile};
 pub(super) struct Opts {
     #[clap(flatten)]
     key_opts: AddOpts,
+
+    #[clap(flatten)]
+    config_opts: ConfigOpts,
 }
 
 pub(super) async fn execute(
@@ -28,6 +32,17 @@ pub(super) async fn execute(
         bail!("Config file already exists. Aborting.");
     }
 
+    // Create config first to allow catching errors from here without writing anything
+    let repo_id = Id::random();
+    let chunker_poly = chunker::random_poly()?;
+    let version = match opts.config_opts.set_version {
+        None => 2,
+        Some(_) => 1, // will be changed later
+    };
+    let mut config = ConfigFile::new(version, repo_id, chunker_poly);
+    opts.config_opts.apply(&mut config)?;
+
+    // generate key
     let key = Key::new();
 
     let key_opts = opts.key_opts;
@@ -56,10 +71,7 @@ pub(super) async fn execute(
     }
     println!("key {} successfully added.", id);
 
-    let repo_id = Id::random();
-    let chunker_poly = chunker::random_poly()?;
-    let mut config = ConfigFile::new(2, repo_id, chunker_poly);
-
+    // save config
     let dbe = DecryptBackend::new(be, key.clone());
     dbe.save_file(&config).await?;
 

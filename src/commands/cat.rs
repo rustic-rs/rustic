@@ -21,14 +21,14 @@ pub(super) struct Opts {
 enum Command {
     TreeBlob(IdOpt),
     DataBlob(IdOpt),
-    Config(IdOpt),
+    Config,
     Index(IdOpt),
     Snapshot(IdOpt),
     /// display a tree within a snapshot
     Tree(TreeOpts),
 }
 
-#[derive(Parser)]
+#[derive(Default, Parser)]
 struct IdOpt {
     /// id to cat
     id: String,
@@ -45,7 +45,7 @@ struct TreeOpts {
 
 pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Config(opt) => cat_file(be, FileType::Config, opt).await,
+        Command::Config => cat_file(be, FileType::Config, IdOpt::default()).await,
         Command::Index(opt) => cat_file(be, FileType::Index, opt).await,
         Command::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt).await,
         // special treatment for catingg blobs: read the index and use it to locate the blob

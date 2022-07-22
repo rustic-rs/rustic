@@ -715,11 +715,7 @@ impl Pruner {
         opts: Opts,
         config: ConfigFile,
     ) -> Result<()> {
-        let zstd = match config.version {
-            1 => None,
-            2 => Some(0),
-            _ => bail!("config version not supported!"),
-        };
+        let zstd = config.zstd()?;
         let mut be = be.clone();
         be.set_zstd(zstd);
 

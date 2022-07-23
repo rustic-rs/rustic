@@ -11,7 +11,7 @@ use vlog::*;
 
 use super::{bytes, progress_counter};
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, FileType};
-use crate::blob::{BlobType, NodeType, Repacker, TreeStreamerOnce, DEFAULT_TREE_SIZE};
+use crate::blob::{BlobType, NodeType, Repacker, TreeStreamerOnce};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer};
 use crate::repo::{ConfigFile, IndexBlob, IndexFile, IndexPack, SnapshotFile};
@@ -51,11 +51,6 @@ pub(super) struct Opts {
     /// Implies --max-unused=0.
     #[clap(long, conflicts_with = "fast-repack")]
     repack_uncompressed: bool,
-
-    /// Default packsize. rustic tries to always produce packs greater than this value.
-    /// Note that for large repos, packs can get even larger. Does only apply to data packs.
-    #[clap(long, value_name = "SIZE", default_value = "50M")]
-    default_packsize: ByteSize,
 
     /// don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
@@ -726,22 +721,13 @@ impl Pruner {
 
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
 
-        let default_packsize: u32 = opts.default_packsize.as_u64().try_into()?;
-        // TODO: use size of data/tree blobs after prune here
-        let mut tree_repacker = Repacker::new(
-            be.clone(),
-            BlobType::Tree,
-            indexer.clone(),
-            zstd,
-            DEFAULT_TREE_SIZE,
-            0,
-        )?;
+        let mut tree_repacker =
+            Repacker::new(be.clone(), BlobType::Tree, indexer.clone(), zstd, 0)?;
         let mut data_repacker = Repacker::new(
             be.clone(),
             BlobType::Data,
             indexer.clone(),
             zstd,
-            default_packsize,
             self.stats.size.total_after_prune(),
         )?;
 

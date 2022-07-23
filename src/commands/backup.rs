@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use bytesize::ByteSize;
 use chrono::{Duration, Local};
 use clap::Parser;
 use gethostname::gethostname;
@@ -42,11 +41,6 @@ pub(super) struct Opts {
     /// Mark snapshot to be deleted after given duration (e.g. 10d)
     #[clap(long, value_name = "DURATION")]
     delete_after: Option<humantime::Duration>,
-
-    /// Default packsize. rustic tries to always produce packs greater than this value.
-    /// Note that for large repos, packs can get even larger. Does only apply to data packs.
-    #[clap(long, value_name = "SIZE", default_value = "50M")]
-    default_packsize: ByteSize,
 
     #[clap(flatten)]
     ignore_opts: LocalSourceOptions,
@@ -135,10 +129,8 @@ pub(super) async fn execute(
     } else {
         0
     };
-    let default_packsize = opts.default_packsize.as_u64().try_into()?;
-
     v1!("starting backup...");
-    let mut archiver = Archiver::new(be, index, poly, parent, snap, zstd, default_packsize)?;
+    let mut archiver = Archiver::new(be, index, poly, parent, snap, zstd)?;
     let p = progress_bytes();
     p.set_length(size);
     for item in src {

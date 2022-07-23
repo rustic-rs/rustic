@@ -20,8 +20,9 @@ use crate::repo::{IndexBlob, IndexPack};
 
 const KB: u32 = 1024;
 const MB: u32 = 1024 * KB;
-// default pack size for tree packs
+// default pack size
 pub const DEFAULT_TREE_SIZE: u32 = 4 * MB;
+pub const DEFAULT_DATA_SIZE: u32 = 50 * MB;
 // the absolute maximum size of a pack: including headers it should not exceed 4 GB
 const MAX_SIZE: u32 = 4076 * MB;
 // the factor used for repo-size dependent pack size.
@@ -56,7 +57,6 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         blob_type: BlobType,
         indexer: SharedIndexer<BE>,
         zstd: Option<i32>,
-        default_size: u32,
         total_size: u64,
     ) -> Result<Self> {
         let file_writer = FileWriter {
@@ -64,6 +64,10 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             be: be.clone(),
             indexer: indexer.clone(),
             cacheable: blob_type.is_cacheable(),
+        };
+        let default_size = match blob_type {
+            BlobType::Tree => DEFAULT_TREE_SIZE,
+            BlobType::Data => DEFAULT_DATA_SIZE,
         };
         Ok(Self {
             be,
@@ -311,10 +315,13 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         blob_type: BlobType,
         indexer: SharedIndexer<BE>,
         zstd: Option<i32>,
-        default_size: u32,
         total_size: u64,
     ) -> Result<Self> {
-        let packer = Packer::new(be.clone(), blob_type, indexer, zstd, 0, 0)?;
+        let default_size = match blob_type {
+            BlobType::Tree => DEFAULT_TREE_SIZE,
+            BlobType::Data => DEFAULT_DATA_SIZE,
+        };
+        let packer = Packer::new(be.clone(), blob_type, indexer, zstd, 0)?;
         let size_limit = Self::size_limit_from_size(total_size, default_size);
         Ok(Self {
             be,

@@ -42,6 +42,15 @@ pub struct IndexPack {
 }
 
 impl IndexPack {
+    // 4 equals the size of blob::packer::PackHeaderLength
+    // 32 equals the size of the crypto overhead
+    pub const PACK_OVERHEAD: u32 = 4 + 32;
+
+    // this equals the size of blob::packer::PackHeaderEntry
+    pub const HEADER_LEN: u32 = 37;
+    // this equals the size of blob::packer::PackHeaderEntryComp
+    pub const HEADER_LEN_COMPRESSED: u32 = 41;
+
     pub fn set_id(&mut self, id: Id) {
         self.id = id;
     }
@@ -66,16 +75,13 @@ impl IndexPack {
     // calculate the pack size from the contained blobs
     pub fn pack_size(&self) -> u32 {
         self.size.unwrap_or_else(|| {
-            self.blobs.iter().fold(
-                4 + 32, // 4 + crypto overhead
-                |acc, blob| {
-                    acc + blob.length
-                        + match blob.uncompressed_length {
-                            None => 37,    // 37 = length of blob description for uncompressed blobs
-                            Some(_) => 41, // 41 = length of blob description for compressed blobs
-                        }
-                },
-            )
+            self.blobs.iter().fold(Self::PACK_OVERHEAD, |acc, blob| {
+                acc + blob.length
+                    + match blob.uncompressed_length {
+                        None => Self::HEADER_LEN,
+                        Some(_) => Self::HEADER_LEN_COMPRESSED,
+                    }
+            })
         })
     }
 

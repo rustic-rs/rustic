@@ -73,7 +73,9 @@ impl<BE: WriteBackend> WriteBackend for HotColdBackend<BE> {
 
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
         if let Some(be) = &self.hot_be {
-            be.write_bytes(tpe, id, buf.clone()).await?;
+            if tpe != FileType::Config {
+                be.write_bytes(tpe, id, buf.clone()).await?;
+            }
         }
         self.be.write_bytes(tpe, id, buf).await
     }

@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use bytesize::ByteSize;
 use clap::Parser;
 
-use crate::backend::DecryptFullBackend;
+use crate::backend::{DecryptBackend, DecryptFullBackend, DecryptWriteBackend, WriteBackend};
 use crate::repo::ConfigFile;
 
 #[derive(Parser)]
@@ -13,13 +13,24 @@ pub(super) struct Opts {
 
 pub(super) async fn execute(
     be: &impl DecryptFullBackend,
+    hot_be: &Option<impl WriteBackend>,
     opts: Opts,
     config: ConfigFile,
 ) -> Result<()> {
     let mut new_config = config.clone();
     opts.config_opts.apply(&mut new_config)?;
     if new_config != config {
+        new_config.is_hot = None;
+        // for hot/cold backend, this only saves the config to the cold repo.
         be.save_file(&new_config).await?;
+
+        if let Some(hot_be) = hot_be {
+            // save config to hot repo
+            let dbe = DecryptBackend::new(hot_be, be.key().clone());
+            new_config.is_hot = Some(true);
+            dbe.save_file(&new_config).await?;
+        }
+
         println!("saved new config");
     } else {
         println!("config is unchanged");

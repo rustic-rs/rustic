@@ -70,6 +70,7 @@ impl IndexEntry {
 #[delegatable_trait]
 pub trait ReadIndex {
     fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry>;
+    fn total_size(&self, tpe: &BlobType) -> u64;
 
     fn get_tree(&self, id: &Id) -> Option<IndexEntry> {
         self.get_id(&BlobType::Tree, id)

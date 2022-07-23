@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use bytesize::ByteSize;
 use clap::Parser;
 
 use crate::backend::DecryptFullBackend;
@@ -36,6 +37,30 @@ pub(super) struct ConfigOpts {
     /// set repository version
     #[clap(long, value_name = "VERSION")]
     pub set_version: Option<u32>,
+
+    /// Set default packsize for tree packs. rustic tries to always produce packs greater than this value.
+    /// Note that for large repos, this value is grown by the grown factor.
+    /// Defaults to 4 MiB if not set.
+    #[clap(long, value_name = "SIZE")]
+    pub set_treepack_size: Option<ByteSize>,
+
+    /// Set grow factor for tree packs. The default packsize grows by the square root of the reposize
+    /// multiplied with this factor. This means 32 kiB times this factor per square root of reposize in GiB.
+    /// Defaults to 32 (= 1MB per sqare root of reposize in GiB) if not set.
+    #[clap(long, value_name = "FACTOR")]
+    pub set_treepack_growfactor: Option<u32>,
+
+    /// Set default packsize for data packs. rustic tries to always produce packs greater than this value.
+    /// Note that for large repos, this value is grown by the grown factor.
+    /// Defaults to 32 MiB if not set.
+    #[clap(long, value_name = "SIZE")]
+    pub set_datapack_size: Option<ByteSize>,
+
+    /// set grow factor for data packs. The default packsize grows by the square root of the reposize
+    /// multiplied with this factor. This means 32 kiB times this factor per square root of reposize in GiB.
+    /// Defaults to 32 (= 1MB per sqare root of reposize in GiB) if not set.
+    #[clap(long, value_name = "FACTOR")]
+    pub set_datapack_growfactor: Option<u32>,
 }
 
 impl ConfigOpts {
@@ -69,6 +94,19 @@ impl ConfigOpts {
                 );
             }
             config.compression = Some(compression);
+        }
+
+        if let Some(size) = self.set_treepack_size {
+            config.treepack_size = Some(size.as_u64().try_into()?);
+        }
+        if let Some(factor) = self.set_treepack_growfactor {
+            config.treepack_growfactor = Some(factor);
+        }
+        if let Some(size) = self.set_datapack_size {
+            config.datapack_size = Some(size.as_u64().try_into()?);
+        }
+        if let Some(factor) = self.set_treepack_growfactor {
+            config.datapack_growfactor = Some(factor);
         }
 
         Ok(())

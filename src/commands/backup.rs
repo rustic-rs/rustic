@@ -56,7 +56,6 @@ pub(super) async fn execute(
     command: String,
 ) -> Result<()> {
     let time = Local::now();
-    let poly = config.poly()?;
     let zstd = config.zstd()?;
     let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
     be.set_zstd(zstd);
@@ -129,9 +128,8 @@ pub(super) async fn execute(
     } else {
         0
     };
-
     v1!("starting backup...");
-    let mut archiver = Archiver::new(be, index, poly, parent, snap, zstd)?;
+    let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
     let p = progress_bytes();
     p.set_length(size);
     for item in src {

@@ -463,6 +463,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum-map"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ddfe61e8040145222887d0d32a939c70c8cae681490d72fb868305e9b40ced8"
+dependencies = [
+ "enum-map-derive",
+]
+
+[[package]]
+name = "enum-map-derive"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00d1c54e25a57236a790ecf051c2befbb57740c9b86c4273eac378ba84d620d6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "fastrand"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -844,6 +864,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "integer-sqrt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -1366,6 +1395,8 @@ dependencies = [
  "derive-getters",
  "derive_more",
  "dirs 4.0.0",
+ "enum-map",
+ "enum-map-derive",
  "filetime",
  "futures",
  "gethostname",
@@ -1373,6 +1404,7 @@ dependencies = [
  "humantime",
  "ignore",
  "indicatif",
+ "integer-sqrt",
  "itertools",
  "lazy_static",
  "nix",

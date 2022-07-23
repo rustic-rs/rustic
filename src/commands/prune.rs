@@ -27,9 +27,9 @@ pub(super) struct Opts {
     #[clap(long, value_name = "LIMIT", default_value = "5%")]
     max_unused: LimitOption,
 
-    /// only repack packs which are cacheable
-    #[clap(long)]
-    repack_cacheable_only: bool,
+    /// only repack packs which are cacheable [default: true for a hot/cold repository, else false]
+    #[clap(long, value_name = "TRUE/FALSE")]
+    repack_cacheable_only: Option<bool>,
 
     /// minimum duration (e.g. 10m) to keep packs marked for deletion
     #[clap(long, value_name = "DURATION", default_value = "23h")]
@@ -101,10 +101,13 @@ pub(super) async fn execute(
     let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
     pruner.count_used_blobs();
     pruner.check()?;
+    let repack_cacheable_only = opts
+        .repack_cacheable_only
+        .unwrap_or_else(|| config.is_hot == Some(true));
     pruner.decide_packs(
         Duration::from_std(*opts.keep_pack)?,
         Duration::from_std(*opts.keep_delete)?,
-        opts.repack_cacheable_only,
+        repack_cacheable_only,
         opts.repack_uncompressed,
     )?;
     pruner.decide_repack(&opts.max_repack, &opts.max_unused, opts.repack_uncompressed);

@@ -753,7 +753,7 @@ impl Pruner {
             be.clone(),
             BlobType::Tree,
             indexer.clone(),
-            zstd,
+            &config,
             tree_size_after_prune,
         )?;
 
@@ -761,7 +761,7 @@ impl Pruner {
             be.clone(),
             BlobType::Data,
             indexer.clone(),
-            zstd,
+            &config,
             data_size_after_prune,
         )?;
 

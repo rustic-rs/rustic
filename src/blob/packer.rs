@@ -16,25 +16,40 @@ use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
 use crate::crypto::{CryptoKey, Hasher};
 use crate::id::Id;
 use crate::index::SharedIndexer;
-use crate::repo::{IndexBlob, IndexPack};
+use crate::repo::{ConfigFile, IndexBlob, IndexPack};
 
 const KB: u32 = 1024;
 const MB: u32 = 1024 * KB;
-// default pack size
-pub const DEFAULT_TREE_SIZE: u32 = 4 * MB;
-pub const DEFAULT_DATA_SIZE: u32 = 50 * MB;
 // the absolute maximum size of a pack: including headers it should not exceed 4 GB
 const MAX_SIZE: u32 = 4076 * MB;
-// the factor used for repo-size dependent pack size.
-// 256 * sqrt(reposize in bytes) = 8 MB * sqrt(reposize in GB)
-const SIZE_GROW_FACTOR: u32 = 256;
 const MAX_COUNT: u32 = 10_000;
 const MAX_AGE: Duration = Duration::from_secs(300);
 
-pub fn size_limit_from_size(size: u64, default_size: u32) -> u32 {
-    (size.integer_sqrt() as u32 * SIZE_GROW_FACTOR).clamp(default_size, MAX_SIZE)
+struct PackSizer {
+    default_size: u32,
+    grow_factor: u32,
+    current_size: u64,
 }
 
+impl PackSizer {
+    pub fn from_config(config: &ConfigFile, blob_type: BlobType, current_size: u64) -> Self {
+        let (default_size, grow_factor) = config.packsize(blob_type);
+        Self {
+            default_size,
+            grow_factor,
+            current_size,
+        }
+    }
+
+    pub fn pack_size(&self) -> u32 {
+        (self.current_size.integer_sqrt() as u32 * self.grow_factor + self.default_size)
+            .min(MAX_SIZE)
+    }
+
+    fn add_size(&mut self, added: u32) {
+        self.current_size += added as u64;
+    }
+}
 pub struct Packer<BE: DecryptWriteBackend> {
     be: BE,
     blob_type: BlobType,
@@ -47,8 +62,7 @@ pub struct Packer<BE: DecryptWriteBackend> {
     hasher: Hasher,
     file_writer: FileWriter<BE>,
     zstd: Option<i32>,
-    default_size: u32,
-    total_size: u64,
+    pack_sizer: PackSizer,
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
@@ -56,7 +70,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         be: BE,
         blob_type: BlobType,
         indexer: SharedIndexer<BE>,
-        zstd: Option<i32>,
+        config: &ConfigFile,
         total_size: u64,
     ) -> Result<Self> {
         let file_writer = FileWriter {
@@ -65,10 +79,8 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             indexer: indexer.clone(),
             cacheable: blob_type.is_cacheable(),
         };
-        let default_size = match blob_type {
-            BlobType::Tree => DEFAULT_TREE_SIZE,
-            BlobType::Data => DEFAULT_DATA_SIZE,
-        };
+        let zstd = config.zstd()?;
+        let pack_sizer = PackSizer::from_config(config, blob_type, total_size);
         Ok(Self {
             be,
             blob_type,
@@ -81,8 +93,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             hasher: Hasher::new(),
             file_writer,
             zstd,
-            default_size,
-            total_size,
+            pack_sizer,
         })
     }
 
@@ -101,7 +112,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     // adds the blob to the packfile; returns the actually added size
     pub async fn add(&mut self, data: &[u8], id: &Id) -> Result<u64> {
         // compute size limit based on total size and size bounds
-        let size_limit = size_limit_from_size(self.total_size, self.default_size);
+        let size_limit = self.pack_sizer.pack_size();
         self.add_with_sizelimit(data, id, size_limit).await
     }
 
@@ -163,7 +174,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         // check if PackFile needs to be saved
         if self.count >= MAX_COUNT || self.size >= size_limit || self.created.elapsed()? >= MAX_AGE
         {
-            self.total_size += self.index.pack_size() as u64;
+            self.pack_sizer.add_size(self.index.pack_size());
             self.save().await?;
             self.size = 0;
             self.count = 0;
@@ -306,23 +317,15 @@ pub struct Repacker<BE: DecryptFullBackend> {
 }
 
 impl<BE: DecryptFullBackend> Repacker<BE> {
-    pub fn size_limit_from_size(size: u64, default_size: u32) -> u32 {
-        size_limit_from_size(size, default_size)
-    }
-
     pub fn new(
         be: BE,
         blob_type: BlobType,
         indexer: SharedIndexer<BE>,
-        zstd: Option<i32>,
+        config: &ConfigFile,
         total_size: u64,
     ) -> Result<Self> {
-        let default_size = match blob_type {
-            BlobType::Tree => DEFAULT_TREE_SIZE,
-            BlobType::Data => DEFAULT_DATA_SIZE,
-        };
-        let packer = Packer::new(be.clone(), blob_type, indexer, zstd, 0)?;
-        let size_limit = Self::size_limit_from_size(total_size, default_size);
+        let packer = Packer::new(be.clone(), blob_type, indexer, config, total_size)?;
+        let size_limit = packer.pack_sizer.pack_size();
         Ok(Self {
             be,
             packer,

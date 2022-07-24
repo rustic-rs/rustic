@@ -30,9 +30,22 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
-    let groups = match opts.ids.is_empty() {
-        true => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?,
-        false => vec![(
+    let groups = match &opts.ids[..] {
+        [] => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?,
+        [id] if id == "latest" => {
+            SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by)
+                .await?
+                .into_iter()
+                .map(|(group, mut snaps)| {
+                    snaps.sort_unstable();
+                    let last_idx = snaps.len() - 1;
+                    snaps.swap(0, last_idx);
+                    snaps.truncate(1);
+                    (group, snaps)
+                })
+                .collect::<Vec<_>>()
+        }
+        _ => vec![(
             SnapshotGroup::default(),
             SnapshotFile::from_ids(be, &opts.ids).await?,
         )],

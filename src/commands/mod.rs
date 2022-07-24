@@ -175,7 +175,7 @@ pub async fn execute() -> Result<()> {
 
     match cmd {
         Command::Backup(opts) => backup::execute(&dbe, opts, config, command).await?,
-        Command::Config(opts) => config::execute(&dbe, opts, config).await?,
+        Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,

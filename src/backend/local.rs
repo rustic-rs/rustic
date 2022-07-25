@@ -22,7 +22,9 @@ pub struct LocalBackend {
 
 impl LocalBackend {
     pub fn new(path: &str) -> Self {
-        Self { path: path.into() }
+        let path = path.into();
+        fs::create_dir_all(&path).unwrap();
+        Self { path }
     }
 
     fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
@@ -189,9 +191,10 @@ impl LocalBackend {
         }
     */
 
-    pub fn create_dir(&self, item: impl AsRef<Path>) {
+    pub fn create_dir(&self, item: impl AsRef<Path>) -> Result<()> {
         let dirname = self.path.join(item);
-        fs::create_dir(&dirname).unwrap();
+        fs::create_dir_all(&dirname)?;
+        Ok(())
     }
 
     pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
@@ -247,10 +250,11 @@ impl LocalBackend {
         Ok(())
     }
 
-    pub fn create_file(&self, item: impl AsRef<Path>, size: u64) {
+    pub fn create_file(&self, item: impl AsRef<Path>, size: u64) -> Result<()> {
         let filename = self.path.join(item);
-        let f = fs::File::create(filename).unwrap();
-        f.set_len(size).unwrap();
+        let f = fs::File::create(filename)?;
+        f.set_len(size)?;
+        Ok(())
     }
 
     pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> Result<()> {
@@ -285,13 +289,13 @@ impl LocalBackend {
         Ok(())
     }
 
-    pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) {
+    pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) -> Result<()> {
         let filename = self.path.join(item);
         let file = fs::OpenOptions::new()
             .create(true)
             .write(true)
-            .open(&filename)
-            .unwrap();
-        file.write_all_at(data, offset).unwrap();
+            .open(&filename)?;
+        file.write_all_at(data, offset)?;
+        Ok(())
     }
 }

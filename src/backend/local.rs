@@ -193,7 +193,7 @@ impl LocalBackend {
 
     pub fn create_dir(&self, item: impl AsRef<Path>) -> Result<()> {
         let dirname = self.path.join(item);
-        fs::create_dir(&dirname)?;
+        fs::create_dir_all(&dirname)?;
         Ok(())
     }
 

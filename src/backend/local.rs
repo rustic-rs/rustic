@@ -22,7 +22,9 @@ pub struct LocalBackend {
 
 impl LocalBackend {
     pub fn new(path: &str) -> Self {
-        Self { path: path.into() }
+        let path = path.into();
+        fs::create_dir_all(&path).unwrap();
+        Self { path }
     }
 
     fn path(&self, tpe: FileType, id: &Id) -> PathBuf {

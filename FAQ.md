@@ -20,7 +20,8 @@ Note that the "hot repo" on its own is not a valid rustic repository. The "cold 
 all files and is nothing but a standard rustic repository.
 
 If you additionally use a cache, you effectively have a first level cache on your local disc and a second
-level cache 
+level cache with the "hot repo". Note that the "hot repo" can be also a remote repo, so hot/cold repositories
+also work for multiple rustic clients backing up to the same repository.
 
 ## How does the lock-free prune work?
 Like the prune within restic, rustic decides for each pack whether to keep it, remove it or repack it.

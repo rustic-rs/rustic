@@ -67,6 +67,7 @@ async fn allocate_and_collect(
 
     let mut node_streamer = NodeStreamer::new(index.clone(), tree).await?;
     while let Some((path, node)) = node_streamer.try_next().await? {
+        v3!("processing {:?}", path);
         match node.node_type() {
             NodeType::Dir => {
                 if !opts.dry_run {
@@ -188,6 +189,7 @@ async fn restore_metadata(
 }
 
 fn set_metadata(dest: &LocalBackend, path: &PathBuf, node: &Node, opts: &Opts) {
+    v3!("processing {:?}", path);
     dest.create_special(path, node)
         .unwrap_or_else(|_| eprintln!("restore {:?}: creating special file failed.", path));
     if opts.numeric_id {

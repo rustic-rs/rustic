@@ -18,28 +18,31 @@ It is not yet considered to be ready for use in a production environment.
 
 Look at the [FAQ][3] or open an issue!
 
-## Comparison with restics:
+## Comparison with restic:
 
 Improvements:
- * Completely lock-free
+ * Allows using cold storage (e.g. AWS Glacier) repos which are only read in the `restore` command
+ * Completely lock-free pruning; option `instant-delete` is available
  * Huge decrease in memory requirement
+ * pack size can be customized
  * Already much faster than restic for most operations (but not yet fully speed optimized)
- * Can use `.gitignore` files
+ * `backup` command can use `.gitignore` files
  * Snapshots save much more information
+ * Allows to save some options in the config file via the command `config`
  * New command `repo-info`
- * cat tree command accepts a snapshot and path to cat the tree blob
-
-Differences:
- * backup uses glob patterns to include/exclude instead of exclude files
+ * `snapshots latest` command to show only the latest snapshot(s)
+ * `check` command checks and uses cache; option `--trust-cache` is available
+ * option `prune --fast-repack` for faster repacking
+ * `cat tree` command accepts a snapshot and path to cat the tree blob
+ * compression is already supported in released versions ;-)
 
 Current limitations:
  * Backup source and restore destinations only on local file system
- * Backup backends: So far only local disc and REST backends supported (others using rclone as REST backend)
  * Runs so far only on Linux and MacOS, Windows support is WIP
  
 ## Open points:
  * [ ] Add tests and benchmarks
- * [ ] Add more backends, backup-sources and restore-destinations
+ * [ ] Add more backup-sources and restore-destinations
  * [ ] Add missing commands: copy, dump, find, mount
  * [ ] Improve error handling
  * [ ] Parallelize the code even more and optimize for speed where useful

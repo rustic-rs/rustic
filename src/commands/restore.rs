@@ -70,7 +70,7 @@ async fn allocate_and_collect(
         match node.node_type() {
             NodeType::Dir => {
                 if !opts.dry_run {
-                    dest.create_dir(&path);
+                    dest.create_dir(&path)?;
                 }
             }
             NodeType::File => {
@@ -78,7 +78,7 @@ async fn allocate_and_collect(
                 let size = file_infos.add_file(&node, path.clone(), &index)?;
                 // create the file
                 if !opts.dry_run {
-                    dest.create_file(&path, size);
+                    dest.create_file(&path, size)?;
                 }
             }
             _ => {} // nothing to do for symlink, device, etc.
@@ -135,7 +135,7 @@ async fn restore_contents(
                 if !dry_run {
                     // save into needed files in parallel
                     for (name, start) in name_dests {
-                        dest.write_at(&name, start, &data);
+                        dest.write_at(&name, start, &data).unwrap();
                     }
                 }
                 p.inc(1);

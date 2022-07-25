@@ -43,13 +43,13 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     let dest = LocalBackend::new(&opts.dest);
     let index = IndexBackend::new(be, progress_counter()).await?;
 
-    v2!("1st tree walk: allocating dirs/files and collecting restore information...");
+    v1!("allocating dirs/files and collecting restore information...");
     let file_infos = allocate_and_collect(&dest, index.clone(), snap.tree, &opts).await?;
 
-    v2!("restoring file contents...");
+    v1!("restoring file contents...");
     restore_contents(be, &dest, file_infos, &opts).await?;
 
-    v2!("2nd tree walk: setting metadata");
+    v1!("setting metadata...");
     restore_metadata(&dest, index, snap.tree, &opts).await?;
 
     v1!("done.");

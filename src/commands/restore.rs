@@ -157,27 +157,52 @@ async fn restore_metadata(
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
     let mut node_streamer = NodeStreamer::new(index, tree).await?;
+    let mut dir_stack = Vec::new();
     while let Some((path, node)) = node_streamer.try_next().await? {
         if !opts.dry_run {
-            dest.create_special(&path, &node)
-                .unwrap_or_else(|_| eprintln!("restore {:?}: creating special file failed.", path));
-            if opts.numeric_id {
-                dest.set_uid_gid(&path, node.meta())
-                    .unwrap_or_else(|_| eprintln!("restore {:?}: setting UID/GID failed.", path));
-            } else {
-                dest.set_user_group(&path, node.meta()).unwrap_or_else(|_| {
-                    eprintln!("restore {:?}: setting User/Group failed.", path)
-                });
+            match node.node_type() {
+                NodeType::Dir => {
+                    // set metadata for all non-parent paths in stack
+                    while let Some((stackpath, _)) = dir_stack.last() {
+                        if !path.starts_with(stackpath) {
+                            let (path, node) = dir_stack.pop().unwrap();
+                            set_metadata(dest, &path, &node, opts);
+                        } else {
+                            break;
+                        }
+                    }
+                    // push current path to the stack
+                    dir_stack.push((path, node));
+                }
+                _ => set_metadata(dest, &path, &node, opts),
             }
-            dest.set_permission(&path, node.meta())
-                .unwrap_or_else(|_| eprintln!("restore {:?}: chmod failed.", path));
-            dest.set_times(&path, node.meta())
-                .unwrap_or_else(|_| eprintln!("restore {:?}: setting file times failed.", path));
         }
+    }
+
+    // empty dir stack and set metadata
+    for (path, node) in dir_stack.into_iter().rev() {
+        set_metadata(dest, &path, &node, opts);
     }
 
     Ok(())
 }
+
+fn set_metadata(dest: &LocalBackend, path: &PathBuf, node: &Node, opts: &Opts) {
+    dest.create_special(path, node)
+        .unwrap_or_else(|_| eprintln!("restore {:?}: creating special file failed.", path));
+    if opts.numeric_id {
+        dest.set_uid_gid(path, node.meta())
+            .unwrap_or_else(|_| eprintln!("restore {:?}: setting UID/GID failed.", path));
+    } else {
+        dest.set_user_group(path, node.meta())
+            .unwrap_or_else(|_| eprintln!("restore {:?}: setting User/Group failed.", path));
+    }
+    dest.set_permission(path, node.meta())
+        .unwrap_or_else(|_| eprintln!("restore {:?}: chmod failed.", path));
+    dest.set_times(path, node.meta())
+        .unwrap_or_else(|_| eprintln!("restore {:?}: setting file times failed.", path));
+}
+
 /// struct that contains information of file contents grouped by
 /// 1) pack ID,
 /// 2) blob within this pack

@@ -1378,7 +1378,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.2.1-dev"
+version = "0.2.2"
 dependencies = [
  "aes256ctr_poly1305aes",
  "ambassador",

@@ -469,7 +469,11 @@ impl Pruner {
                         (false, 1.., 0) => {
                             // used pack
                             self.stats.packs.used += 1;
-                            if too_young || !repack_uncompressed || pack.is_compressed() {
+                            if too_young
+                                || !repack_uncompressed
+                                || pack.is_compressed()
+                                || repack_cacheable_only && !pack.blob_type.is_cacheable()
+                            {
                                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
                             } else {
                                 self.repack_candidates.push((pi, index_num, pack_num));

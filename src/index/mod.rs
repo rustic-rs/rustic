@@ -9,7 +9,6 @@ use derive_more::Constructor;
 use futures::StreamExt;
 use indicatif::ProgressBar;
 use vlog::*;
-use zstd::decode_all;
 
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
@@ -51,12 +50,10 @@ impl IndexEntry {
                 self.blob_type.is_cacheable(),
                 self.offset,
                 self.length,
+                self.uncompressed_length,
             )
             .await?;
-        Ok(match self.uncompressed_length {
-            None => data,
-            Some(_) => decode_all(&*data)?,
-        })
+        Ok(data)
     }
 
     pub fn data_length(&self) -> u32 {

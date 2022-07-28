@@ -359,6 +359,7 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
                 blob.tpe.is_cacheable(),
                 blob.offset,
                 blob.length,
+                blob.uncompressed_length,
             )
             .await?;
         self.packer

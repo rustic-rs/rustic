@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
@@ -9,7 +10,7 @@ use tokio::spawn;
 use vlog::*;
 use zstd::decode_all;
 
-use super::progress_counter;
+use super::{progress_bytes, progress_counter};
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{Node, NodeStreamer, NodeType};
 use crate::id::Id;
@@ -100,8 +101,14 @@ async fn restore_contents(
     let (filenames, restore_info) = file_infos.dissolve();
 
     v1!("processing blobs...");
-    let p = progress_counter();
-    p.set_length(restore_info.iter().map(|(_, blob)| blob.len() as u64).sum());
+    let p = progress_bytes();
+    p.set_length(
+        restore_info
+            .iter()
+            .flat_map(|(_, blob)| blob)
+            .map(|(bl, fl)| bl.data_length() * fl.len() as u64)
+            .sum(),
+    );
     let mut stream = FuturesUnordered::new();
 
     const MAX_READER: usize = 20;
@@ -128,18 +135,20 @@ async fn restore_contents(
                     .await
                     .unwrap();
 
-                let data = match bl.compressed {
+                let data = match bl.uncompressed_length.is_some() {
                     false => data,
                     true => decode_all(&*data).unwrap(),
                 };
+
+                // TODO: check length of uncomressed data
 
                 if !dry_run {
                     // save into needed files in parallel
                     for (name, start) in name_dests {
                         dest.write_at(&name, start, &data).unwrap();
+                        p.inc(bl.data_length());
                     }
                 }
-                p.inc(1);
             }))
         }
     }
@@ -222,7 +231,17 @@ type Filenames = Vec<PathBuf>;
 struct BlobLocation {
     offset: u32,
     length: u32,
-    compressed: bool,
+    uncompressed_length: Option<NonZeroU32>,
+}
+
+impl BlobLocation {
+    fn data_length(&self) -> u64 {
+        match self.uncompressed_length {
+            None => self.length - 32, // crypto overhead
+            Some(length) => length.get(),
+        }
+        .into()
+    }
 }
 
 #[derive(Debug)]
@@ -253,7 +272,7 @@ impl FileInfos {
                 let bl = BlobLocation {
                     offset: *ie.offset(),
                     length: *ie.length(),
-                    compressed: ie.uncompressed_length().is_some(),
+                    uncompressed_length: *ie.uncompressed_length(),
                 };
 
                 let pack = self.r.entry(*ie.pack()).or_insert_with(HashMap::new);

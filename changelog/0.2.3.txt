@@ -1,0 +1,7 @@
+0.2.3 is a bug-fix release that fixes a severe bug in the prune command
+
+Changes in version 0.2.3
+- prune: Fixed a critical bug which corrupted the repo when repacking compressed data
+- prune: Fixed --repack-cacheable-only when used with --repack-uncompressed
+- prune: Added progress bar for repacking
+- restore: Improved progress bar

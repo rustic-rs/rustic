@@ -58,6 +58,10 @@ pub fn progress_counter() -> ProgressBar {
     }
 }
 
+pub fn no_progress() -> ProgressBar {
+    ProgressBar::hidden()
+}
+
 pub fn progress_bytes() -> ProgressBar {
     if get_verbosity_level() == 1 {
         let p = ProgressBar::new(0).with_style(

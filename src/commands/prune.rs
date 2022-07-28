@@ -10,7 +10,7 @@ use derive_more::Add;
 use futures::{future, TryStreamExt};
 use vlog::*;
 
-use super::{bytes, progress_counter};
+use super::{bytes, no_progress, progress_bytes, progress_counter};
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, FileType};
 use crate::blob::{BlobType, BlobTypeMap, NodeType, Repacker, TreeStreamerOnce};
 use crate::id::Id;
@@ -795,11 +795,22 @@ impl Pruner {
         }
 
         // process packs by index_file
-        match (self.index_files.is_empty(), self.stats.packs.repack > 0) {
-            (true, _) => v1!("nothing to do!"),
-            (false, true) => v1!("repacking packs and rebuilding index..."),
-            (false, false) => v1!("rebuilding index..."),
-        }
+        let p = match (self.index_files.is_empty(), self.stats.packs.repack > 0) {
+            (true, _) => {
+                v1!("nothing to do!");
+                no_progress()
+            }
+            (false, true) => {
+                v1!("repacking packs and rebuilding index...");
+                progress_bytes()
+            }
+            (false, false) => {
+                v1!("rebuilding index...");
+                no_progress()
+            }
+        };
+
+        p.set_length(self.stats.total_size().repack - self.stats.total_size().repackrm);
 
         let mut indexes_remove = Vec::new();
         let mut tree_packs_remove = Vec::new();
@@ -839,6 +850,7 @@ impl Pruner {
                             } else {
                                 repacker.add(&pack.id, blob).await?;
                             }
+                            p.inc(blob.length as u64);
                         }
                         if opts.instant_delete {
                             delete_pack(pack);
@@ -879,6 +891,7 @@ impl Pruner {
         tree_repacker.finalize().await?;
         data_repacker.finalize().await?;
         indexer.write().await.finalize().await?;
+        p.finish();
 
         if !data_packs_remove.is_empty() {
             v1!("removing old data pack files...");

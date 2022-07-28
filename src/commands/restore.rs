@@ -8,7 +8,6 @@ use derive_getters::Dissolve;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use tokio::spawn;
 use vlog::*;
-use zstd::decode_all;
 
 use super::{progress_bytes, progress_counter};
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
@@ -131,16 +130,16 @@ async fn restore_contents(
             stream.push(spawn(async move {
                 // read pack at blob_offset with length blob_length
                 let data = be
-                    .read_encrypted_partial(FileType::Pack, &pack, false, bl.offset, bl.length)
+                    .read_encrypted_partial(
+                        FileType::Pack,
+                        &pack,
+                        false,
+                        bl.offset,
+                        bl.length,
+                        bl.uncompressed_length,
+                    )
                     .await
                     .unwrap();
-
-                let data = match bl.uncompressed_length.is_some() {
-                    false => data,
-                    true => decode_all(&*data).unwrap(),
-                };
-
-                // TODO: check length of uncomressed data
 
                 if !dry_run {
                     // save into needed files in parallel

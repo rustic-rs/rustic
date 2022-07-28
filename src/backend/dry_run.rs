@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::num::NonZeroU32;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -32,9 +33,10 @@ impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
         cacheable: bool,
         offset: u32,
         length: u32,
+        uncompressed_length: Option<NonZeroU32>,
     ) -> Result<Vec<u8>> {
         self.be
-            .read_encrypted_partial(tpe, id, cacheable, offset, length)
+            .read_encrypted_partial(tpe, id, cacheable, offset, length, uncompressed_length)
             .await
     }
 }

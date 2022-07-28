@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::num::NonZeroU32;
 
 use anyhow::{bail, Result};
 use async_trait::async_trait;
@@ -23,6 +24,7 @@ pub trait DecryptReadBackend: ReadBackend {
         cacheable: bool,
         offset: u32,
         length: u32,
+        uncompressed_length: Option<NonZeroU32>,
     ) -> Result<Vec<u8>>;
 
     async fn get_file<F: RepoFile>(&self, id: &Id) -> Result<F> {
@@ -176,13 +178,21 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
         cacheable: bool,
         offset: u32,
         length: u32,
+        uncompressed_length: Option<NonZeroU32>,
     ) -> Result<Vec<u8>> {
-        Ok(self.key.decrypt_data(
+        let mut data = self.key.decrypt_data(
             &self
                 .backend
                 .read_partial(tpe, id, cacheable, offset, length)
                 .await?,
-        )?)
+        )?;
+        if let Some(length) = uncompressed_length {
+            data = decode_all(&*data).unwrap();
+            if data.len() != length.get() as usize {
+                bail!("length of uncompressed data does not match!");
+            }
+        }
+        Ok(data)
     }
 }
 

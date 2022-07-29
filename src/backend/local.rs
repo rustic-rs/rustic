@@ -289,6 +289,29 @@ impl LocalBackend {
         Ok(())
     }
 
+    pub fn read_at(&self, item: impl AsRef<Path>, offset: u64, length: u64) -> Result<Vec<u8>> {
+        let filename = self.path.join(item);
+        let mut file = File::open(&filename)?;
+        file.seek(SeekFrom::Start(offset))?;
+        let mut vec = vec![0; length.try_into().unwrap()];
+        file.read_exact(&mut vec).unwrap();
+        Ok(vec)
+    }
+
+    pub fn get_matching_file(&self, item: impl AsRef<Path>, size: u64) -> Option<File> {
+        let filename = self.path.join(item);
+        match fs::symlink_metadata(&filename) {
+            Ok(meta) => {
+                if meta.is_file() && meta.len() == size {
+                    File::open(&filename).ok()
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        }
+    }
+
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) -> Result<()> {
         let filename = self.path.join(item);
         let file = fs::OpenOptions::new()

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 
@@ -78,23 +78,7 @@ async fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Re
 async fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
     let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter()).await?;
     let index = IndexBackend::new(be, progress_counter()).await?;
-    let mut id = snap.tree;
-
-    for p in opts.path.iter() {
-        let p = p.to_str().unwrap();
-        // TODO: check for root instead
-        if p == "/" {
-            continue;
-        }
-        let tree = Tree::from_backend(&index, id).await?;
-        let node = tree
-            .nodes()
-            .iter()
-            .find(|node| node.name() == p)
-            .ok_or_else(|| anyhow!("{} not found", p))?;
-        id = node.subtree().ok_or_else(|| anyhow!("{} is no dir", p))?;
-    }
-
+    let id = Tree::subtree_id(&index, snap.tree, &opts.path).await?;
     let data = index.blob_from_backend(&BlobType::Tree, &id).await?;
     println!("{}", String::from_utf8(data)?);
 

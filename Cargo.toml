@@ -1,6 +1,6 @@
 [package]
 name = "rustic-rs"
-version = "0.2.3"
+version = "0.2.3-dev"
 description = """
 fast, encrypted, deduplicated backups powered by pure Rust
 """

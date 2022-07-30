@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 use std::num::NonZeroU32;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -12,7 +12,7 @@ use vlog::*;
 
 use super::{bytes, progress_bytes, progress_counter};
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
-use crate::blob::{Node, NodeStreamer, NodeType};
+use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
@@ -32,21 +32,25 @@ pub(super) struct Opts {
     #[clap(long)]
     numeric_id: bool,
 
-    /// snapshot to restore
-    id: String,
+    /// snapshot/path to restore
+    #[clap(value_name = "SNAPSHOT[:PATH]")]
+    snap: String,
 
     /// restore destination
     dest: String,
 }
 
 pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
-    let snap = SnapshotFile::from_str(be, &opts.id, |_| true, progress_counter()).await?;
+    let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
+    let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter()).await?;
+
+    let index = IndexBackend::new(be, progress_counter()).await?;
+    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path)).await?;
 
     let dest = LocalBackend::new(&opts.dest);
-    let index = IndexBackend::new(be, progress_counter()).await?;
 
     v1!("collecting restore information and allocating non-existing files...");
-    let file_infos = allocate_and_collect(&dest, index.clone(), snap.tree, &opts).await?;
+    let file_infos = allocate_and_collect(&dest, index.clone(), tree, &opts).await?;
     v1!("total restore size: {}", bytes(file_infos.total_size));
     if file_infos.matched_size > 0 {
         v1!(
@@ -63,7 +67,7 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     }
 
     v1!("setting metadata...");
-    restore_metadata(&dest, index, snap.tree, &opts).await?;
+    restore_metadata(&dest, index, tree, &opts).await?;
 
     v1!("done.");
     Ok(())

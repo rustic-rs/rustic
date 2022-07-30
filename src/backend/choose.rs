@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
@@ -17,16 +17,13 @@ use ChooseBackend::{Local, Rclone, Rest};
 
 impl ChooseBackend {
     pub fn from_url(url: &str) -> Result<Self> {
-        if let Some(path) = url.strip_prefix("rclone:") {
-            return Ok(Rclone(RcloneBackend::new(path)?));
-        }
-        if let Some(path) = url.strip_prefix("rest:") {
-            return Ok(Rest(RestBackend::new(path)));
-        }
-        if let Some(path) = url.strip_prefix("local:") {
-            return Ok(Local(LocalBackend::new(path)));
-        }
-        Ok(Local(LocalBackend::new(url)))
+        Ok(match url.split_once(':') {
+            Some(("rclone", path)) => Rclone(RcloneBackend::new(path)?),
+            Some(("rest", path)) => Rest(RestBackend::new(path)),
+            Some(("local", path)) => Local(LocalBackend::new(path)),
+            Some((backend, _)) => bail!("backend {backend} is not supported!"),
+            None => Local(LocalBackend::new(url)),
+        })
     }
 }
 

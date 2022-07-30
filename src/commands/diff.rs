@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Result;
 use clap::Parser;
 use futures::StreamExt;
@@ -5,30 +7,37 @@ use vlog::*;
 
 use super::progress_counter;
 use crate::backend::DecryptReadBackend;
-use crate::blob::{NodeStreamer, NodeType};
+use crate::blob::{NodeStreamer, NodeType, Tree};
 use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    /// reference snapshot
-    id1: String,
+    /// reference snapshot/path
+    #[clap(value_name = "SNAPSHOT1[:PATH1]")]
+    snap1: String,
 
-    /// new snapshot
-    id2: String,
+    /// new snapshot/path [default for PATH2: PATH1]
+    #[clap(value_name = "SNAPSHOT2[:PATH2]")]
+    snap2: String,
 }
 
 pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
+    let (id1, path1) = opts.snap1.split_once(':').unwrap_or((&opts.snap1, ""));
+    let (id2, path2) = opts.snap2.split_once(':').unwrap_or((&opts.snap2, path1));
+
     v1!("getting snapshots...");
-    let snaps = SnapshotFile::from_ids(be, &[opts.id1, opts.id2]).await?;
+    let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()]).await?;
 
     let snap1 = &snaps[0];
     let snap2 = &snaps[1];
 
     let index = IndexBackend::new(be, progress_counter()).await?;
+    let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1)).await?;
+    let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2)).await?;
 
-    let mut tree_streamer1 = NodeStreamer::new(index.clone(), snap1.tree).await?;
-    let mut tree_streamer2 = NodeStreamer::new(index, snap2.tree).await?;
+    let mut tree_streamer1 = NodeStreamer::new(index.clone(), id1).await?;
+    let mut tree_streamer2 = NodeStreamer::new(index, id2).await?;
 
     let mut item1 = tree_streamer1.next().await.transpose()?;
     let mut item2 = tree_streamer2.next().await.transpose()?;

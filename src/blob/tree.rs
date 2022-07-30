@@ -1,6 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 use std::mem;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use anyhow::{anyhow, Result};
@@ -55,6 +55,24 @@ impl Tree {
             .await?;
 
         Ok(serde_json::from_slice(&data)?)
+    }
+
+    pub async fn subtree_id(be: &impl IndexedBackend, mut id: Id, path: &Path) -> Result<Id> {
+        for p in path.iter() {
+            let p = p.to_str().unwrap();
+            // TODO: check for root instead
+            if p == "/" {
+                continue;
+            }
+            let tree = Tree::from_backend(be, id).await?;
+            let node = tree
+                .nodes()
+                .iter()
+                .find(|node| node.name() == p)
+                .ok_or_else(|| anyhow!("{} not found", p))?;
+            id = node.subtree().ok_or_else(|| anyhow!("{} is no dir", p))?;
+        }
+        Ok(id)
     }
 }
 

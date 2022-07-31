@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 use derive_getters::Dissolve;
 use futures::{stream::FuturesUnordered, TryStreamExt};
@@ -24,6 +25,14 @@ pub(super) struct Opts {
     #[clap(long, short = 'n')]
     dry_run: bool,
 
+    /// warm up needed data pack files by only requesting them without processing
+    #[clap(long, short = 'n', requires = "dry-run")]
+    warm_up: bool,
+
+    /// warm up needed data pack files by running the command with %id replaced by pack id
+    #[clap(long, short = 'n', requires = "dry-run", conflicts_with = "warm-up")]
+    warm_up_command: Option<String>,
+
     /// TODO: remove files/dirs destination which are not contained in snapshot
     #[clap(long)]
     delete: bool,
@@ -41,6 +50,13 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
+    if let Some(command) = &opts.warm_up_command {
+        if !command.contains("%id") {
+            bail!("warm-up command must contain %id!")
+        }
+        v1!("using warm-up command {command}")
+    }
+
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter()).await?;
 
@@ -61,13 +77,21 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
 
     if file_infos.total_size == file_infos.matched_size {
         v1!("all file contents are fine.");
-    } else {
+    } else if opts.warm_up {
+        v1!("warming up needed data pack files...");
+        warm_up(be, file_infos).await?;
+    } else if opts.warm_up_command.is_some() {
+        v1!("warming up needed data pack files...");
+        warm_up_command(file_infos, opts.warm_up_command.as_ref().unwrap())?;
+    } else if !opts.dry_run {
         v1!("restoring missing file contents...");
-        restore_contents(be, &dest, file_infos, &opts).await?;
+        restore_contents(be, &dest, file_infos).await?;
     }
 
-    v1!("setting metadata...");
-    restore_metadata(&dest, index, tree, &opts).await?;
+    if !opts.dry_run {
+        v1!("setting metadata...");
+        restore_metadata(&dest, index, tree, &opts).await?;
+    }
 
     v1!("done.");
     Ok(())
@@ -107,13 +131,56 @@ async fn allocate_and_collect(
     Ok(file_infos)
 }
 
+fn warm_up_command(file_infos: FileInfos, command: &str) -> Result<()> {
+    for pack in file_infos.into_packs() {
+        let id = pack.to_hex();
+        let actual_command = command.replace("%id", &id);
+        v1!("calling {actual_command}...");
+        let mut commands: Vec<_> = actual_command.split(' ').collect();
+        let status = Command::new(commands[0])
+            .args(&mut commands[1..])
+            .status()?;
+        if !status.success() {
+            bail!("warm-up command was not successful for pack {id}. {status}");
+        }
+    }
+    Ok(())
+}
+
+async fn warm_up(be: &impl DecryptReadBackend, file_infos: FileInfos) -> Result<()> {
+    let packs = file_infos.into_packs();
+
+    let p = progress_counter();
+    p.set_length(packs.len() as u64);
+    let mut stream = FuturesUnordered::new();
+
+    const MAX_READER: usize = 20;
+    for pack in packs {
+        while stream.len() > MAX_READER {
+            stream.try_next().await?;
+        }
+
+        let p = p.clone();
+        let be = be.clone();
+        stream.push(spawn(async move {
+            // ignore errors as they are expected from the warm-up
+            _ = be.read_partial(FileType::Pack, &pack, false, 0, 1).await;
+            p.inc(1);
+        }))
+    }
+
+    stream.try_collect().await?;
+    p.finish();
+
+    Ok(())
+}
+
 /// restore_contents restores all files contents as described by file_infos
 /// using the ReadBackend be and writing them into the LocalBackend dest.
 async fn restore_contents(
     be: &impl DecryptReadBackend,
     dest: &LocalBackend,
     file_infos: FileInfos,
-    opts: &Opts,
 ) -> Result<()> {
     let (filenames, restore_info, total_size, matched_size) = file_infos.dissolve();
 
@@ -139,7 +206,7 @@ async fn restore_contents(
                 .map(|fl| (filenames[fl.file_idx].clone(), fl.file_start))
                 .collect();
 
-            if !opts.dry_run & !name_dests.is_empty() {
+            if !name_dests.is_empty() {
                 while stream.len() > MAX_READER {
                     stream.try_next().await?;
                 }
@@ -192,23 +259,21 @@ async fn restore_metadata(
     let mut node_streamer = NodeStreamer::new(index, tree).await?;
     let mut dir_stack = Vec::new();
     while let Some((path, node)) = node_streamer.try_next().await? {
-        if !opts.dry_run {
-            match node.node_type() {
-                NodeType::Dir => {
-                    // set metadata for all non-parent paths in stack
-                    while let Some((stackpath, _)) = dir_stack.last() {
-                        if !path.starts_with(stackpath) {
-                            let (path, node) = dir_stack.pop().unwrap();
-                            set_metadata(dest, &path, &node, opts);
-                        } else {
-                            break;
-                        }
+        match node.node_type() {
+            NodeType::Dir => {
+                // set metadata for all non-parent paths in stack
+                while let Some((stackpath, _)) = dir_stack.last() {
+                    if !path.starts_with(stackpath) {
+                        let (path, node) = dir_stack.pop().unwrap();
+                        set_metadata(dest, &path, &node, opts);
+                    } else {
+                        break;
                     }
-                    // push current path to the stack
-                    dir_stack.push((path, node));
                 }
-                _ => set_metadata(dest, &path, &node, opts),
+                // push current path to the stack
+                dir_stack.push((path, node));
             }
+            _ => set_metadata(dest, &path, &node, opts),
         }
     }
 
@@ -338,5 +403,14 @@ impl FileInfos {
 
         // Tell to allocate the size only if the file does NOT exist with matching size
         Ok(open_file.is_none().then(|| file_pos))
+    }
+
+    // filter out packs which we need
+    fn into_packs(self) -> Vec<Id> {
+        self.r
+            .into_iter()
+            .filter(|(_, blob)| blob.iter().any(|(_, fls)| fls.iter().all(|fl| !fl.matches)))
+            .map(|(pack, _)| pack)
+            .collect()
     }
 }

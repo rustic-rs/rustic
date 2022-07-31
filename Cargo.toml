@@ -49,7 +49,7 @@ chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
 zstd = "0.11"
 enum-map = "2"
-enum-map-derive = "0.9"
+enum-map-derive = "0.10"
 # local backend
 walkdir = "2"
 ignore = "0.4"
@@ -67,7 +67,7 @@ clap = { version = "3", features = ["derive"] }
 rpassword = "6"
 prettytable-rs = {version = "0.8", default-features = false }
 bytesize = "1"
-indicatif = "0.17.0-rc.10"
+indicatif = "0.17"
 path-absolutize = "3"
 gethostname = "0.2"
 humantime = "2"

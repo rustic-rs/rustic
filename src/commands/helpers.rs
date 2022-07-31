@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -6,7 +7,7 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use bytesize::ByteSize;
 use indicatif::HumanDuration;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use rpassword::{prompt_password, read_password_from_bufread};
 use vlog::*;
 
@@ -66,12 +67,12 @@ pub fn progress_bytes() -> ProgressBar {
     if get_verbosity_level() == 1 {
         let p = ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
-            .with_key("my_eta", |s| 
+            .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
                  match (s.pos(), s.len()){
-                    (0, _) => "-".to_string(),
-                    (pos,Some(len)) => format!("{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
-                    (_, _) => "-".to_string(),
-                })
+                    (0, _) => write!(w,"-"),
+                    (pos,Some(len)) => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
+                    (_, _) => write!(w,"-"),
+                }.unwrap())
             .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
             .unwrap()
             );

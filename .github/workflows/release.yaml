@@ -111,6 +111,8 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
 
           # set up git
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}"
           ssh-keyscan -H github.com > ~/.ssh/known_hosts
           GIT_SSH='ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=~/.ssh/known_hosts'
 
@@ -124,6 +126,7 @@ jobs:
           cp -a target/${{ matrix.job.target }}/release/rustic-rs-*.tar.gz $WORKING_DIR/$DEST_DIR
 
           # create the commit
+          cd $WORKING_DIR
           git add .
           git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
           GIT_SSH_COMMAND=$GIT_SSH git push

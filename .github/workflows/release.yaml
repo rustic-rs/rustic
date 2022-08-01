@@ -112,7 +112,7 @@ jobs:
 
           # set up git
           ssh-keyscan -H github.com > ~/.ssh/known_hosts
-          GIT_SSH='ssh -i /github/home/.ssh/id_rsa -o UserKnownHostsFile=/github/home/.ssh/known_hosts'
+          GIT_SSH='ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=~/.ssh/known_hosts'
 
           # clone the repo into our working directory
           GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:/rustic-rs/rust-beta.git $WORKING_DIR

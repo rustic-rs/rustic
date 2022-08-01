@@ -99,12 +99,34 @@ jobs:
           fi
       - name: Releasing beta builds
         if: ${{ github.ref == 'refs/heads/main' }}
-        uses: leigholiver/commit-with-deploy-key@v1.0.3
-        with:
-          source: target/${{ matrix.job.target }}/release/rustic-rs-main-${{ matrix.job.target }}.tar.gz
-          destination_folder: beta
-          destination_repo: rustic-rs/rustic-beta
-          deploy_key: ${{ secrets.BETA_RELEASE_KEY }}
+        shell: bash
+        run: |
+          # set up some directories
+          WORKING_DIR=$(mktemp -d)
+          DEST_DIR=beta
+
+          # set up the github deploy key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.BETA_RELEASE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # set up git
+          ssh-keyscan -H github.com > ~/.ssh/known_hosts
+          GIT_SSH='ssh -i /github/home/.ssh/id_rsa -o UserKnownHostsFile=/github/home/.ssh/known_hosts'
+
+          # clone the repo into our working directory
+          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:/rustic-rs/rust-beta.git $WORKING_DIR
+
+          # ensure destination directory exists
+          mkdir -p $WORKING_DIR/$DEST_DIR
+
+          # do the copy
+          cp -a target/${{ matrix.job.target }}/release/rustic-rs-*.tar.gz $WORKING_DIR/$DEST_DIR
+
+          # create the commit
+          git add .
+          git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
+          GIT_SSH_COMMAND=$GIT_SSH git push
       - name: Releasing release versions
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

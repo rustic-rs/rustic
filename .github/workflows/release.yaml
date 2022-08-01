@@ -101,7 +101,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: leigholiver/commit-with-deploy-key@v1.0.3
         with:
-          source: target/${{ matrix.job.target }}/release/rustic-rs-*.tar.gz
+          source: target/${{ matrix.job.target }}/release/rustic-rs-main-${{ matrix.job.target }}.tar.gz
           destination_folder: beta
           destination_repo: rustic-rs/rustic-beta
           deploy_key: ${{ secrets.BETA_RELEASE_KEY }}

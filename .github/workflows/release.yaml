@@ -115,7 +115,7 @@ jobs:
           GIT_SSH='ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=~/.ssh/known_hosts'
 
           # clone the repo into our working directory
-          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:/rustic-rs/rust-beta.git $WORKING_DIR
+          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/rustic-beta.git $WORKING_DIR
 
           # ensure destination directory exists
           mkdir -p $WORKING_DIR/$DEST_DIR

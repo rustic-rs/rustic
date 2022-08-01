@@ -97,7 +97,15 @@ jobs:
           else
             shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
           fi
-      - name: Releasing assets
+      - name: Releasing beta builds
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: leigholiver/commit-with-deploy-key@v1.0.3
+        with:
+          source: target/${{ matrix.job.target }}/release/rustic-rs-*.tar.gz
+          destination_folder: beta
+          destination_repo: rustic-rs/rustic-beta
+          deploy_key: ${{ secrets.BETA_RELEASE_KEY }}
+      - name: Releasing release versions
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:

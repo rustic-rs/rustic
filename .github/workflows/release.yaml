@@ -1,6 +1,8 @@
 on:
   push:
 
+name: Build release binaries
+
 jobs:
   publish:
     name: Publishing ${{ matrix.job.target }}
@@ -57,7 +59,9 @@ jobs:
               sudo apt update
               sudo apt-get install -y musl-tools
           fi
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
+        with: 
+          key: ${{ matrix.job.target }}
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -151,7 +155,9 @@ jobs:
         #          toolchain: stable
         #          profile: minimal
         #          override: true
-        #      - uses: Swatinem/rust-cache@v1
+        #      - uses: Swatinem/rust-cache@v2
+        #        with: 
+        #          key: ${{ matrix.job.target }}
         #      - uses: actions-rs/cargo@v1
         #        with:
         #          command: publish

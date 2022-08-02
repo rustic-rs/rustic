@@ -133,6 +133,7 @@ jobs:
           cd $WORKING_DIR
           git add .
           git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
+          GIT_SSH_COMMAND=$GIT_SSH git pull --rebase
           GIT_SSH_COMMAND=$GIT_SSH git push
       - name: Releasing release versions
         uses: softprops/action-gh-release@v1

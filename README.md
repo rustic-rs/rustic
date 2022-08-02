@@ -14,6 +14,10 @@ and can therefore be used as a complete replacement for restic.
 Note that rustic currently is in an beta release and misses tests.
 It is not yet considered to be ready for use in a production environment.
 
+## Are binaries availabe?
+Sure. Check out the [releases](https://github.com/rustic-rs/rustic/releases).
+Binaries for the latest development version are availably [here](https://github.com/rustic-rs/rustic-beta).
+
 ## Have a question?
 
 Look at the [FAQ][3] or open an issue!

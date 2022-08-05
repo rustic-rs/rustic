@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::Read;
 use std::num::NonZeroU32;
@@ -8,6 +9,7 @@ use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 use derive_getters::Dissolve;
 use futures::{stream::FuturesUnordered, TryStreamExt};
+use ignore::{DirEntry, WalkBuilder};
 use tokio::spawn;
 use vlog::*;
 
@@ -33,7 +35,8 @@ pub(super) struct Opts {
     #[clap(long, short = 'n', requires = "dry-run", conflicts_with = "warm-up")]
     warm_up_command: Option<String>,
 
-    /// TODO: remove files/dirs destination which are not contained in snapshot
+    /// remove all files/dirs destination which are not contained in snapshot.
+    /// Warning: Use with care, maybe first try this with --dry-run?
     #[clap(long)]
     delete: bool,
 
@@ -105,27 +108,126 @@ async fn allocate_and_collect(
     opts: &Opts,
 ) -> Result<FileInfos> {
     let mut file_infos = FileInfos::new();
+    let mut additional_existing = false;
+    // Dir stack is needed to process removal of dirs AFTER the content has been processed.
+    // This is the same logic as in restore_metadata -> TODO: consollidate!
+    let mut dir_stack = Vec::new();
 
-    let mut node_streamer = NodeStreamer::new(index.clone(), tree).await?;
-    while let Some((path, node)) = node_streamer.try_next().await? {
+    let mut process_existing = |entry: &DirEntry| -> Result<_> {
+        if entry.depth() == 0 {
+            // don't process the root dir which should be existing
+            return Ok(());
+        }
+
+        match (
+            opts.delete,
+            opts.dry_run,
+            entry.file_type().unwrap().is_dir(),
+        ) {
+            (true, true, true) => {
+                println!("would have removed the existing dir: {:?}", entry.path())
+            }
+            (true, true, false) => {
+                println!("would have removed the existing file: {:?}", entry.path())
+            }
+            (true, false, true) => {
+                // remove all non-parent dirs in stack
+                while let Some(stackpath) = dir_stack.last() {
+                    if !entry.path().starts_with(stackpath) {
+                        let path = dir_stack.pop().unwrap();
+                        dest.remove_dir(path)?;
+                    } else {
+                        break;
+                    }
+                }
+                // push current path to the stack
+                dir_stack.push(entry.path().to_path_buf());
+            }
+            (true, false, false) => dest.remove_file(entry.path())?,
+            (false, _, _) => {
+                v2!("additional entry: {:?}", entry.path());
+                additional_existing = true;
+            }
+        }
+
+        Ok(())
+    };
+
+    let mut process_node = |path: &PathBuf, node: &Node| -> Result<_> {
         v3!("processing {:?}", path);
         match node.node_type() {
             NodeType::Dir => {
                 if !opts.dry_run {
-                    dest.create_dir(&path)?;
+                    dest.create_dir(path)?;
                 }
             }
             NodeType::File => {
                 // collect blobs needed for restoring
-                if let Some(size) = file_infos.add_file(dest, &node, path.clone(), &index)? {
+                if let Some(size) = file_infos.add_file(dest, node, path.clone(), &index)? {
                     if !opts.dry_run {
                         // create the file if it doesn't exist with right size
-                        dest.create_file(&path, size)?;
+                        dest.create_file(path, size)?;
                     }
                 }
             }
             _ => {} // nothing to do for symlink, device, etc.
         }
+        Ok(())
+    };
+
+    let dest_path = Path::new(&opts.dest);
+    let mut dst_iter = WalkBuilder::new(dest_path)
+        .follow_links(false)
+        .hidden(false)
+        .ignore(false)
+        .sort_by_file_path(Path::cmp)
+        .build()
+        .filter_map(Result::ok); // TODO: print out the ignored error
+    let mut next_dst = dst_iter.next();
+
+    let mut node_streamer = NodeStreamer::new(index.clone(), tree).await?;
+    let mut next_node = node_streamer.try_next().await?;
+
+    loop {
+        match (&next_dst, &next_node) {
+            (None, None) => break,
+
+            (Some(dst), None) => {
+                process_existing(dst)?;
+                next_dst = dst_iter.next();
+            }
+            (Some(dst), Some((path, node))) => match dst.path().cmp(&dest_path.join(path)) {
+                Ordering::Less => {
+                    process_existing(dst)?;
+                    next_dst = dst_iter.next();
+                }
+                Ordering::Equal => {
+                    // process existing node
+                    // TODO: This fails or behaves wrong if the type of the existing node
+                    // does not match the type of the node in the snapshot!
+                    process_node(path, node)?;
+                    next_dst = dst_iter.next();
+                    next_node = node_streamer.try_next().await?;
+                }
+                Ordering::Greater => {
+                    process_node(path, node)?;
+                    next_node = node_streamer.try_next().await?;
+                }
+            },
+            (None, Some((path, node))) => {
+                process_node(path, node)?;
+                next_node = node_streamer.try_next().await?;
+            }
+        }
+    }
+
+    if additional_existing {
+        v1!("Note: additionals entries exist in destination");
+    }
+
+    // empty dir stack and remove dirs
+    for path in dir_stack.into_iter().rev() {
+        dest.remove_dir(path)?;
     }
 
     Ok(file_infos)

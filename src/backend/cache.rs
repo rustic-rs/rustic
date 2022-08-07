@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 use dirs::cache_dir;
 use vlog::*;
 use walkdir::WalkDir;
@@ -41,7 +42,7 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
         Ok(list)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match (&self.cache, tpe.is_cacheable()) {
             (None, _) | (Some(_), false) => self.be.read_full(tpe, id).await,
             (Some(cache), true) => match cache.read_full(tpe, id).await {
@@ -64,7 +65,7 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         match (&self.cache, cacheable || tpe.is_cacheable()) {
             (None, _) | (Some(_), false) => {
                 self.be
@@ -97,13 +98,7 @@ impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
         self.be.create().await
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        buf: Vec<u8>,
-    ) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         if let Some(cache) = &self.cache {
             if cacheable || tpe.is_cacheable() {
                 let _ = cache.write_bytes(tpe, id, buf.clone()).await;
@@ -206,11 +201,11 @@ impl Cache {
         Ok(())
     }
 
-    pub async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    pub async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         v3!("cache reading tpe: {:?}, id: {}", &tpe, &id);
         let data = fs::read(self.path(tpe, id))?;
         v3!("cache hit!");
-        Ok(data)
+        Ok(data.into())
     }
 
     async fn read_partial(
@@ -219,7 +214,7 @@ impl Cache {
         id: &Id,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         v3!(
             "cache reading tpe: {:?}, id: {}, offset: {}",
             &tpe,
@@ -231,10 +226,10 @@ impl Cache {
         let mut vec = vec![0; length as usize];
         file.read_exact(&mut vec)?;
         v3!("cache hit!");
-        Ok(vec)
+        Ok(vec.into())
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Bytes) -> Result<()> {
         v3!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         fs::create_dir_all(self.dir(tpe, id))?;
         let filename = self.path(tpe, id);

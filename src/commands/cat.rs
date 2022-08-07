@@ -57,7 +57,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
 async fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
     let id = be.find_id(tpe, &opt.id).await?;
     let data = be.read_encrypted_full(tpe, &id).await?;
-    println!("{}", String::from_utf8(data)?);
+    println!("{}", String::from_utf8(data.to_vec())?);
 
     Ok(())
 }
@@ -68,7 +68,7 @@ async fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Re
         .await?
         .blob_from_backend(&tpe, &id)
         .await?;
-    print!("{}", String::from_utf8(data)?);
+    print!("{}", String::from_utf8(data.to_vec())?);
 
     Ok(())
 }
@@ -79,7 +79,7 @@ async fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
     let index = IndexBackend::new(be, progress_counter()).await?;
     let id = Tree::subtree_id(&index, snap.tree, Path::new(path)).await?;
     let data = index.blob_from_backend(&BlobType::Tree, &id).await?;
-    println!("{}", String::from_utf8(data)?);
+    println!("{}", String::from_utf8(data.to_vec())?);
 
     Ok(())
 }

@@ -1463,6 +1463,7 @@ dependencies = [
  "backoff",
  "base64",
  "binrw",
+ "bytes",
  "bytesize",
  "cachedir",
  "cdc",

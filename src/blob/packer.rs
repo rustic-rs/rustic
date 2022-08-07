@@ -4,6 +4,7 @@ use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
 use binrw::{io::Cursor, BinWrite};
+use bytes::{Bytes, BytesMut};
 use chrono::Local;
 use tokio::{spawn, task::JoinHandle};
 use zstd::encode_all;
@@ -50,7 +51,7 @@ impl PackSizer {
 pub struct Packer<BE: DecryptWriteBackend> {
     be: BE,
     blob_type: BlobType,
-    file: Vec<u8>,
+    file: BytesMut,
     size: u32,
     count: u32,
     created: SystemTime,
@@ -81,7 +82,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(Self {
             be,
             blob_type,
-            file: Vec::new(),
+            file: BytesMut::new(),
             size: 0,
             count: 0,
             created: SystemTime::now(),
@@ -263,8 +264,8 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
         // write file to backend
         let index = std::mem::take(&mut self.index);
-        let file = std::mem::replace(&mut self.file, Vec::new());
-        self.file_writer.add(index, file, id).await?;
+        let file = std::mem::replace(&mut self.file, BytesMut::new());
+        self.file_writer.add(index, file.into(), id).await?;
 
         Ok(())
     }
@@ -282,7 +283,7 @@ struct FileWriter<BE: DecryptWriteBackend> {
 }
 
 impl<BE: DecryptWriteBackend> FileWriter<BE> {
-    async fn add(&mut self, mut index: IndexPack, file: Vec<u8>, id: Id) -> Result<()> {
+    async fn add(&mut self, mut index: IndexPack, file: Bytes, id: Id) -> Result<()> {
         let be = self.be.clone();
         let indexer = self.indexer.clone();
         let cacheable = self.cacheable;

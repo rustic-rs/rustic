@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use bytes::Bytes;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
 
@@ -25,7 +26,7 @@ impl<BE: WriteBackend> ReadBackend for HotColdBackend<BE> {
         self.be.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match &self.hot_be {
             None => self.be.read_full(tpe, id).await,
             Some(be) => be.read_full(tpe, id).await,
@@ -39,7 +40,7 @@ impl<BE: WriteBackend> ReadBackend for HotColdBackend<BE> {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         match (&self.hot_be, cacheable || tpe != FileType::Pack) {
             (None, _) | (Some(_), false) => {
                 self.be
@@ -57,13 +58,7 @@ impl<BE: WriteBackend> WriteBackend for HotColdBackend<BE> {
         self.be.create().await
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        buf: Vec<u8>,
-    ) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         if let Some(be) = &self.hot_be {
             if tpe != FileType::Config && (cacheable || tpe != FileType::Pack) {
                 be.write_bytes(tpe, id, cacheable, buf.clone()).await?;

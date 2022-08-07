@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
 use nix::sys::stat::{mknod, Mode, SFlag};
 use nix::unistd::chown;
@@ -99,8 +100,8 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
-        Ok(fs::read(self.path(tpe, id))?)
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        Ok(fs::read(self.path(tpe, id))?.into())
     }
 
     async fn read_partial(
@@ -110,12 +111,12 @@ impl ReadBackend for LocalBackend {
         _cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         let mut file = File::open(self.path(tpe, id))?;
         file.seek(SeekFrom::Start(offset.try_into().unwrap()))?;
         let mut vec = vec![0; length.try_into().unwrap()];
         file.read_exact(&mut vec)?;
-        Ok(vec)
+        Ok(vec.into())
     }
 }
 
@@ -136,7 +137,7 @@ impl WriteBackend for LocalBackend {
         tpe: FileType,
         id: &Id,
         _cacheable: bool,
-        buf: Vec<u8>,
+        buf: Bytes,
     ) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
@@ -265,13 +266,13 @@ impl LocalBackend {
         Ok(())
     }
 
-    pub fn read_at(&self, item: impl AsRef<Path>, offset: u64, length: u64) -> Result<Vec<u8>> {
+    pub fn read_at(&self, item: impl AsRef<Path>, offset: u64, length: u64) -> Result<Bytes> {
         let filename = self.path.join(item);
         let mut file = File::open(&filename)?;
         file.seek(SeekFrom::Start(offset))?;
         let mut vec = vec![0; length.try_into().unwrap()];
         file.read_exact(&mut vec).unwrap();
-        Ok(vec)
+        Ok(vec.into())
     }
 
     pub fn get_matching_file(&self, item: impl AsRef<Path>, size: u64) -> Option<File> {

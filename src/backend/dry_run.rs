@@ -2,6 +2,7 @@ use std::num::NonZeroU32;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bytes::Bytes;
 
 use super::{
     DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType, Id, ReadBackend,
@@ -22,7 +23,7 @@ impl<BE: DecryptFullBackend> DryRunBackend<BE> {
 
 #[async_trait]
 impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
-    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         self.be.read_encrypted_full(tpe, id).await
     }
     async fn read_encrypted_partial(
@@ -33,7 +34,7 @@ impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
         offset: u32,
         length: u32,
         uncompressed_length: Option<NonZeroU32>,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         self.be
             .read_encrypted_partial(tpe, id, cacheable, offset, length, uncompressed_length)
             .await
@@ -50,7 +51,7 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         self.be.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         self.be.read_full(tpe, id).await
     }
 
@@ -61,7 +62,7 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         self.be
             .read_partial(tpe, id, cacheable, offset, length)
             .await
@@ -100,13 +101,7 @@ impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
         }
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        buf: Vec<u8>,
-    ) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
             false => self.be.write_bytes(tpe, id, cacheable, buf).await,

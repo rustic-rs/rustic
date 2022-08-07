@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use async_trait::async_trait;
 use backoff::{ExponentialBackoff, ExponentialBackoffBuilder};
+use bytes::Bytes;
 use reqwest::{Client, Url};
 use serde::Deserialize;
 use vlog::*;
@@ -108,7 +109,7 @@ impl ReadBackend for RestBackend {
         .await?)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         Ok(backoff::future::retry_notify(
             self.backoff.clone(),
             || async {
@@ -134,7 +135,7 @@ impl ReadBackend for RestBackend {
         _cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         let offset2 = offset + length - 1;
         let header_value = format!("bytes={}-{}", offset, offset2);
         Ok(backoff::future::retry_notify(
@@ -179,7 +180,7 @@ impl WriteBackend for RestBackend {
         tpe: FileType,
         id: &Id,
         _cacheable: bool,
-        buf: Vec<u8>,
+        buf: Bytes,
     ) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let req_builder = self.client.post(self.url(tpe, id)).body(buf);

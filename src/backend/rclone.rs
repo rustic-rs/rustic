@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 use rand::distributions::{Alphanumeric, DistString};
 use rand::thread_rng;
 use sha1::{Digest, Sha1};
@@ -126,7 +127,7 @@ impl ReadBackend for RcloneBackend {
         self.rest.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         self.rest.read_full(tpe, id).await
     }
 
@@ -137,7 +138,7 @@ impl ReadBackend for RcloneBackend {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         self.rest
             .read_partial(tpe, id, cacheable, offset, length)
             .await
@@ -150,13 +151,7 @@ impl WriteBackend for RcloneBackend {
         self.rest.create().await
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        buf: Vec<u8>,
-    ) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         self.rest.write_bytes(tpe, id, cacheable, buf).await
     }
 

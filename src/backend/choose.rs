@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
 use super::{LocalBackend, RcloneBackend, RestBackend};
@@ -43,7 +44,7 @@ impl ReadBackend for ChooseBackend {
         }
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match self {
             Local(local) => local.read_full(tpe, id).await,
             Rest(rest) => rest.read_full(tpe, id).await,
@@ -58,7 +59,7 @@ impl ReadBackend for ChooseBackend {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         match self {
             Local(local) => local.read_partial(tpe, id, cacheable, offset, length).await,
             Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length).await,
@@ -81,13 +82,7 @@ impl WriteBackend for ChooseBackend {
         }
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        buf: Vec<u8>,
-    ) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         match self {
             Local(local) => local.write_bytes(tpe, id, cacheable, buf).await,
             Rest(rest) => rest.write_bytes(tpe, id, cacheable, buf).await,

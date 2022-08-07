@@ -30,6 +30,17 @@ Packs which are marked for removal are checked if they are really not needed and
 long enough ago. Depending on these checks they are either finally removed, recovered or kept in the
 state of being marked for removal.
 
+This two-phase deletion is needed for rustic to work lock-free: If a `backup` runs parallel to a `prune`
+run (or `forget --prune`), it could be that prune decides that some blobs can be removed, but the parallel 
+backup uses these blobs for the newly generated snapshot.
+
+The time to hold marked packs should be long enough to guarantee that a possibly parallel backup run has
+finished in between. It can be set by the `--keep-delete` option and defaults to 23 hours. In any case, packs 
+will be kept marked and only deleted by the next prune run.
+
+Note that there is the option `--instant-delete` which circumvents this two-phase deletion. Only use this
+option, if you **REALLY KNOW** that there is no parallel access to your repo, else you risk loosing data!
+
 ## You said "rustic uses less resources than restic" but I'm observing the opposite...
 In general rustic uses less resources, but there may be some exceptions. For instance the crypto libraries
 of Rust and golang both have optimizations for some CPUs. But it might be that your CPU benefits from a

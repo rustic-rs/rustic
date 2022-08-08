@@ -126,7 +126,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 self.stack.push((node, tree, parent));
                 return Ok(());
             } else {
-                let node = Node::new_dir(p.to_os_string(), Metadata::default());
+                let node = Node::new_node(p, NodeType::Dir, Metadata::default());
                 let new_parent = self.parent.sub_parent(&node).await?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));

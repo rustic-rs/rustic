@@ -144,6 +144,7 @@ impl WriteBackend for LocalBackend {
             .create(true)
             .write(true)
             .open(&filename)?;
+        file.set_len(0)?;
         copy(&mut f, &mut file)?;
         file.sync_all()?;
         Ok(())
@@ -156,6 +157,7 @@ impl WriteBackend for LocalBackend {
             .create(true)
             .write(true)
             .open(&filename)?;
+        file.set_len(buf.len().try_into()?)?;
         file.write_all(&buf)?;
         file.sync_all()?;
         Ok(())

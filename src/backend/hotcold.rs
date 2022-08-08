@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::{Seek, SeekFrom};
-
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -60,24 +57,19 @@ impl<BE: WriteBackend> WriteBackend for HotColdBackend<BE> {
         self.be.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, mut f: File) -> Result<()> {
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()> {
         if let Some(be) = &self.hot_be {
-            if cacheable || tpe != FileType::Pack {
-                let f_hot = f.try_clone()?;
-                be.write_file(tpe, id, cacheable, f_hot).await?;
-                f.seek(SeekFrom::Start(0))?;
+            if tpe != FileType::Config && (cacheable || tpe != FileType::Pack) {
+                be.write_bytes(tpe, id, cacheable, buf.clone()).await?;
             }
         }
-        self.be.write_file(tpe, id, cacheable, f).await
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        if let Some(be) = &self.hot_be {
-            if tpe != FileType::Config {
-                be.write_bytes(tpe, id, buf.clone()).await?;
-            }
-        }
-        self.be.write_bytes(tpe, id, buf).await
+        self.be.write_bytes(tpe, id, cacheable, buf).await
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {

@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::num::NonZeroU32;
 
 use anyhow::{bail, Result};
@@ -149,7 +148,7 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
             None => self.key().encrypt_data(data)?,
         };
         let id = hash(&data);
-        self.write_bytes(tpe, &id, data).await?;
+        self.write_bytes(tpe, &id, false, data).await?;
         Ok(id)
     }
 
@@ -234,12 +233,14 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         self.backend.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
-        self.backend.write_file(tpe, id, cacheable, f).await
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        self.backend.write_bytes(tpe, id, buf).await
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()> {
+        self.backend.write_bytes(tpe, id, cacheable, buf).await
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {

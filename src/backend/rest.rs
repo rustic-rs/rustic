@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -136,17 +136,13 @@ impl WriteBackend for RestBackend {
         Ok(())
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, _cacheable: bool, f: File) -> Result<()> {
-        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
-        self.client
-            .post(self.url(tpe, id))
-            .body(tokio::fs::File::from_std(f))
-            .send()
-            .await?;
-        Ok(())
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        _cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         self.client.post(self.url(tpe, id)).body(buf).send().await?;
         Ok(())

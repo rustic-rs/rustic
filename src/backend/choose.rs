@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 
@@ -83,19 +81,17 @@ impl WriteBackend for ChooseBackend {
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()> {
         match self {
-            Local(local) => local.write_file(tpe, id, cacheable, f).await,
-            Rest(rest) => rest.write_file(tpe, id, cacheable, f).await,
-            Rclone(rclone) => rclone.write_file(tpe, id, cacheable, f).await,
-        }
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        match self {
-            Local(local) => local.write_bytes(tpe, id, buf).await,
-            Rest(rest) => rest.write_bytes(tpe, id, buf).await,
-            Rclone(rclone) => rclone.write_bytes(tpe, id, buf).await,
+            Local(local) => local.write_bytes(tpe, id, cacheable, buf).await,
+            Rest(rest) => rest.write_bytes(tpe, id, cacheable, buf).await,
+            Rclone(rclone) => rclone.write_bytes(tpe, id, cacheable, buf).await,
         }
     }
 

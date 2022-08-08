@@ -63,11 +63,12 @@ pub(super) async fn execute(
     let data = serde_json::to_vec(&keyfile)?;
     let id = hash(&data);
     be.create().await?;
-    be.write_bytes(FileType::Key, &id, data.clone()).await?;
+    be.write_bytes(FileType::Key, &id, false, data.clone())
+        .await?;
 
     if let Some(hot_be) = hot_be {
         hot_be.create().await?;
-        hot_be.write_bytes(FileType::Key, &id, data).await?;
+        hot_be.write_bytes(FileType::Key, &id, false, data).await?;
     }
     println!("key {} successfully added.", id);
 

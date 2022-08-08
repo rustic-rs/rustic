@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{copy, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -131,26 +131,13 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
-    async fn write_file(
+    async fn write_bytes(
         &self,
         tpe: FileType,
         id: &Id,
         _cacheable: bool,
-        mut f: File,
+        buf: Vec<u8>,
     ) -> Result<()> {
-        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
-        let filename = self.path(tpe, id);
-        let mut file = fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .open(&filename)?;
-        file.set_len(0)?;
-        copy(&mut f, &mut file)?;
-        file.sync_all()?;
-        Ok(())
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()

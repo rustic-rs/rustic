@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::num::NonZeroU32;
 
 use anyhow::Result;
@@ -101,17 +100,16 @@ impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.write_file(tpe, id, cacheable, f).await,
-        }
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        match self.dry_run {
-            true => Ok(()),
-            false => self.be.write_bytes(tpe, id, buf).await,
+            false => self.be.write_bytes(tpe, id, cacheable, buf).await,
         }
     }
 

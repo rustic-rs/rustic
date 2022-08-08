@@ -56,7 +56,7 @@ async fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> 
     let keyfile = KeyFile::generate(key, &pass, opts.hostname, opts.username, opts.with_created)?;
     let data = serde_json::to_vec(&keyfile)?;
     let id = hash(&data);
-    be.write_bytes(FileType::Key, &id, data).await?;
+    be.write_bytes(FileType::Key, &id, false, data).await?;
 
     println!("key {} successfully added.", id);
     Ok(())

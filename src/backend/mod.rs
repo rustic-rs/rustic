@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -147,8 +146,13 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
 #[async_trait]
 pub trait WriteBackend: ReadBackend {
     async fn create(&self) -> Result<()>;
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()>;
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()>;
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()>;
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
 }
 

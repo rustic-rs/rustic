@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{copy, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
@@ -97,24 +97,19 @@ impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
         self.be.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, mut f: File) -> Result<()> {
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        cacheable: bool,
+        buf: Vec<u8>,
+    ) -> Result<()> {
         if let Some(cache) = &self.cache {
             if cacheable || tpe.is_cacheable() {
-                let f_cache = f.try_clone()?;
-                let _ = cache.write_file(tpe, id, cacheable, f_cache).await;
-                f.seek(SeekFrom::Start(0))?;
-            }
-        }
-        self.be.write_file(tpe, id, cacheable, f).await
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        if let Some(cache) = &self.cache {
-            if tpe.is_cacheable() {
                 let _ = cache.write_bytes(tpe, id, buf.clone()).await;
             }
         }
-        self.be.write_bytes(tpe, id, buf).await
+        self.be.write_bytes(tpe, id, cacheable, buf).await
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
@@ -237,24 +232,6 @@ impl Cache {
         file.read_exact(&mut vec)?;
         v3!("cache hit!");
         Ok(vec)
-    }
-
-    async fn write_file(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        _cacheable: bool,
-        mut f: File,
-    ) -> Result<()> {
-        v3!("cache writing tpe: {:?}, id: {}", &tpe, &id);
-        fs::create_dir_all(self.dir(tpe, id))?;
-        let filename = self.path(tpe, id);
-        let mut file = fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .open(&filename)?;
-        copy(&mut f, &mut file)?;
-        Ok(())
     }
 
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {

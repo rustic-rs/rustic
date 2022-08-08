@@ -1,13 +1,10 @@
 use integer_sqrt::IntegerSquareRoot;
-use std::fs::File;
-use std::io::{Seek, SeekFrom, Write};
 use std::num::NonZeroU32;
 use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
 use binrw::{io::Cursor, BinWrite};
 use chrono::Local;
-use tempfile::tempfile;
 use tokio::{spawn, task::JoinHandle};
 use zstd::encode_all;
 
@@ -53,7 +50,7 @@ impl PackSizer {
 pub struct Packer<BE: DecryptWriteBackend> {
     be: BE,
     blob_type: BlobType,
-    file: File,
+    file: Vec<u8>,
     size: u32,
     count: u32,
     created: SystemTime,
@@ -84,7 +81,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(Self {
             be,
             blob_type,
-            file: tempfile()?,
+            file: Vec::new(),
             size: 0,
             count: 0,
             created: SystemTime::now(),
@@ -104,7 +101,8 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
     pub async fn write_data(&mut self, data: &[u8]) -> Result<u32> {
         self.hasher.update(data);
-        let len = self.file.write(data)?.try_into()?;
+        let len = data.len().try_into()?;
+        self.file.extend_from_slice(data);
         self.size += len;
         Ok(len)
     }
@@ -265,7 +263,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
         // write file to backend
         let index = std::mem::take(&mut self.index);
-        let file = std::mem::replace(&mut self.file, tempfile()?);
+        let file = std::mem::replace(&mut self.file, Vec::new());
         self.file_writer.add(index, file, id).await?;
 
         Ok(())
@@ -284,13 +282,12 @@ struct FileWriter<BE: DecryptWriteBackend> {
 }
 
 impl<BE: DecryptWriteBackend> FileWriter<BE> {
-    async fn add(&mut self, mut index: IndexPack, mut file: File, id: Id) -> Result<()> {
+    async fn add(&mut self, mut index: IndexPack, file: Vec<u8>, id: Id) -> Result<()> {
         let be = self.be.clone();
         let indexer = self.indexer.clone();
         let cacheable = self.cacheable;
         let new_future = spawn(async move {
-            file.seek(SeekFrom::Start(0))?;
-            be.write_file(FileType::Pack, &id, cacheable, file).await?;
+            be.write_bytes(FileType::Pack, &id, cacheable, file).await?;
             index.time = Some(Local::now());
             indexer.write().await.add(index).await?;
             Ok(())

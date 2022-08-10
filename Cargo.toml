@@ -73,3 +73,8 @@ gethostname = "0.2"
 humantime = "2"
 users = "0.11"
 itertools = "0.10"
+
+[dev-dependencies]
+rstest = "0.15"
+quickcheck = "1"
+quickcheck_macros = "1"

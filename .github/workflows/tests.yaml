@@ -31,7 +31,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          overrideo: true
+          override: true
           target: x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1

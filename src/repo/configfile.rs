@@ -5,7 +5,7 @@ use crate::backend::{FileType, RepoFile};
 use crate::blob::BlobType;
 use crate::id::Id;
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConfigFile {
     pub version: u32,
     pub id: Id,

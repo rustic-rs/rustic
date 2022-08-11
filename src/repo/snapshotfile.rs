@@ -46,7 +46,7 @@ pub struct SnapshotSummary {
     pub backup_duration: f64, // in seconds
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Derivative)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Derivative)]
 #[derivative(Default)]
 pub enum DeleteOption {
     #[derivative(Default)]

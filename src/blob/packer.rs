@@ -145,7 +145,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
                 None,
             ),
             Some(level) => (
-                key.encrypt_data(&encode_all(&*data, level)?)
+                key.encrypt_data(&encode_all(data, level)?)
                     .map_err(|_| anyhow!("crypto error"))?,
                 NonZeroU32::new(data_len),
             ),

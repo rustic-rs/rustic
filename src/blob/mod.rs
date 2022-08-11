@@ -31,7 +31,7 @@ impl BlobType {
 
 pub type BlobTypeMap<T> = EnumMap<BlobType, T>;
 
-#[derive(Debug, PartialEq, Clone, Constructor)]
+#[derive(Debug, PartialEq, Eq, Clone, Constructor)]
 pub struct Blob {
     tpe: BlobType,
     id: Id,

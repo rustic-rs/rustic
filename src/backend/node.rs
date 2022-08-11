@@ -12,7 +12,7 @@ use serde_aux::prelude::*;
 
 use crate::id::Id;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Constructor)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Constructor)]
 pub struct Node {
     pub name: String,
     #[serde(flatten)]
@@ -25,7 +25,7 @@ pub struct Node {
     pub subtree: Option<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, IsVariant)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, IsVariant)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum NodeType {
     File,
@@ -45,7 +45,7 @@ pub enum NodeType {
     Socket,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Getters)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Getters)]
 pub struct Metadata {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<u32>,

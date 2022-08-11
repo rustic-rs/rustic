@@ -38,7 +38,7 @@ pub const ALL_FILE_TYPES: [FileType; 4] = [
     FileType::Pack,
 ];
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileType {
     Config,
     Index,
@@ -95,7 +95,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     ) -> Result<Vec<u8>>;
 
     async fn find_starts_with(&self, tpe: FileType, vec: &[String]) -> Result<Vec<Result<Id>>> {
-        #[derive(Clone, Copy, PartialEq)]
+        #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum MapResult<T> {
             None,
             Some(T),

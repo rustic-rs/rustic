@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
-use backoff::{ExponentialBackoff, ExponentialBackoffBuilder};
+use backoff::{backoff::Backoff, ExponentialBackoff, ExponentialBackoffBuilder};
 use bytes::Bytes;
 use reqwest::{Client, Url};
 use serde::Deserialize;
@@ -11,10 +11,25 @@ use vlog::*;
 use super::{FileType, Id, ReadBackend, WriteBackend};
 
 #[derive(Clone)]
+struct MaybeBackoff(Option<ExponentialBackoff>);
+
+impl Backoff for MaybeBackoff {
+    fn next_backoff(&mut self) -> Option<Duration> {
+        self.0.as_mut().and_then(|back| back.next_backoff())
+    }
+
+    fn reset(&mut self) {
+        if let Some(b) = self.0.as_mut() {
+            b.reset()
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct RestBackend {
     url: Url,
     client: Client,
-    backoff: ExponentialBackoff,
+    backoff: MaybeBackoff,
 }
 
 // TODO for backoff: Handle transient vs permanent errors!
@@ -36,9 +51,11 @@ impl RestBackend {
         Self {
             url,
             client: Client::new(),
-            backoff: ExponentialBackoffBuilder::new()
-                .with_max_elapsed_time(Some(Duration::from_secs(120)))
-                .build(),
+            backoff: MaybeBackoff(Some(
+                ExponentialBackoffBuilder::new()
+                    .with_max_elapsed_time(Some(Duration::from_secs(120)))
+                    .build(),
+            )),
         }
     }
 
@@ -63,7 +80,22 @@ impl ReadBackend for RestBackend {
         self.url.as_str()
     }
 
-    fn set_option(&mut self, _option: &str, _value: &str) -> Result<()> {
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        if option == "retry" {
+            match value {
+                "true" => {
+                    self.backoff = MaybeBackoff(Some(
+                        ExponentialBackoffBuilder::new()
+                            .with_max_elapsed_time(Some(Duration::from_secs(120)))
+                            .build(),
+                    ));
+                }
+                "false" => {
+                    self.backoff = MaybeBackoff(None);
+                }
+                val => bail!("value {val} not supported for option retry!"),
+            }
+        }
         Ok(())
     }
 

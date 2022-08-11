@@ -44,6 +44,10 @@ impl ReadBackend for LocalBackend {
         self.path.to_str().unwrap()
     }
 
+    fn set_option(&mut self, _option: &str, _value: &str) -> Result<()> {
+        Ok(())
+    }
+
     async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
         if tpe == FileType::Config {
             return Ok(match self.path.join("config").exists() {

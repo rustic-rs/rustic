@@ -123,6 +123,10 @@ impl ReadBackend for RcloneBackend {
         self.rest.location()
     }
 
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        self.rest.set_option(option, value)
+    }
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         self.rest.list_with_size(tpe).await
     }

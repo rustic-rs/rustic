@@ -203,6 +203,10 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         self.backend.location()
     }
 
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        self.backend.set_option(option, value)
+    }
+
     async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
         self.backend.list(tpe).await
     }

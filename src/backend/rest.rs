@@ -63,6 +63,10 @@ impl ReadBackend for RestBackend {
         self.url.as_str()
     }
 
+    fn set_option(&mut self, _option: &str, _value: &str) -> Result<()> {
+        Ok(())
+    }
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         Ok(backoff::future::retry_notify(
             self.backoff.clone(),

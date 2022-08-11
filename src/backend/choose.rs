@@ -36,6 +36,14 @@ impl ReadBackend for ChooseBackend {
         }
     }
 
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        match self {
+            Local(local) => local.set_option(option, value),
+            Rest(rest) => rest.set_option(option, value),
+            Rclone(rclone) => rclone.set_option(option, value),
+        }
+    }
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         match self {
             Local(local) => local.list_with_size(tpe).await,

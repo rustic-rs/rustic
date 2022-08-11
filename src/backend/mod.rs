@@ -73,6 +73,9 @@ pub trait RepoFile: Serialize + DeserializeOwned + Sized + Send + Sync + 'static
 #[async_trait]
 pub trait ReadBackend: Clone + Send + Sync + 'static {
     fn location(&self) -> &str;
+
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()>;
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>>;
 
     async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {

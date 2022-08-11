@@ -47,6 +47,10 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         self.be.location()
     }
 
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        self.be.set_option(option, value)
+    }
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         self.be.list_with_size(tpe).await
     }

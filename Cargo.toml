@@ -45,8 +45,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde-aux = "3"
 # other dependencies
+bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
-tempfile = "3"
 zstd = "0.11"
 enum-map = "2"
 enum-map-derive = "0.10"
@@ -57,8 +57,10 @@ nix = "0.24"
 filetime = "0.2"
 # rest backend
 reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }
+backoff = { version = "0.4", features = ["tokio"] }
 # rclone backend
 sha1 = "0.10"
+tempfile = "3"
 # cache
 dirs = "4"
 cachedir = "0.3"

@@ -251,6 +251,8 @@ fn warm_up_command(file_infos: FileInfos, command: &str) -> Result<()> {
 
 async fn warm_up(be: &impl DecryptReadBackend, file_infos: FileInfos) -> Result<()> {
     let packs = file_infos.into_packs();
+    let mut be = be.clone();
+    be.set_option("retry", "false")?;
 
     let p = progress_counter();
     p.set_length(packs.len() as u64);

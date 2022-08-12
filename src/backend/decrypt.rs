@@ -1,8 +1,8 @@
-use std::fs::File;
 use std::num::NonZeroU32;
 
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 use futures::{stream, stream::FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use tokio::{spawn, task::JoinHandle};
@@ -16,7 +16,7 @@ impl<T: DecryptWriteBackend + DecryptReadBackend> DecryptFullBackend for T {}
 
 #[async_trait]
 pub trait DecryptReadBackend: ReadBackend {
-    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>>;
+    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes>;
     async fn read_encrypted_partial(
         &self,
         tpe: FileType,
@@ -25,7 +25,7 @@ pub trait DecryptReadBackend: ReadBackend {
         offset: u32,
         length: u32,
         uncompressed_length: Option<NonZeroU32>,
-    ) -> Result<Vec<u8>>;
+    ) -> Result<Bytes>;
 
     async fn get_file<F: RepoFile>(&self, id: &Id) -> Result<F> {
         let data = self.read_encrypted_full(F::TYPE, id).await?;
@@ -149,7 +149,7 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
             None => self.key().encrypt_data(data)?,
         };
         let id = hash(&data);
-        self.write_bytes(tpe, &id, data).await?;
+        self.write_bytes(tpe, &id, false, data.into()).await?;
         Ok(id)
     }
 
@@ -160,7 +160,7 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
 
 #[async_trait]
 impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
-    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         let decrypted = self
             .key
             .decrypt_data(&self.backend.read_full(tpe, id).await?)?;
@@ -168,7 +168,8 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
             b'{' | b'[' => decrypted,          // not compressed
             2 => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
             _ => bail!("not supported"),
-        })
+        }
+        .into())
     }
 
     async fn read_encrypted_partial(
@@ -179,7 +180,7 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
         offset: u32,
         length: u32,
         uncompressed_length: Option<NonZeroU32>,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         let mut data = self.key.decrypt_data(
             &self
                 .backend
@@ -192,7 +193,7 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
                 bail!("length of uncompressed data does not match!");
             }
         }
-        Ok(data)
+        Ok(data.into())
     }
 }
 
@@ -200,6 +201,10 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
 impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     fn location(&self) -> &str {
         self.backend.location()
+    }
+
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        self.backend.set_option(option, value)
     }
 
     async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
@@ -210,7 +215,7 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         self.backend.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         self.backend.read_full(tpe, id).await
     }
 
@@ -221,7 +226,7 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         self.backend
             .read_partial(tpe, id, cacheable, offset, length)
             .await
@@ -234,12 +239,8 @@ impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
         self.backend.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
-        self.backend.write_file(tpe, id, cacheable, f).await
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        self.backend.write_bytes(tpe, id, buf).await
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
+        self.backend.write_bytes(tpe, id, cacheable, buf).await
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {

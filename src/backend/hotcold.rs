@@ -1,8 +1,6 @@
-use std::fs::File;
-use std::io::{Seek, SeekFrom};
-
 use anyhow::Result;
 use async_trait::async_trait;
+use bytes::Bytes;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
 
@@ -24,11 +22,15 @@ impl<BE: WriteBackend> ReadBackend for HotColdBackend<BE> {
         self.be.location()
     }
 
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        self.be.set_option(option, value)
+    }
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         self.be.list_with_size(tpe).await
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match &self.hot_be {
             None => self.be.read_full(tpe, id).await,
             Some(be) => be.read_full(tpe, id).await,
@@ -42,7 +44,7 @@ impl<BE: WriteBackend> ReadBackend for HotColdBackend<BE> {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         match (&self.hot_be, cacheable || tpe != FileType::Pack) {
             (None, _) | (Some(_), false) => {
                 self.be
@@ -60,24 +62,13 @@ impl<BE: WriteBackend> WriteBackend for HotColdBackend<BE> {
         self.be.create().await
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, mut f: File) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         if let Some(be) = &self.hot_be {
-            if cacheable || tpe != FileType::Pack {
-                let f_hot = f.try_clone()?;
-                be.write_file(tpe, id, cacheable, f_hot).await?;
-                f.seek(SeekFrom::Start(0))?;
+            if tpe != FileType::Config && (cacheable || tpe != FileType::Pack) {
+                be.write_bytes(tpe, id, cacheable, buf.clone()).await?;
             }
         }
-        self.be.write_file(tpe, id, cacheable, f).await
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        if let Some(be) = &self.hot_be {
-            if tpe != FileType::Config {
-                be.write_bytes(tpe, id, buf.clone()).await?;
-            }
-        }
-        self.be.write_bytes(tpe, id, buf).await
+        self.be.write_bytes(tpe, id, cacheable, buf).await
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {

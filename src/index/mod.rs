@@ -4,6 +4,7 @@ use std::sync::Arc;
 use ambassador::{delegatable_trait, Delegate};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use futures::StreamExt;
@@ -42,7 +43,7 @@ impl IndexEntry {
     }
 
     /// Get a blob described by IndexEntry from the backend
-    pub async fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Vec<u8>> {
+    pub async fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Bytes> {
         let data = be
             .read_encrypted_partial(
                 FileType::Pack,
@@ -96,7 +97,7 @@ pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
 
     fn be(&self) -> &Self::Backend;
 
-    async fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Vec<u8>> {
+    async fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Bytes> {
         match self.get_id(tpe, id) {
             None => Err(anyhow!("blob not found in index")),
             Some(ie) => ie.read_data(self.be()).await,

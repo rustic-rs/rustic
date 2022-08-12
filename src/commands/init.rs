@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 use anyhow::{bail, Result};
+use bytes::Bytes;
 use clap::Parser;
 use rpassword::{prompt_password, read_password_from_bufread};
 
@@ -60,14 +61,15 @@ pub(super) async fn execute(
         key_opts.username,
         key_opts.with_created,
     )?;
-    let data = serde_json::to_vec(&keyfile)?;
+    let data: Bytes = serde_json::to_vec(&keyfile)?.into();
     let id = hash(&data);
     be.create().await?;
-    be.write_bytes(FileType::Key, &id, data.clone()).await?;
+    be.write_bytes(FileType::Key, &id, false, data.clone())
+        .await?;
 
     if let Some(hot_be) = hot_be {
         hot_be.create().await?;
-        hot_be.write_bytes(FileType::Key, &id, data).await?;
+        hot_be.write_bytes(FileType::Key, &id, false, data).await?;
     }
     println!("key {} successfully added.", id);
 

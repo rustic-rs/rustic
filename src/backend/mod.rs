@@ -1,9 +1,9 @@
-use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::id::Id;
@@ -73,6 +73,9 @@ pub trait RepoFile: Serialize + DeserializeOwned + Sized + Send + Sync + 'static
 #[async_trait]
 pub trait ReadBackend: Clone + Send + Sync + 'static {
     fn location(&self) -> &str;
+
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()>;
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>>;
 
     async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
@@ -84,7 +87,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
             .collect())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>>;
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes>;
     async fn read_partial(
         &self,
         tpe: FileType,
@@ -92,7 +95,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>>;
+    ) -> Result<Bytes>;
 
     async fn find_starts_with(&self, tpe: FileType, vec: &[String]) -> Result<Vec<Result<Id>>> {
         #[derive(Clone, Copy, PartialEq, Eq)]
@@ -147,8 +150,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
 #[async_trait]
 pub trait WriteBackend: ReadBackend {
     async fn create(&self) -> Result<()>;
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()>;
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()>;
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()>;
     async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
 }
 
@@ -161,5 +163,5 @@ pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {
 pub trait WriteSource: Clone {
     fn create(&self, path: PathBuf, node: Node);
     fn set_metadata(&self, path: PathBuf, node: Node);
-    fn write_at(&self, path: PathBuf, offset: u64, data: Vec<u8>);
+    fn write_at(&self, path: PathBuf, offset: u64, data: Bytes);
 }

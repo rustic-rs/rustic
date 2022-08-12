@@ -1,7 +1,9 @@
-use std::fs::File;
+use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
+use backoff::{backoff::Backoff, ExponentialBackoff, ExponentialBackoffBuilder};
+use bytes::Bytes;
 use reqwest::{Client, Url};
 use serde::Deserialize;
 use vlog::*;
@@ -9,9 +11,30 @@ use vlog::*;
 use super::{FileType, Id, ReadBackend, WriteBackend};
 
 #[derive(Clone)]
+struct MaybeBackoff(Option<ExponentialBackoff>);
+
+impl Backoff for MaybeBackoff {
+    fn next_backoff(&mut self) -> Option<Duration> {
+        self.0.as_mut().and_then(|back| back.next_backoff())
+    }
+
+    fn reset(&mut self) {
+        if let Some(b) = self.0.as_mut() {
+            b.reset()
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct RestBackend {
     url: Url,
     client: Client,
+    backoff: MaybeBackoff,
+}
+
+// TODO for backoff: Handle transient vs permanent errors!
+fn notify(err: reqwest::Error, duration: Duration) {
+    println!("Error {err} at {duration:?}, retrying");
 }
 
 impl RestBackend {
@@ -28,6 +51,11 @@ impl RestBackend {
         Self {
             url,
             client: Client::new(),
+            backoff: MaybeBackoff(Some(
+                ExponentialBackoffBuilder::new()
+                    .with_max_elapsed_time(Some(Duration::from_secs(120)))
+                    .build(),
+            )),
         }
     }
 
@@ -52,55 +80,88 @@ impl ReadBackend for RestBackend {
         self.url.as_str()
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
-        if tpe == FileType::Config {
-            return Ok(
-                match self
-                    .client
-                    .head(self.url.join("config").unwrap())
-                    .send()
-                    .await?
-                    .status()
-                    .is_success()
-                {
-                    true => vec![(Id::default(), 0)],
-                    false => Vec::new(),
-                },
-            );
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        if option == "retry" {
+            match value {
+                "true" => {
+                    self.backoff = MaybeBackoff(Some(
+                        ExponentialBackoffBuilder::new()
+                            .with_max_elapsed_time(Some(Duration::from_secs(120)))
+                            .build(),
+                    ));
+                }
+                "false" => {
+                    self.backoff = MaybeBackoff(None);
+                }
+                val => bail!("value {val} not supported for option retry!"),
+            }
         }
-
-        let mut path = tpe.name().to_string();
-        path.push('/');
-        let url = self.url.join(&path).unwrap();
-
-        // format which is delivered by the REST-service
-        #[derive(Deserialize)]
-        struct ListEntry {
-            name: Id,
-            size: u32,
-        }
-
-        let list = self
-            .client
-            .get(url)
-            .header("Accept", "application/vnd.x.restic.rest.v2")
-            .send()
-            .await?
-            .json::<Vec<ListEntry>>()
-            .await?;
-        Ok(list.into_iter().map(|i| (i.name, i.size)).collect())
+        Ok(())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
-        Ok(self
-            .client
-            .get(self.url(tpe, id))
-            .send()
-            .await?
-            .bytes()
-            .await?
-            .into_iter()
-            .collect())
+    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        Ok(backoff::future::retry_notify(
+            self.backoff.clone(),
+            || async {
+                if tpe == FileType::Config {
+                    return Ok(
+                        match self
+                            .client
+                            .head(self.url.join("config").unwrap())
+                            .send()
+                            .await?
+                            .status()
+                            .is_success()
+                        {
+                            true => vec![(Id::default(), 0)],
+                            false => Vec::new(),
+                        },
+                    );
+                }
+
+                let mut path = tpe.name().to_string();
+                path.push('/');
+                let url = self.url.join(&path).unwrap();
+
+                // format which is delivered by the REST-service
+                #[derive(Deserialize)]
+                struct ListEntry {
+                    name: Id,
+                    size: u32,
+                }
+
+                let list = self
+                    .client
+                    .get(url)
+                    .header("Accept", "application/vnd.x.restic.rest.v2")
+                    .send()
+                    .await?
+                    .json::<Vec<ListEntry>>()
+                    .await?;
+                Ok(list.into_iter().map(|i| (i.name, i.size)).collect())
+            },
+            notify,
+        )
+        .await?)
+    }
+
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        Ok(backoff::future::retry_notify(
+            self.backoff.clone(),
+            || async {
+                Ok(self
+                    .client
+                    .get(self.url(tpe, id))
+                    .send()
+                    .await?
+                    .bytes()
+                    .await?
+                    .into_iter()
+                    .collect())
+            },
+            notify,
+        )
+        .await?)
     }
 
     async fn read_partial(
@@ -110,51 +171,76 @@ impl ReadBackend for RestBackend {
         _cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         let offset2 = offset + length - 1;
         let header_value = format!("bytes={}-{}", offset, offset2);
-        Ok(self
-            .client
-            .get(self.url(tpe, id))
-            .header("Range", header_value)
-            .send()
-            .await?
-            .bytes()
-            .await?
-            .into_iter()
-            .collect())
+        Ok(backoff::future::retry_notify(
+            self.backoff.clone(),
+            || async {
+                Ok(self
+                    .client
+                    .get(self.url(tpe, id))
+                    .header("Range", header_value.clone())
+                    .send()
+                    .await?
+                    .bytes()
+                    .await?
+                    .into_iter()
+                    .collect())
+            },
+            notify,
+        )
+        .await?)
     }
 }
 
 #[async_trait]
 impl WriteBackend for RestBackend {
     async fn create(&self) -> Result<()> {
-        self.client
-            .post(self.url.join("?create=true").unwrap())
-            .send()
-            .await?;
-        Ok(())
+        Ok(backoff::future::retry_notify(
+            self.backoff.clone(),
+            || async {
+                self.client
+                    .post(self.url.join("?create=true").unwrap())
+                    .send()
+                    .await?;
+                Ok(())
+            },
+            notify,
+        )
+        .await?)
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, _cacheable: bool, f: File) -> Result<()> {
+    async fn write_bytes(
+        &self,
+        tpe: FileType,
+        id: &Id,
+        _cacheable: bool,
+        buf: Bytes,
+    ) -> Result<()> {
         v3!("writing tpe: {:?}, id: {}", &tpe, &id);
-        self.client
-            .post(self.url(tpe, id))
-            .body(tokio::fs::File::from_std(f))
-            .send()
-            .await?;
-        Ok(())
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
-        self.client.post(self.url(tpe, id)).body(buf).send().await?;
-        Ok(())
+        let req_builder = self.client.post(self.url(tpe, id)).body(buf);
+        Ok(backoff::future::retry_notify(
+            self.backoff.clone(),
+            || async {
+                req_builder.try_clone().unwrap().send().await?;
+                Ok(())
+            },
+            notify,
+        )
+        .await?)
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         v3!("removing tpe: {:?}, id: {}", &tpe, &id);
-        self.client.delete(self.url(tpe, id)).send().await?;
-        Ok(())
+        Ok(backoff::future::retry_notify(
+            self.backoff.clone(),
+            || async {
+                self.client.delete(self.url(tpe, id)).send().await?;
+                Ok(())
+            },
+            notify,
+        )
+        .await?)
     }
 }

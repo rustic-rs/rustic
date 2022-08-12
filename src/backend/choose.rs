@@ -1,7 +1,6 @@
-use std::fs::File;
-
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
 use super::{LocalBackend, RcloneBackend, RestBackend};
@@ -37,6 +36,14 @@ impl ReadBackend for ChooseBackend {
         }
     }
 
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        match self {
+            Local(local) => local.set_option(option, value),
+            Rest(rest) => rest.set_option(option, value),
+            Rclone(rclone) => rclone.set_option(option, value),
+        }
+    }
+
     async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         match self {
             Local(local) => local.list_with_size(tpe).await,
@@ -45,7 +52,7 @@ impl ReadBackend for ChooseBackend {
         }
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Vec<u8>> {
+    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match self {
             Local(local) => local.read_full(tpe, id).await,
             Rest(rest) => rest.read_full(tpe, id).await,
@@ -60,7 +67,7 @@ impl ReadBackend for ChooseBackend {
         cacheable: bool,
         offset: u32,
         length: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         match self {
             Local(local) => local.read_partial(tpe, id, cacheable, offset, length).await,
             Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length).await,
@@ -83,19 +90,11 @@ impl WriteBackend for ChooseBackend {
         }
     }
 
-    async fn write_file(&self, tpe: FileType, id: &Id, cacheable: bool, f: File) -> Result<()> {
+    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         match self {
-            Local(local) => local.write_file(tpe, id, cacheable, f).await,
-            Rest(rest) => rest.write_file(tpe, id, cacheable, f).await,
-            Rclone(rclone) => rclone.write_file(tpe, id, cacheable, f).await,
-        }
-    }
-
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Vec<u8>) -> Result<()> {
-        match self {
-            Local(local) => local.write_bytes(tpe, id, buf).await,
-            Rest(rest) => rest.write_bytes(tpe, id, buf).await,
-            Rclone(rclone) => rclone.write_bytes(tpe, id, buf).await,
+            Local(local) => local.write_bytes(tpe, id, cacheable, buf).await,
+            Rest(rest) => rest.write_bytes(tpe, id, cacheable, buf).await,
+            Rclone(rclone) => rclone.write_bytes(tpe, id, cacheable, buf).await,
         }
     }
 

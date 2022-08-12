@@ -10,7 +10,7 @@ use derive_more::Add;
 use futures::{future, TryStreamExt};
 use vlog::*;
 
-use super::{bytes, no_progress, progress_bytes, progress_counter};
+use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
 use crate::backend::{DecryptFullBackend, DecryptReadBackend, FileType};
 use crate::blob::{BlobType, BlobTypeMap, NodeType, Repacker, TreeStreamerOnce};
 use crate::id::Id;
@@ -56,6 +56,18 @@ pub(super) struct Opts {
     /// don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
     pub(crate) dry_run: bool,
+
+    /// warm up needed data pack files by only requesting them without processing
+    #[clap(long)]
+    warm_up: bool,
+
+    /// warm up needed data pack files by running the command with %id replaced by pack id
+    #[clap(long, conflicts_with = "warm-up")]
+    warm_up_command: Option<String>,
+
+    /// duration (e.g. 10m) to wait after warm up before doing the actual restore
+    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
+    warm_up_wait: Option<humantime::Duration>,
 }
 
 pub(super) async fn execute(
@@ -115,6 +127,17 @@ pub(super) async fn execute(
     pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
 
+    if opts.warm_up {
+        v1!("warming up needed data pack files...");
+        warm_up(be, pruner.repack_packs()).await?;
+    } else if opts.warm_up_command.is_some() {
+        v1!("warming up needed data pack files...");
+        warm_up_command(
+            pruner.repack_packs(),
+            opts.warm_up_command.as_ref().unwrap(),
+        )?;
+    }
+    wait(opts.warm_up_wait).await;
     if !opts.dry_run {
         pruner.do_prune(be, opts, config).await?;
     }
@@ -726,6 +749,15 @@ impl Pruner {
             self.index_files.len(),
             self.stats.index_files
         );
+    }
+
+    fn repack_packs(&self) -> Vec<Id> {
+        self.index_files
+            .iter()
+            .flat_map(|index| &index.packs)
+            .filter(|pack| pack.to_do == PackToDo::Repack)
+            .map(|pack| pack.id)
+            .collect()
     }
 
     async fn do_prune(

@@ -55,6 +55,12 @@ pub(super) struct ConfigOpts {
     #[clap(long, value_name = "SIZE")]
     pub set_treepack_size: Option<ByteSize>,
 
+    /// Set upper limit for default packsize for tree packs.
+    /// Note that packs actually can get up to some MiBs larger.
+    /// If not set, pack sizes can grow up to approximately 4 GiB.
+    #[clap(long, value_name = "SIZE")]
+    pub set_treepack_size_limit: Option<ByteSize>,
+
     /// Set grow factor for tree packs. The default packsize grows by the square root of the reposize
     /// multiplied with this factor. This means 32 kiB times this factor per square root of reposize in GiB.
     /// Defaults to 32 (= 1MB per sqare root of reposize in GiB) if not set.
@@ -72,6 +78,12 @@ pub(super) struct ConfigOpts {
     /// Defaults to 32 (= 1MB per sqare root of reposize in GiB) if not set.
     #[clap(long, value_name = "FACTOR")]
     pub set_datapack_growfactor: Option<u32>,
+
+    /// Set upper limit for default packsize for tree packs.
+    /// Note that packs actually can get up to some MiBs larger.
+    /// If not set, pack sizes can grow up to approximately 4 GiB.
+    #[clap(long, value_name = "SIZE")]
+    pub set_datapack_size_limit: Option<ByteSize>,
 }
 
 impl ConfigOpts {
@@ -113,11 +125,18 @@ impl ConfigOpts {
         if let Some(factor) = self.set_treepack_growfactor {
             config.treepack_growfactor = Some(factor);
         }
+        if let Some(size) = self.set_treepack_size_limit {
+            config.treepack_size_limit = Some(size.as_u64().try_into()?);
+        }
+
         if let Some(size) = self.set_datapack_size {
             config.datapack_size = Some(size.as_u64().try_into()?);
         }
-        if let Some(factor) = self.set_treepack_growfactor {
+        if let Some(factor) = self.set_datapack_growfactor {
             config.datapack_growfactor = Some(factor);
+        }
+        if let Some(size) = self.set_datapack_size_limit {
+            config.datapack_size_limit = Some(size.as_u64().try_into()?);
         }
 
         Ok(())

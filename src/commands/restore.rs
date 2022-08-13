@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{anyhow, bail, Result};
 use clap::Parser;
@@ -13,7 +12,7 @@ use ignore::{DirEntry, WalkBuilder};
 use tokio::spawn;
 use vlog::*;
 
-use super::{bytes, progress_bytes, progress_counter};
+use super::{bytes, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::crypto::hash;
@@ -28,12 +27,16 @@ pub(super) struct Opts {
     dry_run: bool,
 
     /// warm up needed data pack files by only requesting them without processing
-    #[clap(long, short = 'n', requires = "dry-run")]
+    #[clap(long)]
     warm_up: bool,
 
     /// warm up needed data pack files by running the command with %id replaced by pack id
-    #[clap(long, short = 'n', requires = "dry-run", conflicts_with = "warm-up")]
+    #[clap(long, conflicts_with = "warm-up")]
     warm_up_command: Option<String>,
+
+    /// duration (e.g. 10m) to wait after warm up before doing the actual restore
+    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
+    warm_up_wait: Option<humantime::Duration>,
 
     /// remove all files/dirs destination which are not contained in snapshot.
     /// Warning: Use with care, maybe first try this with --dry-run?
@@ -80,15 +83,22 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
 
     if file_infos.total_size == file_infos.matched_size {
         v1!("all file contents are fine.");
-    } else if opts.warm_up {
-        v1!("warming up needed data pack files...");
-        warm_up(be, file_infos).await?;
-    } else if opts.warm_up_command.is_some() {
-        v1!("warming up needed data pack files...");
-        warm_up_command(file_infos, opts.warm_up_command.as_ref().unwrap())?;
-    } else if !opts.dry_run {
-        v1!("restoring missing file contents...");
-        restore_contents(be, &dest, file_infos).await?;
+    } else {
+        if opts.warm_up {
+            v1!("warming up needed data pack files...");
+            warm_up(be, file_infos.to_packs()).await?;
+        } else if opts.warm_up_command.is_some() {
+            v1!("warming up needed data pack files...");
+            warm_up_command(
+                file_infos.to_packs(),
+                opts.warm_up_command.as_ref().unwrap(),
+            )?;
+        }
+        wait(opts.warm_up_wait).await;
+        if !opts.dry_run {
+            v1!("restoring missing file contents...");
+            restore_contents(be, &dest, file_infos).await?;
+        }
     }
 
     if !opts.dry_run {
@@ -231,52 +241,6 @@ async fn allocate_and_collect(
     }
 
     Ok(file_infos)
-}
-
-fn warm_up_command(file_infos: FileInfos, command: &str) -> Result<()> {
-    for pack in file_infos.into_packs() {
-        let id = pack.to_hex();
-        let actual_command = command.replace("%id", &id);
-        v1!("calling {actual_command}...");
-        let mut commands: Vec<_> = actual_command.split(' ').collect();
-        let status = Command::new(commands[0])
-            .args(&mut commands[1..])
-            .status()?;
-        if !status.success() {
-            bail!("warm-up command was not successful for pack {id}. {status}");
-        }
-    }
-    Ok(())
-}
-
-async fn warm_up(be: &impl DecryptReadBackend, file_infos: FileInfos) -> Result<()> {
-    let packs = file_infos.into_packs();
-    let mut be = be.clone();
-    be.set_option("retry", "false")?;
-
-    let p = progress_counter();
-    p.set_length(packs.len() as u64);
-    let mut stream = FuturesUnordered::new();
-
-    const MAX_READER: usize = 20;
-    for pack in packs {
-        while stream.len() > MAX_READER {
-            stream.try_next().await?;
-        }
-
-        let p = p.clone();
-        let be = be.clone();
-        stream.push(spawn(async move {
-            // ignore errors as they are expected from the warm-up
-            _ = be.read_partial(FileType::Pack, &pack, false, 0, 1).await;
-            p.inc(1);
-        }))
-    }
-
-    stream.try_collect().await?;
-    p.finish();
-
-    Ok(())
 }
 
 /// restore_contents restores all files contents as described by file_infos
@@ -509,12 +473,12 @@ impl FileInfos {
         Ok(open_file.is_none().then(|| file_pos))
     }
 
-    // filter out packs which we need
-    fn into_packs(self) -> Vec<Id> {
+    fn to_packs(&self) -> Vec<Id> {
         self.r
-            .into_iter()
+            .iter()
+            // filter out packs which we need
             .filter(|(_, blob)| blob.iter().any(|(_, fls)| fls.iter().all(|fl| !fl.matches)))
-            .map(|(pack, _)| pack)
+            .map(|(pack, _)| *pack)
             .collect()
     }
 }

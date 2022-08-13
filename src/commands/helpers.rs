@@ -2,18 +2,22 @@ use std::fmt::Write;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{bail, Result};
 use bytesize::ByteSize;
+use futures::{stream::FuturesUnordered, TryStreamExt};
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use rpassword::{prompt_password, read_password_from_bufread};
+use tokio::spawn;
+use tokio::time::sleep;
 use vlog::*;
 
-use crate::backend::ReadBackend;
+use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::crypto::Key;
-use crate::repo::find_key_in_backend;
+use crate::repo::{find_key_in_backend, Id};
 
 const MAX_PASSWORD_RETRIES: usize = 5;
 
@@ -80,5 +84,57 @@ pub fn progress_bytes() -> ProgressBar {
         p
     } else {
         ProgressBar::hidden()
+    }
+}
+
+pub fn warm_up_command(packs: Vec<Id>, command: &str) -> Result<()> {
+    for pack in packs {
+        let id = pack.to_hex();
+        let actual_command = command.replace("%id", &id);
+        v1!("calling {actual_command}...");
+        let mut commands: Vec<_> = actual_command.split(' ').collect();
+        let status = Command::new(commands[0])
+            .args(&mut commands[1..])
+            .status()?;
+        if !status.success() {
+            bail!("warm-up command was not successful for pack {id}. {status}");
+        }
+    }
+    Ok(())
+}
+
+pub async fn warm_up(be: &impl DecryptReadBackend, packs: Vec<Id>) -> Result<()> {
+    let mut be = be.clone();
+    be.set_option("retry", "false")?;
+
+    let p = progress_counter();
+    p.set_length(packs.len() as u64);
+    let mut stream = FuturesUnordered::new();
+
+    const MAX_READER: usize = 20;
+    for pack in packs {
+        while stream.len() > MAX_READER {
+            stream.try_next().await?;
+        }
+
+        let p = p.clone();
+        let be = be.clone();
+        stream.push(spawn(async move {
+            // ignore errors as they are expected from the warm-up
+            _ = be.read_partial(FileType::Pack, &pack, false, 0, 1).await;
+            p.inc(1);
+        }))
+    }
+
+    stream.try_collect().await?;
+    p.finish();
+
+    Ok(())
+}
+
+pub async fn wait(d: Option<humantime::Duration>) {
+    if let Some(wait) = d {
+        v1!("waiting {}...", wait);
+        sleep(*wait).await;
     }
 }

@@ -11,7 +11,7 @@ use futures::{future, TryStreamExt};
 use vlog::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
-use crate::backend::{DecryptFullBackend, DecryptReadBackend, FileType};
+use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType};
 use crate::blob::{BlobType, BlobTypeMap, NodeType, Repacker, TreeStreamerOnce};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer};
@@ -44,6 +44,10 @@ pub(super) struct Opts {
     #[clap(long, value_name = "DURATION", default_value = "0d")]
     keep_pack: humantime::Duration,
 
+    /// only remove unneded pack file from local cache
+    #[clap(long)]
+    cache_only: bool,
+
     /// simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting
     #[clap(long)]
     fast_repack: bool,
@@ -72,6 +76,7 @@ pub(super) struct Opts {
 
 pub(super) async fn execute(
     be: &(impl DecryptFullBackend + Unpin),
+    cache: Option<Cache>,
     opts: Opts,
     config: ConfigFile,
     ignore_snaps: Vec<Id>,
@@ -96,6 +101,21 @@ pub(super) async fn execute(
         index_files.push((id, index))
     }
     p.finish();
+
+    if let Some(cache) = &cache {
+        v1!("cleaning up packs from cache...");
+        cache
+            .remove_not_in_list(FileType::Pack, index_collector.tree_packs())
+            .await?;
+    }
+    match (cache.is_some(), opts.cache_only) {
+        (true, true) => return Ok(()),
+        (false, true) => {
+            ve1!("Warning: option --cache-only used without a cache.");
+            return Ok(());
+        }
+        _ => {}
+    }
 
     let used_ids = {
         let indexed_be = IndexBackend::new_from_index(&be.clone(), index_collector.into_index());

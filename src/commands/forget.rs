@@ -5,7 +5,7 @@ use derivative::Derivative;
 use prettytable::{cell, format, row, Table};
 
 use super::{progress_counter, prune};
-use crate::backend::{DecryptFullBackend, FileType};
+use crate::backend::{Cache, DecryptFullBackend, FileType};
 use crate::repo::{
     ConfigFile, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
 };
@@ -44,6 +44,7 @@ pub(super) struct Opts {
 
 pub(super) async fn execute(
     be: &(impl DecryptFullBackend + Unpin),
+    cache: Option<Cache>,
     mut opts: Opts,
     config: ConfigFile,
 ) -> Result<()> {
@@ -127,7 +128,7 @@ pub(super) async fn execute(
     }
 
     if opts.prune {
-        prune::execute(be, opts.prune_opts, config, forget_snaps).await?;
+        prune::execute(be, cache, opts.prune_opts, config, forget_snaps).await?;
     }
 
     Ok(())

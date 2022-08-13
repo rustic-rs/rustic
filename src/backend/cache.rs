@@ -183,10 +183,6 @@ impl Cache {
         Ok(walker.collect())
     }
 
-    // TODO: this function is yet only called from list_with_size. This cleans up
-    // index and snapshot files.
-    // It should also be called when reading the index to clean up pack files.
-
     pub async fn remove_not_in_list(&self, tpe: FileType, list: &Vec<(Id, u32)>) -> Result<()> {
         let mut list_cache = self.list_with_size(tpe).await?;
         // remove present files from the cache list

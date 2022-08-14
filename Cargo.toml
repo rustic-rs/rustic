@@ -53,7 +53,7 @@ enum-map-derive = "0.10"
 # local backend
 walkdir = "2"
 ignore = "0.4"
-nix = "0.24"
+nix = "0.25"
 filetime = "0.2"
 # rest backend
 reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }

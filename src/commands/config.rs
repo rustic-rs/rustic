@@ -84,6 +84,17 @@ pub(super) struct ConfigOpts {
     /// If not set, pack sizes can grow up to approximately 4 GiB.
     #[clap(long, value_name = "SIZE")]
     pub set_datapack_size_limit: Option<ByteSize>,
+
+    /// Set minimum tolerated packsize in percent of the targeted packsize.
+    /// Defaults to 30 if not set.
+    #[clap(long, value_name = "PERCENT")]
+    pub set_min_packsize_tolerate_percent: Option<u32>,
+
+    /// Set maximum tolerated packsize in percent of the targeted packsize
+    /// A value of 0 means packs larger than the targeted packsize are always
+    /// tolerated. Default if not set: larger packfiles are always tolerated.
+    #[clap(long, value_name = "PERCENT")]
+    pub set_max_packsize_tolerate_percent: Option<u32>,
 }
 
 impl ConfigOpts {
@@ -137,6 +148,20 @@ impl ConfigOpts {
         }
         if let Some(size) = self.set_datapack_size_limit {
             config.datapack_size_limit = Some(size.as_u64().try_into()?);
+        }
+
+        if let Some(percent) = self.set_min_packsize_tolerate_percent {
+            if percent > 100 {
+                bail!("set_min_packsize_tolerate_percent must be <= 100");
+            }
+            config.min_packsize_tolerate_percent = Some(percent);
+        }
+
+        if let Some(percent) = self.set_max_packsize_tolerate_percent {
+            if percent < 100 && percent > 0 {
+                bail!("set_max_packsize_tolerate_percent must be >= 100 or 0");
+            }
+            config.max_packsize_tolerate_percent = Some(percent);
         }
 
         Ok(())

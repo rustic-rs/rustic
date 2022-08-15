@@ -232,7 +232,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let size = chunk.len() as u64;
             filesize += size;
 
-            queue.push(spawn(async move {
+            queue.push_back(spawn(async move {
                 let id = hash(&chunk);
                 (id, chunk, size)
             }));

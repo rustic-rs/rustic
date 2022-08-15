@@ -22,7 +22,7 @@ mod indexer;
 pub use binarysorted::*;
 pub use indexer::*;
 
-#[derive(Debug, Clone, Constructor, Getters)]
+#[derive(Debug, Clone, PartialEq, Eq, Constructor, Getters)]
 pub struct IndexEntry {
     blob_type: BlobType,
     pack: Id,

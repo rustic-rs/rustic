@@ -67,7 +67,7 @@ dirs = "4"
 cachedir = "0.3"
 # commands
 clap = { version = "3", features = ["derive", "env"] }
-rpassword = "6"
+rpassword = "7"
 prettytable-rs = {version = "0.8", default-features = false }
 bytesize = "1"
 indicatif = "0.17"

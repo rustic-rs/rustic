@@ -33,15 +33,21 @@ use vlog::*;
 #[clap(about, version)]
 struct Opts {
     /// Repository to use
-    #[clap(short, long)]
+    #[clap(short, long, env = "RUSTIC_REPOSITORY")]
     repository: String,
 
     /// Repository to use as hot storage
-    #[clap(long)]
+    #[clap(long, env = "RUSTIC_REPO_HOT")]
     repo_hot: Option<String>,
 
     /// File to read the password from
-    #[clap(short, long, global = true, parse(from_os_str))]
+    #[clap(
+        short,
+        long,
+        global = true,
+        parse(from_os_str),
+        env = "RUSTIC_PASSWORD_FILE"
+    )]
     password_file: Option<PathBuf>,
     /// Increase verbosity (can be used multiple times)
     #[clap(long, short = 'v', global = true, parse(from_occurrences))]
@@ -58,11 +64,17 @@ struct Opts {
     quiet: i8,
 
     /// Don't use a cache.
-    #[clap(long, global = true)]
+    #[clap(long, global = true, env = "RUSTIC_NO_CACHE")]
     no_cache: bool,
 
     /// Use this dir as cache dir. If not given, rustic searches for rustic cache dirs
-    #[clap(long, global = true, parse(from_os_str), conflicts_with = "no-cache")]
+    #[clap(
+        long,
+        global = true,
+        parse(from_os_str),
+        conflicts_with = "no-cache",
+        env = "RUSTIC_CACHE_DIR"
+    )]
     cache_dir: Option<PathBuf>,
 
     #[clap(subcommand)]

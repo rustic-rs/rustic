@@ -141,7 +141,6 @@ jobs:
         with:
           files: |
             target/${{ matrix.job.target }}/release/rustic-rs-*.tar.gz
-            target/${{ matrix.job.target }}/release/rustic-rs-*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

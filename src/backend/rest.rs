@@ -53,7 +53,7 @@ impl RestBackend {
             client: Client::new(),
             backoff: MaybeBackoff(Some(
                 ExponentialBackoffBuilder::new()
-                    .with_max_elapsed_time(Some(Duration::from_secs(120)))
+                    .with_max_elapsed_time(Some(Duration::from_secs(600)))
                     .build(),
             )),
         }

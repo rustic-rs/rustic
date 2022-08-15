@@ -26,21 +26,24 @@ const MAX_AGE: Duration = Duration::from_secs(300);
 struct PackSizer {
     default_size: u32,
     grow_factor: u32,
+    size_limit: u32,
     current_size: u64,
 }
 
 impl PackSizer {
     pub fn from_config(config: &ConfigFile, blob_type: BlobType, current_size: u64) -> Self {
-        let (default_size, grow_factor) = config.packsize(blob_type);
+        let (default_size, grow_factor, size_limit) = config.packsize(blob_type);
         Self {
             default_size,
             grow_factor,
+            size_limit,
             current_size,
         }
     }
 
     pub fn pack_size(&self) -> u32 {
         (self.current_size.integer_sqrt() as u32 * self.grow_factor + self.default_size)
+            .min(self.size_limit)
             .min(MAX_SIZE)
     }
 

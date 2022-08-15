@@ -23,6 +23,7 @@ mod ls;
 mod prune;
 mod repoinfo;
 mod restore;
+mod self_update;
 mod snapshots;
 mod tag;
 
@@ -33,11 +34,11 @@ use vlog::*;
 #[clap(about, version)]
 struct Opts {
     /// Repository to use
-    #[clap(short, long, env = "RUSTIC_REPOSITORY")]
-    repository: String,
+    #[clap(short, long, global = true, env = "RUSTIC_REPOSITORY")]
+    repository: Option<String>,
 
     /// Repository to use as hot storage
-    #[clap(long, env = "RUSTIC_REPO_HOT")]
+    #[clap(long, global = true, env = "RUSTIC_REPO_HOT")]
     repo_hot: Option<String>,
 
     /// File to read the password from
@@ -116,6 +117,9 @@ enum Command {
     /// Show snapshots
     Snapshots(snapshots::Opts),
 
+    /// update to the latest rustic release
+    SelfUpdate(self_update::Opts),
+
     /// Remove unused data
     Prune(prune::Opts),
 
@@ -132,6 +136,12 @@ enum Command {
 pub async fn execute() -> Result<()> {
     let command: Vec<_> = std::env::args_os().into_iter().collect();
     let args = Opts::parse_from(&command);
+
+    if let Command::SelfUpdate(opts) = args.command {
+        self_update::execute(opts).await?;
+        return Ok(());
+    }
+
     let command: String = command
         .into_iter()
         .map(|s| s.to_string_lossy().to_string())
@@ -141,7 +151,11 @@ pub async fn execute() -> Result<()> {
     let verbosity = (1 + args.verbose - args.quiet).clamp(0, 3);
     set_verbosity_level(verbosity as usize);
 
-    let be = ChooseBackend::from_url(&args.repository)?;
+    let be = match &args.repository {
+        Some(repo) => ChooseBackend::from_url(repo)?,
+        None => bail!("No repository given. Please use the --repository option."),
+    };
+
     let be_hot = args
         .repo_hot
         .map(|repo| ChooseBackend::from_url(&repo))
@@ -196,6 +210,7 @@ pub async fn execute() -> Result<()> {
         Command::Key(opts) => key::execute(&dbe, key, opts).await?,
         Command::List(opts) => list::execute(&dbe, opts).await?,
         Command::Ls(opts) => ls::execute(&dbe, opts).await?,
+        Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts).await?,
         Command::Prune(opts) => prune::execute(&dbe, opts, config, vec![]).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,

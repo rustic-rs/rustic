@@ -78,6 +78,7 @@ jobs:
               sudo apt-get install -y binutils-aarch64-linux-gnu
           fi
       - name: Packaging final binary
+        if: "!startsWith(github.refname, 'dependabot/')"
         shell: bash
         run: |
           cd target/${{ matrix.job.target }}/release

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Local};
-use clap::Parser;
+use clap::{AppSettings, Parser};
 use gethostname::gethostname;
 use path_absolutize::*;
 use vlog::*;
@@ -17,6 +17,7 @@ use crate::index::IndexBackend;
 use crate::repo::{ConfigFile, DeleteOption, SnapshotFile, SnapshotSummary, StringList};
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
     /// Do not upload or write any data, just show what would be done
     #[clap(long, short = 'n')]
@@ -45,7 +46,7 @@ pub(super) struct Opts {
     #[clap(flatten)]
     ignore_opts: LocalSourceOptions,
 
-    /// backup source
+    /// Backup source
     source: String,
 }
 

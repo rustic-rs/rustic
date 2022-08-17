@@ -13,11 +13,11 @@ use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    /// reference snapshot/path
+    /// Reference snapshot/path
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
     snap1: String,
 
-    /// new snapshot/path [default for PATH2: PATH1]
+    /// New snapshot/path [default for PATH2: PATH1]
     #[clap(value_name = "SNAPSHOT2[:PATH2]")]
     snap2: String,
 }

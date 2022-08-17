@@ -11,7 +11,7 @@ use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    /// snapshot/path to ls
+    /// Snapshot/path to list
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 }

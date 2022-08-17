@@ -13,18 +13,18 @@ use crate::repo::{
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    #[clap(flatten)]
+    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
     filter: SnapshotFilter,
 
-    /// group snapshots by any combination of host,paths,tags
+    /// Group snapshots by any combination of host,paths,tags
     #[clap(long, short = 'g', value_name = "CRITERION", default_value = "")]
     group_by: SnapshotGroupCriterion,
 
-    /// show detailed information about snapshots
+    /// Show detailed information about snapshots
     #[clap(long)]
     long: bool,
 
-    /// Snapshots to list
+    /// Snapshots to show
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 }

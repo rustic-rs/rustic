@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use bytesize::ByteSize;
-use clap::Parser;
+use clap::{AppSettings, Parser};
 
 use crate::backend::{DecryptBackend, DecryptFullBackend, DecryptWriteBackend, WriteBackend};
 use crate::repo::ConfigFile;
@@ -40,12 +40,14 @@ pub(super) async fn execute(
 }
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct ConfigOpts {
-    /// set compression level, 0 equals no compression
+    /// Set compression level. Allowed levels are 1 to 22 and -1 to -7, see https://facebook.github.io/zstd/.
+    /// Note that 0 equals to no compression
     #[clap(long, value_name = "LEVEL")]
     pub set_compression: Option<i32>,
 
-    /// set repository version
+    /// Set repository version. Allowed versions: 1,2
     #[clap(long, value_name = "VERSION")]
     pub set_version: Option<u32>,
 
@@ -61,9 +63,10 @@ pub(super) struct ConfigOpts {
     #[clap(long, value_name = "SIZE")]
     pub set_treepack_size_limit: Option<ByteSize>,
 
-    /// Set grow factor for tree packs. The default packsize grows by the square root of the reposize
-    /// multiplied with this factor. This means 32 kiB times this factor per square root of reposize in GiB.
-    /// Defaults to 32 (= 1MB per sqare root of reposize in GiB) if not set.
+    /// Set grow factor for tree packs. The default packsize grows by the square root of the total size of all
+    /// tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total
+    /// treesize in GiB.
+    /// Defaults to 32 (= 1MB per sqare root of total treesize in GiB) if not set.
     #[clap(long, value_name = "FACTOR")]
     pub set_treepack_growfactor: Option<u32>,
 
@@ -73,9 +76,10 @@ pub(super) struct ConfigOpts {
     #[clap(long, value_name = "SIZE")]
     pub set_datapack_size: Option<ByteSize>,
 
-    /// set grow factor for data packs. The default packsize grows by the square root of the reposize
-    /// multiplied with this factor. This means 32 kiB times this factor per square root of reposize in GiB.
-    /// Defaults to 32 (= 1MB per sqare root of reposize in GiB) if not set.
+    /// Set grow factor for data packs. The default packsize grows by the square root of the total size of all
+    /// data packs multiplied with this factor. This means 32 kiB times this factor per square root of total
+    /// datasize in GiB.
+    /// Defaults to 32 (= 1MB per sqare root of total datasize in GiB) if not set.
     #[clap(long, value_name = "FACTOR")]
     pub set_datapack_growfactor: Option<u32>,
 

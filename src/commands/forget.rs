@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
-use clap::Parser;
+use clap::{AppSettings, Parser};
 use derivative::Derivative;
 use prettytable::{format, row, Table};
 
@@ -11,11 +11,9 @@ use crate::repo::{
 };
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
-    #[clap(flatten)]
-    filter: SnapshotFilter,
-
-    /// group snapshots by any combination of host,paths,tags
+    /// Group snapshots by any combination of host,paths,tags
     #[clap(
         long,
         short = 'g',
@@ -24,17 +22,20 @@ pub(super) struct Opts {
     )]
     group_by: SnapshotGroupCriterion,
 
-    #[clap(flatten)]
+    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
+    filter: SnapshotFilter,
+
+    #[clap(flatten, help_heading = "RETENTION OPTIONS")]
     keep: KeepOptions,
 
-    /// also prune the repository
+    /// Also prune the repository
     #[clap(long)]
     prune: bool,
 
-    #[clap(flatten)]
+    #[clap(flatten, help_heading = "PRUNE OPTIONS (only when used with --prune)")]
     prune_opts: prune::Opts,
 
-    /// don't remove anything, only show what would be done
+    /// Don't remove anything, only show what would be done
     #[clap(skip)]
     dry_run: bool,
 
@@ -137,64 +138,64 @@ pub(super) async fn execute(
 #[derive(Clone, PartialEq, Derivative, Parser)]
 #[derivative(Default)]
 struct KeepOptions {
-    /// keep snapshots with this taglist (can be specified multiple times)
-    #[clap(long, value_name = "TAGS")]
+    /// Keep snapshots with this taglist (can be specified multiple times)
+    #[clap(long, value_name = "TAG[,TAG,..]")]
     keep_tags: Vec<StringList>,
 
-    /// keep snapshots ids that start with ID (can be specified multiple times)
+    /// Keep snapshots ids that start with ID (can be specified multiple times)
     #[clap(long = "keep-id", value_name = "ID")]
     keep_ids: Vec<String>,
 
-    /// keep the last N snapshots
+    /// Keep the last N snapshots
     #[clap(long, short = 'l', value_name = "N", default_value = "0")]
     keep_last: u32,
 
-    /// keep the last N hourly snapshots
+    /// Keep the last N hourly snapshots
     #[clap(long, short = 'H', value_name = "N", default_value = "0")]
     keep_hourly: u32,
 
-    /// keep the last N daily snapshots
+    /// Keep the last N daily snapshots
     #[clap(long, short = 'd', value_name = "N", default_value = "0")]
     keep_daily: u32,
 
-    /// keep the last N weekly snapshots
+    /// Keep the last N weekly snapshots
     #[clap(long, short = 'w', value_name = "N", default_value = "0")]
     keep_weekly: u32,
 
-    /// keep the last N monthly snapshots
+    /// Keep the last N monthly snapshots
     #[clap(long, short = 'm', value_name = "N", default_value = "0")]
     keep_monthly: u32,
 
-    /// keep the last N yearly snapshots
+    /// Keep the last N yearly snapshots
     #[clap(long, short = 'y', value_name = "N", default_value = "0")]
     keep_yearly: u32,
 
-    /// keep snapshots newer than DURATION relative to latest snapshot
+    /// Keep snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0h")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within: humantime::Duration,
 
-    /// keep hourly snapshots newer than DURATION relative to latest snapshot
+    /// Keep hourly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0h")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_hourly: humantime::Duration,
 
-    /// keep daily snapshots newer than DURATION relative to latest snapshot
+    /// Keep daily snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0d")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_daily: humantime::Duration,
 
-    /// keep weekly snapshots newer than DURATION relative to latest snapshot
+    /// Keep weekly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0w")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_weekly: humantime::Duration,
 
-    /// keep monthly snapshots newer than DURATION relative to latest snapshot
+    /// Keep monthly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0m")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_monthly: humantime::Duration,
 
-    /// keep yearly snapshots newer than DURATION relative to latest snapshot
+    /// Keep yearly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0y")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
     keep_within_yearly: humantime::Duration,

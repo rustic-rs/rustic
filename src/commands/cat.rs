@@ -19,24 +19,29 @@ pub(super) struct Opts {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Display a tree blob
     TreeBlob(IdOpt),
+    /// Display a data blob
     DataBlob(IdOpt),
+    /// Display the config file
     Config,
+    /// Display an index file
     Index(IdOpt),
+    /// Display a snapshot file
     Snapshot(IdOpt),
-    /// display a tree within a snapshot
+    /// Display a tree within a snapshot
     Tree(TreeOpts),
 }
 
 #[derive(Default, Parser)]
 struct IdOpt {
-    /// id to cat
+    /// Id to display
     id: String,
 }
 
 #[derive(Parser)]
 struct TreeOpts {
-    /// snapshot/path to restore
+    /// Snapshot/path of the tree to display
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 }

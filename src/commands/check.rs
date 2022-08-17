@@ -14,11 +14,11 @@ use crate::repo::{IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    /// don't verify the data saved in the cache
+    /// Don't verify the data saved in the cache
     #[clap(long, conflicts_with = "no-cache")]
     trust_cache: bool,
 
-    /// read all data blobs
+    /// Read all data blobs
     #[clap(long)]
     read_data: bool,
 }

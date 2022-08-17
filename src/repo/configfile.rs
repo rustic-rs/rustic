@@ -26,6 +26,10 @@ pub struct ConfigFile {
     pub datapack_growfactor: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub datapack_size_limit: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_packsize_tolerate_percent: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_packsize_tolerate_percent: Option<u32>,
 }
 
 impl RepoFile for ConfigFile {
@@ -48,14 +52,7 @@ impl ConfigFile {
             version,
             id,
             chunker_polynomial: format!("{:x}", poly),
-            is_hot: None,
-            compression: None,
-            treepack_size: None,
-            treepack_growfactor: None,
-            treepack_size_limit: None,
-            datapack_size: None,
-            datapack_growfactor: None,
-            datapack_size_limit: None,
+            ..Self::default()
         }
     }
 
@@ -85,5 +82,15 @@ impl ConfigFile {
                 self.datapack_size_limit.unwrap_or(DEFAULT_SIZE_LIMIT),
             ),
         }
+    }
+
+    pub fn packsize_ok_percents(&self) -> (u32, u32) {
+        (
+            self.min_packsize_tolerate_percent.unwrap_or(30),
+            match self.max_packsize_tolerate_percent {
+                None | Some(0) => u32::MAX,
+                Some(percent) => percent,
+            },
+        )
     }
 }

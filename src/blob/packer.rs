@@ -23,21 +23,27 @@ const MAX_SIZE: u32 = 4076 * MB;
 const MAX_COUNT: u32 = 10_000;
 const MAX_AGE: Duration = Duration::from_secs(300);
 
-struct PackSizer {
+pub struct PackSizer {
     default_size: u32,
     grow_factor: u32,
     size_limit: u32,
     current_size: u64,
+    min_packsize_tolerate_percent: u32,
+    max_packsize_tolerate_percent: u32,
 }
 
 impl PackSizer {
     pub fn from_config(config: &ConfigFile, blob_type: BlobType, current_size: u64) -> Self {
         let (default_size, grow_factor, size_limit) = config.packsize(blob_type);
+        let (min_packsize_tolerate_percent, max_packsize_tolerate_percent) =
+            config.packsize_ok_percents();
         Self {
             default_size,
             grow_factor,
             size_limit,
             current_size,
+            min_packsize_tolerate_percent,
+            max_packsize_tolerate_percent,
         }
     }
 
@@ -45,6 +51,14 @@ impl PackSizer {
         (self.current_size.integer_sqrt() as u32 * self.grow_factor + self.default_size)
             .min(self.size_limit)
             .min(MAX_SIZE)
+    }
+
+    // returns whether the given size is not too small or too large
+    pub fn size_ok(&self, size: u32) -> bool {
+        let target_size = self.pack_size();
+        // Note: we cast to u64 so that no overflow can occur in the multiplications
+        size as u64 * 100 >= target_size as u64 * self.min_packsize_tolerate_percent as u64
+            && size as u64 * 100 <= target_size as u64 * self.max_packsize_tolerate_percent as u64
     }
 
     fn add_size(&mut self, added: u32) {

@@ -1,45 +1,68 @@
 use anyhow::Result;
 use chrono::{Duration, Local};
-use clap::Parser;
+use clap::{AppSettings, Parser};
 
 use super::progress_counter;
 use crate::backend::{DecryptFullBackend, FileType};
 use crate::repo::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
-    #[clap(flatten)]
-    filter: SnapshotFilter,
-
-    /// Tags to add (can be specified multiple times)
-    #[clap(long, value_name = "TAG[,TAG,..]", conflicts_with = "remove")]
-    add: Vec<StringList>,
-
-    /// Tags to remove (can be specified multiple times)
-    #[clap(long, value_name = "TAG[,TAG,..]")]
-    remove: Vec<StringList>,
-
-    /// Tag list to set (can be specified multiple times)
-    #[clap(long, value_name = "TAG[,TAG,..]", conflicts_with = "remove")]
-    set: Vec<StringList>,
-
-    /// Remove any delete mark
-    #[clap(long, conflicts_with_all = &["set-delete-never", "set-delete-after"])]
-    remove_delete: bool,
-
-    /// Mark snapshot as uneraseable
-    #[clap(long, conflicts_with = "set-delete-after")]
-    set_delete_never: bool,
-
-    /// Mark snapshot to be deleted after given duration (e.g. 10d)
-    #[clap(long, value_name = "DURATION")]
-    set_delete_after: Option<humantime::Duration>,
-
-    /// don't change any snapshot, only show which would be modified
+    /// Don't change any snapshot, only show which would be modified
     #[clap(long, short = 'n')]
     dry_run: bool,
 
-    /// Snapshots to change tags
+    #[clap(
+        flatten,
+        help_heading = "SNAPSHOT FILTER OPTIONS (if no snapshot is given)"
+    )]
+    filter: SnapshotFilter,
+
+    /// Tags to add (can be specified multiple times)
+    #[clap(
+        long,
+        value_name = "TAG[,TAG,..]",
+        conflicts_with = "remove",
+        help_heading = "TAG OPTIONS"
+    )]
+    add: Vec<StringList>,
+
+    /// Tags to remove (can be specified multiple times)
+    #[clap(long, value_name = "TAG[,TAG,..]", help_heading = "TAG OPTIONS")]
+    remove: Vec<StringList>,
+
+    /// Tag list to set (can be specified multiple times)
+    #[clap(
+        long,
+        value_name = "TAG[,TAG,..]",
+        conflicts_with = "remove",
+        help_heading = "TAG OPTIONS"
+    )]
+    set: Vec<StringList>,
+
+    /// Remove any delete mark
+    #[clap(
+        long,
+        conflicts_with_all = &["set-delete-never", "set-delete-after"], 
+        help_heading = "DELETE MARK OPTIONS"
+    )]
+    remove_delete: bool,
+
+    /// Mark snapshot as uneraseable
+    #[clap(
+        long,
+        conflicts_with = "set-delete-after",
+        help_heading = "DELETE MARK OPTIONS"
+    )]
+    set_delete_never: bool,
+
+    /// Mark snapshot to be deleted after given duration (e.g. 10d)
+    #[clap(long, value_name = "DURATION", help_heading = "DELETE MARK OPTIONS")]
+    set_delete_after: Option<humantime::Duration>,
+
+    /// Snapshots to change tags. If none is given, use filter to filter from all
+    /// snapshots.
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 }

@@ -8,7 +8,7 @@ use crate::repo::IndexFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    /// file type to list
+    /// File type to list
     #[clap(possible_values=["blobs", "index", "packs", "snapshots", "keys"])]
     tpe: String,
 }

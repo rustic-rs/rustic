@@ -5,7 +5,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
-use clap::Parser;
+use clap::{AppSettings, Parser};
 use derive_more::Add;
 use futures::{future, TryStreamExt};
 use vlog::*;
@@ -18,58 +18,61 @@ use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Inde
 use crate::repo::{ConfigFile, IndexBlob, IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
-    /// define maximum data to repack in % of reposize or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
+    /// Don't remove anything, only show what would be done
+    #[clap(long, short = 'n')]
+    pub(crate) dry_run: bool,
+
+    /// Define maximum data to repack in % of reposize or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
     #[clap(long, value_name = "LIMIT", default_value = "unlimited")]
     max_repack: LimitOption,
 
-    /// tolerate limit of unused data in % of reposize after pruning or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
+    /// Tolerate limit of unused data in % of reposize after pruning or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
     #[clap(long, value_name = "LIMIT", default_value = "5%")]
     max_unused: LimitOption,
 
-    /// only repack packs which are cacheable [default: true for a hot/cold repository, else false]
-    #[clap(long, value_name = "TRUE/FALSE")]
-    repack_cacheable_only: Option<bool>,
+    /// Minimum duration (e.g. 90d) to keep packs before repacking or removing. More recently created
+    /// packs won't be repacked or marked for deletion within this prune run.
+    #[clap(long, value_name = "DURATION", default_value = "0d")]
+    keep_pack: humantime::Duration,
 
-    /// minimum duration (e.g. 10m) to keep packs marked for deletion
+    /// Minimum duration (e.g. 10m) to keep packs marked for deletion. More recently marked packs won't be
+    /// deleted within this prune run.
     #[clap(long, value_name = "DURATION", default_value = "23h")]
     keep_delete: humantime::Duration,
 
-    /// delete files immediately instead of marking them. This also removes all already marked files.
+    /// Delete files immediately instead of marking them. This also removes all files already marked for deletion.
     /// WARNING: Only use if you are sure the repository is not accessed by parallel processes!
     #[clap(long)]
     instant_delete: bool,
 
-    /// minimum duration (e.g. 90d) to keep packs before repacking or removing
-    #[clap(long, value_name = "DURATION", default_value = "0d")]
-    keep_pack: humantime::Duration,
-
-    /// only remove unneded pack file from local cache
+    /// Only remove unneded pack file from local cache. Do not change the repository at all.
     #[clap(long)]
     cache_only: bool,
 
-    /// simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting
+    /// Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting
     #[clap(long)]
     fast_repack: bool,
 
-    /// repack packs containing uncompressed blobs. This cannot be used with --fast-repack.
+    /// Repack packs containing uncompressed blobs. This cannot be used with --fast-repack.
     /// Implies --max-unused=0.
     #[clap(long, conflicts_with = "fast-repack")]
     repack_uncompressed: bool,
 
-    /// don't remove anything, only show what would be done
-    #[clap(long, short = 'n')]
-    pub(crate) dry_run: bool,
+    /// Only repack packs which are cacheable [default: true for a hot/cold repository, else false]
+    #[clap(long, value_name = "TRUE/FALSE")]
+    repack_cacheable_only: Option<bool>,
 
-    /// warm up needed data pack files by only requesting them without processing
+    /// Warm up needed data pack files by only requesting them without processing
     #[clap(long)]
     warm_up: bool,
 
-    /// warm up needed data pack files by running the command with %id replaced by pack id
+    /// Warm up needed data pack files by running the command with %id replaced by pack id
     #[clap(long, conflicts_with = "warm-up")]
     warm_up_command: Option<String>,
 
-    /// duration (e.g. 10m) to wait after warm up before doing the actual restore
+    /// Duration (e.g. 10m) to wait after warm up before doing the actual restore
     #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
     warm_up_wait: Option<humantime::Duration>,
 }

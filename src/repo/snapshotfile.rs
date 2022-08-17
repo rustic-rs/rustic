@@ -311,11 +311,11 @@ impl Ord for SnapshotFile {
 #[derive(Parser)]
 pub struct SnapshotFilter {
     /// Path list to filter (can be specified multiple times)
-    #[clap(long = "filter-paths")]
+    #[clap(long = "filter-paths", value_name = "PATH[,PATH,..]")]
     paths: Vec<StringList>,
 
     /// Tag list to filter (can be specified multiple times)
-    #[clap(long = "filter-tags")]
+    #[clap(long = "filter-tags", value_name = "TAG[,TAG,..]")]
     tags: Vec<StringList>,
 
     /// Hostname to filter (can be specified multiple times)

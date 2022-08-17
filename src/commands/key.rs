@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{AppSettings, Parser, Subcommand};
 use rpassword::{prompt_password, read_password_from_bufread};
 
 use crate::backend::{FileType, WriteBackend};
@@ -21,22 +21,23 @@ enum Command {
 }
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(crate) struct AddOpts {
-    /// set 'hostname' in public key information
+    /// File from which to read the new password
+    #[clap(long)]
+    pub(crate) new_password_file: Option<String>,
+
+    /// Set 'hostname' in public key information
     #[clap(long)]
     pub(crate) hostname: Option<String>,
 
-    /// set 'username' in public key information
+    /// Set 'username' in public key information
     #[clap(long)]
     pub(crate) username: Option<String>,
 
-    /// add 'created' date in public key information
+    /// Add 'created' date in public key information
     #[clap(long)]
     pub(crate) with_created: bool,
-
-    /// file from which to read the new password
-    #[clap(long)]
-    pub(crate) new_password_file: Option<String>,
 }
 
 pub(super) async fn execute(be: &impl WriteBackend, key: Key, opts: Opts) -> Result<()> {

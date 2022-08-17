@@ -34,11 +34,22 @@ use vlog::*;
 #[clap(about, version)]
 struct Opts {
     /// Repository to use
-    #[clap(short, long, global = true, env = "RUSTIC_REPOSITORY")]
+    #[clap(
+        short,
+        long,
+        global = true,
+        env = "RUSTIC_REPOSITORY",
+        help_heading = "GLOBAL OPTIONS"
+    )]
     repository: Option<String>,
 
     /// Repository to use as hot storage
-    #[clap(long, global = true, env = "RUSTIC_REPO_HOT")]
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_REPO_HOT",
+        help_heading = "GLOBAL OPTIONS"
+    )]
     repo_hot: Option<String>,
 
     /// File to read the password from
@@ -47,11 +58,19 @@ struct Opts {
         long,
         global = true,
         parse(from_os_str),
-        env = "RUSTIC_PASSWORD_FILE"
+        env = "RUSTIC_PASSWORD_FILE",
+        help_heading = "GLOBAL OPTIONS"
     )]
     password_file: Option<PathBuf>,
+
     /// Increase verbosity (can be used multiple times)
-    #[clap(long, short = 'v', global = true, parse(from_occurrences))]
+    #[clap(
+        long,
+        short = 'v',
+        global = true,
+        parse(from_occurrences),
+        help_heading = "GLOBAL OPTIONS"
+    )]
     verbose: i8,
 
     /// Don't be verbose at all
@@ -60,21 +79,28 @@ struct Opts {
         short = 'q',
         global = true,
         parse(from_occurrences),
-        conflicts_with = "verbose"
+        conflicts_with = "verbose",
+        help_heading = "GLOBAL OPTIONS"
     )]
     quiet: i8,
 
     /// Don't use a cache.
-    #[clap(long, global = true, env = "RUSTIC_NO_CACHE")]
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_NO_CACHE",
+        help_heading = "GLOBAL OPTIONS"
+    )]
     no_cache: bool,
 
-    /// Use this dir as cache dir. If not given, rustic searches for rustic cache dirs
+    /// Use this dir as cache dir instead of the standard cache dir
     #[clap(
         long,
         global = true,
         parse(from_os_str),
         conflicts_with = "no-cache",
-        env = "RUSTIC_CACHE_DIR"
+        env = "RUSTIC_CACHE_DIR",
+        help_heading = "GLOBAL OPTIONS"
     )]
     cache_dir: Option<PathBuf>,
 
@@ -87,16 +113,16 @@ enum Command {
     /// Backup to the repository
     Backup(backup::Opts),
 
-    /// Cat repository files and blobs
+    /// Show raw data of repository files and blobs
     Cat(cat::Opts),
 
-    /// Change repo configuration
+    /// Change the repository configuration
     Config(config::Opts),
 
-    /// Check repository
+    /// Check the repository
     Check(check::Opts),
 
-    /// Compare two snapshots
+    /// Compare two snapshots/paths
     Diff(diff::Opts),
 
     /// Remove snapshots from the repository
@@ -111,22 +137,22 @@ enum Command {
     /// List repository files
     List(list::Opts),
 
-    /// Ls snapshots
+    /// List file contents of a snapshot
     Ls(ls::Opts),
 
-    /// Show snapshots
+    /// Show a detailed overview of the snapshots within the repository
     Snapshots(snapshots::Opts),
 
-    /// update to the latest rustic release
+    /// Update to the latest rustic release
     SelfUpdate(self_update::Opts),
 
-    /// Remove unused data
+    /// Remove unused data or repack repository pack files
     Prune(prune::Opts),
 
-    /// Restore snapshot
+    /// Restore a snapshot/path
     Restore(restore::Opts),
 
-    /// Show general information about repository
+    /// Show general information about the repository
     Repoinfo(repoinfo::Opts),
 
     /// Change tags of snapshots

@@ -5,7 +5,7 @@ use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
-use clap::Parser;
+use clap::{AppSettings, Parser};
 use derive_getters::Dissolve;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use ignore::{DirEntry, WalkBuilder};
@@ -21,37 +21,39 @@ use crate::index::{IndexBackend, IndexedBackend};
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
-    /// dry-run: don't restore, only show what would be done
+    /// Dry-run: don't restore, only show what would be done
     #[clap(long, short = 'n')]
     dry_run: bool,
 
-    /// warm up needed data pack files by only requesting them without processing
-    #[clap(long)]
-    warm_up: bool,
-
-    /// warm up needed data pack files by running the command with %id replaced by pack id
-    #[clap(long, conflicts_with = "warm-up")]
-    warm_up_command: Option<String>,
-
-    /// duration (e.g. 10m) to wait after warm up before doing the actual restore
-    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
-    warm_up_wait: Option<humantime::Duration>,
-
-    /// remove all files/dirs destination which are not contained in snapshot.
-    /// Warning: Use with care, maybe first try this with --dry-run?
+    /// Remove all files/dirs in destination which are not contained in snapshot.
+    /// WARNING: Use with care, maybe first try this first with --dry-run?
     #[clap(long)]
     delete: bool,
 
-    /// use numeric ids instead of user/groug when restoring uid/gui
+    /// Use numeric ids instead of user/group when restoring uid/gui
     #[clap(long)]
     numeric_id: bool,
 
-    /// snapshot/path to restore
+    /// Warm up needed data pack files by only requesting them without processing
+    #[clap(long)]
+    warm_up: bool,
+
+    /// Warm up needed data pack files by running the command with %id replaced by pack id
+    #[clap(long, conflicts_with = "warm-up")]
+    warm_up_command: Option<String>,
+
+    /// Duration (e.g. 10m) to wait after warm up before doing the actual restore
+    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
+    warm_up_wait: Option<humantime::Duration>,
+
+    /// Snapshot/path to restore
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 
-    /// restore destination
+    /// Restore destination
+    #[clap(value_name = "DESTINATION")]
     dest: String,
 }
 

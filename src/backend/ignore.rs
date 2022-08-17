@@ -31,11 +31,11 @@ pub struct LocalSourceOptions {
     #[clap(long, short = 'g')]
     glob: Vec<String>,
 
-    /// Read glob patterns to exclude/include from a file (can be specified multiple times)
+    /// Read glob patterns to exclude/include from this file (can be specified multiple times)
     #[clap(long, value_name = "FILE")]
     glob_file: Vec<String>,
 
-    /// Exclude contents of directories containing filename (can be specified multiple times)
+    /// Exclude contents of directories containing this filename (can be specified multiple times)
     #[clap(long, value_name = "FILE")]
     exclude_if_present: Vec<String>,
 

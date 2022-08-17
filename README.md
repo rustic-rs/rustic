@@ -25,20 +25,21 @@ Look at the [FAQ][3] or open an issue!
 ## Comparison with restic:
 
 Improvements:
- * Allows using cold storage (e.g. AWS Glacier) repos which are only read in the `restore` command
+ * Allows using cold storage (e.g. AWS Glacier) repos which are only read in the `restore` command + supports warm-up
  * Completely lock-free pruning; option `instant-delete` is available
  * Huge decrease in memory requirement
- * pack size can be customized
- * Already much faster than restic for most operations (but not yet fully speed optimized)
+ * Pack size can be customized
+ * Already faster than restic for most operations (but not yet fully speed optimized)
  * `backup` command can use `.gitignore` files
- * Snapshots save much more information
+ * `restore` uses existing files; also option `--delete` available
+ * Snapshots save much more information, available in `snapshots` command
  * Allows to save some options in the config file via the command `config`
  * New command `repo-info`
  * `snapshots latest` command to show only the latest snapshot(s)
  * `check` command checks and uses cache; option `--trust-cache` is available
- * option `prune --fast-repack` for faster repacking
- * `cat tree` command accepts a snapshot and path to cat the tree blob
- * compression is already supported in released versions ;-)
+ * Option `prune --fast-repack` for faster repacking
+ * Syntax `<SNAPSHOT>[:PATH]` is available for many commands
+ * Compression is already supported in released versions ;-)
 
 Current limitations:
  * Backup source and restore destinations only on local file system
@@ -46,7 +47,6 @@ Current limitations:
  
 ## Open points:
  * [ ] Add tests and benchmarks
- * [ ] Add more backup-sources and restore-destinations
  * [ ] Add missing commands: copy, dump, find, mount
  * [ ] Improve error handling
  * [ ] Parallelize the code even more and optimize for speed where useful

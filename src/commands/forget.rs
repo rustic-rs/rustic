@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use clap::Parser;
 use derivative::Derivative;
-use prettytable::{cell, format, row, Table};
+use prettytable::{format, row, Table};
 
 use super::{progress_counter, prune};
 use crate::backend::{Cache, DecryptFullBackend, FileType};

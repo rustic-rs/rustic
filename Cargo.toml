@@ -68,7 +68,7 @@ cachedir = "0.3"
 # commands
 clap = { version = "3", features = ["derive", "env"] }
 rpassword = "7"
-prettytable-rs = {version = "0.8", default-features = false }
+prettytable-rs = {version = "0.9", default-features = false }
 bytesize = "1"
 indicatif = "0.17"
 path-absolutize = "3"

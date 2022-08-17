@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use futures::TryStreamExt;
-use prettytable::{cell, format, row, Table};
+use prettytable::{format, row, Table};
 use vlog::*;
 
 use super::{bytes, progress_counter};

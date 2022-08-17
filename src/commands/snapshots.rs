@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use clap::Parser;
 use humantime::format_duration;
-use prettytable::{cell, format, row, Table};
+use prettytable::{format, row, Table};
 
 use super::bytes;
 use crate::backend::DecryptReadBackend;

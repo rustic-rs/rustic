@@ -10,6 +10,8 @@ pub struct Parent<BE: IndexedBackend> {
     tree: Option<Tree>,
     be: BE,
     node_idx: usize,
+    ignore_ctime: bool,
+    ignore_inode: bool,
 }
 
 pub enum ParentResult<T> {
@@ -19,7 +21,7 @@ pub enum ParentResult<T> {
 }
 
 impl<BE: IndexedBackend> Parent<BE> {
-    pub async fn new(be: &BE, tree_id: Option<Id>) -> Self {
+    pub async fn new(be: &BE, tree_id: Option<Id>, ignore_ctime: bool, ignore_inode: bool) -> Self {
         // if tree_id is given, load tree from backend. Turn errors into None.
         // TODO: print warning when loading failed
         let tree = match tree_id {
@@ -30,6 +32,8 @@ impl<BE: IndexedBackend> Parent<BE> {
             tree,
             be: be.clone(),
             node_idx: 0,
+            ignore_ctime,
+            ignore_inode,
         }
     }
 
@@ -58,13 +62,20 @@ impl<BE: IndexedBackend> Parent<BE> {
     }
 
     pub fn is_parent(&mut self, node: &Node) -> ParentResult<&Node> {
+        // use new variables as the mutable borrow is used later
+        let ignore_ctime = self.ignore_ctime;
+        let ignore_inode = self.ignore_inode;
+
         match self.p_node(node) {
             None => ParentResult::NotFound,
             Some(p_node) => {
                 if p_node.node_type == node.node_type
                     && p_node.meta.size == node.meta.size
-                    && p_node.meta().ctime == node.meta.ctime
-                    && (node.meta.inode == 0 || p_node.meta.inode == node.meta.inode)
+                    && p_node.meta.mtime == node.meta.mtime
+                    && (ignore_ctime || p_node.meta.ctime == node.meta.ctime)
+                    && (ignore_inode
+                        || p_node.meta.inode == 0
+                        || p_node.meta.inode == node.meta.inode)
                 {
                     ParentResult::Matched(p_node)
                 } else {
@@ -91,6 +102,8 @@ impl<BE: IndexedBackend> Parent<BE> {
             tree,
             be: self.be.clone(),
             node_idx: 0,
+            ignore_ctime: self.ignore_ctime,
+            ignore_inode: self.ignore_inode,
         })
     }
 }

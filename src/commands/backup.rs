@@ -31,6 +31,14 @@ pub(super) struct Opts {
     #[clap(long, short, conflicts_with = "parent")]
     force: bool,
 
+    /// Ignore ctime changes when checking for modified files
+    #[clap(long, conflicts_with = "force")]
+    ignore_ctime: bool,
+
+    /// Ignore inode number changes when checking for modified files
+    #[clap(long, conflicts_with = "force")]
+    ignore_inode: bool,
+
     /// Tags to add to backup (can be specified multiple times)
     #[clap(long, value_name = "TAG[,TAG,..]")]
     tag: Vec<StringList>,
@@ -119,7 +127,7 @@ pub(super) async fn execute(
 
     let index = IndexBackend::only_full_trees(&be, progress_counter()).await?;
 
-    let parent = Parent::new(&index, parent_tree).await;
+    let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode).await;
 
     let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
 

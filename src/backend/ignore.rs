@@ -3,6 +3,7 @@ use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use bytesize::ByteSize;
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
@@ -23,33 +24,37 @@ pub struct LocalSourceOptions {
     #[clap(long)]
     with_atime: bool,
 
-    /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
-    #[clap(long, short = 'x')]
-    one_file_system: bool,
-
-    /// Glob pattern to include/exclue (can be specified multiple times)
-    #[clap(long, short = 'g')]
+    /// Glob pattern to exclude/include (can be specified multiple times)
+    #[clap(long, short = 'g', help_heading = "EXCLUDE OPTIONS")]
     glob: Vec<String>,
 
-    /// Read glob patterns to exclude/include from this file (can be specified multiple times)
-    #[clap(long, value_name = "FILE")]
-    glob_file: Vec<String>,
-
-    /// Exclude contents of directories containing this filename (can be specified multiple times)
-    #[clap(long, value_name = "FILE")]
-    exclude_if_present: Vec<String>,
-
-    /// Ignore files based on .gitignore files
-    #[clap(long)]
-    git_ignore: bool,
-
     /// Same as --glob pattern but ignores the casing of filenames
-    #[clap(long, value_name = "GLOB")]
+    #[clap(long, value_name = "GLOB", help_heading = "EXCLUDE OPTIONS")]
     iglob: Vec<String>,
 
+    /// Read glob patterns to exclude/include from this file (can be specified multiple times)
+    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    glob_file: Vec<String>,
+
     /// Same as --glob-file ignores the casing of filenames in patterns
-    #[clap(long, value_name = "FILE")]
+    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
     iglob_file: Vec<String>,
+
+    /// Ignore files based on .gitignore files
+    #[clap(long, help_heading = "EXCLUDE OPTIONS")]
+    git_ignore: bool,
+
+    /// Exclude contents of directories containing this filename (can be specified multiple times)
+    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    exclude_if_present: Vec<String>,
+
+    /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
+    #[clap(long, short = 'x', help_heading = "EXCLUDE OPTIONS")]
+    one_file_system: bool,
+
+    /// Maximum size of files to be backuped. Larger files will be excluded.
+    #[clap(long, value_name = "SIZE", help_heading = "EXCLUDE OPTIONS")]
+    exclude_larger_than: Option<ByteSize>,
 }
 
 impl LocalSource {
@@ -91,6 +96,7 @@ impl LocalSource {
             .git_ignore(opts.git_ignore)
             .sort_by_file_path(Path::cmp)
             .same_file_system(opts.one_file_system)
+            .max_filesize(opts.exclude_larger_than.map(|s| s.as_u64()))
             .overrides(override_builder.build()?);
 
         if !opts.exclude_if_present.is_empty() {

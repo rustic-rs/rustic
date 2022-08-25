@@ -3,6 +3,7 @@ use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use bytesize::ByteSize;
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
@@ -26,6 +27,10 @@ pub struct LocalSourceOptions {
     /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
     #[clap(long, short = 'x')]
     one_file_system: bool,
+
+    /// Maximum size of files to be backuped. Larger files will be excluded.
+    #[clap(long, value_name = "SIZE")]
+    exclude_larger_than: Option<ByteSize>,
 
     /// Glob pattern to include/exclue (can be specified multiple times)
     #[clap(long, short = 'g')]
@@ -91,6 +96,7 @@ impl LocalSource {
             .git_ignore(opts.git_ignore)
             .sort_by_file_path(Path::cmp)
             .same_file_system(opts.one_file_system)
+            .max_filesize(opts.exclude_larger_than.map(|s| s.as_u64()))
             .overrides(override_builder.build()?);
 
         if !opts.exclude_if_present.is_empty() {

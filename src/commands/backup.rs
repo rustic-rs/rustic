@@ -13,6 +13,7 @@ use crate::backend::{
     DecryptFullBackend, DecryptWriteBackend, DryRunBackend, LocalSource, LocalSourceOptions,
     ReadSource,
 };
+use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
 use crate::repo::{ConfigFile, DeleteOption, SnapshotFile, SnapshotSummary, StringList};
 
@@ -51,10 +52,14 @@ pub(super) struct Opts {
     #[clap(long, value_name = "DURATION")]
     delete_after: Option<humantime::Duration>,
 
+    /// Set filename to be used when backing up from stdin
+    #[clap(long, value_name = "FILENAME", default_value = "stdin")]
+    stdin_filename: String,
+
     #[clap(flatten)]
     ignore_opts: LocalSourceOptions,
 
-    /// Backup source
+    /// Backup source, use - for stdin
     source: String,
 }
 
@@ -69,8 +74,12 @@ pub(super) async fn execute(
     let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
     be.set_zstd(zstd);
 
-    let backup_path = PathBuf::from(&opts.source);
-    let backup_path = backup_path.absolutize()?;
+    let backup_stdin = opts.source == "-";
+    let backup_path = if backup_stdin {
+        PathBuf::from(&opts.stdin_filename)
+    } else {
+        PathBuf::from(&opts.source).absolutize()?.to_path_buf()
+    };
     let backup_path_str = backup_path
         .to_str()
         .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path))?
@@ -82,16 +91,16 @@ pub(super) async fn execute(
         .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
         .to_string();
 
-    let parent = match (opts.force, opts.parent) {
-        (true, _) => None,
-        (false, None) => SnapshotFile::latest(
+    let parent = match (backup_stdin, opts.force, opts.parent) {
+        (true, _, _) | (false, true, _) => None,
+        (false, false, None) => SnapshotFile::latest(
             &be,
             |snap| snap.hostname == hostname && snap.paths.contains(&backup_path_str),
             progress_counter(),
         )
         .await
         .ok(),
-        (false, Some(parent)) => SnapshotFile::from_id(&be, &parent).await.ok(),
+        (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).await.ok(),
     };
 
     let parent_tree = match &parent {
@@ -129,32 +138,54 @@ pub(super) async fn execute(
 
     let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode).await;
 
-    let src = LocalSource::new(opts.ignore_opts, backup_path.to_path_buf())?;
+    let snap = if backup_stdin {
+        v1!("starting backup from stdin...");
+        let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
+        let p = progress_bytes();
+        archiver
+            .backup_reader(
+                std::io::stdin(),
+                Node::new(
+                    backup_path_str,
+                    NodeType::File,
+                    Metadata::default(),
+                    None,
+                    None,
+                ),
+                p,
+            )
+            .await?;
 
-    let size = if get_verbosity_level() == 1 {
-        v1!("determining size of backup source...");
-        src.size()?
+        archiver.finalize_snapshot().await?
     } else {
-        0
-    };
-    v1!("starting backup...");
-    let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
-    let p = progress_bytes();
-    p.set_length(size);
-    for item in src {
-        match item {
-            Err(e) => {
-                eprintln!("ignoring error {}\n", e)
-            }
-            Ok((path, node)) => {
-                if let Err(e) = archiver.add_entry(&path, node, p.clone()).await {
-                    eprintln!("ignoring error {} for {:?}\n", e, path);
+        let src = LocalSource::new(opts.ignore_opts, backup_path)?;
+
+        let size = if get_verbosity_level() == 1 {
+            v1!("determining size of backup source...");
+            src.size()?
+        } else {
+            0
+        };
+        v1!("starting backup...");
+        let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
+        let p = progress_bytes();
+        p.set_length(size);
+        for item in src {
+            match item {
+                Err(e) => {
+                    eprintln!("ignoring error {}\n", e)
+                }
+                Ok((path, node)) => {
+                    if let Err(e) = archiver.add_entry(&path, node, p.clone()).await {
+                        eprintln!("ignoring error {} for {:?}\n", e, path);
+                    }
                 }
             }
         }
-    }
-    p.finish_with_message("done");
-    let snap = archiver.finalize_snapshot().await?;
+        p.finish_with_message("done");
+        archiver.finalize_snapshot().await?
+    };
+
     let summary = snap.summary.unwrap();
 
     v1!(

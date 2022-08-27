@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
@@ -221,7 +222,11 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             }
         }
         let f = File::open(path)?;
-        let chunk_iter = ChunkIter::new(f, *node.meta().size() as usize, &self.poly);
+        self.backup_reader(f, node, p).await
+    }
+
+    pub async fn backup_reader(&mut self, r: impl Read, node: Node, p: ProgressBar) -> Result<()> {
+        let chunk_iter = ChunkIter::new(r, *node.meta().size() as usize, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
 

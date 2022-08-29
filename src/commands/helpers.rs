@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
@@ -25,24 +25,42 @@ pub fn bytes(b: u64) -> String {
     ByteSize(b).to_string_as(true)
 }
 
-pub async fn get_key(be: &impl ReadBackend, password_file: Option<PathBuf>) -> Result<Key> {
-    match password_file {
-        None => {
-            for _i in 0..MAX_PASSWORD_RETRIES {
-                let pass = prompt_password("enter repository password: ")?;
-                if let Ok(key) = find_key_in_backend(be, &pass, None).await {
-                    ve1!("password is correct");
+pub async fn get_key(
+    be: &impl ReadBackend,
+    password: Option<&str>,
+    password_file: Option<&Path>,
+    password_command: Option<&str>,
+) -> Result<Key> {
+    let password = match (password, password_file, password_command) {
+        (Some(pwd), _, _) => Some(pwd.to_string()),
+        (_, Some(file), _) => {
+            let mut file = BufReader::new(File::open(file)?);
+            Some(read_password_from_bufread(&mut file)?)
+        }
+        (_, _, Some(command)) => {
+            let mut commands: Vec<_> = command.split(' ').collect();
+            let output = Command::new(commands[0])
+                .args(&mut commands[1..])
+                .output()?;
+
+            let mut pwd = BufReader::new(&*output.stdout);
+            Some(read_password_from_bufread(&mut pwd)?)
+        }
+        (None, None, None) => None,
+    };
+
+    for _ in 0..MAX_PASSWORD_RETRIES {
+        match &password {
+            // if password is given, directly return the result of find_key_in_backend and don't retry
+            Some(pass) => return find_key_in_backend(be, pass, None).await,
+            None => {
+                // TODO: Differentiate between wrong password and other error!
+                if let Ok(key) =
+                    find_key_in_backend(be, &prompt_password("enter repository password: ")?, None)
+                        .await
+                {
                     return Ok(key);
                 }
-            }
-            bail!("tried too often...aborting!");
-        }
-        Some(file) => {
-            let mut file = BufReader::new(File::open(file)?);
-            let pass = read_password_from_bufread(&mut file)?;
-            if let Ok(key) = find_key_in_backend(be, &pass, None).await {
-                ve1!("password is correct");
-                return Ok(key);
             }
         }
     }

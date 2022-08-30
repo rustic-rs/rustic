@@ -52,6 +52,15 @@ struct Opts {
     )]
     repo_hot: Option<String>,
 
+    /// Password of the repository - WARNING: Using --password can reveal the password in the process list!
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_PASSWORD",
+        help_heading = "GLOBAL OPTIONS"
+    )]
+    password: Option<String>,
+
     /// File to read the password from
     #[clap(
         short,
@@ -59,9 +68,20 @@ struct Opts {
         global = true,
         parse(from_os_str),
         env = "RUSTIC_PASSWORD_FILE",
-        help_heading = "GLOBAL OPTIONS"
+        help_heading = "GLOBAL OPTIONS",
+        conflicts_with = "password"
     )]
     password_file: Option<PathBuf>,
+
+    /// Command to read the password from
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_PASSWORD_COMMAND",
+        help_heading = "GLOBAL OPTIONS",
+        conflicts_with_all = &["password", "password-file"],
+    )]
+    password_command: Option<String>,
 
     /// Increase verbosity (can be used multiple times)
     #[clap(
@@ -202,7 +222,16 @@ pub async fn execute() -> Result<()> {
                     bail!("keys from repo and repo-hot do not match. Aborting.");
                 }
             }
-            let key = get_key(&be, args.password_file).await?;
+
+            let key = get_key(
+                &be,
+                args.password.as_deref(),
+                args.password_file.as_deref(),
+                args.password_command.as_deref(),
+            )
+            .await?;
+            ve1!("password is correct.");
+
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
             match (config.is_hot == Some(true), be_hot.is_some()) {

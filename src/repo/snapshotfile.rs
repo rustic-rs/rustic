@@ -15,7 +15,7 @@ use crate::backend::{DecryptReadBackend, FileType, RepoFile};
 
 /// This is an extended version of the summaryOutput structure of restic in
 /// restic/internal/ui/backup$/json.go
-#[derive(Debug, Serialize, Deserialize, Derivative)]
+#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
 #[derivative(Default)]
 pub struct SnapshotSummary {
     pub files_new: u64,
@@ -61,7 +61,7 @@ impl DeleteOption {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Derivative)]
+#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
 #[derivative(Default)]
 pub struct SnapshotFile {
     #[derivative(Default(value = "Local::now()"))]

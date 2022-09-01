@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use clap::Parser;
 use humantime::format_duration;
+use itertools::Itertools;
 use prettytable::{format, row, Table};
 
 use super::bytes;
@@ -23,6 +24,10 @@ pub(super) struct Opts {
     /// Show detailed information about snapshots
     #[clap(long)]
     long: bool,
+
+    /// Show all snapshots instead of summarizing identical follow-up snapshots
+    #[clap(long)]
+    all: bool,
 
     /// Snapshots to show
     #[clap(value_name = "ID")]
@@ -63,24 +68,31 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
                 display_snap(snap);
             }
         } else {
+            let snap_to_table = |(sn, count): (SnapshotFile, usize)| {
+                let tags = sn.tags.formatln();
+                let paths = sn.paths.formatln();
+                let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+                let (files, dirs, size) = match &sn.summary {
+                    Some(s) => (
+                        s.total_files_processed.to_string(),
+                        s.total_dirs_processed.to_string(),
+                        bytes(s.total_bytes_processed),
+                    ),
+                    None => ("?".to_string(), "?".to_string(), "?".to_string()),
+                };
+                let id = match count {
+                    0 => format!("{}", sn.id),
+                    count => format!("{} (+{})", sn.id, count),
+                };
+                row![id, time, sn.hostname, tags, paths, r->files, r->dirs, r->size]
+            };
+
             let mut table: Table = snapshots
                 .into_iter()
-                .map(|sn| {
-                    let tags = sn.tags.formatln();
-                    let paths = sn.paths.formatln();
-                    let time = sn.time.format("%Y-%m-%d %H:%M:%S");
-                    let (files, dirs, size) = sn
-                        .summary
-                        .map(|s| {
-                            (
-                                s.total_files_processed.to_string(),
-                                s.total_dirs_processed.to_string(),
-                                bytes(s.total_bytes_processed),
-                            )
-                        })
-                        .unwrap_or_else(|| ("?".to_string(), "?".to_string(), "?".to_string()));
-                    row![sn.id, time, sn.hostname, tags, paths, r->files, r->dirs, r->size]
-                })
+                .group_by(|sn| if opts.all { sn.id } else { sn.tree })
+                .into_iter()
+                .map(|(_, mut g)| (g.next().unwrap(), g.count()))
+                .map(snap_to_table)
                 .collect();
             table.set_titles(
                 row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Files",br->"Dirs", br->"Size"],

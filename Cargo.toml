@@ -67,6 +67,10 @@ dirs = "4"
 cachedir = "0.3"
 # commands
 clap = { version = "3", features = ["derive", "env"] }
+directories = "4"
+toml = "0.5"
+merge = "0.1"
+serde_with = "2"
 rpassword = "7"
 prettytable-rs = {version = "0.9", default-features = false }
 bytesize = "1"

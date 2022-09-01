@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::{Duration, Local};
 use clap::{AppSettings, Parser};
 
-use super::progress_counter;
+use super::{progress_counter, RusticConfig};
 use crate::backend::{DecryptFullBackend, FileType};
 use crate::repo::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
 
@@ -67,7 +67,13 @@ pub(super) struct Opts {
     ids: Vec<String>,
 }
 
-pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
+pub(super) async fn execute(
+    be: &impl DecryptFullBackend,
+    mut opts: Opts,
+    config_file: RusticConfig,
+) -> Result<()> {
+    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+
     let snapshots = match opts.ids.is_empty() {
         true => SnapshotFile::all_from_backend(be, &opts.filter).await?,
         false => SnapshotFile::from_ids(be, &opts.ids).await?,

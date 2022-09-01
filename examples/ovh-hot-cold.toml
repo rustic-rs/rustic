@@ -1,0 +1,31 @@
+# rustic config file to backup /home, /etc and /root to a hot/cold repository hosted by OVH
+#
+# backup usage: "rustic-rs -P ovh-hot-cold backup
+# cleanup:      "rustic-rs -P ovh-hot-cold forget --prune
+#
+[global]
+repository = "rclone:ovh:backup-home"
+repo-hot = "rclone:ovh:backup-home-hot"
+password-file =  "/root/key-rustic-ovh"
+cache-dir = "/var/lib/cache/rustic" # explicitely specify cache dir for remote repository 
+
+[forget]
+keep-daily = 8
+keep-weekly = 5
+keep-monthly = 13
+keep-yearly = 10
+
+[backup]
+exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
+glob-file = ["/root/rustic-ovh.glob"]
+one-filesystem = true
+
+[[backup.sources]]
+source = "/home"
+git-ignore = true
+
+[[backup.sources]]
+source = "/etc"
+
+[[backup.sources]]
+source = "/root"

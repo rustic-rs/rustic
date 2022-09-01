@@ -27,6 +27,7 @@ Look at the [FAQ][3] or open an issue!
 Improvements:
  * Allows using cold storage (e.g. AWS Glacier) repos which are only read in the `restore` command + supports warm-up
  * Completely lock-free pruning; option `instant-delete` is available
+ * Supports configuration in a config file ([example config files](https://github.com/rustic-rs/rustic/tree/main/examples))
  * Huge decrease in memory requirement
  * Pack size can be customized
  * Already faster than restic for most operations (but not yet fully speed optimized)

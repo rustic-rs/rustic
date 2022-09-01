@@ -1,0 +1,40 @@
+# Example rustic config file. 
+#
+# This file should be placed in the user's local config dir (~/.config/rustic/)
+# If you save it under NAME.toml, use "rustic-rs -P NAME" to access this profile. 
+#
+# Note that most options can be overwritten by the corresponding command line option.
+
+# global options: These options are used for all commands. 
+[global]
+repository = "/tmp/rustic"
+password = "mySecretPassword" 
+
+# snapshot-filter options: These options appy to the snapshots, tag and forget command.
+[snapshot-filter]
+filter-host = ["myhost"]
+
+# backup options: These options are used for all sources when calling the backup command. 
+# They can be overwritten by source-specific options (see below) or command line options.
+[backup]
+git-ignore = true
+
+# backup options can be given for specific sources. These options only apply
+# when calling "rustic-rs backup SOURCE".
+#
+# Note that if you call "rustic-rs backup" without any source, all sources from this config 
+# file will be processed. 
+[[backup.sources]]
+source = "/data/dir"
+
+[[backup.sources]]
+source = "/home"
+glob = ["!/home/*/Downloads/*"]
+
+# forget options
+[forget]
+filter-host = ["forgethost"] # <- this overwrites the snapshot-filter option defined above
+keep-tags = ["mytag"]
+keep-within-daily = "7 days"
+keep-monthly = 5
+keep-yearly = 2

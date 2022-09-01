@@ -4,10 +4,13 @@ use anyhow::{anyhow, Result};
 use chrono::{Duration, Local};
 use clap::{AppSettings, Parser};
 use gethostname::gethostname;
+use merge::Merge;
 use path_absolutize::*;
+use serde::Deserialize;
+use serde_with::{serde_as, DisplayFromStr};
 use vlog::*;
 
-use super::{bytes, progress_bytes, progress_counter};
+use super::{bytes, progress_bytes, progress_counter, RusticConfig};
 use crate::archiver::{Archiver, Parent};
 use crate::backend::{
     DecryptFullBackend, DecryptWriteBackend, DryRunBackend, LocalSource, LocalSourceOptions,
@@ -17,11 +20,14 @@ use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
 use crate::repo::{ConfigFile, DeleteOption, SnapshotFile, SnapshotSummary, StringList};
 
-#[derive(Parser)]
+#[serde_as]
+#[derive(Clone, Default, Parser, Deserialize, Merge)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+#[serde(default, rename_all = "kebab-case")]
 pub(super) struct Opts {
     /// Do not upload or write any data, just show what would be done
     #[clap(long, short = 'n')]
+    #[merge(strategy = merge::bool::overwrite_false)]
     dry_run: bool,
 
     /// Snapshot to use as parent
@@ -30,61 +36,97 @@ pub(super) struct Opts {
 
     /// Use no parent, read all files
     #[clap(long, short, conflicts_with = "parent")]
+    #[merge(strategy = merge::bool::overwrite_false)]
     force: bool,
 
     /// Ignore ctime changes when checking for modified files
     #[clap(long, conflicts_with = "force")]
+    #[merge(strategy = merge::bool::overwrite_false)]
     ignore_ctime: bool,
 
     /// Ignore inode number changes when checking for modified files
     #[clap(long, conflicts_with = "force")]
+    #[merge(strategy = merge::bool::overwrite_false)]
     ignore_inode: bool,
 
     /// Tags to add to backup (can be specified multiple times)
     #[clap(long, value_name = "TAG[,TAG,..]")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[merge(strategy = merge::vec::overwrite_empty)]
     tag: Vec<StringList>,
 
     /// Mark snapshot as uneraseable
     #[clap(long, conflicts_with = "delete-after")]
+    #[merge(strategy = merge::bool::overwrite_false)]
     delete_never: bool,
 
     /// Mark snapshot to be deleted after given duration (e.g. 10d)
     #[clap(long, value_name = "DURATION")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     delete_after: Option<humantime::Duration>,
 
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin")]
+    #[merge(skip)]
     stdin_filename: String,
 
     #[clap(flatten)]
+    #[serde(flatten)]
     ignore_opts: LocalSourceOptions,
 
-    /// Backup source, use - for stdin
+    /// Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all
+    /// sources defined in the config file
     #[clap(value_name = "SOURCE")]
+    #[merge(skip)]
+    #[serde(skip)]
     sources: Vec<String>,
+
+    /// Backup source, used within config file
+    #[clap(skip)]
+    #[merge(skip)]
+    source: String,
 }
 
 pub(super) async fn execute(
     be: &impl DecryptFullBackend,
     opts: Opts,
     config: ConfigFile,
+    config_file: RusticConfig,
     command: String,
 ) -> Result<()> {
     let time = Local::now();
-    let zstd = config.zstd()?;
-    let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
-    be.set_zstd(zstd);
 
-    if opts.sources.is_empty() {
-        v1!("no backup source given.");
-        return Ok(());
-    }
+    let zstd = config.zstd()?;
+
+    let mut config_opts: Vec<Opts> = config_file.get("backup.sources")?;
+
+    let sources = match (opts.sources.is_empty(), config_opts.is_empty()) {
+        (false, _) => opts.sources.clone(),
+        (true, false) => {
+            v1!("using all backup sources from config file.");
+            config_opts.iter().map(|opt| opt.source.clone()).collect()
+        }
+        (true, true) => {
+            v1!("no backup source given.");
+            return Ok(());
+        }
+    };
 
     let index = IndexBackend::only_full_trees(&be.clone(), progress_counter()).await?;
 
-    for source in opts.sources {
+    for source in sources {
+        let mut opts = opts.clone();
+
+        // merge Options from config file, if given
+        if let Some(idx) = config_opts.iter().position(|opt| opt.source == *source) {
+            opts.merge(config_opts.remove(idx));
+        }
+        // merge "backup" section from config file, if given
+        config_file.merge_into("backup", &mut opts)?;
+
+        let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
+        be.set_zstd(zstd);
         v1!("\nbacking up {source}...");
-        let be = be.clone();
         let index = index.clone();
         let backup_stdin = source == "-";
         let backup_path = if backup_stdin {

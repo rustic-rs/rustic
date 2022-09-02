@@ -18,7 +18,12 @@ pub(super) struct Opts {
     filter: SnapshotFilter,
 
     /// Group snapshots by any combination of host,paths,tags
-    #[clap(long, short = 'g', value_name = "CRITERION", default_value = "")]
+    #[clap(
+        long,
+        short = 'g',
+        value_name = "CRITERION",
+        default_value = "host,paths"
+    )]
     group_by: SnapshotGroupCriterion,
 
     /// Show detailed information about snapshots

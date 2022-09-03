@@ -18,7 +18,7 @@ pub struct LocalSource {
     cache: UsersCache,
 }
 
-#[derive(Parser)]
+#[derive(Clone, Parser)]
 pub struct LocalSourceOptions {
     /// Save access time for files and directories
     #[clap(long)]

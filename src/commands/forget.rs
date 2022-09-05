@@ -101,11 +101,16 @@ pub(super) async fn execute(
 
         while let Some(sn) = iter.next() {
             let (action, reason) = {
-                if sn.must_delete(now) {
+                if sn.must_keep(now) {
+                    ("keep", "snapshot".to_string())
+                } else if sn.must_delete(now) {
                     forget_snaps.push(sn.id);
                     ("remove", "snapshot".to_string())
+                } else if !opts.ids.is_empty() {
+                    forget_snaps.push(sn.id);
+                    ("remove", "id argument".to_string())
                 } else {
-                    match group_keep.matches(sn, last, iter.peek().is_some(), latest_time, now) {
+                    match group_keep.matches(sn, last, iter.peek().is_some(), latest_time) {
                         None if default_keep => ("keep", "".to_string()),
                         None => {
                             forget_snaps.push(sn.id);
@@ -289,15 +294,9 @@ impl KeepOptions {
         last: Option<&SnapshotFile>,
         has_next: bool,
         latest_time: DateTime<Local>,
-        now: DateTime<Local>,
     ) -> Option<String> {
         let mut keep = false;
         let mut reason = String::new();
-
-        if sn.must_keep(now) {
-            keep = true;
-            reason.push_str("snapshot\n");
-        }
 
         if self
             .keep_ids

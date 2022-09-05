@@ -611,14 +611,13 @@ impl Pruner {
         self.repack_candidates.sort_unstable_by_key(|rc| rc.0);
         let mut resize_packs: BlobTypeMap<Vec<_>> = Default::default();
         let mut do_repack: BlobTypeMap<bool> = Default::default();
+        let mut repack_size = 0;
 
         for (pi, repack_reason, index_num, pack_num) in std::mem::take(&mut self.repack_candidates)
         {
             let pack = &mut self.index_files[index_num].packs[pack_num];
 
-            let repack_size_new =
-                self.stats.total_size().repack + (pi.unused_size + pi.used_size) as u64;
-            if repack_size_new >= max_repack
+            if repack_size + pi.used_size as u64 >= max_repack
                 || (self.stats.total_size().unused_after_prune() < max_unused
                     && repack_reason == PartlyUsed
                     && pi.blob_type == BlobType::Data)
@@ -626,8 +625,10 @@ impl Pruner {
                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
             } else if repack_reason == SizeMismatch {
                 resize_packs[pack.blob_type].push((pi, index_num, pack_num));
+                repack_size += pi.used_size as u64;
             } else {
                 pack.set_todo(PackToDo::Repack, &pi, &mut self.stats);
+                repack_size += pi.used_size as u64;
                 do_repack[pack.blob_type] = true;
             }
         }

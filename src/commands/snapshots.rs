@@ -6,7 +6,7 @@ use humantime::format_duration;
 use itertools::Itertools;
 use prettytable::{format, row, Table};
 
-use super::bytes;
+use super::{bytes, RusticConfig};
 use crate::backend::DecryptReadBackend;
 use crate::repo::{
     DeleteOption, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion,
@@ -39,7 +39,13 @@ pub(super) struct Opts {
     ids: Vec<String>,
 }
 
-pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) async fn execute(
+    be: &impl DecryptReadBackend,
+    mut opts: Opts,
+    config_file: RusticConfig,
+) -> Result<()> {
+    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+
     let groups = match &opts.ids[..] {
         [] => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?,
         [id] if id == "latest" => {

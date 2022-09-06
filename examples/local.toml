@@ -1,7 +1,7 @@
 # rustic config file to backup /home, /etc and /root to a local repository
 #
-# backup usage: "rustic-rs -P local backup
-# cleanup:      "rustic-rs -P local forget --prune
+# backup usage: "rustic -P local backup
+# cleanup:      "rustic -P local forget --prune
 #
 [global]
 repository = "/backup/rustic"

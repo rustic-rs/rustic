@@ -1,7 +1,7 @@
 # Example rustic config file. 
 #
 # This file should be placed in the user's local config dir (~/.config/rustic/)
-# If you save it under NAME.toml, use "rustic-rs -P NAME" to access this profile. 
+# If you save it under NAME.toml, use "rustic -P NAME" to access this profile. 
 #
 # Note that most options can be overwritten by the corresponding command line option.
 
@@ -20,9 +20,9 @@ filter-host = ["myhost"]
 git-ignore = true
 
 # backup options can be given for specific sources. These options only apply
-# when calling "rustic-rs backup SOURCE".
+# when calling "rustic backup SOURCE".
 #
-# Note that if you call "rustic-rs backup" without any source, all sources from this config 
+# Note that if you call "rustic backup" without any source, all sources from this config 
 # file will be processed. 
 [[backup.sources]]
 source = "/data/dir"

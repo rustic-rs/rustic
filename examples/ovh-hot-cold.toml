@@ -1,7 +1,7 @@
 # rustic config file to backup /home, /etc and /root to a hot/cold repository hosted by OVH
 #
-# backup usage: "rustic-rs -P ovh-hot-cold backup
-# cleanup:      "rustic-rs -P ovh-hot-cold forget --prune
+# backup usage: "rustic -P ovh-hot-cold backup
+# cleanup:      "rustic -P ovh-hot-cold forget --prune
 #
 [global]
 repository = "rclone:ovh:backup-home"

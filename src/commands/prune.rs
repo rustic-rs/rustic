@@ -150,7 +150,12 @@ pub(super) async fn execute(
         opts.repack_uncompressed,
         &pack_sizer,
     )?;
-    pruner.decide_repack(&opts.max_repack, &opts.max_unused, opts.repack_uncompressed);
+    pruner.decide_repack(
+        &opts.max_repack,
+        &opts.max_unused,
+        opts.repack_uncompressed,
+        &pack_sizer,
+    );
     pruner.check_existing_packs()?;
     pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
@@ -591,6 +596,7 @@ impl Pruner {
         max_repack: &LimitOption,
         max_unused: &LimitOption,
         repack_uncompressed: bool,
+        pack_sizer: &BlobTypeMap<PackSizer>,
     ) {
         let max_unused = match (repack_uncompressed, max_unused) {
             (true, _) => 0,
@@ -611,30 +617,35 @@ impl Pruner {
         self.repack_candidates.sort_unstable_by_key(|rc| rc.0);
         let mut resize_packs: BlobTypeMap<Vec<_>> = Default::default();
         let mut do_repack: BlobTypeMap<bool> = Default::default();
-        let mut repack_size = 0;
+        let mut repack_size: BlobTypeMap<u64> = Default::default();
 
         for (pi, repack_reason, index_num, pack_num) in std::mem::take(&mut self.repack_candidates)
         {
             let pack = &mut self.index_files[index_num].packs[pack_num];
+            let blob_type = pi.blob_type;
 
-            if repack_size + pi.used_size as u64 >= max_repack
+            let total_repack_size: u64 = repack_size.into_values().sum();
+            if total_repack_size + pi.used_size as u64 >= max_repack
                 || (self.stats.total_size().unused_after_prune() < max_unused
                     && repack_reason == PartlyUsed
-                    && pi.blob_type == BlobType::Data)
+                    && blob_type == BlobType::Data)
             {
                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
             } else if repack_reason == SizeMismatch {
-                resize_packs[pack.blob_type].push((pi, index_num, pack_num));
-                repack_size += pi.used_size as u64;
+                resize_packs[blob_type].push((pi, index_num, pack_num));
+                repack_size[blob_type] += pi.used_size as u64;
             } else {
                 pack.set_todo(PackToDo::Repack, &pi, &mut self.stats);
-                repack_size += pi.used_size as u64;
-                do_repack[pack.blob_type] = true;
+                repack_size[blob_type] += pi.used_size as u64;
+                do_repack[blob_type] = true;
             }
         }
-        // resize_packs are only repacked if at least two packs of the blob_type are repacked
         for (blob_type, resize_packs) in resize_packs {
-            let todo = if do_repack[blob_type] || resize_packs.len() > 1 {
+            // packs in resize_packs are only repacked if we anyway repack this blob type or
+            // if the target pack size is reached for the blob type.
+            let todo = if do_repack[blob_type]
+                || repack_size[blob_type] > pack_sizer[blob_type].pack_size() as u64
+            {
                 PackToDo::Repack
             } else {
                 PackToDo::Keep

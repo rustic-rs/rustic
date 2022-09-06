@@ -1593,14 +1593,13 @@ dependencies = [
  "rstest",
  "scrypt",
  "self_update",
+ "semver",
  "serde",
  "serde-aux",
  "serde_json",
  "serde_with",
- "sha1",
  "sha2",
  "simplelog",
- "tempfile",
  "thiserror",
  "tokio",
  "toml",
@@ -1794,17 +1793,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "sha1"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f04293dc80c3993519f2d7f6f511707ee7094fe0c6d3406feb330cdb3540eba3"
-dependencies = [
- "cfg-if",
- "cpufeatures",
- "digest",
 ]
 
 [[package]]

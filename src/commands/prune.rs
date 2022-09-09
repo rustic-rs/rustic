@@ -64,6 +64,10 @@ pub(super) struct Opts {
     #[clap(long, value_name = "TRUE/FALSE")]
     repack_cacheable_only: Option<bool>,
 
+    /// Do not repack packs which only needs to be resized
+    #[clap(long)]
+    no_resize: bool,
+
     /// Warm up needed data pack files by only requesting them without processing
     #[clap(long)]
     warm_up: bool,
@@ -154,6 +158,7 @@ pub(super) async fn execute(
         &opts.max_repack,
         &opts.max_unused,
         opts.repack_uncompressed,
+        opts.no_resize,
         &pack_sizer,
     );
     pruner.check_existing_packs()?;
@@ -596,6 +601,7 @@ impl Pruner {
         max_repack: &LimitOption,
         max_unused: &LimitOption,
         repack_uncompressed: bool,
+        no_resize: bool,
         pack_sizer: &BlobTypeMap<PackSizer>,
     ) {
         let max_unused = match (repack_uncompressed, max_unused) {
@@ -629,6 +635,7 @@ impl Pruner {
                 || (self.stats.total_size().unused_after_prune() < max_unused
                     && repack_reason == PartlyUsed
                     && blob_type == BlobType::Data)
+                || (repack_reason == SizeMismatch && no_resize)
             {
                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
             } else if repack_reason == SizeMismatch {

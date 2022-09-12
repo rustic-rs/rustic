@@ -88,12 +88,11 @@ jobs:
         if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
         run: |
-          COMPLETIONS_FOLDER=$PWD/target/completions
           cd target/${{ matrix.job.target }}/release
 
           ########## create tar.gz ##########
           RELEASE_NAME=rustic-${GITHUB_REF_NAME}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }} $COMPLETIONS_FOLDER --transform 's|target||'
+          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }} -C ../../../target ./completions
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then

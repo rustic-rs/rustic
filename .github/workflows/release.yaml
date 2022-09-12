@@ -76,31 +76,15 @@ jobs:
           toolchain: ${{ matrix.rust }}
           args: --release --target ${{ matrix.job.target }}
 
-      - name: install strip command
-        shell: bash
-        run: |
-          if [[ ${{ matrix.job.target }} == aarch64-unknown-linux-gnu ]]; then
-              sudo apt update
-              sudo apt-get install -y binutils-aarch64-linux-gnu
-          fi
       - name: Packaging final binary
         if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
         run: |
           cd target/${{ matrix.job.target }}/release
 
-          ####### reduce binary size by removing debug symbols #######
-          BINARY_NAME=rustic${{ matrix.job.binary-postfix }}
-          if [[ ${{ matrix.job.target }} == aarch64-unknown-linux-gnu ]]; then
-            GCC_PREFIX="aarch64-linux-gnu-"
-          else
-            GCC_PREFIX=""
-          fi
-          "$GCC_PREFIX"strip $BINARY_NAME
-
           ########## create tar.gz ##########
           RELEASE_NAME=rustic-${GITHUB_REF_NAME}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
+          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }}
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then

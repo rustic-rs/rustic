@@ -46,3 +46,22 @@ In general rustic uses less resources, but there may be some exceptions. For ins
 of Rust and golang both have optimizations for some CPUs. But it might be that your CPU benefits from a
 golang optimization which is not present in the Rust implementation.
 If you observe some unexpected resource usage, please don't hesitate to submit an issue. 
+
+## How to install shell completions
+All completion files are stored in the release tarball in `completions` sub-folder. Simply move the completion
+file to the appropriate directory.
+
+### Bash
+Completion files are commonly stored in `/etc/bash_completion.d/`. File with completions is `rustic.bash`
+
+### Fish
+Fish completion files are commonly stored in`$HOME/.config/fish/completions`. File with completions is `rustic.fish`
+
+### Zsh
+ZSH completions are commonly stored in any directory listed in your `$fpath` variable. To use these completions,
+you must either add the generated script (`_rustic`) to one of those directories, or add your own to this list.
+
+This list includes, for example, these directories:
+
+- `/usr/local/share/zsh/site-functions`
+- `/usr/share/zsh/site-functions`

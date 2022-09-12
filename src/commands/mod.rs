@@ -11,6 +11,11 @@ use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use simplelog::*;
 
+#[cfg(feature = "completions")]
+use clap::CommandFactory;
+#[cfg(feature = "completions")]
+use clap_complete::{generate_to as generate_completion, shells, Generator};
+
 use crate::backend::{
     Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
     HotColdBackend, ReadBackend,
@@ -173,7 +178,21 @@ enum Command {
     Tag(tag::Opts),
 }
 
+#[cfg_attr(feature = "completions", allow(unused))]
 pub async fn execute() -> Result<()> {
+    #[cfg(feature = "completions")]
+    {
+        // Generate completions if running with "completions" feature enabled
+        //
+        // A bit hacky. Including source code of module in build.rs not work
+        // because there are more one file with clap::Command declaration
+        //
+        // Example with including source code:
+        // https://docs.rs/clap_complete/latest/clap_complete/generator/fn.generate_to.html
+        generate_completions();
+        return Ok(());
+    }
+
     let command: Vec<_> = std::env::args_os().into_iter().collect();
     let args = Opts::parse_from(&command);
 
@@ -313,4 +332,24 @@ pub async fn execute() -> Result<()> {
     };
 
     Ok(())
+}
+
+#[cfg(feature = "completions")]
+pub fn generate_completions() {
+    const OUT_PATH: &str = "target/completions";
+    if let Err(e) = std::fs::create_dir(OUT_PATH) {
+        eprintln!("Error creating directory: {e}");
+    }
+
+    fn generate<G: Generator>(shell: G) {
+        let mut command = Opts::command();
+        match generate_completion(shell, &mut command, env!("CARGO_BIN_NAME"), OUT_PATH) {
+            Ok(p) => println!("Generated shell completions: {}", p.display()),
+            Err(e) => eprintln!("Couldn't generate shell completions: {e}"),
+        }
+    }
+
+    generate(shells::Bash);
+    generate(shells::Fish);
+    generate(shells::Zsh);
 }

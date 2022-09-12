@@ -21,6 +21,10 @@ path = "src/main.rs"
 [profile.release]
 strip = true
 
+[features]
+# feature for generate completions
+completions = ["clap_complete"]
+
 [dependencies]
 # macros
 async-trait = "0.1"
@@ -73,6 +77,7 @@ dirs = "4"
 cachedir = "0.3"
 # commands
 clap = { version = "3", features = ["derive", "env"] }
+clap_complete = { version = "3.2.4", optional = true }
 directories = "4"
 toml = "0.5"
 merge = "0.1"

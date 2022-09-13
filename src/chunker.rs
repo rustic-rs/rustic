@@ -9,6 +9,7 @@ const KB: usize = 1024;
 const MB: usize = 1024 * KB;
 const MIN_SIZE: usize = 512 * KB;
 const MAX_SIZE: usize = 8 * MB;
+const BUF_SIZE: usize = 64 * KB;
 
 #[inline]
 fn default_predicate(x: u64) -> bool {
@@ -86,13 +87,14 @@ impl<R: Read> Iterator for ChunkIter<R> {
             if vec.len() >= self.max_size {
                 break;
             }
+
             if (self.predicate)(self.rabin.hash) {
                 break;
             }
 
             if self.buf.len() == self.pos {
                 // TODO: use a possibly uninitialized buffer here
-                self.buf.resize(4 * KB, 0);
+                self.buf.resize(BUF_SIZE, 0);
                 match self.reader.read(&mut self.buf[..]) {
                     Ok(0) => {
                         self.finished = true;

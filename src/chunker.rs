@@ -9,6 +9,7 @@ const KB: usize = 1024;
 const MB: usize = 1024 * KB;
 const MIN_SIZE: usize = 512 * KB;
 const MAX_SIZE: usize = 8 * MB;
+const BUF_SIZE: usize = 64 * KB;
 
 #[inline]
 fn default_predicate(x: u64) -> bool {
@@ -35,7 +36,7 @@ impl<R: Read> ChunkIter<R> {
             reader,
             predicate: default_predicate,
             rabin: Rabin64::new_with_polynom(6, poly),
-            size_hint,
+            size_hint, // size hint is used to optimize memory allocation; this should be an upper bound on the size
             min_size: MIN_SIZE,
             max_size: MAX_SIZE,
             finished: false,
@@ -87,9 +88,13 @@ impl<R: Read> Iterator for ChunkIter<R> {
                 break;
             }
 
+            if (self.predicate)(self.rabin.hash) {
+                break;
+            }
+
             if self.buf.len() == self.pos {
                 // TODO: use a possibly uninitialized buffer here
-                self.buf.resize(4 * KB, 0);
+                self.buf.resize(BUF_SIZE, 0);
                 match self.reader.read(&mut self.buf[..]) {
                     Ok(0) => {
                         self.finished = true;
@@ -111,9 +116,6 @@ impl<R: Read> Iterator for ChunkIter<R> {
             vec.push(byte);
             self.pos += 1;
             self.rabin.slide(&byte);
-            if (self.predicate)(self.rabin.hash) {
-                break;
-            }
         }
         self.size_hint -= vec.len();
         Some(Ok(vec))
@@ -233,7 +235,7 @@ fn qp(p: i32, g: &Polynom64) -> Polynom64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
+    use std::io::{repeat, Cursor};
 
     #[test]
     fn chunk_empty() {
@@ -257,5 +259,16 @@ mod tests {
 
         let chunks: Vec<_> = chunker.into_iter().collect();
         assert_eq!(0, chunks.len());
+    }
+
+    #[test]
+    fn chunk_zeros() {
+        let mut reader = repeat(0u8);
+
+        let poly = random_poly().unwrap();
+        let mut chunker = ChunkIter::new(&mut reader, usize::MAX, &poly);
+
+        let chunk = chunker.next().unwrap().unwrap();
+        assert_eq!(MIN_SIZE, chunk.len());
     }
 }

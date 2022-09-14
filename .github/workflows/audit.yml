@@ -26,7 +26,5 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/audit-check@v1
         with:
-          # Ignore RUSTSEC-2020-0071, this is not called by chrono and no direct call in rustic 
-          args: --ignore RUSTSEC-2020-0071
           token: ${{ secrets.GITHUB_TOKEN }}
 

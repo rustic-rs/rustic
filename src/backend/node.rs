@@ -1,5 +1,5 @@
 use std::ffi::{OsStr, OsString};
-use std::fmt::Debug;
+use std::fmt::{Debug, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::str::FromStr;
 
@@ -120,8 +120,56 @@ impl Node {
     }
 }
 
+// This escapes the filename in a way that *should* be compatible to golangs
+// stconv.Quote, see https://pkg.go.dev/strconv#Quote
+// However, so far there was no specification what Quote really does, so this
+// is some kind of try-and-error and maybe does not cover every case.
 pub fn escape_filename(name: &OsStr) -> String {
-    name.as_bytes().escape_ascii().to_string()
+    let mut input = name.as_bytes();
+    let mut s = String::with_capacity(name.len());
+
+    let push = |s: &mut String, p: &str| {
+        for c in p.chars() {
+            match c {
+                '\\' => s.push_str("\\\\"),
+                '\"' => s.push_str("\\\""),
+                '\u{7}' => s.push_str("\\a"),
+                '\u{8}' => s.push_str("\\b"),
+                '\u{c}' => s.push_str("\\f"),
+                '\n' => s.push_str("\\n"),
+                '\r' => s.push_str("\\r"),
+                '\t' => s.push_str("\\t"),
+                '\u{b}' => s.push_str("\\v"),
+                c => s.push(c),
+            };
+        }
+    };
+
+    loop {
+        match std::str::from_utf8(input) {
+            Ok(valid) => {
+                push(&mut s, valid);
+                break;
+            }
+            Err(error) => {
+                let (valid, after_valid) = input.split_at(error.valid_up_to());
+                push(&mut s, std::str::from_utf8(valid).unwrap());
+
+                if let Some(invalid_sequence_length) = error.error_len() {
+                    for b in &after_valid[..invalid_sequence_length] {
+                        write!(s, "\\x{b:02x}").unwrap();
+                    }
+                    input = &after_valid[invalid_sequence_length..]
+                } else {
+                    for b in after_valid {
+                        write!(s, "\\x{b:02x}").unwrap();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    s
 }
 
 // inspired by the enquote crate
@@ -208,6 +256,29 @@ mod tests {
             Ok(s) => s,
             Err(_) => return false,
         }
+    }
+
+    #[rstest]
+    #[case(b"\\", r#"\\"#)]
+    #[case(b"\"", r#"\""#)]
+    #[case(b"'", r#"'"#)]
+    #[case(b"`", r#"`"#)]
+    #[case(b"\x07", r#"\a"#)]
+    #[case(b"\x08", r#"\b"#)]
+    #[case(b"\x0b", r#"\v"#)]
+    #[case(b"\x0c", r#"\f"#)]
+    #[case(b"\n", r#"\n"#)]
+    #[case(b"\r", r#"\r"#)]
+    #[case(b"\t", r#"\t"#)]
+    #[case(b"\xab", r#"\xab"#)]
+    #[case(b"\xc2", r#"\xc2"#)]
+    #[case(b"\xff", r#"\xff"#)]
+    #[case(b"\xc3\x9f", "\u{00df}")]
+    #[case(b"\xe2\x9d\xa4", "\u{2764}")]
+    #[case(b"\xf0\x9f\x92\xaf", "\u{01f4af}")]
+    fn escape_cases(#[case] input: &[u8], #[case] expected: &str) {
+        let name = OsStr::from_bytes(input);
+        assert_eq!(expected, escape_filename(name))
     }
 
     #[rstest]

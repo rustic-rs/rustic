@@ -241,8 +241,8 @@ pub async fn execute() -> Result<()> {
                 .then(|| Cache::new(config.id, opts.cache_dir).ok())
                 .flatten();
             match &cache {
-                None => v1!("using no cache"),
-                Some(cache) => v1!("using cache at {}", cache.location()),
+                None => ve1!("using no cache"),
+                Some(cache) => ve1!("using cache at {}", cache.location()),
             }
             let be_cached = CachedBackend::new(be.clone(), cache.clone());
             let dbe = DecryptBackend::new(&be_cached, key.clone());

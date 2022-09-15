@@ -90,7 +90,7 @@ pub struct SnapshotFile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<SnapshotSummary>,
 
-    #[serde(skip)]
+    #[serde(default, skip_serializing_if = "Id::is_null")]
     pub id: Id,
 }
 
@@ -356,10 +356,13 @@ impl FromStr for SnapshotGroupCriterion {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize)]
 pub struct SnapshotGroup {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     hostname: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     paths: Option<StringList>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     tags: Option<StringList>,
 }
 

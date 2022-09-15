@@ -30,8 +30,12 @@ pub(super) struct Opts {
     #[clap(long)]
     long: bool,
 
+    /// Show snapshots in json format
+    #[clap(long, conflicts_with = "long")]
+    json: bool,
+
     /// Show all snapshots instead of summarizing identical follow-up snapshots
-    #[clap(long)]
+    #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
 
     /// Snapshots to show
@@ -66,6 +70,12 @@ pub(super) async fn execute(
             SnapshotFile::from_ids(be, &opts.ids).await?,
         )],
     };
+
+    if opts.json {
+        let mut stdout = std::io::stdout();
+        serde_json::to_writer_pretty(&mut stdout, &groups)?;
+        return Ok(());
+    }
 
     for (group, mut snapshots) in groups {
         if !group.is_empty() {

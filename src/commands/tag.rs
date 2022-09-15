@@ -4,6 +4,7 @@ use clap::{AppSettings, Parser};
 
 use super::{progress_counter, RusticConfig};
 use crate::backend::{DecryptFullBackend, FileType};
+use crate::id::Id;
 use crate::repo::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
 
 #[derive(Parser)]
@@ -90,12 +91,15 @@ pub(super) async fn execute(
         (false, false, None) => None,
     };
 
-    let snapshots: Vec<_> = snapshots
+    let mut snapshots: Vec<_> = snapshots
         .into_iter()
         .filter_map(|sn| modify_sn(sn, &opts, &delete))
         .collect();
-
     let old_snap_ids: Vec<_> = snapshots.iter().map(|sn| sn.id).collect();
+    // remove old ids from snapshots
+    for snap in &mut snapshots {
+        snap.id = Id::default();
+    }
 
     match (old_snap_ids.is_empty(), opts.dry_run) {
         (true, _) => println!("no snapshot changed."),

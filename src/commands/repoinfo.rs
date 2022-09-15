@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
 use futures::TryStreamExt;
+use log::*;
 use prettytable::{format, row, Table};
-use vlog::*;
 
 use super::{bytes, progress_counter};
 use crate::backend::{DecryptReadBackend, ReadBackend, ALL_FILE_TYPES};
@@ -23,8 +23,7 @@ pub(super) async fn execute(
         fileinfo("hot repository files", hot_be).await?;
     }
 
-    v1!("scanning index...");
-    let p = progress_counter();
+    let p = progress_counter("scanning index...");
     let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
 
     #[derive(Default)]
@@ -130,7 +129,7 @@ pub(super) async fn execute(
 }
 
 async fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
-    v1!("scanning files...");
+    info!("scanning files...");
 
     let mut table = Table::new();
     let mut total_count = 0;

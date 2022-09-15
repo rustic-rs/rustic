@@ -7,10 +7,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
+use log::*;
 use nix::sys::stat::{mknod, Mode, SFlag};
 use nix::unistd::chown;
 use nix::unistd::{Gid, Group, Uid, User};
-use vlog::*;
 use walkdir::WalkDir;
 
 use super::node::{Metadata, Node, NodeType};
@@ -143,7 +143,7 @@ impl WriteBackend for LocalBackend {
         _cacheable: bool,
         buf: Bytes,
     ) -> Result<()> {
-        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
             .create(true)
@@ -156,7 +156,7 @@ impl WriteBackend for LocalBackend {
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
-        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         fs::remove_file(filename)?;
         Ok(())

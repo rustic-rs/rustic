@@ -3,11 +3,13 @@ use std::collections::HashMap;
 use anyhow::Result;
 use clap::Parser;
 use futures::{stream, StreamExt, TryStreamExt};
-use vlog::*;
+use indicatif::ProgressBar;
+use log::*;
 
 use super::{progress_bytes, progress_counter};
 use crate::backend::{Cache, DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{BlobType, NodeType, TreeStreamerOnce};
+use crate::commands::helpers::progress_spinner;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
 use crate::repo::{IndexFile, IndexPack, SnapshotFile};
@@ -32,7 +34,6 @@ pub(super) async fn execute(
 ) -> Result<()> {
     if !opts.trust_cache {
         if let Some(cache) = &cache {
-            v1!("checking snapshots and index in cache...");
             for file_type in [FileType::Snapshot, FileType::Index] {
                 // list files in order to clean up the cache
                 //
@@ -40,31 +41,29 @@ pub(super) async fn execute(
                 // TODO: Only list the files once...
                 let _ = be.list_with_size(file_type).await?;
 
-                check_cache_files(cache, raw_be, file_type).await?;
+                let p = progress_bytes(format!("checking {} in cache...", file_type.name()));
+                check_cache_files(cache, raw_be, file_type, p).await?;
             }
         }
     }
 
     if let Some(hot_be) = hot_be {
-        v1!("checking snapshots and index in hot repo...");
         for file_type in [FileType::Snapshot, FileType::Index] {
             check_hot_files(raw_be, hot_be, file_type).await?;
         }
     }
 
-    v1!("checking packs in index and from pack list...");
     let index_collector = check_packs(be, hot_be).await?;
 
     if !opts.trust_cache {
         if let Some(cache) = &cache {
-            v1!("checking packs in cache...");
-            check_cache_files(cache, raw_be, FileType::Pack).await?;
+            let p = progress_bytes("checking packs in cache...");
+            check_cache_files(cache, raw_be, FileType::Pack, p).await?;
         }
     }
 
     let be = IndexBackend::new_from_index(be, index_collector.into_index());
 
-    v1!("checking snapshots and trees...");
     check_snapshots(&be).await?;
 
     if opts.read_data {
@@ -79,6 +78,7 @@ async fn check_hot_files(
     be_hot: &impl ReadBackend,
     file_type: FileType,
 ) -> Result<()> {
+    let p = progress_spinner(format!("checking {} in hot repo...", file_type.name()));
     let mut files = be
         .list_with_size(file_type)
         .await?
@@ -89,8 +89,8 @@ async fn check_hot_files(
 
     for (id, size_hot) in files_hot {
         match files.remove(&id) {
-            None => eprintln!("hot file {} does not exist in repo", id.to_hex()),
-            Some(size) if size != size_hot => eprintln!(
+            None => error!("hot file {} does not exist in repo", id.to_hex()),
+            Some(size) if size != size_hot => error!(
                 "file {}: hot size: {}, actual size: {}",
                 id.to_hex(),
                 size_hot,
@@ -101,8 +101,9 @@ async fn check_hot_files(
     }
 
     for (id, _) in files {
-        eprintln!("hot file {} is missing!", id.to_hex());
+        error!("hot file {} is missing!", id.to_hex());
     }
+    p.finish();
 
     Ok(())
 }
@@ -111,6 +112,7 @@ async fn check_cache_files(
     cache: &Cache,
     be: &impl ReadBackend,
     file_type: FileType,
+    p: ProgressBar,
 ) -> Result<()> {
     let files = cache.list_with_size(file_type).await?;
 
@@ -118,7 +120,6 @@ async fn check_cache_files(
         return Ok(());
     }
 
-    let p = progress_bytes();
     let total_size = files.iter().map(|(_, size)| *size as u64).sum();
     p.set_length(total_size);
 
@@ -134,7 +135,7 @@ async fn check_cache_files(
         let data_cached = cache.read_full(file_type, &id).await.unwrap();
         let data = be.read_full(file_type, &id).await.unwrap();
         if data_cached != data {
-            eprintln!(
+            error!(
                 "Cached file Type: {:?}, Id: {} is not identical to backend!",
                 file_type, id
             );
@@ -170,14 +171,14 @@ async fn check_packs(
         blobs.sort_unstable();
         for blob in blobs {
             if blob.tpe != blob_type {
-                eprintln!(
+                error!(
                     "pack {}: blob {} blob type does not match: {:?}, expected: {:?}",
                     p.id, blob.id, blob.tpe, blob_type
                 );
             }
 
             if blob.offset != expected_offset {
-                eprintln!(
+                error!(
                     "pack {}: blob {} offset in index: {}, expected: {}",
                     p.id, blob.id, blob.offset, expected_offset
                 );
@@ -186,8 +187,7 @@ async fn check_packs(
         }
     };
 
-    v1!("- reading index...");
-    let p = progress_counter();
+    let p = progress_counter("reading index...");
     let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     while let Some(index) = stream.try_next().await? {
         let index = index.1;
@@ -202,12 +202,14 @@ async fn check_packs(
     p.finish();
 
     if let Some(hot_be) = hot_be {
-        v1!("- listing packs in hot repo...");
+        let p = progress_spinner("listing packs in hot repo...");
         check_packs_list(hot_be, tree_packs).await?;
+        p.finish();
     }
 
-    v1!("- listing packs...");
+    let p = progress_spinner("listing packs...");
     check_packs_list(be, packs).await?;
+    p.finish();
 
     Ok(index_collector)
 }
@@ -215,8 +217,8 @@ async fn check_packs(
 async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
     for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
-            None => eprintln!("pack {} not referenced in index", id.to_hex()),
-            Some(index_size) if index_size != size => eprintln!(
+            None => error!("pack {} not referenced in index", id.to_hex()),
+            Some(index_size) if index_size != size => error!(
                 "pack {}: size computed by index: {}, actual size: {}",
                 id.to_hex(),
                 index_size,
@@ -227,7 +229,7 @@ async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) ->
     }
 
     for (id, _) in packs {
-        eprintln!(
+        error!(
             "pack {} is referenced by the index but not presend!",
             id.to_hex()
         );
@@ -237,8 +239,7 @@ async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) ->
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
 async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
-    v1!(" - reading snapshots...");
-    let p = progress_counter();
+    let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
         .stream_all::<SnapshotFile>(p.clone())
@@ -248,9 +249,8 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
         .await?;
     p.finish();
 
-    v1!(" - checking trees...");
-    let mut tree_streamer =
-        TreeStreamerOnce::new(index.clone(), snap_trees, progress_counter()).await?;
+    let p = progress_counter("checking trees...");
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p).await?;
     while let Some(item) = tree_streamer.try_next().await? {
         let (path, tree) = item;
         for node in tree.nodes() {
@@ -258,11 +258,11 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
                 NodeType::File => {
                     for (i, id) in node.content().iter().enumerate() {
                         if id.is_null() {
-                            eprintln!("file {:?} blob {} has null ID", path.join(node.name()), i);
+                            error!("file {:?} blob {} has null ID", path.join(node.name()), i);
                         }
 
                         if !index.has_data(id) {
-                            eprintln!(
+                            error!(
                                 "file {:?} blob {} is missig in index",
                                 path.join(node.name()),
                                 id
@@ -274,10 +274,10 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
                 NodeType::Dir => {
                     match node.subtree() {
                         None => {
-                            eprintln!("dir {:?} subtree does not exist", path.join(node.name()))
+                            error!("dir {:?} subtree does not exist", path.join(node.name()))
                         }
                         Some(tree) if tree.is_null() => {
-                            eprintln!("dir {:?} subtree has null ID", path.join(node.name()))
+                            error!("dir {:?} subtree has null ID", path.join(node.name()))
                         }
                         _ => {} // subtree is ok
                     }

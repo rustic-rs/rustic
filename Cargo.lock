@@ -1572,6 +1572,7 @@ dependencies = [
  "integer-sqrt",
  "itertools",
  "lazy_static",
+ "log",
  "merge",
  "nix",
  "path-absolutize",
@@ -1590,12 +1591,12 @@ dependencies = [
  "serde_with",
  "sha1",
  "sha2",
+ "simplelog",
  "tempfile",
  "thiserror",
  "tokio",
  "toml",
  "users",
- "vlog",
  "walkdir",
  "zstd",
 ]
@@ -1819,6 +1820,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "simplelog"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48dfff04aade74dd495b007c831cd6f4e0cee19c344dd9dc0884c0289b70a786"
+dependencies = [
+ "log",
+ "termcolor",
+ "time",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1972,7 +1984,14 @@ dependencies = [
  "libc",
  "num_threads",
  "serde",
+ "time-macros",
 ]
+
+[[package]]
+name = "time-macros"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42657b1a6f4d817cda8e7a0ace261fe0cc946cf3a80314390b22cc61ae080792"
 
 [[package]]
 name = "tinyvec"
@@ -2162,12 +2181,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "vlog"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2266fcb904c50fb17fda4c9a751a1715629ecf8b21f4c9d78b4890fb71525d71"
 
 [[package]]
 name = "walkdir"

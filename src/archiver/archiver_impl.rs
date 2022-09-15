@@ -7,8 +7,8 @@ use bytesize::ByteSize;
 use chrono::Local;
 use futures::{stream::FuturesOrdered, StreamExt};
 use indicatif::ProgressBar;
+use log::*;
 use tokio::spawn;
-use vlog::*;
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
@@ -82,15 +82,15 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let filename = self.path.join(node.name());
         match self.parent.is_parent(&node) {
             ParentResult::Matched(_) => {
-                v2!("unchanged file: {:?}", filename);
+                debug!("unchanged file: {:?}", filename);
                 self.summary.files_unmodified += 1;
             }
             ParentResult::NotMatched => {
-                v2!("changed   file: {:?}", filename);
+                debug!("changed   file: {:?}", filename);
                 self.summary.files_changed += 1;
             }
             ParentResult::NotFound => {
-                v2!("new       file: {:?}", filename);
+                debug!("new       file: {:?}", filename);
                 self.summary.files_new += 1;
             }
         }
@@ -173,18 +173,18 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         match self.parent.is_parent(&node) {
             ParentResult::Matched(p_node) if node.subtree() == p_node.subtree() => {
-                v2!("unchanged tree: {:?}", self.path);
+                debug!("unchanged tree: {:?}", self.path);
                 self.add_dir(node, dirsize);
                 self.summary.dirs_unmodified += 1;
                 return Ok(());
             }
             ParentResult::NotFound => {
-                v2!("new       tree: {:?} {}", self.path, dirsize_bytes);
+                debug!("new       tree: {:?} {}", self.path, dirsize_bytes);
                 self.summary.dirs_new += 1;
             }
             _ => {
                 // "Matched" trees where the subree id does not match or unmach
-                v2!("changed   tree: {:?} {}", self.path, dirsize_bytes);
+                debug!("changed   tree: {:?} {}", self.path, dirsize_bytes);
                 self.summary.dirs_changed += 1;
             }
         }
@@ -215,7 +215,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 p.inc(size);
                 return Ok(());
             } else {
-                ve1!(
+                warn!(
                     "missing blobs in index for unchanged file {:?}; re-reading file",
                     self.path.join(node.name())
                 );

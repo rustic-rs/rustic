@@ -1,9 +1,12 @@
+use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 use merge::Merge;
 use serde::Deserialize;
+use serde_with::{serde_as, DisplayFromStr};
+use simplelog::*;
 
 use crate::backend::{
     Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
@@ -31,8 +34,8 @@ mod snapshots;
 mod tag;
 
 use helpers::*;
+use log::*;
 use rustic_config::RusticConfig;
-use vlog::*;
 
 #[derive(Parser)]
 #[clap(about, version)]
@@ -54,6 +57,7 @@ struct Opts {
     command: Command,
 }
 
+#[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 struct GlobalOpts {
@@ -89,21 +93,15 @@ struct GlobalOpts {
     )]
     password_command: Option<String>,
 
-    /// Increase verbosity (can be used multiple times)
-    #[clap(long, short = 'v', global = true, parse(from_occurrences))]
-    #[merge(strategy = merge::num::overwrite_zero)]
-    verbose: i8,
+    /// Use this log level [default: info]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    log_level: Option<LevelFilter>,
 
-    /// Don't be verbose at all
-    #[clap(
-        long,
-        short = 'q',
-        global = true,
-        parse(from_occurrences),
-        conflicts_with = "verbose"
-    )]
-    #[merge(strategy = merge::num::overwrite_zero)]
-    quiet: i8,
+    /// Write log messages to the given file instead of printing them.
+    /// Note: warnings and errors are still additionally printed unless they are ignored by --log-level
+    #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE")]
+    log_file: Option<PathBuf>,
 
     /// Don't use a cache.
     #[clap(long, global = true, env = "RUSTIC_NO_CACHE")]
@@ -176,10 +174,39 @@ pub async fn execute() -> Result<()> {
     let command: Vec<_> = std::env::args_os().into_iter().collect();
     let args = Opts::parse_from(&command);
 
+    // get global options from command line / env and config file
     let config_file = RusticConfig::new(&args.config_profile)?;
-
     let mut opts = args.global;
     config_file.merge_into("global", &mut opts)?;
+
+    // start logger
+    let level_filter = opts.log_level.unwrap_or(LevelFilter::Info);
+    match opts.log_file {
+        None => TermLogger::init(
+            level_filter,
+            ConfigBuilder::new()
+                .set_time_level(LevelFilter::Off)
+                .build(),
+            TerminalMode::Stderr,
+            ColorChoice::Auto,
+        )?,
+
+        Some(file) => CombinedLogger::init(vec![
+            TermLogger::new(
+                level_filter.max(LevelFilter::Warn),
+                ConfigBuilder::new()
+                    .set_time_level(LevelFilter::Off)
+                    .build(),
+                TerminalMode::Stderr,
+                ColorChoice::Auto,
+            ),
+            WriteLogger::new(
+                level_filter,
+                Config::default(),
+                File::options().create(true).append(true).open(file)?,
+            ),
+        ])?,
+    }
 
     if let Command::SelfUpdate(opts) = args.command {
         self_update::execute(opts).await?;
@@ -191,9 +218,6 @@ pub async fn execute() -> Result<()> {
         .map(|s| s.to_string_lossy().to_string())
         .collect::<Vec<_>>()
         .join(" ");
-
-    let verbosity = (1 + opts.verbose - opts.quiet).clamp(0, 3);
-    set_verbosity_level(verbosity as usize);
 
     let be = match &opts.repository {
         Some(repo) => ChooseBackend::from_url(repo)?,
@@ -228,7 +252,7 @@ pub async fn execute() -> Result<()> {
                 opts.password_command.as_deref(),
             )
             .await?;
-            ve1!("password is correct.");
+            info!("password is correct.");
 
             let dbe = DecryptBackend::new(&be, key.clone());
             let config: ConfigFile = dbe.get_file(&config_ids[0]).await?;
@@ -241,8 +265,8 @@ pub async fn execute() -> Result<()> {
                 .then(|| Cache::new(config.id, opts.cache_dir).ok())
                 .flatten();
             match &cache {
-                None => ve1!("using no cache"),
-                Some(cache) => ve1!("using cache at {}", cache.location()),
+                None => info!("using no cache"),
+                Some(cache) => info!("using cache at {}", cache.location()),
             }
             let be_cached = CachedBackend::new(be.clone(), cache.clone());
             let dbe = DecryptBackend::new(&be_cached, key.clone());

@@ -9,7 +9,6 @@ use derive_getters::Getters;
 use derive_more::Constructor;
 use futures::StreamExt;
 use indicatif::ProgressBar;
-use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
@@ -125,7 +124,7 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
         p: ProgressBar,
         mut collector: IndexCollector,
     ) -> Result<Self> {
-        v1!("reading index...");
+        p.set_prefix("reading index...");
         let mut stream = be
             .stream_all::<IndexFile>(p.clone())
             .await?

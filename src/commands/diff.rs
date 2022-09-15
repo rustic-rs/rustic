@@ -3,11 +3,11 @@ use std::path::Path;
 use anyhow::Result;
 use clap::Parser;
 use futures::StreamExt;
-use vlog::*;
 
 use super::progress_counter;
 use crate::backend::DecryptReadBackend;
 use crate::blob::{NodeStreamer, NodeType, Tree};
+use crate::commands::helpers::progress_spinner;
 use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
@@ -26,13 +26,14 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     let (id1, path1) = opts.snap1.split_once(':').unwrap_or((&opts.snap1, ""));
     let (id2, path2) = opts.snap2.split_once(':').unwrap_or((&opts.snap2, path1));
 
-    v1!("getting snapshots...");
+    let p = progress_spinner("getting snapshots...");
+    p.finish();
     let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()]).await?;
 
     let snap1 = &snaps[0];
     let snap2 = &snaps[1];
 
-    let index = IndexBackend::new(be, progress_counter()).await?;
+    let index = IndexBackend::new(be, progress_counter("")).await?;
     let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1)).await?;
     let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2)).await?;
 

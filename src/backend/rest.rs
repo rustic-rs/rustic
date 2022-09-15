@@ -4,9 +4,9 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use backoff::{backoff::Backoff, ExponentialBackoff, ExponentialBackoffBuilder};
 use bytes::Bytes;
+use log::*;
 use reqwest::{Client, Url};
 use serde::Deserialize;
-use vlog::*;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
 
@@ -34,7 +34,7 @@ pub struct RestBackend {
 
 // TODO for backoff: Handle transient vs permanent errors!
 fn notify(err: reqwest::Error, duration: Duration) {
-    println!("Error {err} at {duration:?}, retrying");
+    warn!("Error {err} at {duration:?}, retrying");
 }
 
 impl RestBackend {
@@ -218,7 +218,7 @@ impl WriteBackend for RestBackend {
         _cacheable: bool,
         buf: Bytes,
     ) -> Result<()> {
-        v3!("writing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("writing tpe: {:?}, id: {}", &tpe, &id);
         let req_builder = self.client.post(self.url(tpe, id)).body(buf);
         Ok(backoff::future::retry_notify(
             self.backoff.clone(),
@@ -232,7 +232,7 @@ impl WriteBackend for RestBackend {
     }
 
     async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
-        v3!("removing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         Ok(backoff::future::retry_notify(
             self.backoff.clone(),
             || async {

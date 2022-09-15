@@ -74,7 +74,7 @@ pub fn progress_counter() -> ProgressBar {
                 .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}")
                 .unwrap(),
         );
-        p.enable_steady_tick(Duration::from_secs(1));
+        p.enable_steady_tick(Duration::from_millis(100));
         p
     } else {
         ProgressBar::hidden()

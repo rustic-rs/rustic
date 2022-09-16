@@ -20,6 +20,8 @@ impl RusticConfig {
         let path = path.join(profile.to_string() + ".toml");
 
         let config = if path.exists() {
+            // TODO: This should be log::info! - however, the logging config
+            // can be stored in the config file and is needed to initialize the logger
             eprintln!("using config {}", path.display());
             let data = std::fs::read_to_string(path)?;
             toml::from_str(&data)?

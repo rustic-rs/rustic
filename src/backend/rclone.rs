@@ -7,12 +7,12 @@ use std::sync::Arc;
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
+use log::*;
 use rand::distributions::{Alphanumeric, DistString};
 use rand::thread_rng;
 use sha1::{Digest, Sha1};
 use tempfile::{Builder, TempDir};
 use tokio::task::spawn_blocking;
-use vlog::*;
 
 use super::{FileType, Id, ReadBackend, RestBackend, WriteBackend};
 
@@ -38,7 +38,7 @@ fn htpasswd() -> Result<(TempDir, PathBuf, String, String)> {
 struct ChildToKill(Child);
 impl Drop for ChildToKill {
     fn drop(&mut self) {
-        v3!("killing rclone.");
+        debug!("killing rclone.");
         self.0.kill().unwrap();
     }
 }
@@ -62,7 +62,7 @@ impl RcloneBackend {
             "--htpasswd",
             file.to_str().unwrap(),
         ];
-        v3!("starting rclone with args {args:?}");
+        debug!("starting rclone with args {args:?}");
         let mut child = Command::new("rclone")
             .args(args)
             .stderr(Stdio::piped())
@@ -87,7 +87,7 @@ impl RcloneBackend {
                         break url.trim_end().to_string();
                     }
                 }
-                None if !line.is_empty() => v1!("rclone output: {line}"),
+                None if !line.is_empty() => info!("rclone output: {line}"),
                 _ => {}
             }
         };
@@ -98,7 +98,7 @@ impl RcloneBackend {
                 break;
             }
             if !line.is_empty() {
-                v3!("rclone output: {line}");
+                info!("rclone output: {line}");
             }
         });
 
@@ -108,7 +108,7 @@ impl RcloneBackend {
 
         let url = "http://".to_string() + &user + ":" + &pass + "@" + &url[7..];
 
-        v3!("using REST backend with url {url}.");
+        debug!("using REST backend with url {url}.");
         let rest = RestBackend::new(&url);
         Ok(Self {
             _child_data: Arc::new((ChildToKill(child), tmp_dir)),

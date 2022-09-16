@@ -7,6 +7,7 @@ use bytesize::ByteSize;
 use chrono::{TimeZone, Utc};
 use clap::Parser;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
+use log::*;
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
@@ -153,7 +154,7 @@ impl ReadSource for LocalSource {
             if let Err(e) = entry.and_then(|e| e.metadata()).map(|m| {
                 size += if m.is_dir() { 0 } else { m.len() };
             }) {
-                eprintln!("ignoring error {}", e);
+                warn!("ignoring error {}", e);
             }
         }
         Ok(size)

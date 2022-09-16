@@ -4,11 +4,11 @@ use anyhow::{anyhow, Result};
 use chrono::{Duration, Local};
 use clap::{AppSettings, Parser};
 use gethostname::gethostname;
+use log::*;
 use merge::Merge;
 use path_absolutize::*;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
-use vlog::*;
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
 use crate::archiver::{Archiver, Parent};
@@ -103,16 +103,16 @@ pub(super) async fn execute(
     let sources = match (opts.sources.is_empty(), config_opts.is_empty()) {
         (false, _) => opts.sources.clone(),
         (true, false) => {
-            v1!("using all backup sources from config file.");
+            info!("using all backup sources from config file.");
             config_opts.iter().map(|opt| opt.source.clone()).collect()
         }
         (true, true) => {
-            v1!("no backup source given.");
+            warn!("no backup source given.");
             return Ok(());
         }
     };
 
-    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter()).await?;
+    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter("")).await?;
 
     for source in sources {
         let mut opts = opts.clone();
@@ -126,7 +126,7 @@ pub(super) async fn execute(
 
         let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
         be.set_zstd(zstd);
-        v1!("\nbacking up {source}...");
+        info!("starting to backup \"{source}\"...");
         let index = index.clone();
         let backup_stdin = source == "-";
         let backup_path = if backup_stdin {
@@ -150,7 +150,7 @@ pub(super) async fn execute(
             (false, false, None) => SnapshotFile::latest(
                 &be,
                 |snap| snap.hostname == hostname && snap.paths.contains(&backup_path_str),
-                progress_counter(),
+                progress_counter(""),
             )
             .await
             .ok(),
@@ -159,11 +159,11 @@ pub(super) async fn execute(
 
         let parent_tree = match &parent {
             Some(snap) => {
-                v1!("using parent {}", snap.id);
+                info!("using parent {}", snap.id);
                 Some(snap.tree)
             }
             None => {
-                v1!("using no parent");
+                info!("using no parent");
                 None
             }
         };
@@ -191,9 +191,8 @@ pub(super) async fn execute(
         let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode).await;
 
         let snap = if backup_stdin {
-            v1!("starting backup from stdin...");
             let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
-            let p = progress_bytes();
+            let p = progress_bytes("starting backup from stdin...");
             archiver
                 .backup_reader(
                     std::io::stdin(),
@@ -204,70 +203,66 @@ pub(super) async fn execute(
                         None,
                         None,
                     ),
-                    p,
+                    p.clone(),
                 )
                 .await?;
 
-            archiver.finalize_snapshot().await?
+            let snap = archiver.finalize_snapshot().await?;
+            p.finish_with_message("done");
+            snap
         } else {
             let src = LocalSource::new(opts.ignore_opts.clone(), backup_path)?;
 
-            let size = if get_verbosity_level() == 1 {
-                v1!("determining size of backup source...");
-                src.size()?
-            } else {
-                0
+            let p = progress_bytes("determining size...");
+            if !p.is_hidden() {
+                let size = src.size()?;
+                p.set_length(size);
             };
-            v1!("starting backup...");
+            p.set_prefix("backing up...");
             let mut archiver = Archiver::new(be, index.clone(), &config, parent, snap)?;
-            let p = progress_bytes();
-            p.set_length(size);
             for item in src {
                 match item {
                     Err(e) => {
-                        eprintln!("ignoring error {}\n", e)
+                        warn!("ignoring error {}\n", e)
                     }
                     Ok((path, node)) => {
                         if let Err(e) = archiver.add_entry(&path, node, p.clone()).await {
-                            eprintln!("ignoring error {} for {:?}\n", e, path);
+                            warn!("ignoring error {} for {:?}\n", e, path);
                         }
                     }
                 }
             }
+            let snap = archiver.finalize_snapshot().await?;
             p.finish_with_message("done");
-            archiver.finalize_snapshot().await?
+            snap
         };
 
         let summary = snap.summary.unwrap();
 
-        v1!(
+        println!(
             "Files:       {} new, {} changed, {} unchanged",
-            summary.files_new,
-            summary.files_changed,
-            summary.files_unmodified
+            summary.files_new, summary.files_changed, summary.files_unmodified
         );
-        v1!(
+        println!(
             "Dirs:        {} new, {} changed, {} unchanged",
-            summary.dirs_new,
-            summary.dirs_changed,
-            summary.dirs_unmodified
+            summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified
         );
-        v2!("Data Blobs:  {} new", summary.data_blobs);
-        v2!("Tree Blobs:  {} new", summary.tree_blobs);
-        v1!(
+        debug!("Data Blobs:  {} new", summary.data_blobs);
+        debug!("Tree Blobs:  {} new", summary.tree_blobs);
+        println!(
             "Added to the repo: {} (raw: {})",
             bytes(summary.data_added_packed),
             bytes(summary.data_added)
         );
 
-        v1!(
+        println!(
             "processed {} files, {}",
             summary.total_files_processed,
             bytes(summary.total_bytes_processed)
         );
-        v1!("snapshot {} successfully saved.", snap.id);
+        println!("snapshot {} successfully saved.", snap.id);
 
-        v1!("backup of {source} done.");
+        info!("backup of \"{source}\" done.");
     }
 
     Ok(())

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::Write;
 use std::fs::File;
 use std::io::BufReader;
@@ -10,10 +11,10 @@ use bytesize::ByteSize;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use log::*;
 use rpassword::{prompt_password, read_password_from_bufread};
 use tokio::spawn;
 use tokio::time::sleep;
-use vlog::*;
 
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::crypto::Key;
@@ -67,27 +68,34 @@ pub async fn get_key(
     bail!("incorrect password!");
 }
 
-pub fn progress_counter() -> ProgressBar {
-    if get_verbosity_level() == 1 {
-        let p = ProgressBar::new(0).with_style(
-            ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10}")
-                .unwrap(),
-        );
-        p.enable_steady_tick(Duration::from_millis(100));
-        p
-    } else {
-        ProgressBar::hidden()
-    }
+pub fn progress_spinner(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    let p = ProgressBar::new(0).with_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {prefix:30} {spinner}")
+            .unwrap(),
+    );
+    p.set_prefix(prefix);
+    p.enable_steady_tick(Duration::from_millis(100));
+    p
+}
+
+pub fn progress_counter(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    let p = ProgressBar::new(0).with_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}")
+            .unwrap(),
+    );
+    p.enable_steady_tick(Duration::from_millis(100));
+    p.set_prefix(prefix);
+    p
 }
 
 pub fn no_progress() -> ProgressBar {
     ProgressBar::hidden()
 }
 
-pub fn progress_bytes() -> ProgressBar {
-    if get_verbosity_level() == 1 {
-        let p = ProgressBar::new(0).with_style(
+pub fn progress_bytes(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    let p = ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
             .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
                  match (s.pos(), s.len()){
@@ -95,21 +103,21 @@ pub fn progress_bytes() -> ProgressBar {
                     (pos,Some(len)) => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
                     (_, _) => write!(w,"-"),
                 }.unwrap())
-            .template("[{elapsed_precise}] {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
+            .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
             .unwrap()
             );
-        p.enable_steady_tick(Duration::from_secs(1));
-        p
-    } else {
-        ProgressBar::hidden()
-    }
+    p.set_prefix(prefix);
+    p.enable_steady_tick(Duration::from_millis(100));
+    p
 }
 
 pub fn warm_up_command(packs: Vec<Id>, command: &str) -> Result<()> {
+    let p = progress_counter("warming up packs...");
+    p.set_length(packs.len() as u64);
     for pack in packs {
         let id = pack.to_hex();
         let actual_command = command.replace("%id", &id);
-        v1!("calling {actual_command}...");
+        debug!("calling {actual_command}...");
         let mut commands: Vec<_> = actual_command.split(' ').collect();
         let status = Command::new(commands[0])
             .args(&mut commands[1..])
@@ -118,6 +126,7 @@ pub fn warm_up_command(packs: Vec<Id>, command: &str) -> Result<()> {
             bail!("warm-up command was not successful for pack {id}. {status}");
         }
     }
+    p.finish();
     Ok(())
 }
 
@@ -125,7 +134,7 @@ pub async fn warm_up(be: &impl DecryptReadBackend, packs: Vec<Id>) -> Result<()>
     let mut be = be.clone();
     be.set_option("retry", "false")?;
 
-    let p = progress_counter();
+    let p = progress_counter("warming up packs...");
     p.set_length(packs.len() as u64);
     let mut stream = FuturesUnordered::new();
 
@@ -152,7 +161,8 @@ pub async fn warm_up(be: &impl DecryptReadBackend, packs: Vec<Id>) -> Result<()>
 
 pub async fn wait(d: Option<humantime::Duration>) {
     if let Some(wait) = d {
-        v1!("waiting {}...", wait);
+        let p = progress_spinner(format!("waiting {}...", wait));
         sleep(*wait).await;
+        p.finish();
     }
 }

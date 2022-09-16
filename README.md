@@ -10,6 +10,7 @@ It reads and writes the [restic][1] repo format desribed in the [design document
 and can therefore be used as a complete replacement for restic.
 
 <img src="https://github.com/rustic-rs/rustic/blob/main/screenshots/rustic.png">
+<img src="https://github.com/rustic-rs/rustic/blob/main/screenshots/rustic-restore.png">
 
 Note that rustic currently is in an beta release and misses tests.
 It is not yet considered to be ready for use in a production environment.

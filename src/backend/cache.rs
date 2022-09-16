@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use dirs::cache_dir;
-use vlog::*;
+use log::*;
 use walkdir::WalkDir;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
@@ -202,9 +202,9 @@ impl Cache {
     }
 
     pub async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        v3!("cache reading tpe: {:?}, id: {}", &tpe, &id);
+        trace!("cache reading tpe: {:?}, id: {}", &tpe, &id);
         let data = fs::read(self.path(tpe, id))?;
-        v3!("cache hit!");
+        trace!("cache hit!");
         Ok(data.into())
     }
 
@@ -215,7 +215,7 @@ impl Cache {
         offset: u32,
         length: u32,
     ) -> Result<Bytes> {
-        v3!(
+        trace!(
             "cache reading tpe: {:?}, id: {}, offset: {}",
             &tpe,
             &id,
@@ -225,12 +225,12 @@ impl Cache {
         file.seek(SeekFrom::Start(offset as u64))?;
         let mut vec = vec![0; length as usize];
         file.read_exact(&mut vec)?;
-        v3!("cache hit!");
+        trace!("cache hit!");
         Ok(vec.into())
     }
 
     async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Bytes) -> Result<()> {
-        v3!("cache writing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         fs::create_dir_all(self.dir(tpe, id))?;
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
@@ -242,7 +242,7 @@ impl Cache {
     }
 
     async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
-        v3!("cache writing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         fs::remove_file(filename)?;
         Ok(())

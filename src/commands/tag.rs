@@ -108,11 +108,11 @@ pub(super) async fn execute(
             old_snap_ids
         ),
         (false, false) => {
-            println!("saving new snapshots...");
-            be.save_list(snapshots, progress_counter()).await?;
+            let p = progress_counter("saving new snapshots...");
+            be.save_list(snapshots, p).await?;
 
-            println!("deleting old snapshots...");
-            be.delete_list(FileType::Snapshot, true, old_snap_ids, progress_counter())
+            let p = progress_counter("deleting old snapshots...");
+            be.delete_list(FileType::Snapshot, true, old_snap_ids, p)
                 .await?;
         }
     }

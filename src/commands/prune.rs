@@ -8,11 +8,12 @@ use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derive_more::Add;
 use futures::{future, TryStreamExt};
-use vlog::*;
+use log::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
 use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType};
 use crate::blob::{BlobType, BlobTypeMap, NodeType, PackSizer, Repacker, TreeStreamerOnce};
+use crate::commands::helpers::progress_spinner;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer, ReadIndex};
 use crate::repo::{ConfigFile, IndexBlob, IndexFile, IndexPack, SnapshotFile};
@@ -92,10 +93,9 @@ pub(super) async fn execute(
         bail!("--repack-uncompressed makes no sense for v1 repo!");
     }
 
-    v1!("reading index...");
     let mut index_files = Vec::new();
 
-    let p = progress_counter();
+    let p = progress_counter("reading index...");
     let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
@@ -110,15 +110,16 @@ pub(super) async fn execute(
     p.finish();
 
     if let Some(cache) = &cache {
-        v1!("cleaning up packs from cache...");
+        let p = progress_spinner("cleaning up packs from cache...");
         cache
             .remove_not_in_list(FileType::Pack, index_collector.tree_packs())
             .await?;
+        p.finish();
     }
     match (cache.is_some(), opts.cache_only) {
         (true, true) => return Ok(()),
         (false, true) => {
-            ve1!("Warning: option --cache-only used without a cache.");
+            warn!("Warning: option --cache-only used without a cache.");
             return Ok(());
         }
         _ => {}
@@ -133,12 +134,13 @@ pub(super) async fn execute(
     };
 
     // list existing pack files
-    v1!("geting packs from repository...");
+    let p = progress_spinner("geting packs from repository...");
     let existing_packs: HashMap<_, _> = be
         .list_with_size(FileType::Pack)
         .await?
         .into_iter()
         .collect();
+    p.finish();
 
     let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
     pruner.count_used_blobs();
@@ -166,10 +168,8 @@ pub(super) async fn execute(
     pruner.print_stats();
 
     if opts.warm_up {
-        v1!("warming up needed data pack files...");
         warm_up(be, pruner.repack_packs()).await?;
     } else if opts.warm_up_command.is_some() {
-        v1!("warming up needed data pack files...");
         warm_up_command(
             pruner.repack_packs(),
             opts.warm_up_command.as_ref().unwrap(),
@@ -495,7 +495,7 @@ impl Pruner {
         // check that all used blobs are present in index
         for (id, count) in &self.used_ids {
             if *count == 0 {
-                eprintln!("used blob {} is missing", id);
+                error!("used blob {} is missing", id);
                 bail!("missing blobs");
             }
         }
@@ -744,92 +744,88 @@ impl Pruner {
         let blob_stat = self.stats.total_blobs();
         let size_stat = self.stats.total_size();
 
-        v2!(
+        debug!(
             "used:   {:>10} blobs, {:>10}",
             blob_stat.used,
             bytes(size_stat.used)
         );
 
-        v2!(
+        debug!(
             "unused: {:>10} blobs, {:>10}",
             blob_stat.unused,
             bytes(size_stat.unused)
         );
-        v2!(
+        debug!(
             "total:  {:>10} blobs, {:>10}",
             blob_stat.total(),
             bytes(size_stat.total())
         );
 
-        v1!("");
-
-        v1!(
+        println!(
             "to repack: {:>10} packs, {:>10} blobs, {:>10}",
             pack_stat.repack,
             blob_stat.repack,
             bytes(size_stat.repack)
         );
-        v1!(
+        println!(
             "this removes:                {:>10} blobs, {:>10}",
             blob_stat.repackrm,
             bytes(size_stat.repackrm)
         );
-        v1!(
+        println!(
             "to delete: {:>10} packs, {:>10} blobs, {:>10}",
             pack_stat.unused,
             blob_stat.remove,
             bytes(size_stat.remove)
         );
         if !self.existing_packs.is_empty() {
-            v1!(
+            println!(
                 "unindexed: {:>10} packs,         ?? blobs, {:>10}",
                 self.existing_packs.len(),
                 bytes(self.stats.size_unref)
             );
         }
 
-        v1!(
+        println!(
             "total prune:                 {:>10} blobs, {:>10}",
             blob_stat.repackrm + blob_stat.remove,
             bytes(size_stat.repackrm + size_stat.remove + self.stats.size_unref)
         );
-        v1!(
+        println!(
             "remaining:                   {:>10} blobs, {:>10}",
             blob_stat.total_after_prune(),
             bytes(size_stat.total_after_prune())
         );
-        v1!(
+        println!(
             "unused size after prune: {:>10} ({:.2}% of remaining size)",
             bytes(size_stat.unused_after_prune()),
             size_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64 * 100.0
         );
 
-        v1!("");
+        println!();
 
-        v1!(
+        println!(
             "packs marked for deletion: {:>10}, {:>10}",
             self.stats.packs_to_delete.total(),
             bytes(self.stats.size_to_delete.total()),
         );
-        v1!(
+        println!(
             " - complete deletion:      {:>10}, {:>10}",
             self.stats.packs_to_delete.remove,
             bytes(self.stats.size_to_delete.remove),
         );
-        v1!(
+        println!(
             " - keep marked:            {:>10}, {:>10}",
             self.stats.packs_to_delete.keep,
             bytes(self.stats.size_to_delete.keep),
         );
-        v1!(
+        println!(
             " - recover:                {:>10}, {:>10}",
             self.stats.packs_to_delete.recover,
             bytes(self.stats.size_to_delete.recover),
         );
 
-        v2!("");
-
-        v2!(
+        debug!(
             "index files to rebuild: {} / {}",
             self.index_files.len(),
             self.stats.index_files
@@ -892,13 +888,13 @@ impl Pruner {
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
             if opts.instant_delete {
-                v1!("removing not needed unindexed pack files...");
+                let p = progress_counter("removing unindexed packs...");
                 let existing_packs: Vec<_> =
                     self.existing_packs.into_iter().map(|(id, _)| id).collect();
-                be.delete_list(FileType::Pack, true, existing_packs, progress_counter())
+                be.delete_list(FileType::Pack, true, existing_packs, p)
                     .await?;
             } else {
-                v1!("marking not needed unindexed pack files for deletion...");
+                info!("marking not needed unindexed pack files for deletion...");
                 for (id, size) in self.existing_packs {
                     let pack = IndexPack {
                         id,
@@ -914,17 +910,12 @@ impl Pruner {
         // process packs by index_file
         let p = match (self.index_files.is_empty(), self.stats.packs.repack > 0) {
             (true, _) => {
-                v1!("nothing to do!");
+                info!("nothing to do!");
                 no_progress()
             }
-            (false, true) => {
-                v1!("repacking packs and rebuilding index...");
-                progress_bytes()
-            }
-            (false, false) => {
-                v1!("rebuilding index...");
-                no_progress()
-            }
+            // TODO: Use a MultiProgressBar here
+            (false, true) => progress_bytes("repacking // rebuilding index..."),
+            (false, false) => progress_spinner("rebuilding index..."),
         };
 
         p.set_length(self.stats.total_size().repack - self.stats.total_size().repackrm);
@@ -1011,20 +1002,20 @@ impl Pruner {
         p.finish();
 
         if !data_packs_remove.is_empty() {
-            v1!("removing old data pack files...");
-            be.delete_list(FileType::Pack, false, data_packs_remove, progress_counter())
+            let p = progress_counter("removing old data packs...");
+            be.delete_list(FileType::Pack, false, data_packs_remove, p)
                 .await?;
         }
 
         if !tree_packs_remove.is_empty() {
-            v1!("removing old tree pack files...");
-            be.delete_list(FileType::Pack, true, tree_packs_remove, progress_counter())
+            let p = progress_counter("removing old tree packs...");
+            be.delete_list(FileType::Pack, true, tree_packs_remove, p)
                 .await?;
         }
 
         if !indexes_remove.is_empty() {
-            v1!("removing old index files...");
-            be.delete_list(FileType::Index, true, indexes_remove, progress_counter())
+            let p = progress_counter("removing old index files...");
+            be.delete_list(FileType::Index, true, indexes_remove, p)
                 .await?;
         }
 
@@ -1107,9 +1098,8 @@ async fn find_used_blobs(
     ignore_snaps: Vec<Id>,
 ) -> Result<HashMap<Id, u8>> {
     let ignore_snaps: HashSet<_> = ignore_snaps.into_iter().collect();
-    v1!("reading snapshots...");
 
-    let p = progress_counter();
+    let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
         .stream_all::<SnapshotFile>(p.clone())
@@ -1122,11 +1112,10 @@ async fn find_used_blobs(
         .await?;
     p.finish();
 
-    v1!("finding used blobs...");
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();
+    let p = progress_counter("finding used blobs...");
 
-    let mut tree_streamer =
-        TreeStreamerOnce::new(index.clone(), snap_trees, progress_counter()).await?;
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p).await?;
     while let Some(item) = tree_streamer.try_next().await? {
         let (_, tree) = item;
         for node in tree.nodes() {

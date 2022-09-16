@@ -84,7 +84,7 @@ pub(super) async fn execute(
 
     for (group, mut snapshots) in groups {
         if !group.is_empty() {
-            println!("snapshots for {:?}", group);
+            println!("snapshots for {group}");
         }
         snapshots.sort_unstable_by(|sn1, sn2| sn1.cmp(sn2).reverse());
         let latest_time = snapshots[0].time;

@@ -79,7 +79,7 @@ pub(super) async fn execute(
 
     for (group, mut snapshots) in groups {
         if !group.is_empty() {
-            println!("\nsnapshots for {:?}", group);
+            println!("\nsnapshots for {group}");
         }
         snapshots.sort_unstable();
         let count = snapshots.len();

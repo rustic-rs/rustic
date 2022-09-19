@@ -45,7 +45,7 @@ cdc = "0.1"
 integer-sqrt = "0.1"
 # serialization
 base64 = "0.13"
-binrw = "0.9"
+binrw = "0.10"
 hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

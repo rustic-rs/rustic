@@ -203,22 +203,22 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     /// writes header and length of header to packfile
     pub async fn write_header(&mut self) -> Result<()> {
         #[derive(BinWrite)]
-        struct PackHeaderLength(#[bw(little)] u32);
+        #[bw(little)]
+        struct PackHeaderLength(u32);
 
         #[derive(BinWrite)]
+        #[bw(little)]
         struct PackHeaderEntry {
             tpe: u8,
-            #[bw(little)]
             len: u32,
             id: Id,
         }
 
         #[derive(BinWrite)]
+        #[bw(little)]
         struct PackHeaderEntryComp {
             tpe: u8,
-            #[bw(little)]
             len: u32,
-            #[bw(little)]
             len_data: u32,
             id: Id,
         }
@@ -235,7 +235,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
                     len: blob.length,
                     id: blob.id,
                 }
-                .write_to(&mut writer)?,
+                .write(&mut writer)?,
                 Some(len) => PackHeaderEntryComp {
                     tpe: match blob.tpe {
                         BlobType::Data => 0b10,
@@ -245,7 +245,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
                     len_data: len.get(),
                     id: blob.id,
                 }
-                .write_to(&mut writer)?,
+                .write(&mut writer)?,
             };
         }
 
@@ -261,7 +261,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
         // finally write length of header unencrypted to pack file
         let mut writer = Cursor::new(Vec::new());
-        PackHeaderLength(headerlen.try_into()?).write_to(&mut writer)?;
+        PackHeaderLength(headerlen.try_into()?).write(&mut writer)?;
         let data = writer.into_inner();
         self.write_data(&data).await?;
 

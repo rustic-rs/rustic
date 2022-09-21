@@ -1,8 +1,5 @@
 use std::borrow::Cow;
 use std::fmt::Write;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
@@ -12,7 +9,7 @@ use futures::{stream::FuturesUnordered, TryStreamExt};
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use log::*;
-use rpassword::{prompt_password, read_password_from_bufread};
+use rpassword::prompt_password;
 use tokio::spawn;
 use tokio::time::sleep;
 
@@ -26,30 +23,7 @@ pub fn bytes(b: u64) -> String {
     ByteSize(b).to_string_as(true)
 }
 
-pub async fn get_key(
-    be: &impl ReadBackend,
-    password: Option<&str>,
-    password_file: Option<&Path>,
-    password_command: Option<&str>,
-) -> Result<Key> {
-    let password = match (password, password_file, password_command) {
-        (Some(pwd), _, _) => Some(pwd.to_string()),
-        (_, Some(file), _) => {
-            let mut file = BufReader::new(File::open(file)?);
-            Some(read_password_from_bufread(&mut file)?)
-        }
-        (_, _, Some(command)) => {
-            let mut commands: Vec<_> = command.split(' ').collect();
-            let output = Command::new(commands[0])
-                .args(&mut commands[1..])
-                .output()?;
-
-            let mut pwd = BufReader::new(&*output.stdout);
-            Some(read_password_from_bufread(&mut pwd)?)
-        }
-        (None, None, None) => None,
-    };
-
+pub async fn get_key(be: &impl ReadBackend, password: Option<String>) -> Result<Key> {
     for _ in 0..MAX_PASSWORD_RETRIES {
         match &password {
             // if password is given, directly return the result of find_key_in_backend and don't retry

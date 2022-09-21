@@ -27,6 +27,13 @@ pub(crate) struct AddOpts {
     #[clap(long)]
     pub(crate) new_password_file: Option<String>,
 
+    #[clap(flatten)]
+    pub key_opts: KeyOpts,
+}
+
+#[derive(Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+pub(crate) struct KeyOpts {
     /// Set 'hostname' in public key information
     #[clap(long)]
     pub(crate) hostname: Option<String>,
@@ -54,7 +61,8 @@ async fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> 
         }
         None => prompt_password("enter password for new key: ")?,
     };
-    let keyfile = KeyFile::generate(key, &pass, opts.hostname, opts.username, opts.with_created)?;
+    let ko = opts.key_opts;
+    let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
     let data = serde_json::to_vec(&keyfile)?;
     let id = hash(&data);
     be.write_bytes(FileType::Key, &id, false, data.into())

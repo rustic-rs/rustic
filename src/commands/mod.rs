@@ -1,9 +1,12 @@
 use std::fs::File;
+use std::io::BufReader;
 use std::path::PathBuf;
+use std::process;
 
 use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 use merge::Merge;
+use rpassword::read_password_from_bufread;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use simplelog::*;
@@ -229,10 +232,30 @@ pub async fn execute() -> Result<()> {
         .map(|repo| ChooseBackend::from_url(&repo))
         .transpose()?;
 
+    let password = match (opts.password, opts.password_file, opts.password_command) {
+        (Some(pwd), _, _) => Some(pwd),
+        (_, Some(file), _) => {
+            let mut file = BufReader::new(File::open(file)?);
+            Some(read_password_from_bufread(&mut file)?)
+        }
+        (_, _, Some(command)) => {
+            let mut commands: Vec<_> = command.split(' ').collect();
+            let output = process::Command::new(commands[0])
+                .args(&mut commands[1..])
+                .output()?;
+
+            let mut pwd = BufReader::new(&*output.stdout);
+            Some(read_password_from_bufread(&mut pwd)?)
+        }
+        (None, None, None) => None,
+    };
+
     let config_ids = be.list(FileType::Config).await?;
 
     let (cmd, key, dbe, cache, be, be_hot, config) = match (args.command, config_ids.len()) {
-        (Command::Init(opts), _) => return init::execute(&be, &be_hot, opts, config_ids).await,
+        (Command::Init(opts), _) => {
+            return init::execute(&be, &be_hot, opts, password, config_ids).await
+        }
         (cmd, 1) => {
             let be = HotColdBackend::new(be, be_hot.clone());
             if let Some(be_hot) = &be_hot {
@@ -245,13 +268,7 @@ pub async fn execute() -> Result<()> {
                 }
             }
 
-            let key = get_key(
-                &be,
-                opts.password.as_deref(),
-                opts.password_file.as_deref(),
-                opts.password_command.as_deref(),
-            )
-            .await?;
+            let key = get_key(&be, password).await?;
             info!("password is correct.");
 
             let dbe = DecryptBackend::new(&be, key.clone());

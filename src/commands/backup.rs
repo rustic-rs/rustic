@@ -70,6 +70,10 @@ pub(super) struct Opts {
     #[merge(skip)]
     stdin_filename: String,
 
+    /// Set the host name manually
+    #[clap(long, value_name = "NAME")]
+    host: Option<String>,
+
     #[clap(flatten)]
     #[serde(flatten)]
     ignore_opts: LocalSourceOptions,
@@ -139,11 +143,16 @@ pub(super) async fn execute(
             .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path))?
             .to_string();
 
-        let hostname = gethostname();
-        let hostname = hostname
-            .to_str()
-            .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
-            .to_string();
+        let hostname = match opts.host {
+            Some(host) => host,
+            None => {
+                let hostname = gethostname();
+                hostname
+                    .to_str()
+                    .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
+                    .to_string()
+            }
+        };
 
         let parent = match (backup_stdin, opts.force, opts.parent.clone()) {
             (true, _, _) | (false, true, _) => None,

@@ -1,13 +1,10 @@
-use std::fs::File;
-use std::io::BufReader;
-
 use anyhow::{bail, Result};
 use bytes::Bytes;
 use clap::Parser;
-use rpassword::{prompt_password, read_password_from_bufread};
+use rpassword::prompt_password;
 
 use super::config::ConfigOpts;
-use super::key::AddOpts;
+use super::key::KeyOpts;
 use crate::backend::{DecryptBackend, DecryptWriteBackend, FileType, WriteBackend};
 use crate::chunker;
 use crate::crypto::{hash, Key};
@@ -17,7 +14,7 @@ use crate::repo::{ConfigFile, KeyFile};
 #[derive(Parser)]
 pub(super) struct Opts {
     #[clap(flatten, help_heading = "KEY OPTIONS")]
-    key_opts: AddOpts,
+    key_opts: KeyOpts,
 
     #[clap(flatten, help_heading = "CONFIG OPTIONS")]
     config_opts: ConfigOpts,
@@ -27,6 +24,7 @@ pub(super) async fn execute(
     be: &impl WriteBackend,
     hot_be: &Option<impl WriteBackend>,
     opts: Opts,
+    password: Option<String>,
     config_ids: Vec<Id>,
 ) -> Result<()> {
     if !config_ids.is_empty() {
@@ -46,14 +44,12 @@ pub(super) async fn execute(
     // generate key
     let key = Key::new();
 
-    let key_opts = opts.key_opts;
-    let pass = match key_opts.new_password_file {
-        Some(file) => {
-            let mut file = BufReader::new(File::open(file)?);
-            read_password_from_bufread(&mut file)?
-        }
+    let pass = match password {
+        Some(pass) => pass,
         None => prompt_password("enter password for new key: ")?,
     };
+
+    let key_opts = opts.key_opts;
     let keyfile = KeyFile::generate(
         key.clone(),
         &pass,

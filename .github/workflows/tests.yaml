@@ -7,9 +7,15 @@ on:
 name: Tests
 
 jobs:
-  test_linux:
-    name: Test on Linux
-    runs-on: ubuntu-latest
+  test:
+    name: Test
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        rust: [stable]
+        job:
+          - os: macos-latest
+          - os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -21,19 +27,13 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-
-  test_macos:
-    name: Test on MacOS
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
         with:
-          profile: minimal
+          command: build
           toolchain: stable
-          override: true
-          target: x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+          args: --release
+      - name: Running bats tests
+        shell: bash
+        run: |
+          ./test-bats/run-tests.sh

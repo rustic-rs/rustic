@@ -368,6 +368,6 @@ impl KeepOptions {
             }
         }
 
-        keep.then(|| reason)
+        keep.then_some(reason)
     }
 }

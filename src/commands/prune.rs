@@ -617,7 +617,7 @@ impl Pruner {
         let max_repack = match max_repack {
             LimitOption::Unlimited => u64::MAX,
             LimitOption::Size(size) => size.as_u64(),
-            LimitOption::Percentage(p) => (p * self.stats.total_size().total()),
+            LimitOption::Percentage(p) => p * self.stats.total_size().total(),
         };
 
         self.repack_candidates.sort_unstable_by_key(|rc| rc.0);

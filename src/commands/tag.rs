@@ -139,5 +139,5 @@ fn modify_sn(
         }
     }
 
-    changed.then(|| sn)
+    changed.then_some(sn)
 }

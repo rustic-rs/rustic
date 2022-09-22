@@ -472,7 +472,7 @@ impl FileInfos {
         }
 
         // Tell to allocate the size only if the file does NOT exist with matching size
-        Ok(open_file.is_none().then(|| file_pos))
+        Ok(open_file.is_none().then_some(file_pos))
     }
 
     fn to_packs(&self) -> Vec<Id> {

@@ -35,6 +35,10 @@
 )]
 
 use anyhow::Result;
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 mod archiver;
 mod backend;

@@ -42,7 +42,8 @@ pub(super) async fn execute(
                 let _ = be.list_with_size(file_type).await?;
 
                 let p = progress_bytes(format!("checking {} in cache...", file_type.name()));
-                check_cache_files(cache, raw_be, file_type, p).await?;
+                // TODO: Make concurrency (20) customizable
+                check_cache_files(20, cache, raw_be, file_type, p).await?;
             }
         }
     }
@@ -58,7 +59,8 @@ pub(super) async fn execute(
     if !opts.trust_cache {
         if let Some(cache) = &cache {
             let p = progress_bytes("checking packs in cache...");
-            check_cache_files(cache, raw_be, FileType::Pack, p).await?;
+            // TODO: Make concurrency (5) customizable
+            check_cache_files(5, cache, raw_be, FileType::Pack, p).await?;
         }
     }
 
@@ -89,19 +91,16 @@ async fn check_hot_files(
 
     for (id, size_hot) in files_hot {
         match files.remove(&id) {
-            None => error!("hot file {} does not exist in repo", id.to_hex()),
-            Some(size) if size != size_hot => error!(
-                "file {}: hot size: {}, actual size: {}",
-                id.to_hex(),
-                size_hot,
-                size
-            ),
+            None => error!("hot file Type: {file_type:?}, Id: {id} does not exist in repo",),
+            Some(size) if size != size_hot => {
+                error!("Type: {file_type:?}, Id: {id}: hot size: {size_hot}, actual size: {size}",)
+            }
             _ => {} //everything ok
         }
     }
 
     for (id, _) in files {
-        error!("hot file {} is missing!", id.to_hex());
+        error!("hot file Type: {file_type:?}, Id: {id} is missing!",);
     }
     p.finish();
 
@@ -109,6 +108,7 @@ async fn check_hot_files(
 }
 
 async fn check_cache_files(
+    concurrency: usize,
     cache: &Cache,
     be: &impl ReadBackend,
     file_type: FileType,
@@ -129,17 +129,22 @@ async fn check_cache_files(
         let p = p.clone();
         (file, cache, be, p)
     }))
-    .for_each_concurrent(5, |((id, size), cache, be, p)| async move {
+    .for_each_concurrent(concurrency, |((id, size), cache, be, p)| async move {
         // Read file from cache and from backend and compare
-        // TODO: Use (Async)Readers and compare using them!
-        let data_cached = cache.read_full(file_type, &id).await.unwrap();
-        let data = be.read_full(file_type, &id).await.unwrap();
-        if data_cached != data {
-            error!(
-                "Cached file Type: {:?}, Id: {} is not identical to backend!",
-                file_type, id
-            );
+        match (
+            cache.read_full(file_type, &id).await,
+            be.read_full(file_type, &id).await,
+        ) {
+            (Err(err), _) => {
+                error!("Error reading cached file Type: {file_type:?}, Id: {id} : {err}",)
+            }
+            (_, Err(err)) => error!("Error reading file Type: {file_type:?}, Id: {id} : {err}",),
+            (Ok(data_cached), Ok(data)) if data_cached != data => {
+                error!("Cached file Type: {file_type:?}, Id: {id} is not identical to backend!",)
+            }
+            (Ok(_), Ok(_)) => {} // everything ok
         }
+
         p.inc(size as u64);
     })
     .await;
@@ -172,7 +177,7 @@ async fn check_packs(
         for blob in blobs {
             if blob.tpe != blob_type {
                 error!(
-                    "pack {}: blob {} blob type does not match: {:?}, expected: {:?}",
+                    "pack {}: blob {} blob type does not match: type: {:?}, expected: {:?}",
                     p.id, blob.id, blob.tpe, blob_type
                 );
             }
@@ -217,22 +222,16 @@ async fn check_packs(
 async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
     for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
-            None => error!("pack {} not referenced in index", id.to_hex()),
-            Some(index_size) if index_size != size => error!(
-                "pack {}: size computed by index: {}, actual size: {}",
-                id.to_hex(),
-                index_size,
-                size
-            ),
+            None => warn!("pack {id} not referenced in index"),
+            Some(index_size) if index_size != size => {
+                error!("pack {id}: size computed by index: {index_size}, actual size: {size}",)
+            }
             _ => {} //everything ok
         }
     }
 
     for (id, _) in packs {
-        error!(
-            "pack {} is referenced by the index but not presend!",
-            id.to_hex()
-        );
+        error!("pack {id} is referenced by the index but not present!",);
     }
     Ok(())
 }

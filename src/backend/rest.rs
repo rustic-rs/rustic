@@ -136,6 +136,7 @@ impl ReadBackend for RestBackend {
                     .header("Accept", "application/vnd.x.restic.rest.v2")
                     .send()
                     .await?
+                    .error_for_status()?
                     .json::<Vec<ListEntry>>()
                     .await?;
                 Ok(list.into_iter().map(|i| (i.name, i.size)).collect())
@@ -154,6 +155,7 @@ impl ReadBackend for RestBackend {
                     .get(self.url(tpe, id))
                     .send()
                     .await?
+                    .error_for_status()?
                     .bytes()
                     .await?
                     .into_iter()
@@ -183,6 +185,7 @@ impl ReadBackend for RestBackend {
                     .header("Range", header_value.clone())
                     .send()
                     .await?
+                    .error_for_status()?
                     .bytes()
                     .await?
                     .into_iter()
@@ -203,7 +206,8 @@ impl WriteBackend for RestBackend {
                 self.client
                     .post(self.url.join("?create=true").unwrap())
                     .send()
-                    .await?;
+                    .await?
+                    .error_for_status()?;
                 Ok(())
             },
             notify,
@@ -223,7 +227,12 @@ impl WriteBackend for RestBackend {
         Ok(backoff::future::retry_notify(
             self.backoff.clone(),
             || async {
-                req_builder.try_clone().unwrap().send().await?;
+                req_builder
+                    .try_clone()
+                    .unwrap()
+                    .send()
+                    .await?
+                    .error_for_status()?;
                 Ok(())
             },
             notify,
@@ -236,7 +245,11 @@ impl WriteBackend for RestBackend {
         Ok(backoff::future::retry_notify(
             self.backoff.clone(),
             || async {
-                self.client.delete(self.url(tpe, id)).send().await?;
+                self.client
+                    .delete(self.url(tpe, id))
+                    .send()
+                    .await?
+                    .error_for_status()?;
                 Ok(())
             },
             notify,

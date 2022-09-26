@@ -1,7 +1,6 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
+use std::str;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
@@ -10,30 +9,9 @@ use bytes::Bytes;
 use log::*;
 use rand::distributions::{Alphanumeric, DistString};
 use rand::thread_rng;
-use sha1::{Digest, Sha1};
-use tempfile::{Builder, TempDir};
 use tokio::task::spawn_blocking;
 
 use super::{FileType, Id, ReadBackend, RestBackend, WriteBackend};
-
-// create a .htpasswd file with random user/password
-fn htpasswd() -> Result<(TempDir, PathBuf, String, String)> {
-    let dir = Builder::new().prefix("rustic").tempdir()?;
-
-    let file_path = dir.path().join(".htpasswd");
-    let mut file = File::create(&file_path)?;
-
-    let user = Alphanumeric.sample_string(&mut thread_rng(), 12);
-    let password = Alphanumeric.sample_string(&mut thread_rng(), 12);
-
-    let mut hasher = Sha1::new();
-    hasher.update(password.as_bytes());
-    let pass = base64::encode(hasher.finalize());
-
-    writeln!(file, "{}:{{SHA}}{}", user, pass)?;
-
-    Ok((dir, file_path, user, password))
-}
 
 struct ChildToKill(Child);
 impl Drop for ChildToKill {
@@ -46,24 +24,47 @@ impl Drop for ChildToKill {
 #[derive(Clone)]
 pub struct RcloneBackend {
     rest: RestBackend,
-    _child_data: Arc<(ChildToKill, TempDir)>,
+    _child_data: Arc<ChildToKill>,
 }
 
 impl RcloneBackend {
     pub fn new(url: &str) -> Result<Self> {
-        let (tmp_dir, file, user, pass) = htpasswd()?;
+        let rclone_version_output = Command::new("rclone").arg("version").output()?.stdout;
+        let rclone_version = str::from_utf8(&rclone_version_output)?
+            .lines()
+            .next()
+            .ok_or_else(|| anyhow!("'rclone version' doesn't give any output"))?
+            .strip_prefix("rclone v")
+            .ok_or_else(|| anyhow!("output of 'rclone version' doesn't start with 'rclone v'"))?;
 
-        let args = [
-            "serve",
-            "restic",
-            url,
-            "--addr",
-            "localhost:0",
-            "--htpasswd",
-            file.to_str().unwrap(),
-        ];
+        let versions: Vec<&str> = rclone_version.split(&['.', '-'][..]).collect();
+        let major = versions[0].parse::<i32>()?;
+        let minor = versions[1].parse::<i32>()?;
+        let patch = versions[2].parse::<i32>()?;
+
+        if major
+            .cmp(&1)
+            .then(minor.cmp(&52))
+            .then(patch.cmp(&2))
+            .is_lt()
+        {
+            // for rclone < 1.52.2 setting user/password via env variable doesn't work. This means
+            // we are setting up an rclone without authentication which is a security issue!
+            // (however, it still works, so we give a warning)
+            warn!(
+                "Using rclone without authentication! Upgrade to rclone >= 1.52.2 (current version: {rclone_version})!"
+            );
+        }
+
+        let user = Alphanumeric.sample_string(&mut thread_rng(), 12);
+        let password = Alphanumeric.sample_string(&mut thread_rng(), 12);
+
+        let args = ["serve", "restic", url, "--addr", "localhost:0"];
         debug!("starting rclone with args {args:?}");
+
         let mut child = Command::new("rclone")
+            .env("RCLONE_USER", &user)
+            .env("RCLONE_PASS", &password)
             .args(args)
             .stderr(Stdio::piped())
             .spawn()?;
@@ -106,12 +107,12 @@ impl RcloneBackend {
             bail!("url must start with http://! url: {url}");
         }
 
-        let url = "http://".to_string() + &user + ":" + &pass + "@" + &url[7..];
+        let url = "http://".to_string() + &user + ":" + &password + "@" + &url[7..];
 
         debug!("using REST backend with url {url}.");
         let rest = RestBackend::new(&url);
         Ok(Self {
-            _child_data: Arc::new((ChildToKill(child), tmp_dir)),
+            _child_data: Arc::new(ChildToKill(child)),
             rest,
         })
     }

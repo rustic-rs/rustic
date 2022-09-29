@@ -76,14 +76,6 @@ jobs:
           toolchain: ${{ matrix.rust }}
           args: --release --target ${{ matrix.job.target }}
 
-      - name: Generate completions
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          use-cross: ${{ matrix.job.use-cross }}
-          toolchain: ${{ matrix.rust }}
-          args: --release --features=completions --target ${{ matrix.job.target }}
-
       - name: Packaging final binary
         if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
@@ -92,7 +84,7 @@ jobs:
 
           ########## create tar.gz ##########
           RELEASE_NAME=rustic-${GITHUB_REF_NAME}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }} -C ../../../target ./completions
+          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }}
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then

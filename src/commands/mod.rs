@@ -11,11 +11,6 @@ use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use simplelog::*;
 
-#[cfg(feature = "completions")]
-use clap::CommandFactory;
-#[cfg(feature = "completions")]
-use clap_complete::{generate_to as generate_completion, shells, Generator};
-
 use crate::backend::{
     Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
     HotColdBackend, ReadBackend,
@@ -25,6 +20,7 @@ use crate::repo::ConfigFile;
 mod backup;
 mod cat;
 mod check;
+mod completions;
 mod config;
 mod diff;
 mod forget;
@@ -138,6 +134,9 @@ enum Command {
     /// Change the repository configuration
     Config(config::Opts),
 
+    /// Generate shell completions
+    Completions(completions::Opts),
+
     /// Check the repository
     Check(check::Opts),
 
@@ -178,21 +177,7 @@ enum Command {
     Tag(tag::Opts),
 }
 
-#[cfg_attr(feature = "completions", allow(unused))]
 pub async fn execute() -> Result<()> {
-    #[cfg(feature = "completions")]
-    {
-        // Generate completions if running with "completions" feature enabled
-        //
-        // A bit hacky. Including source code of module in build.rs not work
-        // because there are more one file with clap::Command declaration
-        //
-        // Example with including source code:
-        // https://docs.rs/clap_complete/latest/clap_complete/generator/fn.generate_to.html
-        generate_completions();
-        return Ok(());
-    }
-
     let command: Vec<_> = std::env::args_os().into_iter().collect();
     let args = Opts::parse_from(&command);
 
@@ -232,6 +217,11 @@ pub async fn execute() -> Result<()> {
 
     if let Command::SelfUpdate(opts) = args.command {
         self_update::execute(opts).await?;
+        return Ok(());
+    }
+
+    if let Command::Completions(opts) = args.command {
+        completions::execute(opts);
         return Ok(());
     }
 
@@ -317,6 +307,7 @@ pub async fn execute() -> Result<()> {
         Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
+        Command::Completions(_) => {} // already handled above
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,
         Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file).await?,
         Command::Init(_) => {} // already handled above
@@ -332,24 +323,4 @@ pub async fn execute() -> Result<()> {
     };
 
     Ok(())
-}
-
-#[cfg(feature = "completions")]
-pub fn generate_completions() {
-    const OUT_PATH: &str = "target/completions";
-    if let Err(e) = std::fs::create_dir(OUT_PATH) {
-        eprintln!("Error creating directory: {e}");
-    }
-
-    fn generate<G: Generator>(shell: G) {
-        let mut command = Opts::command();
-        match generate_completion(shell, &mut command, env!("CARGO_BIN_NAME"), OUT_PATH) {
-            Ok(p) => println!("Generated shell completions: {}", p.display()),
-            Err(e) => eprintln!("Couldn't generate shell completions: {e}"),
-        }
-    }
-
-    generate(shells::Bash);
-    generate(shells::Fish);
-    generate(shells::Zsh);
 }

@@ -1,4 +1,4 @@
-use clap::{CommandFactory, ValueEnum, Parser};
+use clap::{CommandFactory, Parser, ValueEnum};
 use clap_complete::{generate, shells, Generator};
 
 #[derive(Parser)]
@@ -24,5 +24,10 @@ pub(super) fn execute(opts: Opts) {
 
 fn generate_completion<G: Generator>(shell: G) {
     let mut command = super::Opts::command();
-    generate(shell, &mut command, env!("CARGO_BIN_NAME"), &mut std::io::stdout())
+    generate(
+        shell,
+        &mut command,
+        env!("CARGO_BIN_NAME"),
+        &mut std::io::stdout(),
+    )
 }

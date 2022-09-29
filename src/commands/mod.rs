@@ -20,6 +20,7 @@ use crate::repo::ConfigFile;
 mod backup;
 mod cat;
 mod check;
+mod completions;
 mod config;
 mod diff;
 mod forget;
@@ -133,6 +134,9 @@ enum Command {
     /// Change the repository configuration
     Config(config::Opts),
 
+    /// Generate shell completions
+    Completions(completions::Opts),
+
     /// Check the repository
     Check(check::Opts),
 
@@ -213,6 +217,11 @@ pub async fn execute() -> Result<()> {
 
     if let Command::SelfUpdate(opts) = args.command {
         self_update::execute(opts).await?;
+        return Ok(());
+    }
+
+    if let Command::Completions(opts) = args.command {
+        completions::execute(opts);
         return Ok(());
     }
 
@@ -298,6 +307,7 @@ pub async fn execute() -> Result<()> {
         Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config).await?,
         Command::Cat(opts) => cat::execute(&dbe, opts).await?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
+        Command::Completions(_) => {} // already handled above
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,
         Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file).await?,
         Command::Init(_) => {} // already handled above

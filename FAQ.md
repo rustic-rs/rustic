@@ -9,7 +9,7 @@
 
 ## Why is rustic written in Rust
 Rust is a powerful language designed to build reliable and efficient software.
-This is a very good fit for a backup software.
+This is a very good fit for a backup tool.
 
 ## How does rustic work with cold storages like AWS Glacier?
 If you want to use cold storage, make sure you always specify an extra repository `--repo-hot` which 

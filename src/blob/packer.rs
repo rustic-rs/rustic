@@ -3,7 +3,6 @@ use std::num::NonZeroU32;
 use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
-use binrw::{io::Cursor, BinWrite};
 use bytes::{Bytes, BytesMut};
 use chrono::Local;
 use tokio::{spawn, task::JoinHandle};
@@ -14,7 +13,7 @@ use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
 use crate::crypto::{CryptoKey, Hasher};
 use crate::id::Id;
 use crate::index::SharedIndexer;
-use crate::repo::{ConfigFile, IndexBlob, IndexPack};
+use crate::repo::{ConfigFile, IndexBlob, IndexPack, PackHeaderLength, PackHeaderRef};
 
 const KB: u32 = 1024;
 const MB: u32 = 1024 * KB;
@@ -202,68 +201,22 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
 
     /// writes header and length of header to packfile
     pub async fn write_header(&mut self) -> Result<()> {
-        #[derive(BinWrite)]
-        #[bw(little)]
-        struct PackHeaderLength(u32);
-
-        #[derive(BinWrite)]
-        #[bw(little)]
-        struct PackHeaderEntry {
-            tpe: u8,
-            len: u32,
-            id: Id,
-        }
-
-        #[derive(BinWrite)]
-        #[bw(little)]
-        struct PackHeaderEntryComp {
-            tpe: u8,
-            len: u32,
-            len_data: u32,
-            id: Id,
-        }
-
-        // collect header entries
-        let mut writer = Cursor::new(Vec::new());
-        for blob in &self.index.blobs {
-            match blob.uncompressed_length {
-                None => PackHeaderEntry {
-                    tpe: match blob.tpe {
-                        BlobType::Data => 0b00,
-                        BlobType::Tree => 0b01,
-                    },
-                    len: blob.length,
-                    id: blob.id,
-                }
-                .write(&mut writer)?,
-                Some(len) => PackHeaderEntryComp {
-                    tpe: match blob.tpe {
-                        BlobType::Data => 0b10,
-                        BlobType::Tree => 0b11,
-                    },
-                    len: blob.length,
-                    len_data: len.get(),
-                    id: blob.id,
-                }
-                .write(&mut writer)?,
-            };
-        }
+        // comput the pack header
+        let data = PackHeaderRef::from_index_pack(&self.index).to_binary()?;
 
         // encrypt and write to pack file
-        let data = writer.into_inner();
         let data = self
             .be
             .key()
             .encrypt_data(&data)
             .map_err(|_| anyhow!("crypto error"))?;
-        let headerlen = data.len();
+
+        let headerlen = data.len().try_into()?;
         self.write_data(&data).await?;
 
         // finally write length of header unencrypted to pack file
-        let mut writer = Cursor::new(Vec::new());
-        PackHeaderLength(headerlen.try_into()?).write(&mut writer)?;
-        let data = writer.into_inner();
-        self.write_data(&data).await?;
+        self.write_data(&PackHeaderLength::from_u32(headerlen).to_binary()?)
+            .await?;
 
         Ok(())
     }

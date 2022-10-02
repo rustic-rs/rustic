@@ -8,6 +8,8 @@ use crate::backend::{FileType, RepoFile};
 use crate::blob::BlobType;
 use crate::id::Id;
 
+use super::PackHeaderRef;
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct IndexFile {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -42,15 +44,6 @@ pub struct IndexPack {
 }
 
 impl IndexPack {
-    // 4 equals the size of blob::packer::PackHeaderLength
-    // 32 equals the size of the crypto overhead
-    pub const PACK_OVERHEAD: u32 = 4 + 32;
-
-    // this equals the size of blob::packer::PackHeaderEntry
-    pub const HEADER_LEN: u32 = 37;
-    // this equals the size of blob::packer::PackHeaderEntryComp
-    pub const HEADER_LEN_COMPRESSED: u32 = 41;
-
     pub fn set_id(&mut self, id: Id) {
         self.id = id;
     }
@@ -74,15 +67,8 @@ impl IndexPack {
 
     // calculate the pack size from the contained blobs
     pub fn pack_size(&self) -> u32 {
-        self.size.unwrap_or_else(|| {
-            self.blobs.iter().fold(Self::PACK_OVERHEAD, |acc, blob| {
-                acc + blob.length
-                    + match blob.uncompressed_length {
-                        None => Self::HEADER_LEN,
-                        Some(_) => Self::HEADER_LEN_COMPRESSED,
-                    }
-            })
-        })
+        self.size
+            .unwrap_or_else(|| PackHeaderRef::from_index_pack(self).pack_size())
     }
 
     /// returns the blob type of the pack. Note that only packs with

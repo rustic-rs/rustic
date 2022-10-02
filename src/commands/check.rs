@@ -1,18 +1,24 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use bytes::Bytes;
 use clap::Parser;
 use futures::{stream, StreamExt, TryStreamExt};
 use indicatif::ProgressBar;
 use log::*;
+use tokio::task::spawn_blocking;
+use zstd::stream::decode_all;
 
 use super::{progress_bytes, progress_counter};
-use crate::backend::{Cache, DecryptReadBackend, FileType, ReadBackend};
+use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{BlobType, NodeType, TreeStreamerOnce};
 use crate::commands::helpers::progress_spinner;
+use crate::crypto::{hash, CryptoKey};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
-use crate::repo::{IndexFile, IndexPack, SnapshotFile};
+use crate::repo::{
+    IndexFile, IndexPack, PackHeader, PackHeaderLength, PackHeaderRef, SnapshotFile,
+};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -26,7 +32,7 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(
-    be: &(impl DecryptReadBackend + Unpin),
+    be: &(impl DecryptFullBackend + Unpin), // TODO: this should be a DecryptReadBackend; see check_pack()
     cache: &Option<Cache>,
     hot_be: &Option<impl ReadBackend>,
     raw_be: &impl ReadBackend,
@@ -54,7 +60,7 @@ pub(super) async fn execute(
         }
     }
 
-    let index_collector = check_packs(be, hot_be).await?;
+    let index_collector = check_packs(be, hot_be, opts.read_data).await?;
 
     if !opts.trust_cache {
         if let Some(cache) = &cache {
@@ -64,12 +70,33 @@ pub(super) async fn execute(
         }
     }
 
-    let be = IndexBackend::new_from_index(be, index_collector.into_index());
+    let index_be = IndexBackend::new_from_index(be, index_collector.into_index());
 
-    check_snapshots(&be).await?;
+    check_snapshots(&index_be).await?;
 
     if opts.read_data {
-        unimplemented!()
+        let p = progress_counter("reading pack data...");
+        stream::iter(index_be.into_index().into_iter().map(|pack| {
+            let be = be.clone();
+            let p = p.clone();
+            (pack, be, p)
+        }))
+        // TODO: Make concurrency (4) customizable
+        .for_each_concurrent(4, |(pack, be, p)| async move {
+            let id = pack.id;
+            let data = be.read_full(FileType::Pack, &id).await.unwrap();
+            spawn_blocking(move || {
+                match check_pack(&be, pack, data) {
+                    Ok(()) => {}
+                    Err(err) => error!("Error reading pack {id} : {err}",),
+                }
+                p.inc(1);
+            })
+            .await
+            .unwrap()
+        })
+        .await;
+        p.finish();
     }
 
     Ok(())
@@ -157,10 +184,15 @@ async fn check_cache_files(
 async fn check_packs(
     be: &impl DecryptReadBackend,
     hot_be: &Option<impl ReadBackend>,
+    read_data: bool,
 ) -> Result<IndexCollector> {
     let mut packs = HashMap::new();
     let mut tree_packs = HashMap::new();
-    let mut index_collector = IndexCollector::new(IndexType::FullTrees);
+    let mut index_collector = IndexCollector::new(if read_data {
+        IndexType::Full
+    } else {
+        IndexType::FullTrees
+    });
 
     let mut process_pack = |p: IndexPack| {
         let blob_type = p.blob_type();
@@ -284,6 +316,76 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
 
                 _ => {} // nothing to check
             }
+        }
+    }
+
+    Ok(())
+}
+
+fn check_pack(
+    be: &impl DecryptFullBackend, // TODO: this should be a DecryptReadBackend; we just additionally need the key() method
+    index_pack: IndexPack,
+    mut data: Bytes,
+) -> Result<()> {
+    let id = index_pack.id;
+    let size = index_pack.pack_size();
+    if data.len() != size as usize {
+        error!(
+            "pack {id}: data size does not match expected size. Read: {} bytes, expected: {size} bytes",
+            data.len()
+        );
+        return Ok(());
+    }
+
+    let comp_id = hash(&data);
+    if id != comp_id {
+        error!("pack {id}: Hash mismatch. Computed hash: {comp_id}");
+        return Ok(());
+    }
+
+    // check header length
+    let header_len = PackHeaderRef::from_index_pack(&index_pack).size();
+    let pack_header_len = PackHeaderLength::from_binary(&data.split_off(data.len() - 4))?.to_u32();
+    if pack_header_len != header_len {
+        error!("pack {id}: Header length in pack file doesn't match index. In pack: {pack_header_len}, calculated: {header_len}");
+        return Ok(());
+    }
+
+    // check header
+    let header = be
+        .key()
+        .decrypt_data(&data.split_off(data.len() - header_len as usize))?;
+
+    let pack_blobs = PackHeader::from_binary(&header)?.into_blobs();
+    let mut blobs = index_pack.blobs;
+    blobs.sort_unstable_by_key(|b| b.offset);
+    if pack_blobs != blobs {
+        error!("pack {id}: Header from pack file does not match the index");
+        debug!("pack file header: {pack_blobs:?}");
+        debug!("index: {:?}", blobs);
+        return Ok(());
+    }
+
+    // check blobs
+    for blob in blobs {
+        let blob_id = blob.id;
+        let mut blob_data = be
+            .key()
+            .decrypt_data(&data.split_to(blob.length as usize))?;
+
+        // TODO: this is identical to backend/decrypt.rs; unify these two parts!
+        if let Some(length) = blob.uncompressed_length {
+            blob_data = decode_all(&*blob_data).unwrap();
+            if blob_data.len() != length.get() as usize {
+                error!("pack {id}, blob {blob_id}: Actual uncompressed length does not fit saved uncompressed length");
+                return Ok(());
+            }
+        }
+
+        let comp_id = hash(&blob_data);
+        if blob.id != comp_id {
+            error!("pack {id}, blob {blob_id}: Hash mismatch. Computed hash: {comp_id}");
+            return Ok(());
         }
     }
 

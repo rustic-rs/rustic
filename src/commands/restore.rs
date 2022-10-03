@@ -119,6 +119,8 @@ async fn allocate_and_collect(
     tree: Id,
     opts: &Opts,
 ) -> Result<FileInfos> {
+    let dest_path = Path::new(&opts.dest);
+
     let mut file_infos = FileInfos::new();
     let mut additional_existing = false;
     // Dir stack is needed to process removal of dirs AFTER the content has been processed.
@@ -130,6 +132,8 @@ async fn allocate_and_collect(
             // don't process the root dir which should be existing
             return Ok(());
         }
+
+        debug!("additional {:?}", entry.path());
 
         match (
             opts.delete,
@@ -157,7 +161,6 @@ async fn allocate_and_collect(
             }
             (true, false, false) => dest.remove_file(entry.path())?,
             (false, _, _) => {
-                debug!("additional entry: {:?}", entry.path());
                 additional_existing = true;
             }
         }
@@ -165,20 +168,43 @@ async fn allocate_and_collect(
         Ok(())
     };
 
-    let mut process_node = |path: &PathBuf, node: &Node| -> Result<_> {
-        debug!("processing {:?}", path);
+    let mut process_node = |path: &PathBuf, node: &Node, exists: bool| -> Result<_> {
         match node.node_type() {
             NodeType::Dir => {
-                if !opts.dry_run {
-                    dest.create_dir(path)?;
+                if exists {
+                    trace!("existing dir {path:?}");
+                } else {
+                    debug!("to restore: {path:?}");
+                    if !opts.dry_run {
+                        dest.create_dir(path)?;
+                    }
                 }
             }
             NodeType::File => {
                 // collect blobs needed for restoring
-                if let Some(size) = file_infos.add_file(dest, node, path.clone(), &index)? {
-                    if !opts.dry_run {
-                        // create the file if it doesn't exist with right size
-                        dest.create_file(path, size)?;
+                match (
+                    exists,
+                    file_infos.add_file(dest, node, path.clone(), &index)?,
+                ) {
+                    (true, (None, true)) => debug!("to modify: {path:?}"),
+                    (true, (None, false)) => trace!("identical file: {path:?}"),
+                    (false, (None, _)) => {
+                        error!("non-existing file, but restore algo returned existing file??!??")
+                    }
+                    (false, (Some(size), _)) => {
+                        debug!("to restore: {path:?}");
+                        if !opts.dry_run {
+                            // create the file as it doesn't exist
+                            dest.create_file(path, size)?;
+                        }
+                    }
+                    (true, (Some(size), _)) => {
+                        debug!("to modify: {path:?} (exists with different size)");
+                        if !opts.dry_run {
+                            // remove file and re-create as it doesn't exist with right size
+                            dest.remove_file(dest_path.join(path))?;
+                            dest.create_file(path, size)?;
+                        }
                     }
                 }
             }
@@ -187,7 +213,6 @@ async fn allocate_and_collect(
         Ok(())
     };
 
-    let dest_path = Path::new(&opts.dest);
     let mut dst_iter = WalkBuilder::new(dest_path)
         .follow_links(false)
         .hidden(false)
@@ -217,17 +242,17 @@ async fn allocate_and_collect(
                     // process existing node
                     // TODO: This fails or behaves wrong if the type of the existing node
                     // does not match the type of the node in the snapshot!
-                    process_node(path, node)?;
+                    process_node(path, node, true)?;
                     next_dst = dst_iter.next();
                     next_node = node_streamer.try_next().await?;
                 }
                 Ordering::Greater => {
-                    process_node(path, node)?;
+                    process_node(path, node, false)?;
                     next_node = node_streamer.try_next().await?;
                 }
             },
             (None, Some((path, node))) => {
-                process_node(path, node)?;
+                process_node(path, node, false)?;
                 next_node = node_streamer.try_next().await?;
             }
         }
@@ -429,9 +454,10 @@ impl FileInfos {
         file: &Node,
         name: PathBuf,
         index: &impl IndexedBackend,
-    ) -> Result<Option<u64>> {
+    ) -> Result<(Option<u64>, bool)> {
         let mut open_file = dest.get_matching_file(&name, *file.meta().size());
         let mut file_pos = 0;
+        let mut has_unmatched = false;
         if !file.content().is_empty() {
             let file_idx = self.names.len();
             self.names.push(name);
@@ -457,6 +483,8 @@ impl FileInfos {
                 self.total_size += length;
                 if matches {
                     self.matched_size += length;
+                } else {
+                    has_unmatched = true;
                 }
 
                 let pack = self.r.entry(*ie.pack()).or_insert_with(HashMap::new);
@@ -472,7 +500,7 @@ impl FileInfos {
         }
 
         // Tell to allocate the size only if the file does NOT exist with matching size
-        Ok(open_file.is_none().then_some(file_pos))
+        Ok((open_file.is_none().then_some(file_pos), has_unmatched))
     }
 
     fn to_packs(&self) -> Vec<Id> {

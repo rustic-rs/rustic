@@ -49,7 +49,7 @@ teardown () {
    assert_success
    assert_output -p "2 snapshot(s)"
 
-   run $RUSTIC check
+   run $RUSTIC check --read-data
    assert_success
 }
 

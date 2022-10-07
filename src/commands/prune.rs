@@ -16,7 +16,7 @@ use crate::blob::{BlobType, BlobTypeMap, NodeType, PackSizer, Repacker, TreeStre
 use crate::commands::helpers::progress_spinner;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer, ReadIndex};
-use crate::repo::{ConfigFile, IndexBlob, IndexFile, IndexPack, SnapshotFile};
+use crate::repo::{ConfigFile, HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
@@ -864,10 +864,10 @@ impl Pruner {
         // header size.
         let tree_size_after_prune = self.stats.size[BlobType::Tree].total_after_prune()
             + self.stats.blobs[BlobType::Tree].total_after_prune()
-                * IndexPack::HEADER_LEN_COMPRESSED as u64;
+                * HeaderEntry::ENTRY_LEN_COMPRESSED as u64;
         let data_size_after_prune = self.stats.size[BlobType::Data].total_after_prune()
             + self.stats.blobs[BlobType::Data].total_after_prune()
-                * IndexPack::HEADER_LEN_COMPRESSED as u64;
+                * HeaderEntry::ENTRY_LEN_COMPRESSED as u64;
 
         let mut tree_repacker = Repacker::new(
             be.clone(),

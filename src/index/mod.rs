@@ -145,6 +145,10 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
     pub async fn only_full_trees(be: &BE, p: ProgressBar) -> Result<Self> {
         Self::new_from_collector(be, p, IndexCollector::new(IndexType::FullTrees)).await
     }
+
+    pub fn into_index(self) -> Index {
+        Arc::try_unwrap(self.index).expect("index still in use")
+    }
 }
 
 impl<BE: DecryptReadBackend> IndexedBackend for IndexBackend<BE> {

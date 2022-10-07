@@ -1,6 +1,6 @@
 use std::fmt;
 
-use binrw::BinWrite;
+use binrw::{BinRead, BinWrite};
 use derive_more::{Constructor, Display};
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,7 @@ use thiserror::Error;
     Serialize,
     Deserialize,
     BinWrite,
+    BinRead,
     Display,
 )]
 #[display(fmt = "{}", "&self.to_hex()[0..8]")]

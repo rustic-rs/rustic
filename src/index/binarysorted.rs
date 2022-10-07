@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use super::{BlobType, IndexEntry, ReadIndex};
 use crate::blob::BlobTypeMap;
 use crate::id::Id;
-use crate::repo::IndexPack;
+use crate::repo::{IndexBlob, IndexPack};
 
 #[derive(Debug, PartialEq, Eq)]
 struct SortedEntry {
@@ -20,6 +20,7 @@ pub(crate) enum IndexType {
     OnlyTrees,
 }
 
+#[derive(Debug)]
 enum EntriesVariants {
     None,
     Ids(Vec<Id>),
@@ -42,11 +43,20 @@ pub(crate) struct TypeIndexCollector {
 #[derive(Default)]
 pub(crate) struct IndexCollector(BlobTypeMap<TypeIndexCollector>);
 
+pub struct PackIndexes {
+    c: Index,
+    tpe: BlobType,
+    idx: BlobTypeMap<(usize, usize)>,
+}
+
+#[derive(Debug)]
 pub(crate) struct TypeIndex {
     packs: Vec<Id>,
     entries: EntriesVariants,
     total_size: u64,
 }
+
+#[derive(Debug)]
 pub struct Index(BlobTypeMap<TypeIndex>);
 
 impl IndexCollector {
@@ -67,7 +77,7 @@ impl IndexCollector {
         &self.0[BlobType::Tree].packs
     }
 
-    // Turns Collector into an index by sorting the entries.
+    // Turns Collector into an index by sorting the entries by ID.
     pub fn into_index(self) -> Index {
         Index(self.0.map(|_, mut tc| {
             match &mut tc.entries {
@@ -121,6 +131,74 @@ impl Extend<IndexPack> for IndexCollector {
                     EntriesVariants::FullEntries(entries) => entries.push(be),
                 };
             }
+        }
+    }
+}
+
+impl Iterator for PackIndexes {
+    type Item = IndexPack;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (pack_idx, idx) = loop {
+            let (pack_idx, idx) = &mut self.idx[self.tpe];
+            if *pack_idx >= self.c.0[self.tpe].packs.len() {
+                if self.tpe == BlobType::Data {
+                    return None;
+                } else {
+                    self.tpe = BlobType::Data;
+                }
+            } else {
+                break (pack_idx, idx);
+            }
+        };
+
+        let mut pack = IndexPack::default();
+        pack.set_id(self.c.0[self.tpe].packs[*pack_idx]);
+
+        if let EntriesVariants::FullEntries(entries) = &self.c.0[self.tpe].entries {
+            while *idx < entries.len() && entries[*idx].pack_idx == *pack_idx {
+                let entry = &entries[*idx];
+                pack.blobs.push(IndexBlob {
+                    id: entry.id,
+                    tpe: self.tpe,
+                    offset: entry.offset,
+                    length: entry.length,
+                    uncompressed_length: entry.uncompressed_length,
+                });
+                *idx += 1;
+            }
+        }
+        *pack_idx += 1;
+
+        Some(pack)
+    }
+}
+
+impl IntoIterator for Index {
+    type Item = IndexPack;
+    type IntoIter = PackIndexes;
+
+    // Turns Collector into an iterator yielding PackIndex by sorting the entries by pack.
+    fn into_iter(mut self) -> Self::IntoIter {
+        for (_, tc) in self.0.iter_mut() {
+            if let EntriesVariants::FullEntries(entries) = &mut tc.entries {
+                entries.sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
+            }
+        }
+        PackIndexes {
+            c: Index(self.0.map(|_, mut tc| {
+                if let EntriesVariants::FullEntries(entries) = &mut tc.entries {
+                    entries.sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
+                }
+
+                TypeIndex {
+                    packs: tc.packs,
+                    entries: tc.entries,
+                    total_size: tc.total_size,
+                }
+            })),
+            tpe: BlobType::Tree,
+            idx: BlobTypeMap::default(),
         }
     }
 }

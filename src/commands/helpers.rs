@@ -85,7 +85,7 @@ pub fn progress_bytes(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
     p
 }
 
-pub fn warm_up_command(packs: Vec<Id>, command: &str) -> Result<()> {
+pub fn warm_up_command(packs: impl ExactSizeIterator<Item = Id>, command: &str) -> Result<()> {
     let p = progress_counter("warming up packs...");
     p.set_length(packs.len() as u64);
     for pack in packs {
@@ -104,7 +104,10 @@ pub fn warm_up_command(packs: Vec<Id>, command: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn warm_up(be: &impl DecryptReadBackend, packs: Vec<Id>) -> Result<()> {
+pub async fn warm_up(
+    be: &impl DecryptReadBackend,
+    packs: impl ExactSizeIterator<Item = Id>,
+) -> Result<()> {
     let mut be = be.clone();
     be.set_option("retry", "false")?;
 

@@ -3,8 +3,9 @@ use std::num::NonZeroU32;
 use anyhow::Result;
 use binrw::{io::Cursor, BinRead, BinWrite};
 
-use crate::blob::BlobType;
+use crate::backend::FileType;
 use crate::id::Id;
+use crate::{backend::DecryptReadBackend, blob::BlobType};
 
 use super::{IndexBlob, IndexPack};
 
@@ -152,6 +153,43 @@ impl PackHeader {
             blobs.push(blob);
         }
         Ok(Self(blobs))
+    }
+
+    /// Read the pack header directly from a packfile using the backend
+    pub async fn from_file(
+        be: &impl DecryptReadBackend,
+        id: Id,
+        size_hint: Option<u32>,
+        pack_size: u32,
+    ) -> Result<Self> {
+        // guess the header size from size_hint and pack_size
+        // If the guess is too small, we have to re-read. If the guess is too large, we have to have read too much
+        // but this should normally not matter too much. So we try to overguess here...
+        let size_guess = size_hint.unwrap_or(0);
+
+        // read (guessed) header + length field
+        let read_size = size_guess + LENGTH_LEN;
+        let offset = pack_size - read_size;
+        let mut data = be
+            .read_partial(FileType::Pack, &id, false, offset, read_size)
+            .await?;
+
+        // get header length from the file
+        let size_real =
+            PackHeaderLength::from_binary(&data.split_off(size_guess as usize))?.to_u32();
+
+        // now read the header
+        let data = if size_real <= size_guess {
+            // header was alread read
+            data.split_off((size_guess - size_real) as usize)
+        } else {
+            // size_guess was too small; we have to read again
+            let offset = pack_size - size_real - LENGTH_LEN;
+            be.read_partial(FileType::Pack, &id, false, offset, size_real)
+                .await?
+        };
+
+        Self::from_binary(&be.decrypt(&data)?)
     }
 
     pub fn into_blobs(self) -> Vec<IndexBlob> {

@@ -142,6 +142,8 @@ enum Command {
     Check(check::Opts),
 
     /// Compare two snapshots/paths
+    ///
+    /// Note that the exclude options only apply for comparison with a local path
     Diff(diff::Opts),
 
     /// Remove snapshots from the repository

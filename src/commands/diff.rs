@@ -1,44 +1,91 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 
 use super::progress_counter;
-use crate::backend::DecryptReadBackend;
-use crate::blob::{NodeStreamer, NodeType, Tree};
+use crate::backend::{DecryptReadBackend, LocalSource, LocalSourceOptions};
+use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::index::IndexBackend;
 use crate::repo::SnapshotFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {
+    #[clap(flatten)]
+    ignore_opts: LocalSourceOptions,
+
     /// Reference snapshot/path
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
     snap1: String,
 
-    /// New snapshot/path [default for PATH2: PATH1]
-    #[clap(value_name = "SNAPSHOT2[:PATH2]")]
+    /// New snapshot/path or local path [default for PATH2: PATH1]
+    #[clap(value_name = "SNAPSHOT2[:PATH2]|PATH2")]
     snap2: String,
 }
 
-pub(super) fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
-    let (id1, path1) = opts.snap1.split_once(':').unwrap_or((&opts.snap1, ""));
-    let (id2, path2) = opts.snap2.split_once(':').unwrap_or((&opts.snap2, path1));
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+    let (id1, path1) = arg_to_snap_path(&opts.snap1, "");
+    let (id2, path2) = arg_to_snap_path(&opts.snap2, path1);
 
-    let p = progress_spinner("getting snapshots...");
-    p.finish();
-    let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()])?;
+    match (id1, id2) {
+        (Some(id1), Some(id2)) => {
+            // diff between two snapshots
+            let p = progress_spinner("getting snapshots...");
+            let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()])?;
+            p.finish();
 
-    let snap1 = &snaps[0];
-    let snap2 = &snaps[1];
+            let snap1 = &snaps[0];
+            let snap2 = &snaps[1];
 
-    let index = IndexBackend::new(be, progress_counter(""))?;
-    let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
-    let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2))?;
+            let index = IndexBackend::new(be, progress_counter(""))?;
+            let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
+            let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2))?;
 
-    let mut tree_streamer1 = NodeStreamer::new(index.clone(), id1)?;
-    let mut tree_streamer2 = NodeStreamer::new(index, id2)?;
+            diff(
+                NodeStreamer::new(index.clone(), id1)?,
+                NodeStreamer::new(index, id2)?,
+                true,
+            )
+        }
+        (Some(id1), None) => {
+            // diff between snapshot and local path
+            let p = progress_spinner("getting snapshot...");
+            let snap1 = SnapshotFile::from_id(be, id1)?;
+            p.finish();
 
+            let index = IndexBackend::new(be, progress_counter(""))?;
+            let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
+            let path2 = PathBuf::from(path2);
+            let src = LocalSource::new(opts.ignore_opts, path2.clone())?.map(|item| {
+                let (path, node) = item?;
+                Ok((path.strip_prefix(&path2)?.to_path_buf(), node))
+            });
+
+            diff(NodeStreamer::new(index, id1)?, src, false)
+        }
+        (None, _) => bail!("cannot use local path as first argument"),
+    }
+}
+
+fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>, &'a str) {
+    match arg.split_once(':') {
+        Some((id, path)) => (Some(id), path),
+        None => {
+            if arg.contains('/') {
+                (None, arg)
+            } else {
+                (Some(arg), default_path)
+            }
+        }
+    }
+}
+
+fn diff(
+    mut tree_streamer1: impl Iterator<Item = Result<(PathBuf, Node)>>,
+    mut tree_streamer2: impl Iterator<Item = Result<(PathBuf, Node)>>,
+    check_content: bool,
+) -> Result<()> {
     let mut item1 = tree_streamer1.next().transpose()?;
     let mut item2 = tree_streamer2.next().transpose()?;
 
@@ -67,7 +114,10 @@ pub(super) fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Res
                 let node2 = &i2.1;
                 match node1.node_type() {
                     tpe if tpe != node2.node_type() => println!("M    {:?}", path), // type was changed
-                    NodeType::File if node1.content() != node2.content() => {
+                    NodeType::File if node1.meta() != node2.meta() => {
+                        println!("M    {:?}", path)
+                    }
+                    NodeType::File if check_content && node1.content() != node2.content() => {
                         println!("M    {:?}", path)
                     }
                     NodeType::Symlink { linktarget } => {

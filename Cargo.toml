@@ -83,7 +83,7 @@ prettytable-rs = {version = "0.9", default-features = false }
 bytesize = "1"
 indicatif = "0.17"
 path-absolutize = "3"
-gethostname = "0.2"
+gethostname = "0.3"
 humantime = "2"
 users = "0.11"
 itertools = "0.10"

@@ -30,6 +30,7 @@ mod key;
 mod list;
 mod ls;
 mod prune;
+mod repair;
 mod repoinfo;
 mod restore;
 mod rustic_config;
@@ -169,6 +170,9 @@ enum Command {
 
     /// Restore a snapshot/path
     Restore(restore::Opts),
+
+    /// Restore a snapshot/path
+    Repair(repair::Opts),
 
     /// Show general information about the repository
     Repoinfo(repoinfo::Opts),
@@ -318,6 +322,7 @@ pub async fn execute() -> Result<()> {
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file).await?,
         Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![]).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,
+        Command::Repair(opts) => repair::execute(&dbe, opts).await?,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts).await?,
         Command::Tag(opts) => tag::execute(&dbe, opts, config_file).await?,
     };

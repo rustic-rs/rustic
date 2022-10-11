@@ -10,10 +10,10 @@ use tokio::task::spawn_blocking;
 use zstd::stream::decode_all;
 
 use super::{progress_bytes, progress_counter};
-use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType, ReadBackend};
+use crate::backend::{Cache, DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{BlobType, NodeType, TreeStreamerOnce};
 use crate::commands::helpers::progress_spinner;
-use crate::crypto::{hash, CryptoKey};
+use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
 use crate::repo::{
@@ -32,7 +32,7 @@ pub(super) struct Opts {
 }
 
 pub(super) async fn execute(
-    be: &(impl DecryptFullBackend + Unpin), // TODO: this should be a DecryptReadBackend; see check_pack()
+    be: &(impl DecryptReadBackend + Unpin),
     cache: &Option<Cache>,
     hot_be: &Option<impl ReadBackend>,
     raw_be: &impl ReadBackend,
@@ -254,16 +254,16 @@ async fn check_packs(
 async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
     for (id, size) in be.list_with_size(FileType::Pack).await? {
         match packs.remove(&id) {
-            None => warn!("pack {id} not referenced in index"),
+            None => warn!("pack {id} not referenced in index. Can be a parallel backup job. To repair: 'rustic repair index'."),
             Some(index_size) if index_size != size => {
-                error!("pack {id}: size computed by index: {index_size}, actual size: {size}",)
+                error!("pack {id}: size computed by index: {index_size}, actual size: {size}. To repair: 'rustic repair index'.")
             }
             _ => {} //everything ok
         }
     }
 
     for (id, _) in packs {
-        error!("pack {id} is referenced by the index but not present!",);
+        error!("pack {id} is referenced by the index but not present! To repair: 'rustic repair index'.",);
     }
     Ok(())
 }
@@ -294,7 +294,7 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
 
                         if !index.has_data(id) {
                             error!(
-                                "file {:?} blob {} is missig in index",
+                                "file {:?} blob {} is missing in index",
                                 path.join(node.name()),
                                 id
                             );
@@ -322,11 +322,7 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
     Ok(())
 }
 
-fn check_pack(
-    be: &impl DecryptFullBackend, // TODO: this should be a DecryptReadBackend; we just additionally need the key() method
-    index_pack: IndexPack,
-    mut data: Bytes,
-) -> Result<()> {
+fn check_pack(be: &impl DecryptReadBackend, index_pack: IndexPack, mut data: Bytes) -> Result<()> {
     let id = index_pack.id;
     let size = index_pack.pack_size();
     if data.len() != size as usize {
@@ -352,9 +348,7 @@ fn check_pack(
     }
 
     // check header
-    let header = be
-        .key()
-        .decrypt_data(&data.split_off(data.len() - header_len as usize))?;
+    let header = be.decrypt(&data.split_off(data.len() - header_len as usize))?;
 
     let pack_blobs = PackHeader::from_binary(&header)?.into_blobs();
     let mut blobs = index_pack.blobs;
@@ -369,9 +363,7 @@ fn check_pack(
     // check blobs
     for blob in blobs {
         let blob_id = blob.id;
-        let mut blob_data = be
-            .key()
-            .decrypt_data(&data.split_to(blob.length as usize))?;
+        let mut blob_data = be.decrypt(&data.split_to(blob.length as usize))?;
 
         // TODO: this is identical to backend/decrypt.rs; unify these two parts!
         if let Some(length) = blob.uncompressed_length {

@@ -89,10 +89,10 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
         info!("all file contents are fine.");
     } else {
         if opts.warm_up {
-            warm_up(be, file_infos.to_packs()).await?;
+            warm_up(be, file_infos.to_packs().into_iter()).await?;
         } else if opts.warm_up_command.is_some() {
             warm_up_command(
-                file_infos.to_packs(),
+                file_infos.to_packs().into_iter(),
                 opts.warm_up_command.as_ref().unwrap(),
             )?;
         }

@@ -16,7 +16,18 @@ impl<T: DecryptWriteBackend + DecryptReadBackend> DecryptFullBackend for T {}
 
 #[async_trait]
 pub trait DecryptReadBackend: ReadBackend {
-    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes>;
+    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>>;
+
+    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        let decrypted = self.decrypt(&self.read_full(tpe, id).await?)?;
+        Ok(match decrypted[0] {
+            b'{' | b'[' => decrypted,          // not compressed
+            2 => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
+            _ => bail!("not supported"),
+        }
+        .into())
+    }
+
     async fn read_encrypted_partial(
         &self,
         tpe: FileType,
@@ -25,7 +36,20 @@ pub trait DecryptReadBackend: ReadBackend {
         offset: u32,
         length: u32,
         uncompressed_length: Option<NonZeroU32>,
-    ) -> Result<Bytes>;
+    ) -> Result<Bytes> {
+        let mut data = self.decrypt(
+            &self
+                .read_partial(tpe, id, cacheable, offset, length)
+                .await?,
+        )?;
+        if let Some(length) = uncompressed_length {
+            data = decode_all(&*data).unwrap();
+            if data.len() != length.get() as usize {
+                bail!("length of uncompressed data does not match!");
+            }
+        }
+        Ok(data.into())
+    }
 
     async fn get_file<F: RepoFile>(&self, id: &Id) -> Result<F> {
         let data = self.read_encrypted_full(F::TYPE, id).await?;
@@ -160,40 +184,8 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
 
 #[async_trait]
 impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
-    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        let decrypted = self
-            .key
-            .decrypt_data(&self.backend.read_full(tpe, id).await?)?;
-        Ok(match decrypted[0] {
-            b'{' | b'[' => decrypted,          // not compressed
-            2 => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
-            _ => bail!("not supported"),
-        }
-        .into())
-    }
-
-    async fn read_encrypted_partial(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        offset: u32,
-        length: u32,
-        uncompressed_length: Option<NonZeroU32>,
-    ) -> Result<Bytes> {
-        let mut data = self.key.decrypt_data(
-            &self
-                .backend
-                .read_partial(tpe, id, cacheable, offset, length)
-                .await?,
-        )?;
-        if let Some(length) = uncompressed_length {
-            data = decode_all(&*data).unwrap();
-            if data.len() != length.get() as usize {
-                bail!("length of uncompressed data does not match!");
-            }
-        }
-        Ok(data.into())
+    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
+        Ok(self.key.decrypt_data(data)?)
     }
 }
 

@@ -168,14 +168,15 @@ pub(super) async fn execute(
     pruner.print_stats();
 
     if opts.warm_up {
-        warm_up(be, pruner.repack_packs()).await?;
+        warm_up(be, pruner.repack_packs().into_iter()).await?;
     } else if opts.warm_up_command.is_some() {
         warm_up_command(
-            pruner.repack_packs(),
+            pruner.repack_packs().into_iter(),
             opts.warm_up_command.as_ref().unwrap(),
         )?;
     }
     wait(opts.warm_up_wait).await;
+
     if !opts.dry_run {
         pruner.do_prune(be, opts, config).await?;
     }

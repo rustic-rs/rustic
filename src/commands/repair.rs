@@ -1,13 +1,21 @@
+use std::collections::{HashMap, HashSet};
+
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use async_recursion::async_recursion;
+use clap::{AppSettings, Parser, Subcommand};
 use futures::TryStreamExt;
 use log::*;
-use std::collections::HashMap;
 
-use crate::backend::{DecryptFullBackend, FileType};
-use crate::index::Indexer;
-use crate::repo::{IndexFile, IndexPack, PackHeader, PackHeaderRef};
+use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
+use crate::blob::{BlobType, NodeType, Packer, Tree};
+use crate::id::Id;
+use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
+use crate::repo::{
+    ConfigFile, IndexFile, IndexPack, PackHeader, PackHeaderRef, SnapshotFile, SnapshotFilter,
+    StringList,
+};
 
+use super::rustic_config::RusticConfig;
 use super::{progress_counter, progress_spinner, wait, warm_up, warm_up_command};
 
 #[derive(Parser)]
@@ -20,6 +28,8 @@ pub(super) struct Opts {
 enum Command {
     /// Repair the repository index
     Index(IndexOpts),
+    /// Repair snapshots
+    Snapshots(SnapOpts),
 }
 
 #[derive(Default, Parser)]
@@ -45,9 +55,42 @@ struct IndexOpts {
     warm_up_wait: Option<humantime::Duration>,
 }
 
-pub(super) async fn execute(be: &impl DecryptFullBackend, opts: Opts) -> Result<()> {
+#[derive(Default, Parser)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+struct SnapOpts {
+    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
+    filter: SnapshotFilter,
+
+    /// Only show what would be repaired
+    #[clap(long, short = 'n')]
+    dry_run: bool,
+
+    /// Also remove defect snapshots - WARNING: This can result in data loss!
+    #[clap(long, short = 'n')]
+    delete: bool,
+
+    /// Append this suffix to repaired directory or file name
+    #[clap(long, value_name = "SUFFIX", default_value = ".repaired")]
+    suffix: String,
+
+    /// Tag list to set on repaired snapshots (can be specified multiple times)
+    #[clap(long, value_name = "TAG[,TAG,..]", default_value = "repaired")]
+    tag: Vec<StringList>,
+
+    /// Snapshots to repair. If none is given, use filter to filter from all snapshots.
+    #[clap(value_name = "ID")]
+    ids: Vec<String>,
+}
+
+pub(super) async fn execute(
+    be: &impl DecryptFullBackend,
+    opts: Opts,
+    config_file: RusticConfig,
+    config: &ConfigFile,
+) -> Result<()> {
     match opts.command {
         Command::Index(opt) => repair_index(be, opt).await,
+        Command::Snapshots(opt) => repair_snaps(be, opt, config_file, config).await,
     }
 }
 
@@ -166,4 +209,199 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
     p.finish();
 
     Ok(())
+}
+
+async fn repair_snaps(
+    be: &impl DecryptFullBackend,
+    mut opts: SnapOpts,
+    config_file: RusticConfig,
+    config: &ConfigFile,
+) -> Result<()> {
+    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+
+    let snapshots = match opts.ids.is_empty() {
+        true => SnapshotFile::all_from_backend(be, &opts.filter).await?,
+        false => SnapshotFile::from_ids(be, &opts.ids).await?,
+    };
+
+    let mut replaced = HashMap::new();
+    let mut seen = HashSet::new();
+    let mut delete = Vec::new();
+
+    let index = IndexBackend::new(&be.clone(), progress_counter("")).await?;
+    let indexer = Indexer::new(be.clone()).into_shared();
+    let mut packer = Packer::new(
+        be.clone(),
+        BlobType::Tree,
+        indexer.clone(),
+        config,
+        index.total_size(&BlobType::Tree),
+    )?;
+
+    for mut snap in snapshots {
+        let snap_id = snap.id;
+        info!("processing snapshot {snap_id}");
+        match repair_tree(
+            &index,
+            &mut packer,
+            Some(snap.tree),
+            &mut replaced,
+            &mut seen,
+            &opts,
+        )
+        .await?
+        {
+            (Changed::None, _) => {
+                info!("snapshot {snap_id} is ok.");
+            }
+            (Changed::This, _) => {
+                warn!("snapshot {snap_id}: root tree is damaged -> marking for deletion!");
+                delete.push(snap_id);
+            }
+            (Changed::SubTree, id) => {
+                // change snapshot tree
+                if snap.original.is_none() {
+                    snap.original = Some(snap.id);
+                }
+                snap.set_tags(opts.tag.clone());
+                snap.tree = id;
+                if opts.dry_run {
+                    info!("would have modified snapshot {snap_id}.");
+                } else {
+                    let new_id = be.save_file(&snap).await?;
+                    info!("saved modified snapshot as {new_id}.");
+                }
+                delete.push(snap_id);
+            }
+        }
+    }
+
+    if !opts.dry_run {
+        packer.finalize().await?;
+        indexer.write().await.finalize().await?;
+    }
+
+    if opts.delete {
+        if opts.dry_run {
+            info!("would have removed {} snapshots.", delete.len());
+        } else {
+            be.delete_list(
+                FileType::Snapshot,
+                true,
+                delete,
+                progress_counter("remove defect snapshots"),
+            )
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum Changed {
+    This,
+    SubTree,
+    None,
+}
+
+#[async_recursion]
+async fn repair_tree<BE: DecryptWriteBackend>(
+    be: &impl IndexedBackend,
+    packer: &mut Packer<BE>,
+    id: Option<Id>,
+    replaced: &mut HashMap<Id, (Changed, Id)>,
+    seen: &mut HashSet<Id>,
+    opts: &SnapOpts,
+) -> Result<(Changed, Id)> {
+    let (tree, changed) = match id {
+        None => (Tree::new(), Changed::This),
+        Some(id) => {
+            if seen.contains(&id) {
+                return Ok((Changed::None, id));
+            }
+            if let Some(r) = replaced.get(&id) {
+                return Ok(*r);
+            }
+
+            let (tree, mut changed) = match Tree::from_backend(be, id).await {
+                Ok(tree) => (tree, Changed::None),
+                Err(_) => {
+                    warn!("tree {id} could not be loaded.");
+                    (Tree::new(), Changed::This)
+                }
+            };
+            let mut new_tree = Tree::new();
+
+            for mut node in tree {
+                match node.node_type {
+                    NodeType::File {} => {
+                        let mut file_changed = false;
+                        let mut new_content = Vec::new();
+                        let mut new_size = 0;
+                        for blob in node.content.take().unwrap() {
+                            match be.get_data(&blob) {
+                                Some(ie) => {
+                                    new_content.push(blob);
+                                    new_size += ie.data_length() as u64;
+                                }
+                                None => {
+                                    file_changed = true;
+                                }
+                            }
+                        }
+                        if file_changed {
+                            warn!("file {}: contents are missing", node.name);
+                            node.name += &opts.suffix;
+                            changed = Changed::SubTree;
+                        } else if new_size != node.meta.size {
+                            info!("file {}: corrected file size", node.name);
+                            changed = Changed::SubTree;
+                        }
+                        node.content = Some(new_content);
+                        node.meta.size = new_size;
+                    }
+                    NodeType::Dir {} => {
+                        let (c, tree_id) =
+                            repair_tree(be, packer, node.subtree, replaced, seen, opts).await?;
+                        match c {
+                            Changed::None => {}
+                            Changed::This => {
+                                warn!("dir {}: tree is missing", node.name);
+                                node.subtree = Some(tree_id);
+                                node.name += &opts.suffix;
+                                changed = Changed::SubTree;
+                            }
+                            Changed::SubTree => {
+                                node.subtree = Some(tree_id);
+                                changed = Changed::SubTree;
+                            }
+                        }
+                    }
+                    _ => {} // Other types: no check needed
+                }
+                new_tree.add(node);
+            }
+            if let Changed::None = changed {
+                seen.insert(id);
+            }
+            (new_tree, changed)
+        }
+    };
+
+    match (id, changed) {
+        (None, Changed::None) => panic!("this should not happen!"),
+        (Some(id), Changed::None) => Ok((Changed::None, id)),
+        (_, c) => {
+            // the tree has been changed => save it
+            let (chunk, new_id) = tree.serialize()?;
+            if !be.has_tree(&new_id) && !opts.dry_run {
+                packer.add(&chunk, &new_id).await?;
+            }
+            if let Some(id) = id {
+                replaced.insert(id, (c, new_id));
+            }
+            Ok((c, new_id))
+        }
+    }
 }

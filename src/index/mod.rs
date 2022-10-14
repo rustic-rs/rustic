@@ -1,7 +1,6 @@
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
-use ambassador::{delegatable_trait, Delegate};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -64,7 +63,6 @@ impl IndexEntry {
     }
 }
 
-#[delegatable_trait]
 pub trait ReadIndex {
     fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry>;
     fn total_size(&self, tpe: &BlobType) -> u64;
@@ -104,11 +102,20 @@ pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
     }
 }
 
-#[derive(Clone, Delegate)]
-#[delegate(ReadIndex, target = "index")]
+#[derive(Clone)]
 pub struct IndexBackend<BE: DecryptReadBackend> {
     be: BE,
     index: Arc<Index>,
+}
+
+impl<BE: DecryptReadBackend> ReadIndex for IndexBackend<BE> {
+    fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry> {
+        self.index.get_id(tpe, id)
+    }
+
+    fn total_size(&self, tpe: &BlobType) -> u64 {
+        self.index.total_size(tpe)
+    }
 }
 
 impl<BE: DecryptReadBackend> IndexBackend<BE> {

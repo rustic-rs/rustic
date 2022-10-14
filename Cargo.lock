@@ -54,17 +54,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ambassador"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61874b33258f18ca7923047c12887078ccfe95c2811b03c1a09e309c19b7e50b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1571,7 +1560,6 @@ name = "rustic-rs"
 version = "0.3.2-dev"
 dependencies = [
  "aes256ctr_poly1305aes",
- "ambassador",
  "anyhow",
  "async-recursion",
  "async-trait",

@@ -14,6 +14,7 @@ use indicatif::ProgressBar;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::{spawn, task::JoinHandle};
 
+use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::IndexedBackend;
 
@@ -43,8 +44,11 @@ impl Tree {
         self.nodes.push(node)
     }
 
-    pub fn serialize(&self) -> Result<Vec<u8>> {
-        Ok(serde_json::to_vec(&self)?)
+    pub fn serialize(&self) -> Result<(Vec<u8>, Id)> {
+        let mut chunk = serde_json::to_vec(&self)?;
+        chunk.push(b'\n'); // for whatever reason, restic adds a newline, so to be compatible...
+        let id = hash(&chunk);
+        Ok((chunk, id))
     }
 
     pub async fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
@@ -73,6 +77,15 @@ impl Tree {
             id = node.subtree().ok_or_else(|| anyhow!("{} is no dir", p))?;
         }
         Ok(id)
+    }
+}
+
+impl IntoIterator for Tree {
+    type Item = Node;
+    type IntoIter = std::vec::IntoIter<Node>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.nodes.into_iter()
     }
 }
 

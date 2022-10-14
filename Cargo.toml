@@ -24,6 +24,7 @@ strip = true
 [dependencies]
 # macros
 async-trait = "0.1"
+async-recursion = "1"
 anyhow = "1"
 ambassador = "0.2"
 thiserror = "1"

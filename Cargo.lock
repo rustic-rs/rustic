@@ -55,10 +55,11 @@ dependencies = [
 
 [[package]]
 name = "ambassador"
-version = "0.2.1"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61874b33258f18ca7923047c12887078ccfe95c2811b03c1a09e309c19b7e50b"
+checksum = "1b5b3b5b19ef25117b6a62a83bfca06a00dce36e932ea3216d11af861cf8795f"
 dependencies = [
+ "itertools",
  "proc-macro2",
  "quote",
  "syn",

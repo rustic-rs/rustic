@@ -118,7 +118,7 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
         match (changed, opts.dry_run) {
             (true, true) => info!("would have modified index file {index_id}"),
             (true, false) => {
-                if !new_index.packs.is_empty() && !new_index.packs_to_delete.is_empty() {
+                if !new_index.packs.is_empty() || !new_index.packs_to_delete.is_empty() {
                     be.save_file(&new_index).await?;
                 }
                 be.remove(FileType::Index, &index_id, true).await?;

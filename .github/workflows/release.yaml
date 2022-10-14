@@ -110,7 +110,7 @@ jobs:
     name: Publishing beta-builds
     needs: publish
     if: ${{ github.ref == 'refs/heads/main' }}
-    runs-on: ubunut-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3

@@ -64,8 +64,8 @@ ignore = "0.4"
 nix = "0.25"
 filetime = "0.2"
 # rest backend
-reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream"] }
-backoff = { version = "0.4", features = ["tokio"] }
+reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream", "blocking"] }
+backoff = "0.4"
 # rclone backend
 semver = "1"
 # cache

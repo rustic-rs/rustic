@@ -11,7 +11,7 @@ pub(super) struct Opts {
     config_opts: ConfigOpts,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptFullBackend,
     hot_be: &Option<impl WriteBackend>,
     opts: Opts,
@@ -22,13 +22,13 @@ pub(super) async fn execute(
     if new_config != config {
         new_config.is_hot = None;
         // for hot/cold backend, this only saves the config to the cold repo.
-        be.save_file(&new_config).await?;
+        be.save_file(&new_config)?;
 
         if let Some(hot_be) = hot_be {
             // save config to hot repo
             let dbe = DecryptBackend::new(hot_be, be.key().clone());
             new_config.is_hot = Some(true);
-            dbe.save_file(&new_config).await?;
+            dbe.save_file(&new_config)?;
         }
 
         println!("saved new config");

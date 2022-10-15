@@ -108,8 +108,8 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend
-    pub async fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        Ok(Self::set_id((*id, be.get_file(id).await?)))
+    pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
+        Ok(Self::set_id((*id, be.get_file(id)?)))
     }
 
     pub async fn from_str<B: DecryptReadBackend>(
@@ -120,7 +120,7 @@ impl SnapshotFile {
     ) -> Result<Self> {
         match string {
             "latest" => Self::latest(be, predicate, p).await,
-            _ => Self::from_id(be, string).await,
+            _ => Self::from_id(be, string),
         }
     }
 
@@ -152,15 +152,15 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend by (part of the) id
-    pub async fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
+    pub fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
         info!("getting snapshot...");
-        let id = be.find_id(FileType::Snapshot, id).await?;
-        SnapshotFile::from_backend(be, &id).await
+        let id = be.find_id(FileType::Snapshot, id)?;
+        SnapshotFile::from_backend(be, &id)
     }
 
     /// Get a Vector of SnapshotFile from the backend by list of (parts of the) ids
     pub async fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
-        let ids = be.find_ids(FileType::Snapshot, ids).await?;
+        let ids = be.find_ids(FileType::Snapshot, ids)?;
         Ok(be
             .stream_list::<Self>(ids, ProgressBar::hidden())
             .await?

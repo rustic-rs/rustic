@@ -45,7 +45,7 @@ pub(super) async fn execute(
                 //
                 // This lists files here and later when reading index / checking snapshots
                 // TODO: Only list the files once...
-                let _ = be.list_with_size(file_type).await?;
+                let _ = be.list_with_size(file_type)?;
 
                 let p = progress_bytes(format!("checking {} in cache...", file_type.name()));
                 // TODO: Make concurrency (20) customizable
@@ -84,7 +84,7 @@ pub(super) async fn execute(
         // TODO: Make concurrency (4) customizable
         .for_each_concurrent(4, |(pack, be, p)| async move {
             let id = pack.id;
-            let data = be.read_full(FileType::Pack, &id).await.unwrap();
+            let data = be.read_full(FileType::Pack, &id).unwrap();
             spawn_blocking(move || {
                 match check_pack(&be, pack, data) {
                     Ok(()) => {}
@@ -109,12 +109,11 @@ async fn check_hot_files(
 ) -> Result<()> {
     let p = progress_spinner(format!("checking {} in hot repo...", file_type.name()));
     let mut files = be
-        .list_with_size(file_type)
-        .await?
+        .list_with_size(file_type)?
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-    let files_hot = be_hot.list_with_size(file_type).await?;
+    let files_hot = be_hot.list_with_size(file_type)?;
 
     for (id, size_hot) in files_hot {
         match files.remove(&id) {
@@ -141,7 +140,7 @@ async fn check_cache_files(
     file_type: FileType,
     p: ProgressBar,
 ) -> Result<()> {
-    let files = cache.list_with_size(file_type).await?;
+    let files = cache.list_with_size(file_type)?;
 
     if files.is_empty() {
         return Ok(());
@@ -159,8 +158,8 @@ async fn check_cache_files(
     .for_each_concurrent(concurrency, |((id, size), cache, be, p)| async move {
         // Read file from cache and from backend and compare
         match (
-            cache.read_full(file_type, &id).await,
-            be.read_full(file_type, &id).await,
+            cache.read_full(file_type, &id),
+            be.read_full(file_type, &id),
         ) {
             (Err(err), _) => {
                 error!("Error reading cached file Type: {file_type:?}, Id: {id} : {err}",)
@@ -252,7 +251,7 @@ async fn check_packs(
 }
 
 async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
-    for (id, size) in be.list_with_size(FileType::Pack).await? {
+    for (id, size) in be.list_with_size(FileType::Pack)? {
         match packs.remove(&id) {
             None => warn!("pack {id} not referenced in index. Can be a parallel backup job. To repair: 'rustic repair index'."),
             Some(index_size) if index_size != size => {

@@ -116,7 +116,7 @@ async fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
     let mut total_count = 0;
     let mut total_size = 0;
     for tpe in ALL_FILE_TYPES {
-        let list = be.list_with_size(tpe).await?;
+        let list = be.list_with_size(tpe)?;
         let count = list.len();
         let size = list.iter().map(|f| f.1 as u64).sum();
         table.add_row(row![format!("{:?}", tpe), r->count, r->bytes(size)]);

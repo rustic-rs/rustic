@@ -23,16 +23,15 @@ pub fn bytes(b: u64) -> String {
     ByteSize(b).to_string_as(true)
 }
 
-pub async fn get_key(be: &impl ReadBackend, password: Option<String>) -> Result<Key> {
+pub fn get_key(be: &impl ReadBackend, password: Option<String>) -> Result<Key> {
     for _ in 0..MAX_PASSWORD_RETRIES {
         match &password {
             // if password is given, directly return the result of find_key_in_backend and don't retry
-            Some(pass) => return find_key_in_backend(be, pass, None).await,
+            Some(pass) => return find_key_in_backend(be, pass, None),
             None => {
                 // TODO: Differentiate between wrong password and other error!
                 if let Ok(key) =
                     find_key_in_backend(be, &prompt_password("enter repository password: ")?, None)
-                        .await
                 {
                     return Ok(key);
                 }
@@ -125,7 +124,7 @@ pub async fn warm_up(
         let be = be.clone();
         stream.push(spawn(async move {
             // ignore errors as they are expected from the warm-up
-            _ = be.read_partial(FileType::Pack, &pack, false, 0, 1).await;
+            _ = be.read_partial(FileType::Pack, &pack, false, 0, 1);
             p.inc(1);
         }))
     }

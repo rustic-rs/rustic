@@ -4,12 +4,10 @@ use std::str;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
 use log::*;
 use rand::distributions::{Alphanumeric, DistString};
 use rand::thread_rng;
-use tokio::task::spawn_blocking;
 
 use super::{FileType, Id, ReadBackend, RestBackend, WriteBackend};
 
@@ -93,7 +91,7 @@ impl RcloneBackend {
             }
         };
 
-        spawn_blocking(move || loop {
+        std::thread::spawn(move || loop {
             let mut line = String::new();
             if stderr.read_line(&mut line).unwrap() == 0 {
                 break;
@@ -118,7 +116,6 @@ impl RcloneBackend {
     }
 }
 
-#[async_trait]
 impl ReadBackend for RcloneBackend {
     fn location(&self) -> &str {
         self.rest.location()
@@ -128,15 +125,15 @@ impl ReadBackend for RcloneBackend {
         self.rest.set_option(option, value)
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
-        self.rest.list_with_size(tpe).await
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        self.rest.list_with_size(tpe)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        self.rest.read_full(tpe, id).await
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        self.rest.read_full(tpe, id)
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -144,23 +141,20 @@ impl ReadBackend for RcloneBackend {
         offset: u32,
         length: u32,
     ) -> Result<Bytes> {
-        self.rest
-            .read_partial(tpe, id, cacheable, offset, length)
-            .await
+        self.rest.read_partial(tpe, id, cacheable, offset, length)
     }
 }
 
-#[async_trait]
 impl WriteBackend for RcloneBackend {
-    async fn create(&self) -> Result<()> {
-        self.rest.create().await
+    fn create(&self) -> Result<()> {
+        self.rest.create()
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
-        self.rest.write_bytes(tpe, id, cacheable, buf).await
+    fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
+        self.rest.write_bytes(tpe, id, cacheable, buf)
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
-        self.rest.remove(tpe, id, cacheable).await
+    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
+        self.rest.remove(tpe, id, cacheable)
     }
 }

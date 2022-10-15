@@ -258,9 +258,9 @@ impl<BE: DecryptWriteBackend> FileWriter<BE> {
         let indexer = self.indexer.clone();
         let cacheable = self.cacheable;
         let new_future = spawn(async move {
-            be.write_bytes(FileType::Pack, &id, cacheable, file).await?;
+            be.write_bytes(FileType::Pack, &id, cacheable, file)?;
             index.time = Some(Local::now());
-            indexer.write().await.add(index).await?;
+            indexer.write().await.add(index)?;
             Ok(())
         });
 
@@ -302,16 +302,13 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
     }
 
     pub async fn add_fast(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
-        let data = self
-            .be
-            .read_partial(
-                FileType::Pack,
-                pack_id,
-                blob.tpe.is_cacheable(),
-                blob.offset,
-                blob.length,
-            )
-            .await?;
+        let data = self.be.read_partial(
+            FileType::Pack,
+            pack_id,
+            blob.tpe.is_cacheable(),
+            blob.offset,
+            blob.length,
+        )?;
         self.packer
             .add_raw(&data, &blob.id, blob.uncompressed_length, self.size_limit)
             .await?;
@@ -319,17 +316,14 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
     }
 
     pub async fn add(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
-        let data = self
-            .be
-            .read_encrypted_partial(
-                FileType::Pack,
-                pack_id,
-                blob.tpe.is_cacheable(),
-                blob.offset,
-                blob.length,
-                blob.uncompressed_length,
-            )
-            .await?;
+        let data = self.be.read_encrypted_partial(
+            FileType::Pack,
+            pack_id,
+            blob.tpe.is_cacheable(),
+            blob.offset,
+            blob.length,
+            blob.uncompressed_length,
+        )?;
         self.packer
             .add_with_sizelimit(&data, &blob.id, self.size_limit)
             .await?;

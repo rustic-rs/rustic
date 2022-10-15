@@ -51,24 +51,23 @@ impl Tree {
         Ok((chunk, id))
     }
 
-    pub async fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
+    pub fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
         let data = be
             .get_tree(&id)
             .ok_or_else(|| anyhow!("blob {} not found in index", id.to_hex()))?
-            .read_data(be.be())
-            .await?;
+            .read_data(be.be())?;
 
         Ok(serde_json::from_slice(&data)?)
     }
 
-    pub async fn subtree_id(be: &impl IndexedBackend, mut id: Id, path: &Path) -> Result<Id> {
+    pub fn subtree_id(be: &impl IndexedBackend, mut id: Id, path: &Path) -> Result<Id> {
         for p in path.iter() {
             let p = p.to_str().unwrap();
             // TODO: check for root instead
             if p == "/" {
                 continue;
             }
-            let tree = Tree::from_backend(be, id).await?;
+            let tree = Tree::from_backend(be, id)?;
             let node = tree
                 .nodes()
                 .iter()
@@ -105,8 +104,8 @@ impl<BE> NodeStreamer<BE>
 where
     BE: IndexedBackend + Unpin,
 {
-    pub async fn new(be: BE, id: Id) -> Result<Self> {
-        let inner = Tree::from_backend(&be, id).await?.nodes.into_iter();
+    pub fn new(be: BE, id: Id) -> Result<Self> {
+        let inner = Tree::from_backend(&be, id)?.nodes.into_iter();
         Ok(Self {
             future: None,
             inner,
@@ -150,7 +149,7 @@ where
                         slf.path.push(node.name());
                         let be = slf.be.clone();
                         let id = *id;
-                        slf.future = Some(spawn(async move { Tree::from_backend(&be, id).await }));
+                        slf.future = Some(spawn(async move { Tree::from_backend(&be, id) }));
                     }
 
                     return Poll::Ready(Some(Ok((path, node))));
@@ -233,9 +232,9 @@ where
         while slf.futures.len() < MAX_TREE_LOADER && !slf.pending.is_empty() {
             let (path, id, count) = slf.pending.pop_front().unwrap();
             let be = slf.be.clone();
-            slf.futures.push(spawn(async move {
-                (path, Tree::from_backend(&be, id).await, count)
-            }));
+            slf.futures.push(spawn(
+                async move { (path, Tree::from_backend(&be, id), count) },
+            ));
         }
 
         match Pin::new(&mut slf.futures).poll_next(cx) {

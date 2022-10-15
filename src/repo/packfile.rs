@@ -156,7 +156,7 @@ impl PackHeader {
     }
 
     /// Read the pack header directly from a packfile using the backend
-    pub async fn from_file(
+    pub fn from_file(
         be: &impl DecryptReadBackend,
         id: Id,
         size_hint: Option<u32>,
@@ -170,9 +170,7 @@ impl PackHeader {
         // read (guessed) header + length field
         let read_size = size_guess + LENGTH_LEN;
         let offset = pack_size - read_size;
-        let mut data = be
-            .read_partial(FileType::Pack, &id, false, offset, read_size)
-            .await?;
+        let mut data = be.read_partial(FileType::Pack, &id, false, offset, read_size)?;
 
         // get header length from the file
         let size_real =
@@ -185,8 +183,7 @@ impl PackHeader {
         } else {
             // size_guess was too small; we have to read again
             let offset = pack_size - size_real - LENGTH_LEN;
-            be.read_partial(FileType::Pack, &id, false, offset, size_real)
-                .await?
+            be.read_partial(FileType::Pack, &id, false, offset, size_real)?
         };
 
         Self::from_binary(&be.decrypt(&data)?)

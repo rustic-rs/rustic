@@ -96,11 +96,7 @@ pub(super) async fn execute(
 
 async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
     let p = progress_spinner("listing packs...");
-    let mut packs: HashMap<_, _> = be
-        .list_with_size(FileType::Pack)
-        .await?
-        .into_iter()
-        .collect();
+    let mut packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
     p.finish();
 
     let mut pack_read_header = Vec::new();
@@ -162,9 +158,9 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
             (true, true) => info!("would have modified index file {index_id}"),
             (true, false) => {
                 if !new_index.packs.is_empty() || !new_index.packs_to_delete.is_empty() {
-                    be.save_file(&new_index).await?;
+                    be.save_file(&new_index)?;
                 }
-                be.remove(FileType::Index, &index_id, true).await?;
+                be.remove(FileType::Index, &index_id, true)?;
             }
             (false, _) => {} // nothing to do
         }
@@ -197,15 +193,13 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
         debug!("reading pack {id}...");
         let mut pack = IndexPack::default();
         pack.set_id(id);
-        pack.blobs = PackHeader::from_file(be, id, size_hint, packsize)
-            .await?
-            .into_blobs();
+        pack.blobs = PackHeader::from_file(be, id, size_hint, packsize)?.into_blobs();
         if !opts.dry_run {
-            indexer.write().await.add_with(pack, to_delete).await?;
+            indexer.write().await.add_with(pack, to_delete)?;
         }
         p.inc(1);
     }
-    indexer.write().await.finalize().await?;
+    indexer.write().await.finalize()?;
     p.finish();
 
     Ok(())
@@ -268,7 +262,7 @@ async fn repair_snaps(
                 if opts.dry_run {
                     info!("would have modified snapshot {snap_id}.");
                 } else {
-                    let new_id = be.save_file(&snap).await?;
+                    let new_id = be.save_file(&snap)?;
                     info!("saved modified snapshot as {new_id}.");
                 }
                 delete.push(snap_id);
@@ -278,7 +272,7 @@ async fn repair_snaps(
 
     if !opts.dry_run {
         packer.finalize().await?;
-        indexer.write().await.finalize().await?;
+        indexer.write().await.finalize()?;
     }
 
     if opts.delete {
@@ -324,7 +318,7 @@ async fn repair_tree<BE: DecryptWriteBackend>(
                 return Ok(*r);
             }
 
-            let (tree, mut changed) = match Tree::from_backend(be, id).await {
+            let (tree, mut changed) = match Tree::from_backend(be, id) {
                 Ok(tree) => (tree, Changed::None),
                 Err(_) => {
                     warn!("tree {id} could not be loaded.");

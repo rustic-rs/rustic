@@ -20,9 +20,9 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter("")).await?;
     let index = IndexBackend::new(be, progress_counter("")).await?;
-    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path)).await?;
+    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
 
-    let mut tree_streamer = NodeStreamer::new(index, tree).await?;
+    let mut tree_streamer = NodeStreamer::new(index, tree)?;
     while let Some(item) = tree_streamer.next().await {
         let (path, _) = item?;
         println!("{:?} ", path);

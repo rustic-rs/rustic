@@ -47,13 +47,13 @@ pub(crate) struct KeyOpts {
     pub(crate) with_created: bool,
 }
 
-pub(super) async fn execute(be: &impl WriteBackend, key: Key, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl WriteBackend, key: Key, opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Add(opt) => add_key(be, key, opt).await,
+        Command::Add(opt) => add_key(be, key, opt),
     }
 }
 
-async fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> {
+fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> {
     let pass = match opts.new_password_file {
         Some(file) => {
             let mut file = BufReader::new(File::open(file)?);
@@ -65,8 +65,7 @@ async fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> 
     let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
     let data = serde_json::to_vec(&keyfile)?;
     let id = hash(&data);
-    be.write_bytes(FileType::Key, &id, false, data.into())
-        .await?;
+    be.write_bytes(FileType::Key, &id, false, data.into())?;
 
     println!("key {} successfully added.", id);
     Ok(())

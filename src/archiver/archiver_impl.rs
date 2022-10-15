@@ -122,13 +122,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let tree = std::mem::replace(&mut self.tree, Tree::new());
             if self.path == path {
                 // use Node and return
-                let new_parent = self.parent.sub_parent(&node).await?;
+                let new_parent = self.parent.sub_parent(&node)?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));
                 return Ok(());
             } else {
                 let node = Node::new_node(p, NodeType::Dir, Metadata::default());
-                let new_parent = self.parent.sub_parent(&node).await?;
+                let new_parent = self.parent.sub_parent(&node)?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));
             };
@@ -294,7 +294,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.tree_packer.finalize().await?;
         {
             let indexer = self.indexer.write().await;
-            indexer.finalize().await?;
+            indexer.finalize()?;
         }
         let end_time = Local::now();
         self.summary.backup_duration = (end_time - self.summary.backup_start)
@@ -303,7 +303,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.summary.total_duration = (end_time - self.snap.time).to_std()?.as_secs_f64();
         self.summary.backup_end = end_time;
         self.snap.summary = Some(self.summary);
-        let id = self.be.save_file(&self.snap).await?;
+        let id = self.be.save_file(&self.snap)?;
         self.snap.id = id;
 
         Ok(self.snap)

@@ -34,7 +34,7 @@ pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<
         t => bail!("invalid type: {}", t),
     };
 
-    for id in be.list(tpe).await? {
+    for id in be.list(tpe)? {
         println!("{}", id.to_hex());
     }
 

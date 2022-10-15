@@ -4,7 +4,6 @@ use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use async_trait::async_trait;
 use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
 use log::*;
@@ -38,7 +37,6 @@ impl LocalBackend {
     }
 }
 
-#[async_trait]
 impl ReadBackend for LocalBackend {
     fn location(&self) -> &str {
         self.path.to_str().unwrap()
@@ -48,7 +46,7 @@ impl ReadBackend for LocalBackend {
         Ok(())
     }
 
-    async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
+    fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
         if tpe == FileType::Config {
             return Ok(match self.path.join("config").exists() {
                 true => vec![Id::default()],
@@ -65,7 +63,7 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         let path = self.path.join(tpe.name());
 
         if tpe == FileType::Config {
@@ -104,11 +102,11 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         Ok(fs::read(self.path(tpe, id))?.into())
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -124,9 +122,8 @@ impl ReadBackend for LocalBackend {
     }
 }
 
-#[async_trait]
 impl WriteBackend for LocalBackend {
-    async fn create(&self) -> Result<()> {
+    fn create(&self) -> Result<()> {
         for tpe in ALL_FILE_TYPES {
             fs::create_dir_all(self.path.join(tpe.name()))?;
         }
@@ -136,13 +133,7 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        _cacheable: bool,
-        buf: Bytes,
-    ) -> Result<()> {
+    fn write_bytes(&self, tpe: FileType, id: &Id, _cacheable: bool, buf: Bytes) -> Result<()> {
         trace!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         let mut file = fs::OpenOptions::new()
@@ -155,7 +146,7 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
+    fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         trace!("writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         fs::remove_file(filename)?;

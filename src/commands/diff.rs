@@ -34,11 +34,11 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     let snap2 = &snaps[1];
 
     let index = IndexBackend::new(be, progress_counter("")).await?;
-    let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1)).await?;
-    let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2)).await?;
+    let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
+    let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2))?;
 
-    let mut tree_streamer1 = NodeStreamer::new(index.clone(), id1).await?;
-    let mut tree_streamer2 = NodeStreamer::new(index, id2).await?;
+    let mut tree_streamer1 = NodeStreamer::new(index.clone(), id1)?;
+    let mut tree_streamer2 = NodeStreamer::new(index, id2)?;
 
     let mut item1 = tree_streamer1.next().await.transpose()?;
     let mut item2 = tree_streamer2.next().await.transpose()?;

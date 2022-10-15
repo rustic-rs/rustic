@@ -70,7 +70,7 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter("")).await?;
 
     let index = IndexBackend::new(be, progress_counter("")).await?;
-    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path)).await?;
+    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
 
     let dest = LocalBackend::new(&opts.dest);
 
@@ -222,7 +222,7 @@ async fn allocate_and_collect(
         .filter_map(Result::ok); // TODO: print out the ignored error
     let mut next_dst = dst_iter.next();
 
-    let mut node_streamer = NodeStreamer::new(index.clone(), tree).await?;
+    let mut node_streamer = NodeStreamer::new(index.clone(), tree)?;
     let mut next_node = node_streamer.try_next().await?;
 
     loop {
@@ -323,7 +323,6 @@ async fn restore_contents(
                                 bl.length,
                                 bl.uncompressed_length,
                             )
-                            .await
                             .unwrap()
                         }
                     };
@@ -351,7 +350,7 @@ async fn restore_metadata(
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    let mut node_streamer = NodeStreamer::new(index, tree).await?;
+    let mut node_streamer = NodeStreamer::new(index, tree)?;
     let mut dir_stack = Vec::new();
     while let Some((path, node)) = node_streamer.try_next().await? {
         match node.node_type() {

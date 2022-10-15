@@ -113,9 +113,7 @@ pub(super) async fn execute(
 
     if let Some(cache) = &cache {
         let p = progress_spinner("cleaning up packs from cache...");
-        cache
-            .remove_not_in_list(FileType::Pack, index_collector.tree_packs())
-            .await?;
+        cache.remove_not_in_list(FileType::Pack, index_collector.tree_packs())?;
         p.finish();
     }
     match (cache.is_some(), opts.cache_only) {
@@ -137,11 +135,7 @@ pub(super) async fn execute(
 
     // list existing pack files
     let p = progress_spinner("geting packs from repository...");
-    let existing_packs: HashMap<_, _> = be
-        .list_with_size(FileType::Pack)
-        .await?
-        .into_iter()
-        .collect();
+    let existing_packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
     p.finish();
 
     let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
@@ -896,7 +890,7 @@ impl Pruner {
                         time: Some(Local::now()),
                         blobs: Vec::new(),
                     };
-                    indexer.write().await.add_remove(pack).await?;
+                    indexer.write().await.add_remove(pack)?;
                 }
             }
         }
@@ -933,7 +927,7 @@ impl Pruner {
                     PackToDo::Keep => {
                         // keep pack: add to new index
                         let pack = pack.into_index_pack();
-                        indexer.write().await.add(pack).await?;
+                        indexer.write().await.add(pack)?;
                     }
                     PackToDo::Repack => {
                         // TODO: repack in parallel
@@ -959,7 +953,7 @@ impl Pruner {
                         } else {
                             // mark pack for removal
                             let pack = pack.into_index_pack_with_time(self.time);
-                            indexer.write().await.add_remove(pack).await?;
+                            indexer.write().await.add_remove(pack)?;
                         }
                     }
                     PackToDo::MarkDelete => {
@@ -968,7 +962,7 @@ impl Pruner {
                         } else {
                             // mark pack for removal
                             let pack = pack.into_index_pack_with_time(self.time);
-                            indexer.write().await.add_remove(pack).await?;
+                            indexer.write().await.add_remove(pack)?;
                         }
                     }
                     PackToDo::KeepMarked => {
@@ -977,13 +971,13 @@ impl Pruner {
                         } else {
                             // keep pack: add to new index
                             let pack = pack.into_index_pack();
-                            indexer.write().await.add_remove(pack).await?;
+                            indexer.write().await.add_remove(pack)?;
                         }
                     }
                     PackToDo::Recover => {
                         // recover pack: add to new index in section packs
                         let pack = pack.into_index_pack_with_time(self.time);
-                        indexer.write().await.add(pack).await?;
+                        indexer.write().await.add(pack)?;
                     }
                     PackToDo::Delete => delete_pack(pack),
                 }
@@ -992,7 +986,7 @@ impl Pruner {
         }
         tree_repacker.finalize().await?;
         data_repacker.finalize().await?;
-        indexer.write().await.finalize().await?;
+        indexer.write().await.finalize()?;
         p.finish();
 
         if !data_packs_remove.is_empty() {

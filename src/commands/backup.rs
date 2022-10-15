@@ -163,7 +163,7 @@ pub(super) async fn execute(
             )
             .await
             .ok(),
-            (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).await.ok(),
+            (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
         };
 
         let parent_tree = match &parent {
@@ -197,7 +197,7 @@ pub(super) async fn execute(
         snap.paths.add(backup_path_str.clone());
         snap.set_tags(opts.tag.clone());
 
-        let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode).await;
+        let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode);
 
         let snap = if backup_stdin {
             let mut archiver = Archiver::new(be, index, &config, parent, snap)?;

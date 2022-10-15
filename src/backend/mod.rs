@@ -2,7 +2,6 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -70,25 +69,23 @@ pub trait RepoFile: Serialize + DeserializeOwned + Sized + Send + Sync + 'static
     const TYPE: FileType;
 }
 
-#[async_trait]
 pub trait ReadBackend: Clone + Send + Sync + 'static {
     fn location(&self) -> &str;
 
     fn set_option(&mut self, option: &str, value: &str) -> Result<()>;
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>>;
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>>;
 
-    async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
+    fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
         Ok(self
-            .list_with_size(tpe)
-            .await?
+            .list_with_size(tpe)?
             .into_iter()
             .map(|(id, _)| id)
             .collect())
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes>;
-    async fn read_partial(
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes>;
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -97,7 +94,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         length: u32,
     ) -> Result<Bytes>;
 
-    async fn find_starts_with(&self, tpe: FileType, vec: &[String]) -> Result<Vec<Result<Id>>> {
+    fn find_starts_with(&self, tpe: FileType, vec: &[String]) -> Result<Vec<Result<Id>>> {
         #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum MapResult<T> {
             None,
@@ -105,7 +102,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
             NonUnique,
         }
         let mut results = vec![MapResult::None; vec.len()];
-        for id in self.list(tpe).await? {
+        for id in self.list(tpe)? {
             for (i, v) in vec.iter().enumerate() {
                 if id.to_hex().starts_with(v) {
                     if results[i] == MapResult::None {
@@ -128,30 +125,28 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
             .collect())
     }
 
-    async fn find_id(&self, tpe: FileType, id: &str) -> Result<Id> {
-        Ok(self.find_ids(tpe, &[id.to_string()]).await?.remove(0))
+    fn find_id(&self, tpe: FileType, id: &str) -> Result<Id> {
+        Ok(self.find_ids(tpe, &[id.to_string()])?.remove(0))
     }
 
-    async fn find_ids(&self, tpe: FileType, ids: &[String]) -> Result<Vec<Id>> {
+    fn find_ids(&self, tpe: FileType, ids: &[String]) -> Result<Vec<Id>> {
         let long_ids: Vec<_> = ids.iter().map(|id| Id::from_hex(id)).collect();
 
         Ok(match long_ids.iter().all(Result::is_ok) {
             true => long_ids.into_iter().map(Result::unwrap).collect(),
             // if the given id param are not full Ids, search for a suitable one
             false => self
-                .find_starts_with(tpe, ids)
-                .await?
+                .find_starts_with(tpe, ids)?
                 .into_iter()
                 .collect::<Result<Vec<_>>>()?,
         })
     }
 }
 
-#[async_trait]
 pub trait WriteBackend: ReadBackend {
-    async fn create(&self) -> Result<()>;
-    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()>;
-    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
+    fn create(&self) -> Result<()>;
+    fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()>;
+    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
 }
 
 pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {

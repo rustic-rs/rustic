@@ -20,7 +20,7 @@ pub(super) struct Opts {
     config_opts: ConfigOpts,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl WriteBackend,
     hot_be: &Option<impl WriteBackend>,
     opts: Opts,
@@ -59,24 +59,23 @@ pub(super) async fn execute(
     )?;
     let data: Bytes = serde_json::to_vec(&keyfile)?.into();
     let id = hash(&data);
-    be.create().await?;
-    be.write_bytes(FileType::Key, &id, false, data.clone())
-        .await?;
+    be.create()?;
+    be.write_bytes(FileType::Key, &id, false, data.clone())?;
 
     if let Some(hot_be) = hot_be {
-        hot_be.create().await?;
-        hot_be.write_bytes(FileType::Key, &id, false, data).await?;
+        hot_be.create()?;
+        hot_be.write_bytes(FileType::Key, &id, false, data)?;
     }
     println!("key {} successfully added.", id);
 
     // save config
     let dbe = DecryptBackend::new(be, key.clone());
-    dbe.save_file(&config).await?;
+    dbe.save_file(&config)?;
 
     if let Some(hot_be) = hot_be {
         let dbe = DecryptBackend::new(hot_be, key);
         config.is_hot = Some(true);
-        dbe.save_file(&config).await?;
+        dbe.save_file(&config)?;
     }
     println!("repository {} successfully created.", repo_id);
 

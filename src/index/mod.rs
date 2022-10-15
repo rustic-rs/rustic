@@ -41,17 +41,15 @@ impl IndexEntry {
     }
 
     /// Get a blob described by IndexEntry from the backend
-    pub async fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Bytes> {
-        let data = be
-            .read_encrypted_partial(
-                FileType::Pack,
-                &self.pack,
-                self.blob_type.is_cacheable(),
-                self.offset,
-                self.length,
-                self.uncompressed_length,
-            )
-            .await?;
+    pub fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Bytes> {
+        let data = be.read_encrypted_partial(
+            FileType::Pack,
+            &self.pack,
+            self.blob_type.is_cacheable(),
+            self.offset,
+            self.length,
+            self.uncompressed_length,
+        )?;
         Ok(data)
     }
 
@@ -91,10 +89,10 @@ pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
 
     fn be(&self) -> &Self::Backend;
 
-    async fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Bytes> {
+    fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Bytes> {
         match self.get_id(tpe, id) {
             None => Err(anyhow!("blob not found in index")),
-            Some(ie) => ie.read_data(self.be()).await,
+            Some(ie) => ie.read_data(self.be()),
         }
     }
 }

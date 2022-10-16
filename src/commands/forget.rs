@@ -74,10 +74,10 @@ pub(super) async fn execute(
         .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,paths").unwrap());
 
     let groups = match opts.ids.is_empty() {
-        true => SnapshotFile::group_from_backend(be, &opts.config.filter, &group_by).await?,
+        true => SnapshotFile::group_from_backend(be, &opts.config.filter, &group_by)?,
         false => vec![(
             SnapshotGroup::default(),
-            SnapshotFile::from_ids(be, &opts.ids).await?,
+            SnapshotFile::from_ids(be, &opts.ids)?,
         )],
     };
     let mut forget_snaps = Vec::new();
@@ -146,8 +146,7 @@ pub(super) async fn execute(
         ),
         (false, false) => {
             let p = progress_counter("removing snapshots...");
-            be.delete_list(FileType::Snapshot, true, forget_snaps.clone(), p)
-                .await?;
+            be.delete_list(FileType::Snapshot, true, forget_snaps.clone(), p)?;
         }
     }
 

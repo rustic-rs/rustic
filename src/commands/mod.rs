@@ -307,22 +307,22 @@ pub async fn execute() -> Result<()> {
     match cmd {
         Command::Backup(opts) => backup::execute(&dbe, opts, config, config_file, command).await?,
         Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config)?,
-        Command::Cat(opts) => cat::execute(&dbe, opts).await?,
+        Command::Cat(opts) => cat::execute(&dbe, opts)?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
         Command::Completions(_) => {} // already handled above
         Command::Diff(opts) => diff::execute(&dbe, opts).await?,
         Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file).await?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(&dbe, key, opts)?,
-        Command::List(opts) => list::execute(&dbe, opts).await?,
+        Command::List(opts) => list::execute(&dbe, opts)?,
         Command::Ls(opts) => ls::execute(&dbe, opts).await?,
         Command::SelfUpdate(_) => {} // already handled above
-        Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file).await?,
+        Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file)?,
         Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![]).await?,
         Command::Restore(opts) => restore::execute(&dbe, opts).await?,
         Command::Repair(opts) => repair::execute(&dbe, opts, config_file, &config).await?,
-        Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts).await?,
-        Command::Tag(opts) => tag::execute(&dbe, opts, config_file).await?,
+        Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts)?,
+        Command::Tag(opts) => tag::execute(&dbe, opts, config_file)?,
     };
 
     Ok(())

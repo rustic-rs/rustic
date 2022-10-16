@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use async_recursion::async_recursion;
 use clap::{AppSettings, Parser, Subcommand};
-use futures::TryStreamExt;
 use log::*;
 
 use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
@@ -142,12 +141,9 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
     };
 
     let p = progress_counter("reading index...");
-    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
-    while let Some(index) = stream.try_next().await? {
+    for (index_id, index) in be.stream_all::<IndexFile>(p.clone())? {
         let mut new_index = IndexFile::default();
         let mut changed = false;
-        let index_id = index.0;
-        let index = index.1;
         for p in index.packs {
             process_pack(p, false, &mut new_index, &mut changed);
         }
@@ -214,15 +210,15 @@ async fn repair_snaps(
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     let snapshots = match opts.ids.is_empty() {
-        true => SnapshotFile::all_from_backend(be, &opts.filter).await?,
-        false => SnapshotFile::from_ids(be, &opts.ids).await?,
+        true => SnapshotFile::all_from_backend(be, &opts.filter)?,
+        false => SnapshotFile::from_ids(be, &opts.ids)?,
     };
 
     let mut replaced = HashMap::new();
     let mut seen = HashSet::new();
     let mut delete = Vec::new();
 
-    let index = IndexBackend::new(&be.clone(), progress_counter("")).await?;
+    let index = IndexBackend::new(&be.clone(), progress_counter(""))?;
     let indexer = Indexer::new(be.clone()).into_shared();
     let mut packer = Packer::new(
         be.clone(),
@@ -284,8 +280,7 @@ async fn repair_snaps(
                 true,
                 delete,
                 progress_counter("remove defect snapshots"),
-            )
-            .await?;
+            )?;
         }
     }
 

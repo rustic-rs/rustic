@@ -32,6 +32,9 @@ derivative = "2"
 derive-getters = "0.2"
 lazy_static = "1"
 log = "0.4"
+# parallelize
+crossbeam-channel = "0.5"
+rayon = "1"
 # async
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"

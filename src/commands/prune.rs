@@ -7,7 +7,7 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derive_more::Add;
-use futures::{future, TryStreamExt};
+use futures::TryStreamExt;
 use log::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
@@ -98,10 +98,9 @@ pub(super) async fn execute(
     let mut index_files = Vec::new();
 
     let p = progress_counter("reading index...");
-    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
-    while let Some((id, index)) = stream.try_next().await? {
+    for (id, index) in be.stream_all::<IndexFile>(p.clone())? {
         index_collector.extend(index.packs.clone());
         // we add the trees from packs_to_delete to the index such that searching for
         // used blobs doesn't abort if they are already marked for deletion
@@ -879,8 +878,7 @@ impl Pruner {
                 let p = progress_counter("removing unindexed packs...");
                 let existing_packs: Vec<_> =
                     self.existing_packs.into_iter().map(|(id, _)| id).collect();
-                be.delete_list(FileType::Pack, true, existing_packs, p)
-                    .await?;
+                be.delete_list(FileType::Pack, true, existing_packs, p)?;
             } else {
                 info!("marking not needed unindexed pack files for deletion...");
                 for (id, size) in self.existing_packs {
@@ -991,20 +989,17 @@ impl Pruner {
 
         if !data_packs_remove.is_empty() {
             let p = progress_counter("removing old data packs...");
-            be.delete_list(FileType::Pack, false, data_packs_remove, p)
-                .await?;
+            be.delete_list(FileType::Pack, false, data_packs_remove, p)?;
         }
 
         if !tree_packs_remove.is_empty() {
             let p = progress_counter("removing old tree packs...");
-            be.delete_list(FileType::Pack, true, tree_packs_remove, p)
-                .await?;
+            be.delete_list(FileType::Pack, true, tree_packs_remove, p)?;
         }
 
         if !indexes_remove.is_empty() {
             let p = progress_counter("removing old index files...");
-            be.delete_list(FileType::Index, true, indexes_remove, p)
-                .await?;
+            be.delete_list(FileType::Index, true, indexes_remove, p)?;
         }
 
         Ok(())
@@ -1090,14 +1085,13 @@ async fn find_used_blobs(
     let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(p.clone())
-        .await?
+        .stream_all::<SnapshotFile>(p.clone())?
+        .into_iter()
         // TODO: it would even better to give ignore_snaps to the streaming function instead
         // if reading and then filtering the snapshot
-        .try_filter(|(id, _)| future::ready(!ignore_snaps.contains(id)))
-        .map_ok(|(_, snap)| snap.tree)
-        .try_collect()
-        .await?;
+        .filter(|(id, _)| !ignore_snaps.contains(id))
+        .map(|(_, snap)| snap.tree)
+        .collect();
     p.finish();
 
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();

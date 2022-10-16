@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use clap::Parser;
-use futures::StreamExt;
 use indicatif::ProgressBar;
 
 use crate::backend::{DecryptReadBackend, FileType};
@@ -13,13 +12,12 @@ pub(super) struct Opts {
     tpe: String,
 }
 
-pub(super) async fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
     let tpe = match opts.tpe.as_str() {
         // special treatment for listing blobs: read the index and display it
         "blobs" => {
-            let mut stream = be.stream_all::<IndexFile>(ProgressBar::hidden()).await?;
-            while let Some(index) = stream.next().await {
-                for pack in index?.1.packs {
+            for (_, index) in be.stream_all::<IndexFile>(ProgressBar::hidden())? {
+                for pack in index.packs {
                     for blob in pack.blobs {
                         println!("{:?} {}", blob.tpe, blob.id.to_hex());
                     }

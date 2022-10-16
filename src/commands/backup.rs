@@ -116,7 +116,7 @@ pub(super) async fn execute(
         }
     };
 
-    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter("")).await?;
+    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter(""))?;
 
     for source in sources {
         let mut opts = opts.clone();
@@ -161,7 +161,6 @@ pub(super) async fn execute(
                 |snap| snap.hostname == hostname && snap.paths.contains(&backup_path_str),
                 progress_counter(""),
             )
-            .await
             .ok(),
             (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
         };

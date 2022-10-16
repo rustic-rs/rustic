@@ -28,12 +28,12 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
 
     let p = progress_spinner("getting snapshots...");
     p.finish();
-    let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()]).await?;
+    let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()])?;
 
     let snap1 = &snaps[0];
     let snap2 = &snaps[1];
 
-    let index = IndexBackend::new(be, progress_counter("")).await?;
+    let index = IndexBackend::new(be, progress_counter(""))?;
     let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
     let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2))?;
 

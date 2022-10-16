@@ -56,11 +56,11 @@ pub(super) async fn execute(
 
     if let Some(hot_be) = hot_be {
         for file_type in [FileType::Snapshot, FileType::Index] {
-            check_hot_files(raw_be, hot_be, file_type).await?;
+            check_hot_files(raw_be, hot_be, file_type)?;
         }
     }
 
-    let index_collector = check_packs(be, hot_be, opts.read_data).await?;
+    let index_collector = check_packs(be, hot_be, opts.read_data)?;
 
     if !opts.trust_cache {
         if let Some(cache) = &cache {
@@ -102,7 +102,7 @@ pub(super) async fn execute(
     Ok(())
 }
 
-async fn check_hot_files(
+fn check_hot_files(
     be: &impl ReadBackend,
     be_hot: &impl ReadBackend,
     file_type: FileType,
@@ -180,7 +180,7 @@ async fn check_cache_files(
 }
 
 // check if packs correspond to index
-async fn check_packs(
+fn check_packs(
     be: &impl DecryptReadBackend,
     hot_be: &Option<impl ReadBackend>,
     read_data: bool,
@@ -224,9 +224,7 @@ async fn check_packs(
     };
 
     let p = progress_counter("reading index...");
-    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
-    while let Some(index) = stream.try_next().await? {
-        let index = index.1;
+    for (_, index) in be.stream_all::<IndexFile>(p.clone())? {
         index_collector.extend(index.packs.clone());
         for p in index.packs {
             process_pack(p);
@@ -235,22 +233,23 @@ async fn check_packs(
             process_pack(p);
         }
     }
+
     p.finish();
 
     if let Some(hot_be) = hot_be {
         let p = progress_spinner("listing packs in hot repo...");
-        check_packs_list(hot_be, tree_packs).await?;
+        check_packs_list(hot_be, tree_packs)?;
         p.finish();
     }
 
     let p = progress_spinner("listing packs...");
-    check_packs_list(be, packs).await?;
+    check_packs_list(be, packs)?;
     p.finish();
 
     Ok(index_collector)
 }
 
-async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
+fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
     for (id, size) in be.list_with_size(FileType::Pack)? {
         match packs.remove(&id) {
             None => warn!("pack {id} not referenced in index. Can be a parallel backup job. To repair: 'rustic repair index'."),
@@ -272,11 +271,10 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
     let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(p.clone())
-        .await?
-        .map_ok(|(_, snap)| snap.tree)
-        .try_collect()
-        .await?;
+        .stream_all::<SnapshotFile>(p.clone())?
+        .iter()
+        .map(|(_, snap)| snap.tree)
+        .collect();
     p.finish();
 
     let p = progress_counter("checking trees...");

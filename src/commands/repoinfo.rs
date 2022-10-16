@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use derive_more::Add;
-use futures::TryStreamExt;
 use log::*;
 use prettytable::{format, row, Table};
 
@@ -14,18 +13,15 @@ use crate::repo::{IndexFile, IndexPack};
 #[derive(Parser)]
 pub(super) struct Opts;
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptReadBackend,
     hot_be: &Option<impl ReadBackend>,
     _opts: Opts,
 ) -> Result<()> {
-    fileinfo("repository files", be).await?;
+    fileinfo("repository files", be)?;
     if let Some(hot_be) = hot_be {
-        fileinfo("hot repository files", hot_be).await?;
+        fileinfo("hot repository files", hot_be)?;
     }
-
-    let p = progress_counter("scanning index...");
-    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
 
     #[derive(Default, Clone, Copy, Add)]
     struct Info {
@@ -59,7 +55,8 @@ pub(super) async fn execute(
     info[BlobType::Data].min_pack_size = u64::MAX;
     let mut info_delete = BlobTypeMap::<Info>::default();
 
-    while let Some((_, index)) = stream.try_next().await? {
+    let p = progress_counter("scanning index...");
+    for (_, index) in be.stream_all::<IndexFile>(p.clone())? {
         for pack in &index.packs {
             info[pack.blob_type()].add_pack(pack);
 
@@ -109,7 +106,7 @@ pub(super) async fn execute(
     Ok(())
 }
 
-async fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
+fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
     info!("scanning files...");
 
     let mut table = Table::new();

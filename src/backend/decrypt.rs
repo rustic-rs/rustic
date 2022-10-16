@@ -1,11 +1,10 @@
 use std::num::NonZeroU32;
 
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{stream, stream::FuturesUnordered, StreamExt};
+use crossbeam_channel::{unbounded, Receiver};
 use indicatif::ProgressBar;
-use tokio::{spawn, task::JoinHandle};
+use rayon::prelude::*;
 use zstd::stream::{copy_encode, decode_all};
 
 use super::{FileType, Id, ReadBackend, RepoFile, WriteBackend};
@@ -14,7 +13,6 @@ use crate::crypto::{hash, CryptoKey};
 pub trait DecryptFullBackend: DecryptWriteBackend + DecryptReadBackend {}
 impl<T: DecryptWriteBackend + DecryptReadBackend> DecryptFullBackend for T {}
 
-#[async_trait]
 pub trait DecryptReadBackend: ReadBackend {
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>>;
 
@@ -52,38 +50,25 @@ pub trait DecryptReadBackend: ReadBackend {
         Ok(serde_json::from_slice(&data)?)
     }
 
-    async fn stream_all<F: RepoFile>(
-        &self,
-        p: ProgressBar,
-    ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
+    fn stream_all<F: RepoFile>(&self, p: ProgressBar) -> Result<Receiver<(Id, F)>> {
         let list = self.list(F::TYPE)?;
-        self.stream_list(list, p).await
+        self.stream_list(list, p)
     }
 
-    async fn stream_list<F: RepoFile>(
-        &self,
-        list: Vec<Id>,
-        p: ProgressBar,
-    ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
+    fn stream_list<F: RepoFile>(&self, list: Vec<Id>, p: ProgressBar) -> Result<Receiver<(Id, F)>> {
         p.set_length(list.len() as u64);
+        let (tx, rx) = unbounded();
 
-        let stream: FuturesUnordered<_> = list
-            .into_iter()
-            .map(|id| {
-                let be = self.clone();
-                let p = p.clone();
-                spawn(async move {
-                    let file = be.get_file::<F>(&id).unwrap();
-                    p.inc(1);
-                    (id, file)
-                })
-            })
-            .collect();
-        Ok(stream)
+        list.into_par_iter()
+            .for_each_with((self, p, tx), |(be, p, tx), id| {
+                let file = be.get_file::<F>(&id).unwrap();
+                p.inc(1);
+                tx.send((id, file)).unwrap();
+            });
+        Ok(rx)
     }
 }
 
-#[async_trait]
 pub trait DecryptWriteBackend: WriteBackend {
     type Key: CryptoKey;
     fn key(&self) -> &Self::Key;
@@ -91,26 +76,20 @@ pub trait DecryptWriteBackend: WriteBackend {
 
     fn save_file<F: RepoFile>(&self, file: &F) -> Result<Id> {
         let data = serde_json::to_vec(file)?;
-        Ok(self.hash_write_full(F::TYPE, &data)?)
+        self.hash_write_full(F::TYPE, &data)
     }
 
-    async fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
+    fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
         p.set_length(list.len() as u64);
-        stream::iter(list.into_iter().map(|file| {
-            let be = self.clone();
-            let p = p.clone();
-            (file, be, p)
-        }))
-        .for_each_concurrent(5, |(file, be, p)| async move {
-            be.save_file(&file).unwrap();
+        list.par_iter().for_each(|file| {
+            self.save_file(file).unwrap();
             p.inc(1);
-        })
-        .await;
+        });
         p.finish();
         Ok(())
     }
 
-    async fn delete_list(
+    fn delete_list(
         &self,
         tpe: FileType,
         cacheable: bool,
@@ -118,16 +97,10 @@ pub trait DecryptWriteBackend: WriteBackend {
         p: ProgressBar,
     ) -> Result<()> {
         p.set_length(list.len() as u64);
-        stream::iter(list.into_iter().map(|id| {
-            let be = self.clone();
-            let p = p.clone();
-            (id, be, p)
-        }))
-        .for_each_concurrent(20, |(id, be, p)| async move {
-            be.remove(tpe, &id, cacheable).unwrap();
+        list.par_iter().for_each(|id| {
+            self.remove(tpe, id, cacheable).unwrap();
             p.inc(1);
-        })
-        .await;
+        });
 
         p.finish();
         Ok(())
@@ -153,7 +126,6 @@ impl<R: ReadBackend, C: CryptoKey> DecryptBackend<R, C> {
     }
 }
 
-#[async_trait]
 impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C> {
     type Key = C;
     fn key(&self) -> &Self::Key {
@@ -179,7 +151,6 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
     }
 }
 
-#[async_trait]
 impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         Ok(self.key.decrypt_data(data)?)

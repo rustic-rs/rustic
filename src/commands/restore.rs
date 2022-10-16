@@ -67,9 +67,9 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
     }
 
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
-    let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter("")).await?;
+    let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter(""))?;
 
-    let index = IndexBackend::new(be, progress_counter("")).await?;
+    let index = IndexBackend::new(be, progress_counter(""))?;
     let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
 
     let dest = LocalBackend::new(&opts.dest);

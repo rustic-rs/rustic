@@ -51,6 +51,8 @@ teardown () {
 
    run $RUSTIC check --read-data
    assert_success
+   refute_output -p "ERROR"
+   refute_output -p "WARN"
 }
 
 @test "backup and restore" {

@@ -66,6 +66,7 @@ impl IndexEntry {
 pub trait ReadIndex {
     fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry>;
     fn total_size(&self, tpe: &BlobType) -> u64;
+    fn has(&self, tpe: &BlobType, id: &Id) -> bool;
 
     fn get_tree(&self, id: &Id) -> Option<IndexEntry> {
         self.get_id(&BlobType::Tree, id)
@@ -73,10 +74,6 @@ pub trait ReadIndex {
 
     fn get_data(&self, id: &Id) -> Option<IndexEntry> {
         self.get_id(&BlobType::Data, id)
-    }
-
-    fn has(&self, tpe: &BlobType, id: &Id) -> bool {
-        self.get_id(tpe, id).is_some()
     }
 
     fn has_tree(&self, id: &Id) -> bool {
@@ -115,6 +112,9 @@ impl<BE: DecryptReadBackend> ReadIndex for IndexBackend<BE> {
 
     fn total_size(&self, tpe: &BlobType) -> u64 {
         self.index.total_size(tpe)
+    }
+    fn has(&self, tpe: &BlobType, id: &Id) -> bool {
+        self.index.has(tpe, id)
     }
 }
 

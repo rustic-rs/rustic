@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
-use tokio::sync::RwLock;
 
 use crate::backend::DecryptWriteBackend;
 use crate::id::Id;

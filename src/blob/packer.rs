@@ -5,7 +5,7 @@ use std::time::{Duration, SystemTime};
 use anyhow::{anyhow, Result};
 use bytes::{Bytes, BytesMut};
 use chrono::Local;
-use tokio::{spawn, task::JoinHandle};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use zstd::encode_all;
 
 use super::BlobType;
@@ -74,7 +74,7 @@ pub struct Packer<BE: DecryptWriteBackend> {
     index: IndexPack,
     indexer: SharedIndexer<BE>,
     hasher: Hasher,
-    file_writer: FileWriter<BE>,
+    file_writer: Actor<(Bytes, Id, IndexPack)>,
     zstd: Option<i32>,
     pack_sizer: PackSizer,
 }
@@ -87,12 +87,15 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         config: &ConfigFile,
         total_size: u64,
     ) -> Result<Self> {
-        let file_writer = FileWriter {
-            future: None,
-            be: be.clone(),
-            indexer: indexer.clone(),
-            cacheable: blob_type.is_cacheable(),
-        };
+        let file_writer = Actor::new(
+            FileWriterHandle {
+                be: be.clone(),
+                indexer: indexer.clone(),
+                cacheable: blob_type.is_cacheable(),
+            },
+            1,
+            1,
+        );
         let zstd = config.zstd()?;
         let pack_sizer = PackSizer::from_config(config, blob_type, total_size);
         Ok(Self {
@@ -111,12 +114,13 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         })
     }
 
-    pub async fn finalize(&mut self) -> Result<()> {
-        self.save().await?;
-        self.file_writer.finalize().await
+    pub fn finalize(mut self) -> Result<()> {
+        self.save()?;
+        self.file_writer.finalize()?;
+        Ok(())
     }
 
-    pub async fn write_data(&mut self, data: &[u8]) -> Result<u32> {
+    pub fn write_data(&mut self, data: &[u8]) -> Result<u32> {
         self.hasher.update(data);
         let len = data.len().try_into()?;
         self.file.extend_from_slice(data);
@@ -125,25 +129,20 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 
     // adds the blob to the packfile; returns the actually added size
-    pub async fn add(&mut self, data: &[u8], id: &Id) -> Result<u64> {
+    pub fn add(&mut self, data: &[u8], id: &Id) -> Result<u64> {
         // compute size limit based on total size and size bounds
         let size_limit = self.pack_sizer.pack_size();
-        self.add_with_sizelimit(data, id, size_limit).await
+        self.add_with_sizelimit(data, id, size_limit)
     }
 
     // adds the blob to the packfile; returns the actually added size
-    pub async fn add_with_sizelimit(
-        &mut self,
-        data: &[u8],
-        id: &Id,
-        size_limit: u32,
-    ) -> Result<u64> {
+    pub fn add_with_sizelimit(&mut self, data: &[u8], id: &Id, size_limit: u32) -> Result<u64> {
         // only add if this blob is not present
         if self.has(id) {
             return Ok(0);
         }
         {
-            let indexer = self.indexer.read().await;
+            let indexer = self.indexer.read().unwrap();
             if indexer.has(id) {
                 return Ok(0);
             }
@@ -167,13 +166,12 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         };
 
         // add using current total_size as repo_size
-        self.add_raw(&data, id, uncompressed_length, size_limit)
-            .await?;
+        self.add_raw(&data, id, uncompressed_length, size_limit)?;
         Ok(data.len().try_into()?)
     }
 
     // adds the already compressed/encrypted blob to the packfile without any check
-    pub async fn add_raw(
+    pub fn add_raw(
         &mut self,
         data: &[u8],
         id: &Id,
@@ -181,7 +179,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         size_limit: u32,
     ) -> Result<()> {
         let offset = self.size;
-        let len = self.write_data(data).await?;
+        let len = self.write_data(data)?;
         self.index
             .add(*id, self.blob_type, offset, len, uncompressed_length);
         self.count += 1;
@@ -190,7 +188,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         if self.count >= MAX_COUNT || self.size >= size_limit || self.created.elapsed()? >= MAX_AGE
         {
             self.pack_sizer.add_size(self.index.pack_size());
-            self.save().await?;
+            self.save()?;
             self.size = 0;
             self.count = 0;
             self.created = SystemTime::now();
@@ -200,7 +198,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 
     /// writes header and length of header to packfile
-    pub async fn write_header(&mut self) -> Result<()> {
+    pub fn write_header(&mut self) -> Result<()> {
         // comput the pack header
         let data = PackHeaderRef::from_index_pack(&self.index).to_binary()?;
 
@@ -212,21 +210,20 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             .map_err(|_| anyhow!("crypto error"))?;
 
         let headerlen = data.len().try_into()?;
-        self.write_data(&data).await?;
+        self.write_data(&data)?;
 
         // finally write length of header unencrypted to pack file
-        self.write_data(&PackHeaderLength::from_u32(headerlen).to_binary()?)
-            .await?;
+        self.write_data(&PackHeaderLength::from_u32(headerlen).to_binary()?)?;
 
         Ok(())
     }
 
-    pub async fn save(&mut self) -> Result<()> {
+    pub fn save(&mut self) -> Result<()> {
         if self.size == 0 {
             return Ok(());
         }
 
-        self.write_header().await?;
+        self.write_header()?;
 
         // compute id of packfile
         let id = self.hasher.finalize();
@@ -235,7 +232,7 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         // write file to backend
         let index = std::mem::take(&mut self.index);
         let file = std::mem::replace(&mut self.file, BytesMut::new());
-        self.file_writer.add(index, file.into(), id).await?;
+        self.file_writer.send((file.into(), id, index))?;
 
         Ok(())
     }
@@ -245,36 +242,69 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 }
 
-struct FileWriter<BE: DecryptWriteBackend> {
-    future: Option<JoinHandle<Result<()>>>,
+#[derive(Clone)]
+struct FileWriterHandle<BE: DecryptWriteBackend> {
     be: BE,
     indexer: SharedIndexer<BE>,
     cacheable: bool,
 }
 
-impl<BE: DecryptWriteBackend> FileWriter<BE> {
-    async fn add(&mut self, mut index: IndexPack, file: Bytes, id: Id) -> Result<()> {
-        let be = self.be.clone();
-        let indexer = self.indexer.clone();
-        let cacheable = self.cacheable;
-        let new_future = spawn(async move {
-            be.write_bytes(FileType::Pack, &id, cacheable, file)?;
-            index.time = Some(Local::now());
-            indexer.write().await.add(index)?;
-            Ok(())
+impl<BE: DecryptWriteBackend> ActorHandle<(Bytes, Id, IndexPack)> for FileWriterHandle<BE> {
+    fn process(&self, load: (Bytes, Id, IndexPack)) -> Result<()> {
+        let (file, id, mut index) = load;
+        self.be
+            .write_bytes(FileType::Pack, &id, self.cacheable, file)?;
+        index.time = Some(Local::now());
+        self.indexer.write().unwrap().add(index)?;
+        Ok(())
+    }
+}
+
+pub trait ActorHandle<T>: Clone + Send + 'static {
+    fn process(&self, load: T) -> Result<()>;
+}
+
+pub struct Actor<T> {
+    sender: Sender<T>,
+    finish: Receiver<Result<()>>,
+}
+
+impl<T: Send + Sync + 'static> Actor<T> {
+    pub fn new(fwh: impl ActorHandle<T>, queue_len: usize, par: usize) -> Self {
+        let (tx, rx) = bounded(queue_len);
+        let (finish_tx, finish_rx) = bounded::<Result<()>>(0);
+        (0..par).for_each(|_| {
+            let rx = rx.clone();
+            let finish_tx = finish_tx.clone();
+            let fwh = fwh.clone();
+            std::thread::spawn(move || {
+                let mut status = Ok(());
+                for load in rx {
+                    // only keep processing if there was no error
+                    if status.is_ok() {
+                        status = fwh.process(load);
+                    }
+                }
+                let _ = finish_tx.send(status);
+            });
         });
 
-        if let Some(fut) = self.future.replace(new_future) {
-            fut.await??;
+        Self {
+            sender: tx,
+            finish: finish_rx,
         }
+    }
+
+    pub fn send(&self, load: T) -> Result<()> {
+        self.sender.send(load)?;
         Ok(())
     }
 
-    async fn finalize(&mut self) -> Result<()> {
-        if let Some(fut) = self.future.take() {
-            return fut.await?;
-        }
-        Ok(())
+    pub fn finalize(self) -> Result<()> {
+        // cancel channel
+        drop(self.sender);
+        // wait for items in channel to be processed
+        self.finish.recv().unwrap()
     }
 }
 
@@ -301,7 +331,7 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         })
     }
 
-    pub async fn add_fast(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
+    pub fn add_fast(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
         let data = self.be.read_partial(
             FileType::Pack,
             pack_id,
@@ -310,12 +340,11 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
             blob.length,
         )?;
         self.packer
-            .add_raw(&data, &blob.id, blob.uncompressed_length, self.size_limit)
-            .await?;
+            .add_raw(&data, &blob.id, blob.uncompressed_length, self.size_limit)?;
         Ok(())
     }
 
-    pub async fn add(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
+    pub fn add(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
         let data = self.be.read_encrypted_partial(
             FileType::Pack,
             pack_id,
@@ -325,12 +354,11 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
             blob.uncompressed_length,
         )?;
         self.packer
-            .add_with_sizelimit(&data, &blob.id, self.size_limit)
-            .await?;
+            .add_with_sizelimit(&data, &blob.id, self.size_limit)?;
         Ok(())
     }
 
-    pub async fn finalize(&mut self) -> Result<()> {
-        self.packer.finalize().await
+    pub fn finalize(self) -> Result<()> {
+        self.packer.finalize()
     }
 }

@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
-use async_recursion::async_recursion;
 use clap::{AppSettings, Parser, Subcommand};
 use log::*;
 
@@ -89,7 +88,7 @@ pub(super) async fn execute(
 ) -> Result<()> {
     match opts.command {
         Command::Index(opt) => repair_index(be, opt).await,
-        Command::Snapshots(opt) => repair_snaps(be, opt, config_file, config).await,
+        Command::Snapshots(opt) => repair_snaps(be, opt, config_file, config),
     }
 }
 
@@ -191,17 +190,17 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
         pack.set_id(id);
         pack.blobs = PackHeader::from_file(be, id, size_hint, packsize)?.into_blobs();
         if !opts.dry_run {
-            indexer.write().await.add_with(pack, to_delete)?;
+            indexer.write().unwrap().add_with(pack, to_delete)?;
         }
         p.inc(1);
     }
-    indexer.write().await.finalize()?;
+    indexer.write().unwrap().finalize()?;
     p.finish();
 
     Ok(())
 }
 
-async fn repair_snaps(
+fn repair_snaps(
     be: &impl DecryptFullBackend,
     mut opts: SnapOpts,
     config_file: RusticConfig,
@@ -238,9 +237,7 @@ async fn repair_snaps(
             &mut replaced,
             &mut seen,
             &opts,
-        )
-        .await?
-        {
+        )? {
             (Changed::None, _) => {
                 info!("snapshot {snap_id} is ok.");
             }
@@ -267,8 +264,8 @@ async fn repair_snaps(
     }
 
     if !opts.dry_run {
-        packer.finalize().await?;
-        indexer.write().await.finalize()?;
+        packer.finalize()?;
+        indexer.write().unwrap().finalize()?;
     }
 
     if opts.delete {
@@ -294,8 +291,7 @@ enum Changed {
     None,
 }
 
-#[async_recursion]
-async fn repair_tree<BE: DecryptWriteBackend>(
+fn repair_tree<BE: DecryptWriteBackend>(
     be: &impl IndexedBackend,
     packer: &mut Packer<BE>,
     id: Option<Id>,
@@ -352,7 +348,7 @@ async fn repair_tree<BE: DecryptWriteBackend>(
                     }
                     NodeType::Dir {} => {
                         let (c, tree_id) =
-                            repair_tree(be, packer, node.subtree, replaced, seen, opts).await?;
+                            repair_tree(be, packer, node.subtree, replaced, seen, opts)?;
                         match c {
                             Changed::None => {}
                             Changed::This => {
@@ -385,7 +381,7 @@ async fn repair_tree<BE: DecryptWriteBackend>(
             // the tree has been changed => save it
             let (chunk, new_id) = tree.serialize()?;
             if !be.has_tree(&new_id) && !opts.dry_run {
-                packer.add(&chunk, &new_id).await?;
+                packer.add(&chunk, &new_id)?;
             }
             if let Some(id) = id {
                 replaced.insert(id, (c, new_id));

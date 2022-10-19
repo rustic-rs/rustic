@@ -188,7 +188,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
 
         if !self.index.has_tree(&id) {
-            match self.tree_packer.add(&chunk, &id).await? {
+            match self.tree_packer.add(&chunk, &id)? {
                 0 => {}
                 packed_size => {
                     self.summary.tree_blobs += 1;
@@ -242,13 +242,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
             if queue.len() > 8 {
                 let (id, chunk, size) = queue.next().await.unwrap()?;
-                self.process_data_junk(id, &chunk, size, &p).await?;
+                self.process_data_junk(id, &chunk, size, &p)?;
                 content.push(id);
             }
         }
 
         while let Some(Ok((id, chunk, size))) = queue.next().await {
-            self.process_data_junk(id, &chunk, size, &p).await?;
+            self.process_data_junk(id, &chunk, size, &p)?;
             content.push(id);
         }
 
@@ -258,7 +258,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    async fn process_data_junk(
+    fn process_data_junk(
         &mut self,
         id: Id,
         chunk: &[u8],
@@ -266,7 +266,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         p: &ProgressBar,
     ) -> Result<()> {
         if !self.index.has_data(&id) {
-            match self.data_packer.add(chunk, &id).await? {
+            match self.data_packer.add(chunk, &id)? {
                 0 => {}
                 packed_size => {
                     self.summary.data_blobs += 1;
@@ -286,14 +286,14 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         let (chunk, id) = self.tree.serialize()?;
         if !self.index.has_tree(&id) {
-            self.tree_packer.add(&chunk, &id).await?;
+            self.tree_packer.add(&chunk, &id)?;
         }
         self.snap.tree = id;
 
-        self.data_packer.finalize().await?;
-        self.tree_packer.finalize().await?;
+        self.data_packer.finalize()?;
+        self.tree_packer.finalize()?;
         {
-            let indexer = self.indexer.write().await;
+            let indexer = self.indexer.write().unwrap();
             indexer.finalize()?;
         }
         let end_time = Local::now();

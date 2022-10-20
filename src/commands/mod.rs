@@ -220,7 +220,7 @@ pub async fn execute() -> Result<()> {
     }
 
     if let Command::SelfUpdate(opts) = args.command {
-        self_update::execute(opts).await?;
+        self_update::execute(opts)?;
         return Ok(());
     }
 
@@ -305,17 +305,17 @@ pub async fn execute() -> Result<()> {
     };
 
     match cmd {
-        Command::Backup(opts) => backup::execute(&dbe, opts, config, config_file, command).await?,
+        Command::Backup(opts) => backup::execute(&dbe, opts, config, config_file, command)?,
         Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config)?,
         Command::Cat(opts) => cat::execute(&dbe, opts)?,
-        Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts).await?,
+        Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts)?,
         Command::Completions(_) => {} // already handled above
-        Command::Diff(opts) => diff::execute(&dbe, opts).await?,
+        Command::Diff(opts) => diff::execute(&dbe, opts)?,
         Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file).await?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(&dbe, key, opts)?,
         Command::List(opts) => list::execute(&dbe, opts)?,
-        Command::Ls(opts) => ls::execute(&dbe, opts).await?,
+        Command::Ls(opts) => ls::execute(&dbe, opts)?,
         Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file)?,
         Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![]).await?,

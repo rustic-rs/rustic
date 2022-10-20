@@ -223,7 +223,7 @@ async fn allocate_and_collect(
     let mut next_dst = dst_iter.next();
 
     let mut node_streamer = NodeStreamer::new(index.clone(), tree)?;
-    let mut next_node = node_streamer.try_next().await?;
+    let mut next_node = node_streamer.next().transpose()?;
 
     loop {
         match (&next_dst, &next_node) {
@@ -244,16 +244,16 @@ async fn allocate_and_collect(
                     // does not match the type of the node in the snapshot!
                     process_node(path, node, true)?;
                     next_dst = dst_iter.next();
-                    next_node = node_streamer.try_next().await?;
+                    next_node = node_streamer.next().transpose()?;
                 }
                 Ordering::Greater => {
                     process_node(path, node, false)?;
-                    next_node = node_streamer.try_next().await?;
+                    next_node = node_streamer.next().transpose()?;
                 }
             },
             (None, Some((path, node))) => {
                 process_node(path, node, false)?;
-                next_node = node_streamer.try_next().await?;
+                next_node = node_streamer.next().transpose()?;
             }
         }
     }
@@ -352,7 +352,7 @@ async fn restore_metadata(
     // walk over tree in repository and compare with tree in dest
     let mut node_streamer = NodeStreamer::new(index, tree)?;
     let mut dir_stack = Vec::new();
-    while let Some((path, node)) = node_streamer.try_next().await? {
+    while let Some((path, node)) = node_streamer.next().transpose()? {
         match node.node_type() {
             NodeType::Dir => {
                 // set metadata for all non-parent paths in stack

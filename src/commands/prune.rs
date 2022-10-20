@@ -7,11 +7,10 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derive_more::Add;
-use futures::TryStreamExt;
 use log::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
-use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType};
+use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{
     BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
 };
@@ -128,7 +127,7 @@ pub(super) async fn execute(
         let index = index_collector.into_index();
         let total_size = BlobTypeMap::init(|blob_type| index.total_size(&blob_type));
         let indexed_be = IndexBackend::new_from_index(&be.clone(), index);
-        let used_ids = find_used_blobs(&indexed_be, ignore_snaps).await?;
+        let used_ids = find_used_blobs(&indexed_be, ignore_snaps)?;
         (used_ids, total_size)
     };
 
@@ -1076,20 +1075,23 @@ impl PackInfo {
 }
 
 // find used blobs in repo
-async fn find_used_blobs(
+fn find_used_blobs(
     index: &(impl IndexedBackend + Unpin),
     ignore_snaps: Vec<Id>,
 ) -> Result<HashMap<Id, u8>> {
     let ignore_snaps: HashSet<_> = ignore_snaps.into_iter().collect();
 
     let p = progress_counter("reading snapshots...");
+    let list = index
+        .be()
+        .list(FileType::Snapshot)?
+        .into_iter()
+        .filter(|id| !ignore_snaps.contains(id))
+        .collect();
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(p.clone())?
+        .stream_list::<SnapshotFile>(list, p.clone())?
         .into_iter()
-        // TODO: it would even better to give ignore_snaps to the streaming function instead
-        // if reading and then filtering the snapshot
-        .filter(|(id, _)| !ignore_snaps.contains(id))
         .map(|(_, snap)| snap.tree)
         .collect();
     p.finish();
@@ -1097,8 +1099,8 @@ async fn find_used_blobs(
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();
     let p = progress_counter("finding used blobs...");
 
-    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p).await?;
-    while let Some(item) = tree_streamer.try_next().await? {
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
+    while let Some(item) = tree_streamer.next().transpose()? {
         let (_, tree) = item;
         for node in tree.nodes() {
             match node.node_type() {

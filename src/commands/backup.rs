@@ -91,7 +91,7 @@ pub(super) struct Opts {
     source: String,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptFullBackend,
     opts: Opts,
     config: ConfigFile,

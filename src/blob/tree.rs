@@ -1,18 +1,12 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::pin::Pin;
 
 use anyhow::{anyhow, Result};
+use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use derive_getters::Getters;
-use futures::{
-    stream::FuturesUnordered,
-    task::{Context, Poll},
-    Future, Stream,
-};
 use indicatif::ProgressBar;
 use serde::{Deserialize, Deserializer, Serialize};
-use tokio::{spawn, task::JoinHandle};
 
 use crate::crypto::hash;
 use crate::id::Id;
@@ -91,9 +85,8 @@ impl IntoIterator for Tree {
 /// NodeStreamer recursively streams all nodes of a given tree including all subtrees in-order
 pub struct NodeStreamer<BE>
 where
-    BE: IndexedBackend + Unpin,
+    BE: IndexedBackend,
 {
-    future: Option<JoinHandle<Result<Tree>>>,
     open_iterators: Vec<std::vec::IntoIter<Node>>,
     inner: std::vec::IntoIter<Node>,
     path: PathBuf,
@@ -102,12 +95,11 @@ where
 
 impl<BE> NodeStreamer<BE>
 where
-    BE: IndexedBackend + Unpin,
+    BE: IndexedBackend,
 {
     pub fn new(be: BE, id: Id) -> Result<Self> {
         let inner = Tree::from_backend(&be, id)?.nodes.into_iter();
         Ok(Self {
-            future: None,
             inner,
             open_iterators: Vec::new(),
             path: PathBuf::new(),
@@ -118,48 +110,37 @@ where
 
 type NodeStreamItem = Result<(PathBuf, Node)>;
 
-// TODO: This is not really parallel at the moment...
-impl<BE> Stream for NodeStreamer<BE>
+// TODO: This is not parallel at the moment...
+impl<BE> Iterator for NodeStreamer<BE>
 where
-    BE: IndexedBackend + Unpin,
+    BE: IndexedBackend,
 {
     type Item = NodeStreamItem;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let slf = self.get_mut();
-        if let Some(mut future) = slf.future.as_mut() {
-            match Pin::new(&mut future).poll(cx) {
-                Poll::Pending => {
-                    return Poll::Pending;
-                }
-                Poll::Ready(tree) => {
-                    let old_inner =
-                        mem::replace(&mut slf.inner, tree.unwrap().unwrap().nodes.into_iter());
-                    slf.open_iterators.push(old_inner);
-                    slf.future = None;
-                }
-            }
-        }
-
+    fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match slf.inner.next() {
+            match self.inner.next() {
                 Some(node) => {
-                    let path = slf.path.join(node.name());
+                    let path = self.path.join(node.name());
                     if let Some(id) = node.subtree() {
-                        slf.path.push(node.name());
-                        let be = slf.be.clone();
-                        let id = *id;
-                        slf.future = Some(spawn(async move { Tree::from_backend(&be, id) }));
+                        self.path.push(node.name());
+                        let be = self.be.clone();
+                        let tree = match Tree::from_backend(&be, *id) {
+                            Ok(tree) => tree,
+                            Err(err) => return Some(Err(err)),
+                        };
+                        let old_inner = mem::replace(&mut self.inner, tree.nodes.into_iter());
+                        self.open_iterators.push(old_inner);
                     }
 
-                    return Poll::Ready(Some(Ok((path, node))));
+                    return Some(Ok((path, node)));
                 }
-                None => match slf.open_iterators.pop() {
+                None => match self.open_iterators.pop() {
                     Some(it) => {
-                        slf.inner = it;
-                        slf.path.pop();
+                        self.inner = it;
+                        self.path.pop();
                     }
-                    None => return Poll::Ready(None),
+                    None => return None,
                 },
             }
         }
@@ -167,98 +148,100 @@ where
 }
 
 /// TreeStreamerOnce recursively visits all trees and subtrees, but each tree ID only once
-pub struct TreeStreamerOnce<BE>
-where
-    BE: IndexedBackend + Unpin,
-{
-    futures: FuturesUnordered<JoinHandle<(PathBuf, Result<Tree>, usize)>>,
+pub struct TreeStreamerOnce {
     visited: HashSet<Id>,
-    pending: VecDeque<(PathBuf, Id, usize)>,
-    be: BE,
+    queue_in: Option<Sender<(PathBuf, Id, usize)>>,
+    queue_out: Receiver<Result<(PathBuf, Tree, usize)>>,
     p: ProgressBar,
     counter: Vec<usize>,
+    finished_ids: usize,
 }
 
-impl<BE> TreeStreamerOnce<BE>
-where
-    BE: IndexedBackend + Unpin,
-{
-    pub async fn new(be: BE, ids: Vec<Id>, p: ProgressBar) -> Result<Self> {
+const MAX_TREE_LOADER: usize = 4;
+
+impl TreeStreamerOnce {
+    pub fn new<BE: IndexedBackend>(be: BE, ids: Vec<Id>, p: ProgressBar) -> Result<Self> {
         p.set_length(ids.len() as u64);
+
+        let (out_tx, out_rx) = bounded(MAX_TREE_LOADER);
+        let (in_tx, in_rx) = unbounded();
+
+        for _ in 0..MAX_TREE_LOADER {
+            let be = be.clone();
+            let in_rx = in_rx.clone();
+            let out_tx = out_tx.clone();
+            std::thread::spawn(move || {
+                for (path, id, count) in in_rx {
+                    out_tx
+                        .send(Tree::from_backend(&be, id).map(|tree| (path, tree, count)))
+                        .unwrap();
+                }
+            });
+        }
+
         let counter = vec![0; ids.len()];
         let mut streamer = Self {
-            futures: FuturesUnordered::new(),
             visited: HashSet::new(),
-            pending: VecDeque::new(),
-            be,
+            queue_in: Some(in_tx),
+            queue_out: out_rx,
             p,
             counter,
+            finished_ids: 0,
         };
 
         for (count, id) in ids.into_iter().enumerate() {
-            if !streamer.add_pending(PathBuf::new(), id, count) {
+            if !streamer.add_pending(PathBuf::new(), id, count)? {
                 streamer.p.inc(1);
+                streamer.finished_ids += 1;
             }
         }
 
         Ok(streamer)
     }
 
-    fn add_pending(&mut self, path: PathBuf, id: Id, count: usize) -> bool {
+    fn add_pending(&mut self, path: PathBuf, id: Id, count: usize) -> Result<bool> {
         if self.visited.insert(id) {
-            self.pending.push_back((path, id, count));
+            self.queue_in.as_ref().unwrap().send((path, id, count))?;
             self.counter[count] += 1;
-            true
+            Ok(true)
         } else {
-            false
+            Ok(false)
         }
     }
 }
 
 type TreeStreamItem = Result<(PathBuf, Tree)>;
 
-const MAX_TREE_LOADER: usize = 20;
-
-impl<BE> Stream for TreeStreamerOnce<BE>
-where
-    BE: IndexedBackend + Unpin,
-{
+impl Iterator for TreeStreamerOnce {
     type Item = TreeStreamItem;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let slf = self.get_mut();
-
-        // fill futures queue if there is space
-        while slf.futures.len() < MAX_TREE_LOADER && !slf.pending.is_empty() {
-            let (path, id, count) = slf.pending.pop_front().unwrap();
-            let be = slf.be.clone();
-            slf.futures.push(spawn(
-                async move { (path, Tree::from_backend(&be, id), count) },
-            ));
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.counter.len() == self.finished_ids {
+            drop(self.queue_in.take());
+            self.p.finish();
+            return None;
         }
+        let (path, tree, count) = match self.queue_out.recv() {
+            Ok(Ok(res)) => res,
+            Err(err) => return Some(Err(err.into())),
+            Ok(Err(err)) => return Some(Err(err)),
+        };
 
-        match Pin::new(&mut slf.futures).poll_next(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Some(Ok((path, tree, count)))) => {
-                let tree = tree.unwrap();
-                for node in tree.nodes() {
-                    if let Some(id) = node.subtree() {
-                        let mut path = path.clone();
-                        path.push(node.name());
-                        slf.add_pending(path, *id, count);
-                    }
+        for node in tree.nodes() {
+            if let Some(id) = node.subtree() {
+                let mut path = path.clone();
+                path.push(node.name());
+                match self.add_pending(path, *id, count) {
+                    Ok(_) => {}
+                    Err(err) => return Some(Err(err)),
                 }
-                slf.counter[count] -= 1;
-                if slf.counter[count] == 0 {
-                    slf.p.inc(1);
-                }
-                Poll::Ready(Some(Ok((path, tree))))
             }
-            Poll::Ready(None) => {
-                slf.p.finish();
-                Poll::Ready(None)
-            }
-            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err.into()))),
         }
+        self.counter[count] -= 1;
+        if self.counter[count] == 0 {
+            self.p.inc(1);
+            self.finished_ids += 1;
+        }
+        Some(Ok((path, tree)))
     }
 }

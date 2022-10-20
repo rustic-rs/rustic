@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use futures::StreamExt;
 use std::path::Path;
 
 use super::progress_counter;
@@ -16,14 +15,13 @@ pub(super) struct Opts {
     snap: String,
 }
 
-pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter(""))?;
     let index = IndexBackend::new(be, progress_counter(""))?;
     let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
 
-    let mut tree_streamer = NodeStreamer::new(index, tree)?;
-    while let Some(item) = tree_streamer.next().await {
+    for item in NodeStreamer::new(index, tree)? {
         let (path, _) = item?;
         println!("{:?} ", path);
     }

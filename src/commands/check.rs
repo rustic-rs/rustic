@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use anyhow::Result;
 use bytes::Bytes;
 use clap::Parser;
-use futures::TryStreamExt;
 use indicatif::ProgressBar;
 use log::*;
 use rayon::prelude::*;
@@ -31,7 +30,7 @@ pub(super) struct Opts {
     read_data: bool,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &(impl DecryptReadBackend + Unpin),
     cache: &Option<Cache>,
     hot_be: &Option<impl ReadBackend>,
@@ -72,7 +71,7 @@ pub(super) async fn execute(
 
     let index_be = IndexBackend::new_from_index(be, index_collector.into_index());
 
-    check_snapshots(&index_be).await?;
+    check_snapshots(&index_be)?;
 
     if opts.read_data {
         let p = progress_counter("reading pack data...");
@@ -255,7 +254,7 @@ fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Resul
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
-async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
+fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
     let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
@@ -266,8 +265,8 @@ async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
     p.finish();
 
     let p = progress_counter("checking trees...");
-    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p).await?;
-    while let Some(item) = tree_streamer.try_next().await? {
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
+    while let Some(item) = tree_streamer.next().transpose()? {
         let (path, tree) = item;
         for node in tree.nodes() {
             match node.node_type() {

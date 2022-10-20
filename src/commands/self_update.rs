@@ -9,7 +9,7 @@ pub(super) struct Opts {
     force: bool,
 }
 
-pub(super) async fn execute(opts: Opts) -> Result<()> {
+pub(super) fn execute(opts: Opts) -> Result<()> {
     let status = self_update::backends::github::Update::configure()
         .repo_owner("rustic-rs")
         .repo_name("rustic")

@@ -4,6 +4,7 @@ use super::{BlobType, IndexEntry, ReadIndex};
 use crate::blob::BlobTypeMap;
 use crate::id::Id;
 use crate::repo::{IndexBlob, IndexPack};
+use rayon::prelude::*;
 
 #[derive(Debug, PartialEq, Eq)]
 struct SortedEntry {
@@ -82,8 +83,8 @@ impl IndexCollector {
         Index(self.0.map(|_, mut tc| {
             match &mut tc.entries {
                 EntriesVariants::None => {}
-                EntriesVariants::Ids(ids) => ids.sort_unstable(),
-                EntriesVariants::FullEntries(entries) => entries.sort_unstable_by_key(|e| e.id),
+                EntriesVariants::Ids(ids) => ids.par_sort_unstable(),
+                EntriesVariants::FullEntries(entries) => entries.par_sort_unstable_by_key(|e| e.id),
             };
 
             let packs = tc.packs.into_iter().map(|(id, _)| id).collect();
@@ -182,13 +183,13 @@ impl IntoIterator for Index {
     fn into_iter(mut self) -> Self::IntoIter {
         for (_, tc) in self.0.iter_mut() {
             if let EntriesVariants::FullEntries(entries) = &mut tc.entries {
-                entries.sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
+                entries.par_sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
             }
         }
         PackIndexes {
             c: Index(self.0.map(|_, mut tc| {
                 if let EntriesVariants::FullEntries(entries) = &mut tc.entries {
-                    entries.sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
+                    entries.par_sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
                 }
 
                 TypeIndex {

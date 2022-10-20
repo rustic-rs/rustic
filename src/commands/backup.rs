@@ -201,21 +201,19 @@ pub(super) async fn execute(
         let snap = if backup_stdin {
             let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
             let p = progress_bytes("starting backup from stdin...");
-            archiver
-                .backup_reader(
-                    std::io::stdin(),
-                    Node::new(
-                        backup_path_str,
-                        NodeType::File,
-                        Metadata::default(),
-                        None,
-                        None,
-                    ),
-                    p.clone(),
-                )
-                .await?;
+            archiver.backup_reader(
+                std::io::stdin(),
+                Node::new(
+                    backup_path_str,
+                    NodeType::File,
+                    Metadata::default(),
+                    None,
+                    None,
+                ),
+                p.clone(),
+            )?;
 
-            let snap = archiver.finalize_snapshot().await?;
+            let snap = archiver.finalize_snapshot()?;
             p.finish_with_message("done");
             snap
         } else {
@@ -234,13 +232,13 @@ pub(super) async fn execute(
                         warn!("ignoring error {}\n", e)
                     }
                     Ok((path, node)) => {
-                        if let Err(e) = archiver.add_entry(&path, node, p.clone()).await {
+                        if let Err(e) = archiver.add_entry(&path, node, p.clone()) {
                             warn!("ignoring error {} for {:?}\n", e, path);
                         }
                     }
                 }
             }
-            let snap = archiver.finalize_snapshot().await?;
+            let snap = archiver.finalize_snapshot()?;
             p.finish_with_message("done");
             snap
         };

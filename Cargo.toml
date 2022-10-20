@@ -35,6 +35,7 @@ log = "0.4"
 # parallelize
 crossbeam-channel = "0.5"
 rayon = "1"
+pariter = "0.5"
 # async
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"

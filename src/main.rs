@@ -40,7 +40,6 @@ mod id;
 mod index;
 mod repo;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    commands::execute().await
+fn main() -> Result<()> {
+    commands::execute()
 }

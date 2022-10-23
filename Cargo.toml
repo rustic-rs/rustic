@@ -23,8 +23,6 @@ strip = true
 
 [dependencies]
 # macros
-async-trait = "0.1"
-async-recursion = "1"
 anyhow = "1"
 thiserror = "1"
 derive_more = "0.99"
@@ -36,9 +34,6 @@ log = "0.4"
 crossbeam-channel = "0.5"
 rayon = "1"
 pariter = "0.5"
-# async
-tokio = { version = "1", features = ["full"] }
-futures = "0.3"
 #crypto
 aes256ctr_poly1305aes = "0.1"
 sha2 = "0.10"

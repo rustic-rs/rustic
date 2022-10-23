@@ -181,7 +181,7 @@ enum Command {
     Tag(tag::Opts),
 }
 
-pub async fn execute() -> Result<()> {
+pub fn execute() -> Result<()> {
     let command: Vec<_> = std::env::args_os().into_iter().collect();
     let args = Opts::parse_from(&command);
 

@@ -5,13 +5,11 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use bytesize::ByteSize;
-use futures::{stream::FuturesUnordered, TryStreamExt};
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use log::*;
+use rayon::ThreadPoolBuilder;
 use rpassword::prompt_password;
-use tokio::spawn;
-use tokio::time::sleep;
 
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::crypto::Key;
@@ -103,7 +101,7 @@ pub fn warm_up_command(packs: impl ExactSizeIterator<Item = Id>, command: &str) 
     Ok(())
 }
 
-pub async fn warm_up(
+pub fn warm_up(
     be: &impl DecryptReadBackend,
     packs: impl ExactSizeIterator<Item = Id>,
 ) -> Result<()> {
@@ -112,33 +110,30 @@ pub async fn warm_up(
 
     let p = progress_counter("warming up packs...");
     p.set_length(packs.len() as u64);
-    let mut stream = FuturesUnordered::new();
 
     const MAX_READER: usize = 20;
-    for pack in packs {
-        while stream.len() > MAX_READER {
-            stream.try_next().await?;
+    let pool = ThreadPoolBuilder::new().num_threads(MAX_READER).build()?;
+    let p = &p;
+    let be = &be;
+    pool.in_place_scope(|s| {
+        for pack in packs {
+            s.spawn(move |_| {
+                // ignore errors as they are expected from the warm-up
+                _ = be.read_partial(FileType::Pack, &pack, false, 0, 1);
+                p.inc(1);
+            });
         }
+    });
 
-        let p = p.clone();
-        let be = be.clone();
-        stream.push(spawn(async move {
-            // ignore errors as they are expected from the warm-up
-            _ = be.read_partial(FileType::Pack, &pack, false, 0, 1);
-            p.inc(1);
-        }))
-    }
-
-    stream.try_collect().await?;
     p.finish();
 
     Ok(())
 }
 
-pub async fn wait(d: Option<humantime::Duration>) {
+pub fn wait(d: Option<humantime::Duration>) {
     if let Some(wait) = d {
         let p = progress_spinner(format!("waiting {}...", wait));
-        sleep(*wait).await;
+        std::thread::sleep(*wait);
         p.finish();
     }
 }

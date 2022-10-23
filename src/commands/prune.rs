@@ -83,7 +83,7 @@ pub(super) struct Opts {
     warm_up_wait: Option<humantime::Duration>,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     cache: Option<Cache>,
     opts: Opts,
@@ -162,14 +162,14 @@ pub(super) async fn execute(
     pruner.print_stats();
 
     if opts.warm_up {
-        warm_up(be, pruner.repack_packs().into_iter()).await?;
+        warm_up(be, pruner.repack_packs().into_iter())?;
     } else if opts.warm_up_command.is_some() {
         warm_up_command(
             pruner.repack_packs().into_iter(),
             opts.warm_up_command.as_ref().unwrap(),
         )?;
     }
-    wait(opts.warm_up_wait).await;
+    wait(opts.warm_up_wait);
 
     if !opts.dry_run {
         pruner.do_prune(be, opts, config)?;

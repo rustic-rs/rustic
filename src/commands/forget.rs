@@ -55,7 +55,7 @@ struct ConfigOpts {
     keep: KeepOptions,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     cache: Option<Cache>,
     mut opts: Opts,
@@ -151,7 +151,7 @@ pub(super) async fn execute(
     }
 
     if opts.prune {
-        prune::execute(be, cache, opts.prune_opts, config, forget_snaps).await?;
+        prune::execute(be, cache, opts.prune_opts, config, forget_snaps)?;
     }
 
     Ok(())

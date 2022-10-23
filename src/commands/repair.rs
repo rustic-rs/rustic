@@ -80,19 +80,19 @@ struct SnapOpts {
     ids: Vec<String>,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptFullBackend,
     opts: Opts,
     config_file: RusticConfig,
     config: &ConfigFile,
 ) -> Result<()> {
     match opts.command {
-        Command::Index(opt) => repair_index(be, opt).await,
+        Command::Index(opt) => repair_index(be, opt),
         Command::Snapshots(opt) => repair_snaps(be, opt, config_file, config),
     }
 }
 
-async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
+fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
     let p = progress_spinner("listing packs...");
     let mut packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
     p.finish();
@@ -166,7 +166,7 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
     pack_read_header.extend(packs.into_iter().map(|(id, size)| (id, false, None, size)));
 
     if opts.warm_up {
-        warm_up(be, pack_read_header.iter().map(|(id, _, _, _)| *id)).await?;
+        warm_up(be, pack_read_header.iter().map(|(id, _, _, _)| *id))?;
         if opts.dry_run {
             return Ok(());
         }
@@ -179,7 +179,7 @@ async fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<(
             return Ok(());
         }
     }
-    wait(opts.warm_up_wait).await;
+    wait(opts.warm_up_wait);
 
     let indexer = Indexer::new(be.clone()).into_shared();
     let p = progress_counter("reading pack headers");

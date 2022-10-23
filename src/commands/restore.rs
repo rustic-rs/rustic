@@ -57,7 +57,7 @@ pub(super) struct Opts {
     dest: String,
 }
 
-pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
+pub(super) fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
     if let Some(command) = &opts.warm_up_command {
         if !command.contains("%id") {
             bail!("warm-up command must contain %id!")
@@ -88,14 +88,14 @@ pub(super) async fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) 
         info!("all file contents are fine.");
     } else {
         if opts.warm_up {
-            warm_up(be, file_infos.to_packs().into_iter()).await?;
+            warm_up(be, file_infos.to_packs().into_iter())?;
         } else if opts.warm_up_command.is_some() {
             warm_up_command(
                 file_infos.to_packs().into_iter(),
                 opts.warm_up_command.as_ref().unwrap(),
             )?;
         }
-        wait(opts.warm_up_wait).await;
+        wait(opts.warm_up_wait);
         if !opts.dry_run {
             restore_contents(be, &dest, file_infos)?;
         }

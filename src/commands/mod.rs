@@ -311,16 +311,16 @@ pub async fn execute() -> Result<()> {
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts)?,
         Command::Completions(_) => {} // already handled above
         Command::Diff(opts) => diff::execute(&dbe, opts)?,
-        Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file).await?,
+        Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file)?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(&dbe, key, opts)?,
         Command::List(opts) => list::execute(&dbe, opts)?,
         Command::Ls(opts) => ls::execute(&dbe, opts)?,
         Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file)?,
-        Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![]).await?,
-        Command::Restore(opts) => restore::execute(&dbe, opts).await?,
-        Command::Repair(opts) => repair::execute(&dbe, opts, config_file, &config).await?,
+        Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![])?,
+        Command::Restore(opts) => restore::execute(&dbe, opts)?,
+        Command::Repair(opts) => repair::execute(&dbe, opts, config_file, &config)?,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts)?,
         Command::Tag(opts) => tag::execute(&dbe, opts, config_file)?,
     };

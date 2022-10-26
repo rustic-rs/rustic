@@ -1,11 +1,13 @@
 use std::time::Duration;
 
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 use backoff::{backoff::Backoff, Error, ExponentialBackoff, ExponentialBackoffBuilder};
 use bytes::Bytes;
 use log::*;
-use reqwest::{Client, Response, Url};
+use reqwest::{
+    blocking::{Client, Response},
+    Url,
+};
 use serde::Deserialize;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
@@ -92,7 +94,6 @@ impl RestBackend {
     }
 }
 
-#[async_trait]
 impl ReadBackend for RestBackend {
     fn location(&self) -> &str {
         self.url.as_str()
@@ -117,17 +118,16 @@ impl ReadBackend for RestBackend {
         Ok(())
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
-        Ok(backoff::future::retry_notify(
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        Ok(backoff::retry_notify(
             self.backoff.clone(),
-            || async {
+            || {
                 if tpe == FileType::Config {
                     return Ok(
                         match self
                             .client
                             .head(self.url.join("config").unwrap())
-                            .send()
-                            .await?
+                            .send()?
                             .status()
                             .is_success()
                         {
@@ -152,39 +152,33 @@ impl ReadBackend for RestBackend {
                     .client
                     .get(url)
                     .header("Accept", "application/vnd.x.restic.rest.v2")
-                    .send()
-                    .await?
+                    .send()?
                     .check_error()?
-                    .json::<Vec<ListEntry>>()
-                    .await?;
+                    .json::<Vec<ListEntry>>()?;
                 Ok(list.into_iter().map(|i| (i.name, i.size)).collect())
             },
             notify,
-        )
-        .await?)
+        )?)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        Ok(backoff::future::retry_notify(
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        Ok(backoff::retry_notify(
             self.backoff.clone(),
-            || async {
+            || {
                 Ok(self
                     .client
                     .get(self.url(tpe, id))
-                    .send()
-                    .await?
+                    .send()?
                     .check_error()?
-                    .bytes()
-                    .await?
+                    .bytes()?
                     .into_iter()
                     .collect())
             },
             notify,
-        )
-        .await?)
+        )?)
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -194,84 +188,64 @@ impl ReadBackend for RestBackend {
     ) -> Result<Bytes> {
         let offset2 = offset + length - 1;
         let header_value = format!("bytes={}-{}", offset, offset2);
-        Ok(backoff::future::retry_notify(
+        Ok(backoff::retry_notify(
             self.backoff.clone(),
-            || async {
+            || {
                 Ok(self
                     .client
                     .get(self.url(tpe, id))
                     .header("Range", header_value.clone())
-                    .send()
-                    .await?
+                    .send()?
                     .check_error()?
-                    .bytes()
-                    .await?
+                    .bytes()?
                     .into_iter()
                     .collect())
             },
             notify,
-        )
-        .await?)
+        )?)
     }
 }
 
-#[async_trait]
 impl WriteBackend for RestBackend {
-    async fn create(&self) -> Result<()> {
-        Ok(backoff::future::retry_notify(
+    fn create(&self) -> Result<()> {
+        Ok(backoff::retry_notify(
             self.backoff.clone(),
-            || async {
+            || {
                 self.client
                     .post(self.url.join("?create=true").unwrap())
-                    .send()
-                    .await?
+                    .send()?
                     .check_error()?;
                 Ok(())
             },
             notify,
-        )
-        .await?)
+        )?)
     }
 
-    async fn write_bytes(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        _cacheable: bool,
-        buf: Bytes,
-    ) -> Result<()> {
+    fn write_bytes(&self, tpe: FileType, id: &Id, _cacheable: bool, buf: Bytes) -> Result<()> {
         trace!("writing tpe: {:?}, id: {}", &tpe, &id);
         let req_builder = self.client.post(self.url(tpe, id)).body(buf);
-        Ok(backoff::future::retry_notify(
+        Ok(backoff::retry_notify(
             self.backoff.clone(),
-            || async {
-                req_builder
-                    .try_clone()
-                    .unwrap()
-                    .send()
-                    .await?
-                    .check_error()?;
+            || {
+                req_builder.try_clone().unwrap().send()?.check_error()?;
                 Ok(())
             },
             notify,
-        )
-        .await?)
+        )?)
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
+    fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
-        Ok(backoff::future::retry_notify(
+        Ok(backoff::retry_notify(
             self.backoff.clone(),
-            || async {
+            || {
                 self.client
                     .delete(self.url(tpe, id))
-                    .send()
-                    .await?
+                    .send()?
                     .check_error()?;
                 Ok(())
             },
             notify,
-        )
-        .await?)
+        )?)
     }
 }

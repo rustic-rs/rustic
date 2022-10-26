@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use bytes::Bytes;
 
 use super::{
@@ -19,14 +18,12 @@ impl<BE: DecryptFullBackend> DryRunBackend<BE> {
     }
 }
 
-#[async_trait]
 impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         self.be.decrypt(data)
     }
 }
 
-#[async_trait]
 impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
     fn location(&self) -> &str {
         self.be.location()
@@ -36,15 +33,15 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         self.be.set_option(option, value)
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
-        self.be.list_with_size(tpe).await
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        self.be.list_with_size(tpe)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        self.be.read_full(tpe, id).await
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        self.be.read_full(tpe, id)
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -52,13 +49,10 @@ impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
         offset: u32,
         length: u32,
     ) -> Result<Bytes> {
-        self.be
-            .read_partial(tpe, id, cacheable, offset, length)
-            .await
+        self.be.read_partial(tpe, id, cacheable, offset, length)
     }
 }
 
-#[async_trait]
 impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
     type Key = <BE as DecryptWriteBackend>::Key;
 
@@ -66,10 +60,10 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
         self.be.key()
     }
 
-    async fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
         match self.dry_run {
             true => Ok(Id::default()),
-            false => self.be.hash_write_full(tpe, data).await,
+            false => self.be.hash_write_full(tpe, data),
         }
     }
 
@@ -81,26 +75,25 @@ impl<BE: DecryptFullBackend> DecryptWriteBackend for DryRunBackend<BE> {
     }
 }
 
-#[async_trait]
 impl<BE: DecryptFullBackend> WriteBackend for DryRunBackend<BE> {
-    async fn create(&self) -> Result<()> {
+    fn create(&self) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.create().await,
+            false => self.be.create(),
         }
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
+    fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.write_bytes(tpe, id, cacheable, buf).await,
+            false => self.be.write_bytes(tpe, id, cacheable, buf),
         }
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
+    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
         match self.dry_run {
             true => Ok(()),
-            false => self.be.remove(tpe, id, cacheable).await,
+            false => self.be.remove(tpe, id, cacheable),
         }
     }
 }

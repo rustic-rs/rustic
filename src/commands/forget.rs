@@ -55,7 +55,7 @@ struct ConfigOpts {
     keep: KeepOptions,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     cache: Option<Cache>,
     mut opts: Opts,
@@ -74,10 +74,10 @@ pub(super) async fn execute(
         .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,paths").unwrap());
 
     let groups = match opts.ids.is_empty() {
-        true => SnapshotFile::group_from_backend(be, &opts.config.filter, &group_by).await?,
+        true => SnapshotFile::group_from_backend(be, &opts.config.filter, &group_by)?,
         false => vec![(
             SnapshotGroup::default(),
-            SnapshotFile::from_ids(be, &opts.ids).await?,
+            SnapshotFile::from_ids(be, &opts.ids)?,
         )],
     };
     let mut forget_snaps = Vec::new();
@@ -146,13 +146,12 @@ pub(super) async fn execute(
         ),
         (false, false) => {
             let p = progress_counter("removing snapshots...");
-            be.delete_list(FileType::Snapshot, true, forget_snaps.clone(), p)
-                .await?;
+            be.delete_list(FileType::Snapshot, true, forget_snaps.clone(), p)?;
         }
     }
 
     if opts.prune {
-        prune::execute(be, cache, opts.prune_opts, config, forget_snaps).await?;
+        prune::execute(be, cache, opts.prune_opts, config, forget_snaps)?;
     }
 
     Ok(())

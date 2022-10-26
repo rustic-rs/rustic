@@ -1,5 +1,4 @@
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
@@ -26,7 +25,6 @@ impl ChooseBackend {
     }
 }
 
-#[async_trait]
 impl ReadBackend for ChooseBackend {
     fn location(&self) -> &str {
         match self {
@@ -44,23 +42,23 @@ impl ReadBackend for ChooseBackend {
         }
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
         match self {
-            Local(local) => local.list_with_size(tpe).await,
-            Rest(rest) => rest.list_with_size(tpe).await,
-            Rclone(rclone) => rclone.list_with_size(tpe).await,
+            Local(local) => local.list_with_size(tpe),
+            Rest(rest) => rest.list_with_size(tpe),
+            Rclone(rclone) => rclone.list_with_size(tpe),
         }
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match self {
-            Local(local) => local.read_full(tpe, id).await,
-            Rest(rest) => rest.read_full(tpe, id).await,
-            Rclone(rclone) => rclone.read_full(tpe, id).await,
+            Local(local) => local.read_full(tpe, id),
+            Rest(rest) => rest.read_full(tpe, id),
+            Rclone(rclone) => rclone.read_full(tpe, id),
         }
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -69,40 +67,35 @@ impl ReadBackend for ChooseBackend {
         length: u32,
     ) -> Result<Bytes> {
         match self {
-            Local(local) => local.read_partial(tpe, id, cacheable, offset, length).await,
-            Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length).await,
-            Rclone(rclone) => {
-                rclone
-                    .read_partial(tpe, id, cacheable, offset, length)
-                    .await
-            }
+            Local(local) => local.read_partial(tpe, id, cacheable, offset, length),
+            Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length),
+            Rclone(rclone) => rclone.read_partial(tpe, id, cacheable, offset, length),
         }
     }
 }
 
-#[async_trait]
 impl WriteBackend for ChooseBackend {
-    async fn create(&self) -> Result<()> {
+    fn create(&self) -> Result<()> {
         match self {
-            Local(local) => local.create().await,
-            Rest(rest) => rest.create().await,
-            Rclone(rclone) => rclone.create().await,
+            Local(local) => local.create(),
+            Rest(rest) => rest.create(),
+            Rclone(rclone) => rclone.create(),
         }
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
+    fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         match self {
-            Local(local) => local.write_bytes(tpe, id, cacheable, buf).await,
-            Rest(rest) => rest.write_bytes(tpe, id, cacheable, buf).await,
-            Rclone(rclone) => rclone.write_bytes(tpe, id, cacheable, buf).await,
+            Local(local) => local.write_bytes(tpe, id, cacheable, buf),
+            Rest(rest) => rest.write_bytes(tpe, id, cacheable, buf),
+            Rclone(rclone) => rclone.write_bytes(tpe, id, cacheable, buf),
         }
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
+    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
         match self {
-            Local(local) => local.remove(tpe, id, cacheable).await,
-            Rest(rest) => rest.remove(tpe, id, cacheable).await,
-            Rclone(rclone) => rclone.remove(tpe, id, cacheable).await,
+            Local(local) => local.remove(tpe, id, cacheable),
+            Rest(rest) => rest.remove(tpe, id, cacheable),
+            Rclone(rclone) => rclone.remove(tpe, id, cacheable),
         }
     }
 }

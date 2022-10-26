@@ -91,7 +91,7 @@ pub(super) struct Opts {
     source: String,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptFullBackend,
     opts: Opts,
     config: ConfigFile,
@@ -116,7 +116,7 @@ pub(super) async fn execute(
         }
     };
 
-    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter("")).await?;
+    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter(""))?;
 
     for source in sources {
         let mut opts = opts.clone();
@@ -161,9 +161,8 @@ pub(super) async fn execute(
                 |snap| snap.hostname == hostname && snap.paths.contains(&backup_path_str),
                 progress_counter(""),
             )
-            .await
             .ok(),
-            (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).await.ok(),
+            (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
         };
 
         let parent_tree = match &parent {
@@ -197,26 +196,24 @@ pub(super) async fn execute(
         snap.paths.add(backup_path_str.clone());
         snap.set_tags(opts.tag.clone());
 
-        let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode).await;
+        let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode);
 
         let snap = if backup_stdin {
             let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
             let p = progress_bytes("starting backup from stdin...");
-            archiver
-                .backup_reader(
-                    std::io::stdin(),
-                    Node::new(
-                        backup_path_str,
-                        NodeType::File,
-                        Metadata::default(),
-                        None,
-                        None,
-                    ),
-                    p.clone(),
-                )
-                .await?;
+            archiver.backup_reader(
+                std::io::stdin(),
+                Node::new(
+                    backup_path_str,
+                    NodeType::File,
+                    Metadata::default(),
+                    None,
+                    None,
+                ),
+                p.clone(),
+            )?;
 
-            let snap = archiver.finalize_snapshot().await?;
+            let snap = archiver.finalize_snapshot()?;
             p.finish_with_message("done");
             snap
         } else {
@@ -235,13 +232,13 @@ pub(super) async fn execute(
                         warn!("ignoring error {}\n", e)
                     }
                     Ok((path, node)) => {
-                        if let Err(e) = archiver.add_entry(&path, node, p.clone()).await {
+                        if let Err(e) = archiver.add_entry(&path, node, p.clone()) {
                             warn!("ignoring error {} for {:?}\n", e, path);
                         }
                     }
                 }
             }
-            let snap = archiver.finalize_snapshot().await?;
+            let snap = archiver.finalize_snapshot()?;
             p.finish_with_message("done");
             snap
         };

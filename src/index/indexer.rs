@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
-use tokio::sync::RwLock;
 
 use crate::backend::DecryptWriteBackend;
 use crate::id::Id;
@@ -53,26 +53,26 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
         Arc::new(RwLock::new(self))
     }
 
-    pub async fn finalize(&self) -> Result<()> {
-        self.save().await
+    pub fn finalize(&self) -> Result<()> {
+        self.save()
     }
 
-    pub async fn save(&self) -> Result<()> {
+    pub fn save(&self) -> Result<()> {
         if (self.file.packs.len() + self.file.packs_to_delete.len()) > 0 {
-            self.be.save_file(&self.file).await?;
+            self.be.save_file(&self.file)?;
         }
         Ok(())
     }
 
-    pub async fn add(&mut self, pack: IndexPack) -> Result<()> {
-        self.add_with(pack, false).await
+    pub fn add(&mut self, pack: IndexPack) -> Result<()> {
+        self.add_with(pack, false)
     }
 
-    pub async fn add_remove(&mut self, pack: IndexPack) -> Result<()> {
-        self.add_with(pack, true).await
+    pub fn add_remove(&mut self, pack: IndexPack) -> Result<()> {
+        self.add_with(pack, true)
     }
 
-    pub async fn add_with(&mut self, pack: IndexPack, delete: bool) -> Result<()> {
+    pub fn add_with(&mut self, pack: IndexPack, delete: bool) -> Result<()> {
         self.count += pack.blobs.len();
 
         if let Some(indexed) = &mut self.indexed {
@@ -85,7 +85,7 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
 
         // check if IndexFile needs to be saved
         if self.count >= MAX_COUNT || self.created.elapsed()? >= MAX_AGE {
-            self.save().await?;
+            self.save()?;
             self.reset();
         }
         Ok(())

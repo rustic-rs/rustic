@@ -1,11 +1,10 @@
 use std::num::NonZeroU32;
 
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{stream, stream::FuturesUnordered, StreamExt};
+use crossbeam_channel::{unbounded, Receiver};
 use indicatif::ProgressBar;
-use tokio::{spawn, task::JoinHandle};
+use rayon::prelude::*;
 use zstd::stream::{copy_encode, decode_all};
 
 use super::{FileType, Id, ReadBackend, RepoFile, WriteBackend};
@@ -14,12 +13,11 @@ use crate::crypto::{hash, CryptoKey};
 pub trait DecryptFullBackend: DecryptWriteBackend + DecryptReadBackend {}
 impl<T: DecryptWriteBackend + DecryptReadBackend> DecryptFullBackend for T {}
 
-#[async_trait]
 pub trait DecryptReadBackend: ReadBackend {
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>>;
 
-    async fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        let decrypted = self.decrypt(&self.read_full(tpe, id).await?)?;
+    fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        let decrypted = self.decrypt(&self.read_full(tpe, id)?)?;
         Ok(match decrypted[0] {
             b'{' | b'[' => decrypted,          // not compressed
             2 => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
@@ -28,7 +26,7 @@ pub trait DecryptReadBackend: ReadBackend {
         .into())
     }
 
-    async fn read_encrypted_partial(
+    fn read_encrypted_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -37,11 +35,7 @@ pub trait DecryptReadBackend: ReadBackend {
         length: u32,
         uncompressed_length: Option<NonZeroU32>,
     ) -> Result<Bytes> {
-        let mut data = self.decrypt(
-            &self
-                .read_partial(tpe, id, cacheable, offset, length)
-                .await?,
-        )?;
+        let mut data = self.decrypt(&self.read_partial(tpe, id, cacheable, offset, length)?)?;
         if let Some(length) = uncompressed_length {
             data = decode_all(&*data).unwrap();
             if data.len() != length.get() as usize {
@@ -51,70 +45,51 @@ pub trait DecryptReadBackend: ReadBackend {
         Ok(data.into())
     }
 
-    async fn get_file<F: RepoFile>(&self, id: &Id) -> Result<F> {
-        let data = self.read_encrypted_full(F::TYPE, id).await?;
+    fn get_file<F: RepoFile>(&self, id: &Id) -> Result<F> {
+        let data = self.read_encrypted_full(F::TYPE, id)?;
         Ok(serde_json::from_slice(&data)?)
     }
 
-    async fn stream_all<F: RepoFile>(
-        &self,
-        p: ProgressBar,
-    ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
-        let list = self.list(F::TYPE).await?;
-        self.stream_list(list, p).await
+    fn stream_all<F: RepoFile>(&self, p: ProgressBar) -> Result<Receiver<(Id, F)>> {
+        let list = self.list(F::TYPE)?;
+        self.stream_list(list, p)
     }
 
-    async fn stream_list<F: RepoFile>(
-        &self,
-        list: Vec<Id>,
-        p: ProgressBar,
-    ) -> Result<FuturesUnordered<JoinHandle<(Id, F)>>> {
+    fn stream_list<F: RepoFile>(&self, list: Vec<Id>, p: ProgressBar) -> Result<Receiver<(Id, F)>> {
         p.set_length(list.len() as u64);
+        let (tx, rx) = unbounded();
 
-        let stream: FuturesUnordered<_> = list
-            .into_iter()
-            .map(|id| {
-                let be = self.clone();
-                let p = p.clone();
-                spawn(async move {
-                    let file = be.get_file::<F>(&id).await.unwrap();
-                    p.inc(1);
-                    (id, file)
-                })
-            })
-            .collect();
-        Ok(stream)
+        list.into_par_iter()
+            .for_each_with((self, p, tx), |(be, p, tx), id| {
+                let file = be.get_file::<F>(&id).unwrap();
+                p.inc(1);
+                tx.send((id, file)).unwrap();
+            });
+        Ok(rx)
     }
 }
 
-#[async_trait]
 pub trait DecryptWriteBackend: WriteBackend {
     type Key: CryptoKey;
     fn key(&self) -> &Self::Key;
-    async fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id>;
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id>;
 
-    async fn save_file<F: RepoFile>(&self, file: &F) -> Result<Id> {
+    fn save_file<F: RepoFile>(&self, file: &F) -> Result<Id> {
         let data = serde_json::to_vec(file)?;
-        Ok(self.hash_write_full(F::TYPE, &data).await?)
+        self.hash_write_full(F::TYPE, &data)
     }
 
-    async fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
+    fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
         p.set_length(list.len() as u64);
-        stream::iter(list.into_iter().map(|file| {
-            let be = self.clone();
-            let p = p.clone();
-            (file, be, p)
-        }))
-        .for_each_concurrent(5, |(file, be, p)| async move {
-            be.save_file(&file).await.unwrap();
+        list.par_iter().for_each(|file| {
+            self.save_file(file).unwrap();
             p.inc(1);
-        })
-        .await;
+        });
         p.finish();
         Ok(())
     }
 
-    async fn delete_list(
+    fn delete_list(
         &self,
         tpe: FileType,
         cacheable: bool,
@@ -122,16 +97,10 @@ pub trait DecryptWriteBackend: WriteBackend {
         p: ProgressBar,
     ) -> Result<()> {
         p.set_length(list.len() as u64);
-        stream::iter(list.into_iter().map(|id| {
-            let be = self.clone();
-            let p = p.clone();
-            (id, be, p)
-        }))
-        .for_each_concurrent(20, |(id, be, p)| async move {
-            be.remove(tpe, &id, cacheable).await.unwrap();
+        list.par_iter().for_each(|id| {
+            self.remove(tpe, id, cacheable).unwrap();
             p.inc(1);
-        })
-        .await;
+        });
 
         p.finish();
         Ok(())
@@ -157,13 +126,13 @@ impl<R: ReadBackend, C: CryptoKey> DecryptBackend<R, C> {
     }
 }
 
-#[async_trait]
 impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C> {
     type Key = C;
     fn key(&self) -> &Self::Key {
         &self.key
     }
-    async fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
+
+    fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> Result<Id> {
         let data = match self.zstd {
             Some(level) => {
                 let mut out = vec![2_u8];
@@ -173,7 +142,7 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
             None => self.key().encrypt_data(data)?,
         };
         let id = hash(&data);
-        self.write_bytes(tpe, &id, false, data.into()).await?;
+        self.write_bytes(tpe, &id, false, data.into())?;
         Ok(id)
     }
 
@@ -182,14 +151,12 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
     }
 }
 
-#[async_trait]
 impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         Ok(self.key.decrypt_data(data)?)
     }
 }
 
-#[async_trait]
 impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     fn location(&self) -> &str {
         self.backend.location()
@@ -199,19 +166,19 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
         self.backend.set_option(option, value)
     }
 
-    async fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
-        self.backend.list(tpe).await
+    fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
+        self.backend.list(tpe)
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
-        self.backend.list_with_size(tpe).await
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        self.backend.list_with_size(tpe)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
-        self.backend.read_full(tpe, id).await
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        self.backend.read_full(tpe, id)
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -221,21 +188,19 @@ impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
     ) -> Result<Bytes> {
         self.backend
             .read_partial(tpe, id, cacheable, offset, length)
-            .await
     }
 }
 
-#[async_trait]
 impl<R: WriteBackend, C: CryptoKey> WriteBackend for DecryptBackend<R, C> {
-    async fn create(&self) -> Result<()> {
-        self.backend.create().await
+    fn create(&self) -> Result<()> {
+        self.backend.create()
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
-        self.backend.write_bytes(tpe, id, cacheable, buf).await
+    fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
+        self.backend.write_bytes(tpe, id, cacheable, buf)
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
-        self.backend.remove(tpe, id, cacheable).await
+    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
+        self.backend.remove(tpe, id, cacheable)
     }
 }

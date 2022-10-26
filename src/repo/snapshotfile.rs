@@ -6,7 +6,6 @@ use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Local};
 use clap::Parser;
 use derivative::Derivative;
-use futures::{future, TryStreamExt};
 use indicatif::ProgressBar;
 use log::*;
 use merge::Merge;
@@ -108,37 +107,37 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend
-    pub async fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
-        Ok(Self::set_id((*id, be.get_file(id).await?)))
+    pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
+        Ok(Self::set_id((*id, be.get_file(id)?)))
     }
 
-    pub async fn from_str<B: DecryptReadBackend>(
+    pub fn from_str<B: DecryptReadBackend>(
         be: &B,
         string: &str,
-        predicate: impl FnMut(&Self) -> bool,
+        predicate: impl FnMut(&Self) -> bool + Send + Sync,
         p: ProgressBar,
     ) -> Result<Self> {
         match string {
-            "latest" => Self::latest(be, predicate, p).await,
-            _ => Self::from_id(be, string).await,
+            "latest" => Self::latest(be, predicate, p),
+            _ => Self::from_id(be, string),
         }
     }
 
     /// Get the latest SnapshotFile from the backend
-    pub async fn latest<B: DecryptReadBackend>(
+    pub fn latest<B: DecryptReadBackend>(
         be: &B,
-        predicate: impl FnMut(&Self) -> bool,
+        predicate: impl FnMut(&Self) -> bool + Send + Sync,
         p: ProgressBar,
     ) -> Result<Self> {
         p.set_prefix("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
-        let mut snaps = be.stream_all::<SnapshotFile>(p.clone()).await?;
 
-        while let Some((id, mut snap)) = snaps.try_next().await? {
+        for (id, mut snap) in be.stream_all::<SnapshotFile>(p.clone())? {
             if !pred(&snap) {
                 continue;
             }
+
             snap.id = id;
             match &latest {
                 Some(l) if l.time > snap.time => {}
@@ -152,21 +151,20 @@ impl SnapshotFile {
     }
 
     /// Get a SnapshotFile from the backend by (part of the) id
-    pub async fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
+    pub fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
         info!("getting snapshot...");
-        let id = be.find_id(FileType::Snapshot, id).await?;
-        SnapshotFile::from_backend(be, &id).await
+        let id = be.find_id(FileType::Snapshot, id)?;
+        SnapshotFile::from_backend(be, &id)
     }
 
     /// Get a Vector of SnapshotFile from the backend by list of (parts of the) ids
-    pub async fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
-        let ids = be.find_ids(FileType::Snapshot, ids).await?;
+    pub fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
+        let ids = be.find_ids(FileType::Snapshot, ids)?;
         Ok(be
-            .stream_list::<Self>(ids, ProgressBar::hidden())
-            .await?
-            .map_ok(Self::set_id)
-            .try_collect()
-            .await?)
+            .stream_list::<Self>(ids, ProgressBar::hidden())?
+            .into_iter()
+            .map(Self::set_id)
+            .collect())
     }
 
     fn cmp_group(&self, crit: &SnapshotGroupCriterion, other: &Self) -> Ordering {
@@ -199,12 +197,12 @@ impl SnapshotFile {
 
     /// Get SnapshotFiles which match the filter grouped by the group criterion
     /// from the backend
-    pub async fn group_from_backend<B: DecryptReadBackend>(
+    pub fn group_from_backend<B: DecryptReadBackend>(
         be: &B,
         filter: &SnapshotFilter,
         crit: &SnapshotGroupCriterion,
     ) -> Result<Vec<(SnapshotGroup, Vec<Self>)>> {
-        let mut snaps = Self::all_from_backend(be, filter).await?;
+        let mut snaps = Self::all_from_backend(be, filter)?;
         snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(crit, sn2));
 
         let mut result = Vec::new();
@@ -233,17 +231,16 @@ impl SnapshotFile {
         Ok(result)
     }
 
-    pub async fn all_from_backend<B: DecryptReadBackend>(
+    pub fn all_from_backend<B: DecryptReadBackend>(
         be: &B,
         filter: &SnapshotFilter,
     ) -> Result<Vec<Self>> {
         Ok(be
-            .stream_all::<SnapshotFile>(ProgressBar::hidden())
-            .await?
-            .map_ok(Self::set_id)
-            .try_filter(|sn| future::ready(sn.matches(filter)))
-            .try_collect()
-            .await?)
+            .stream_all::<SnapshotFile>(ProgressBar::hidden())?
+            .into_iter()
+            .map(Self::set_id)
+            .filter(|sn| sn.matches(filter))
+            .collect())
     }
 
     pub fn matches(&self, filter: &SnapshotFilter) -> bool {

@@ -4,7 +4,6 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
 use dirs::cache_dir;
 use log::*;
@@ -24,7 +23,6 @@ impl<BE: WriteBackend> CachedBackend<BE> {
     }
 }
 
-#[async_trait]
 impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
     fn location(&self) -> &str {
         self.be.location()
@@ -34,27 +32,27 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
         self.be.set_option(option, value)
     }
 
-    async fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
-        let list = self.be.list_with_size(tpe).await?;
+    fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        let list = self.be.list_with_size(tpe)?;
 
         if let Some(cache) = &self.cache {
             if tpe.is_cacheable() {
-                cache.remove_not_in_list(tpe, &list).await?;
+                cache.remove_not_in_list(tpe, &list)?;
             }
         }
 
         Ok(list)
     }
 
-    async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+    fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         match (&self.cache, tpe.is_cacheable()) {
-            (None, _) | (Some(_), false) => self.be.read_full(tpe, id).await,
-            (Some(cache), true) => match cache.read_full(tpe, id).await {
+            (None, _) | (Some(_), false) => self.be.read_full(tpe, id),
+            (Some(cache), true) => match cache.read_full(tpe, id) {
                 Ok(res) => Ok(res),
                 _ => {
-                    let res = self.be.read_full(tpe, id).await;
+                    let res = self.be.read_full(tpe, id);
                     if let Ok(data) = &res {
-                        let _ = cache.write_bytes(tpe, id, data.clone()).await;
+                        let _ = cache.write_bytes(tpe, id, data.clone());
                     }
                     res
                 }
@@ -62,7 +60,7 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
         }
     }
 
-    async fn read_partial(
+    fn read_partial(
         &self,
         tpe: FileType,
         id: &Id,
@@ -72,21 +70,19 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
     ) -> Result<Bytes> {
         match (&self.cache, cacheable || tpe.is_cacheable()) {
             (None, _) | (Some(_), false) => {
-                self.be
-                    .read_partial(tpe, id, cacheable, offset, length)
-                    .await
+                self.be.read_partial(tpe, id, cacheable, offset, length)
             }
-            (Some(cache), true) => match cache.read_partial(tpe, id, offset, length).await {
+            (Some(cache), true) => match cache.read_partial(tpe, id, offset, length) {
                 Ok(res) => Ok(res),
-                _ => match self.be.read_full(tpe, id).await {
+                _ => match self.be.read_full(tpe, id) {
                     // read full file, save to cache and return partial content from cache
-                    // TODO: - Do not read to memory, but use a (Async)Reader
+                    // TODO: - Do not read to memory, but use a Reader
                     //       - Don't read from cache, but use the right part of the read content
                     Ok(data) => {
-                        if cache.write_bytes(tpe, id, data.clone()).await.is_ok() {
-                            cache.read_partial(tpe, id, offset, length).await
+                        if cache.write_bytes(tpe, id, data).is_ok() {
+                            cache.read_partial(tpe, id, offset, length)
                         } else {
-                            self.be.read_partial(tpe, id, false, offset, length).await
+                            self.be.read_partial(tpe, id, false, offset, length)
                         }
                     }
                     error => error,
@@ -96,28 +92,27 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
     }
 }
 
-#[async_trait]
 impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
-    async fn create(&self) -> Result<()> {
-        self.be.create().await
+    fn create(&self) -> Result<()> {
+        self.be.create()
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
+    fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {
         if let Some(cache) = &self.cache {
             if cacheable || tpe.is_cacheable() {
-                let _ = cache.write_bytes(tpe, id, buf.clone()).await;
+                let _ = cache.write_bytes(tpe, id, buf.clone());
             }
         }
-        self.be.write_bytes(tpe, id, cacheable, buf).await
+        self.be.write_bytes(tpe, id, cacheable, buf)
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
+    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()> {
         if let Some(cache) = &self.cache {
             if cacheable || tpe.is_cacheable() {
-                let _ = cache.remove(tpe, id).await;
+                let _ = cache.remove(tpe, id);
             }
         }
-        self.be.remove(tpe, id, cacheable).await
+        self.be.remove(tpe, id, cacheable)
     }
 }
 
@@ -154,7 +149,7 @@ impl Cache {
         self.path.join(tpe.name()).join(&hex_id[0..2]).join(&hex_id)
     }
 
-    pub async fn list_with_size(&self, tpe: FileType) -> Result<HashMap<Id, u32>> {
+    pub fn list_with_size(&self, tpe: FileType) -> Result<HashMap<Id, u32>> {
         let path = self.path.join(tpe.name());
 
         let walker = WalkDir::new(path)
@@ -183,38 +178,32 @@ impl Cache {
         Ok(walker.collect())
     }
 
-    pub async fn remove_not_in_list(&self, tpe: FileType, list: &Vec<(Id, u32)>) -> Result<()> {
-        let mut list_cache = self.list_with_size(tpe).await?;
+    pub fn remove_not_in_list(&self, tpe: FileType, list: &Vec<(Id, u32)>) -> Result<()> {
+        let mut list_cache = self.list_with_size(tpe)?;
         // remove present files from the cache list
         for (id, size) in list {
             if let Some(cached_size) = list_cache.remove(id) {
                 if &cached_size != size {
                     // remove cache files with non-matching size
-                    self.remove(tpe, id).await?;
+                    self.remove(tpe, id)?;
                 }
             }
         }
         // remove all remaining (i.e. not present in repo) cache files
         for id in list_cache.keys() {
-            self.remove(tpe, id).await?;
+            self.remove(tpe, id)?;
         }
         Ok(())
     }
 
-    pub async fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+    pub fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         trace!("cache reading tpe: {:?}, id: {}", &tpe, &id);
         let data = fs::read(self.path(tpe, id))?;
         trace!("cache hit!");
         Ok(data.into())
     }
 
-    async fn read_partial(
-        &self,
-        tpe: FileType,
-        id: &Id,
-        offset: u32,
-        length: u32,
-    ) -> Result<Bytes> {
+    fn read_partial(&self, tpe: FileType, id: &Id, offset: u32, length: u32) -> Result<Bytes> {
         trace!(
             "cache reading tpe: {:?}, id: {}, offset: {}",
             &tpe,
@@ -229,7 +218,7 @@ impl Cache {
         Ok(vec.into())
     }
 
-    async fn write_bytes(&self, tpe: FileType, id: &Id, buf: Bytes) -> Result<()> {
+    fn write_bytes(&self, tpe: FileType, id: &Id, buf: Bytes) -> Result<()> {
         trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         fs::create_dir_all(self.dir(tpe, id))?;
         let filename = self.path(tpe, id);
@@ -241,7 +230,7 @@ impl Cache {
         Ok(())
     }
 
-    async fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
+    fn remove(&self, tpe: FileType, id: &Id) -> Result<()> {
         trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         fs::remove_file(filename)?;

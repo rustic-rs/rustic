@@ -68,7 +68,7 @@ pub(super) struct Opts {
     ids: Vec<String>,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptFullBackend,
     mut opts: Opts,
     config_file: RusticConfig,
@@ -76,8 +76,8 @@ pub(super) async fn execute(
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     let snapshots = match opts.ids.is_empty() {
-        true => SnapshotFile::all_from_backend(be, &opts.filter).await?,
-        false => SnapshotFile::from_ids(be, &opts.ids).await?,
+        true => SnapshotFile::all_from_backend(be, &opts.filter)?,
+        false => SnapshotFile::from_ids(be, &opts.ids)?,
     };
 
     let delete = match (
@@ -109,11 +109,10 @@ pub(super) async fn execute(
         ),
         (false, false) => {
             let p = progress_counter("saving new snapshots...");
-            be.save_list(snapshots, p).await?;
+            be.save_list(snapshots, p)?;
 
             let p = progress_counter("deleting old snapshots...");
-            be.delete_list(FileType::Snapshot, true, old_snap_ids, p)
-                .await?;
+            be.delete_list(FileType::Snapshot, true, old_snap_ids, p)?;
         }
     }
     Ok(())

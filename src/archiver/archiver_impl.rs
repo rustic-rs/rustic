@@ -5,10 +5,9 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 use bytesize::ByteSize;
 use chrono::Local;
-use futures::{stream::FuturesOrdered, StreamExt};
 use indicatif::ProgressBar;
 use log::*;
-use tokio::spawn;
+use pariter::IteratorExt;
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
@@ -105,7 +104,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.summary.total_dirsize_processed += size;
     }
 
-    pub async fn add_entry(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
+    pub fn add_entry(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
         let basepath = if node.is_dir() {
             path
         } else {
@@ -113,7 +112,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 .ok_or_else(|| anyhow!("file path should have a parent!"))?
         };
 
-        self.finish_trees(basepath).await?;
+        self.finish_trees(basepath)?;
 
         let missing_dirs = basepath.strip_prefix(&self.path)?;
         for p in missing_dirs.iter() {
@@ -122,13 +121,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             let tree = std::mem::replace(&mut self.tree, Tree::new());
             if self.path == path {
                 // use Node and return
-                let new_parent = self.parent.sub_parent(&node).await?;
+                let new_parent = self.parent.sub_parent(&node)?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));
                 return Ok(());
             } else {
                 let node = Node::new_node(p, NodeType::Dir, Metadata::default());
-                let new_parent = self.parent.sub_parent(&node).await?;
+                let new_parent = self.parent.sub_parent(&node)?;
                 let parent = std::mem::replace(&mut self.parent, new_parent);
                 self.stack.push((node, tree, parent));
             };
@@ -136,7 +135,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         match node.node_type() {
             NodeType::File => {
-                self.backup_file(path, node, p).await?;
+                self.backup_file(path, node, p)?;
             }
             NodeType::Dir => {}          // is already handled, see above
             _ => self.add_file(node, 0), // all other cases: just save the given node
@@ -144,7 +143,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub async fn finish_trees(&mut self, path: &Path) -> Result<()> {
+    pub fn finish_trees(&mut self, path: &Path) -> Result<()> {
         while !path.starts_with(&self.path) {
             // save tree and go back to parent dir
             let (chunk, id) = self.tree.serialize()?;
@@ -158,13 +157,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             self.tree = tree;
             self.parent = parent;
 
-            self.backup_tree(node, chunk).await?;
+            self.backup_tree(node, chunk)?;
             self.path.pop();
         }
         Ok(())
     }
 
-    pub async fn backup_tree(&mut self, node: Node, chunk: Vec<u8>) -> Result<()> {
+    pub fn backup_tree(&mut self, node: Node, chunk: Vec<u8>) -> Result<()> {
         let dirsize = chunk.len() as u64;
         let dirsize_bytes = ByteSize(dirsize).to_string_as(true);
         let id = node.subtree().unwrap();
@@ -188,7 +187,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
 
         if !self.index.has_tree(&id) {
-            match self.tree_packer.add(&chunk, &id).await? {
+            match self.tree_packer.add(&chunk, &id)? {
                 0 => {}
                 packed_size => {
                     self.summary.tree_blobs += 1;
@@ -203,7 +202,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub async fn backup_file(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
+    pub fn backup_file(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
         if let ParentResult::Matched(p_node) = self.parent.is_parent(&node) {
             if p_node.content().iter().all(|id| self.index.has_data(id)) {
                 let size = *p_node.meta().size();
@@ -220,37 +219,37 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             }
         }
         let f = File::open(path)?;
-        self.backup_reader(f, node, p).await
+        self.backup_reader(f, node, p)
     }
 
-    pub async fn backup_reader(&mut self, r: impl Read, node: Node, p: ProgressBar) -> Result<()> {
+    pub fn backup_reader(
+        &mut self,
+        r: impl Read + 'static,
+        node: Node,
+        p: ProgressBar,
+    ) -> Result<()> {
         let chunk_iter = ChunkIter::new(r, *node.meta().size() as usize, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
 
-        let mut queue = FuturesOrdered::new();
-
-        for chunk in chunk_iter {
-            let chunk = chunk?;
-            let size = chunk.len() as u64;
-            filesize += size;
-
-            queue.push_back(spawn(async move {
+        chunk_iter
+            .into_iter()
+            // TODO: This parallelization works pretty well for big files. For small files this produces a lot of
+            // unneccessary overhead. Maybe use a parallel hashing actor?
+            .parallel_map(|chunk| {
+                let chunk = chunk?;
                 let id = hash(&chunk);
-                (id, chunk, size)
-            }));
+                Ok((chunk, id))
+            })
+            .try_for_each(|data: Result<_>| -> Result<_> {
+                let (chunk, id) = data?;
+                let size = chunk.len() as u64;
+                filesize += size;
 
-            if queue.len() > 8 {
-                let (id, chunk, size) = queue.next().await.unwrap()?;
-                self.process_data_junk(id, &chunk, size, &p).await?;
                 content.push(id);
-            }
-        }
-
-        while let Some(Ok((id, chunk, size))) = queue.next().await {
-            self.process_data_junk(id, &chunk, size, &p).await?;
-            content.push(id);
-        }
+                self.process_data_junk(id, &chunk, size, &p)?;
+                Ok(())
+            })?;
 
         let mut node = node;
         node.set_content(content);
@@ -258,7 +257,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    async fn process_data_junk(
+    fn process_data_junk(
         &mut self,
         id: Id,
         chunk: &[u8],
@@ -266,7 +265,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         p: &ProgressBar,
     ) -> Result<()> {
         if !self.index.has_data(&id) {
-            match self.data_packer.add(chunk, &id).await? {
+            match self.data_packer.add(chunk, &id)? {
                 0 => {}
                 packed_size => {
                     self.summary.data_blobs += 1;
@@ -281,20 +280,20 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub async fn finalize_snapshot(mut self) -> Result<SnapshotFile> {
-        self.finish_trees(&PathBuf::from("/")).await?;
+    pub fn finalize_snapshot(mut self) -> Result<SnapshotFile> {
+        self.finish_trees(&PathBuf::from("/"))?;
 
         let (chunk, id) = self.tree.serialize()?;
         if !self.index.has_tree(&id) {
-            self.tree_packer.add(&chunk, &id).await?;
+            self.tree_packer.add(&chunk, &id)?;
         }
         self.snap.tree = id;
 
-        self.data_packer.finalize().await?;
-        self.tree_packer.finalize().await?;
+        self.data_packer.finalize()?;
+        self.tree_packer.finalize()?;
         {
-            let indexer = self.indexer.write().await;
-            indexer.finalize().await?;
+            let indexer = self.indexer.write().unwrap();
+            indexer.finalize()?;
         }
         let end_time = Local::now();
         self.summary.backup_duration = (end_time - self.summary.backup_start)
@@ -303,7 +302,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.summary.total_duration = (end_time - self.snap.time).to_std()?.as_secs_f64();
         self.summary.backup_end = end_time;
         self.snap.summary = Some(self.summary);
-        let id = self.be.save_file(&self.snap).await?;
+        let id = self.be.save_file(&self.snap)?;
         self.snap.id = id;
 
         Ok(self.snap)

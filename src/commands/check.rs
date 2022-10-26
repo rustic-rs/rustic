@@ -3,10 +3,9 @@ use std::collections::HashMap;
 use anyhow::Result;
 use bytes::Bytes;
 use clap::Parser;
-use futures::{stream, StreamExt, TryStreamExt};
 use indicatif::ProgressBar;
 use log::*;
-use tokio::task::spawn_blocking;
+use rayon::prelude::*;
 use zstd::stream::decode_all;
 
 use super::{progress_bytes, progress_counter};
@@ -31,7 +30,7 @@ pub(super) struct Opts {
     read_data: bool,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &(impl DecryptReadBackend + Unpin),
     cache: &Option<Cache>,
     hot_be: &Option<impl ReadBackend>,
@@ -45,76 +44,69 @@ pub(super) async fn execute(
                 //
                 // This lists files here and later when reading index / checking snapshots
                 // TODO: Only list the files once...
-                let _ = be.list_with_size(file_type).await?;
+                let _ = be.list_with_size(file_type)?;
 
                 let p = progress_bytes(format!("checking {} in cache...", file_type.name()));
                 // TODO: Make concurrency (20) customizable
-                check_cache_files(20, cache, raw_be, file_type, p).await?;
+                check_cache_files(20, cache, raw_be, file_type, p)?;
             }
         }
     }
 
     if let Some(hot_be) = hot_be {
         for file_type in [FileType::Snapshot, FileType::Index] {
-            check_hot_files(raw_be, hot_be, file_type).await?;
+            check_hot_files(raw_be, hot_be, file_type)?;
         }
     }
 
-    let index_collector = check_packs(be, hot_be, opts.read_data).await?;
+    let index_collector = check_packs(be, hot_be, opts.read_data)?;
 
     if !opts.trust_cache {
         if let Some(cache) = &cache {
             let p = progress_bytes("checking packs in cache...");
             // TODO: Make concurrency (5) customizable
-            check_cache_files(5, cache, raw_be, FileType::Pack, p).await?;
+            check_cache_files(5, cache, raw_be, FileType::Pack, p)?;
         }
     }
 
     let index_be = IndexBackend::new_from_index(be, index_collector.into_index());
 
-    check_snapshots(&index_be).await?;
+    check_snapshots(&index_be)?;
 
     if opts.read_data {
         let p = progress_counter("reading pack data...");
-        stream::iter(index_be.into_index().into_iter().map(|pack| {
-            let be = be.clone();
-            let p = p.clone();
-            (pack, be, p)
-        }))
-        // TODO: Make concurrency (4) customizable
-        .for_each_concurrent(4, |(pack, be, p)| async move {
-            let id = pack.id;
-            let data = be.read_full(FileType::Pack, &id).await.unwrap();
-            spawn_blocking(move || {
-                match check_pack(&be, pack, data) {
+
+        index_be
+            .into_index()
+            .into_iter()
+            .par_bridge()
+            .for_each_with((be.clone(), p.clone()), |(be, p), pack| {
+                let id = pack.id;
+                let data = be.read_full(FileType::Pack, &id).unwrap();
+                match check_pack(be, pack, data) {
                     Ok(()) => {}
                     Err(err) => error!("Error reading pack {id} : {err}",),
                 }
                 p.inc(1);
-            })
-            .await
-            .unwrap()
-        })
-        .await;
+            });
         p.finish();
     }
 
     Ok(())
 }
 
-async fn check_hot_files(
+fn check_hot_files(
     be: &impl ReadBackend,
     be_hot: &impl ReadBackend,
     file_type: FileType,
 ) -> Result<()> {
     let p = progress_spinner(format!("checking {} in hot repo...", file_type.name()));
     let mut files = be
-        .list_with_size(file_type)
-        .await?
+        .list_with_size(file_type)?
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-    let files_hot = be_hot.list_with_size(file_type).await?;
+    let files_hot = be_hot.list_with_size(file_type)?;
 
     for (id, size_hot) in files_hot {
         match files.remove(&id) {
@@ -134,14 +126,14 @@ async fn check_hot_files(
     Ok(())
 }
 
-async fn check_cache_files(
-    concurrency: usize,
+fn check_cache_files(
+    _concurrency: usize,
     cache: &Cache,
     be: &impl ReadBackend,
     file_type: FileType,
     p: ProgressBar,
 ) -> Result<()> {
-    let files = cache.list_with_size(file_type).await?;
+    let files = cache.list_with_size(file_type)?;
 
     if files.is_empty() {
         return Ok(());
@@ -150,17 +142,12 @@ async fn check_cache_files(
     let total_size = files.iter().map(|(_, size)| *size as u64).sum();
     p.set_length(total_size);
 
-    stream::iter(files.into_iter().map(|file| {
-        let cache = cache.clone();
-        let be = be.clone();
-        let p = p.clone();
-        (file, cache, be, p)
-    }))
-    .for_each_concurrent(concurrency, |((id, size), cache, be, p)| async move {
+    files.into_par_iter()
+    .for_each_with((cache,be,p.clone()), |(cache, be, p),(id, size)|  {
         // Read file from cache and from backend and compare
         match (
-            cache.read_full(file_type, &id).await,
-            be.read_full(file_type, &id).await,
+            cache.read_full(file_type, &id),
+            be.read_full(file_type, &id),
         ) {
             (Err(err), _) => {
                 error!("Error reading cached file Type: {file_type:?}, Id: {id} : {err}",)
@@ -173,15 +160,14 @@ async fn check_cache_files(
         }
 
         p.inc(size as u64);
-    })
-    .await;
+    });
 
     p.finish();
     Ok(())
 }
 
 // check if packs correspond to index
-async fn check_packs(
+fn check_packs(
     be: &impl DecryptReadBackend,
     hot_be: &Option<impl ReadBackend>,
     read_data: bool,
@@ -225,9 +211,7 @@ async fn check_packs(
     };
 
     let p = progress_counter("reading index...");
-    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
-    while let Some(index) = stream.try_next().await? {
-        let index = index.1;
+    for (_, index) in be.stream_all::<IndexFile>(p.clone())? {
         index_collector.extend(index.packs.clone());
         for p in index.packs {
             process_pack(p);
@@ -236,23 +220,24 @@ async fn check_packs(
             process_pack(p);
         }
     }
+
     p.finish();
 
     if let Some(hot_be) = hot_be {
         let p = progress_spinner("listing packs in hot repo...");
-        check_packs_list(hot_be, tree_packs).await?;
+        check_packs_list(hot_be, tree_packs)?;
         p.finish();
     }
 
     let p = progress_spinner("listing packs...");
-    check_packs_list(be, packs).await?;
+    check_packs_list(be, packs)?;
     p.finish();
 
     Ok(index_collector)
 }
 
-async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
-    for (id, size) in be.list_with_size(FileType::Pack).await? {
+fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Result<()> {
+    for (id, size) in be.list_with_size(FileType::Pack)? {
         match packs.remove(&id) {
             None => warn!("pack {id} not referenced in index. Can be a parallel backup job. To repair: 'rustic repair index'."),
             Some(index_size) if index_size != size => {
@@ -269,20 +254,19 @@ async fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) ->
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
-async fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
+fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
     let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(p.clone())
-        .await?
-        .map_ok(|(_, snap)| snap.tree)
-        .try_collect()
-        .await?;
+        .stream_all::<SnapshotFile>(p.clone())?
+        .iter()
+        .map(|(_, snap)| snap.tree)
+        .collect();
     p.finish();
 
     let p = progress_counter("checking trees...");
-    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p).await?;
-    while let Some(item) = tree_streamer.try_next().await? {
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
+    while let Some(item) = tree_streamer.next().transpose()? {
         let (path, tree) = item;
         for node in tree.nodes() {
             match node.node_type() {

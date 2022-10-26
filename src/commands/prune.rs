@@ -7,11 +7,10 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derive_more::Add;
-use futures::{future, TryStreamExt};
 use log::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
-use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType};
+use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType, ReadBackend};
 use crate::blob::{
     BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
 };
@@ -84,7 +83,7 @@ pub(super) struct Opts {
     warm_up_wait: Option<humantime::Duration>,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &(impl DecryptFullBackend + Unpin),
     cache: Option<Cache>,
     opts: Opts,
@@ -98,10 +97,9 @@ pub(super) async fn execute(
     let mut index_files = Vec::new();
 
     let p = progress_counter("reading index...");
-    let mut stream = be.stream_all::<IndexFile>(p.clone()).await?;
     let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
-    while let Some((id, index)) = stream.try_next().await? {
+    for (id, index) in be.stream_all::<IndexFile>(p.clone())? {
         index_collector.extend(index.packs.clone());
         // we add the trees from packs_to_delete to the index such that searching for
         // used blobs doesn't abort if they are already marked for deletion
@@ -113,9 +111,7 @@ pub(super) async fn execute(
 
     if let Some(cache) = &cache {
         let p = progress_spinner("cleaning up packs from cache...");
-        cache
-            .remove_not_in_list(FileType::Pack, index_collector.tree_packs())
-            .await?;
+        cache.remove_not_in_list(FileType::Pack, index_collector.tree_packs())?;
         p.finish();
     }
     match (cache.is_some(), opts.cache_only) {
@@ -131,17 +127,13 @@ pub(super) async fn execute(
         let index = index_collector.into_index();
         let total_size = BlobTypeMap::init(|blob_type| index.total_size(&blob_type));
         let indexed_be = IndexBackend::new_from_index(&be.clone(), index);
-        let used_ids = find_used_blobs(&indexed_be, ignore_snaps).await?;
+        let used_ids = find_used_blobs(&indexed_be, ignore_snaps)?;
         (used_ids, total_size)
     };
 
     // list existing pack files
     let p = progress_spinner("geting packs from repository...");
-    let existing_packs: HashMap<_, _> = be
-        .list_with_size(FileType::Pack)
-        .await?
-        .into_iter()
-        .collect();
+    let existing_packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
     p.finish();
 
     let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
@@ -170,17 +162,17 @@ pub(super) async fn execute(
     pruner.print_stats();
 
     if opts.warm_up {
-        warm_up(be, pruner.repack_packs().into_iter()).await?;
+        warm_up(be, pruner.repack_packs().into_iter())?;
     } else if opts.warm_up_command.is_some() {
         warm_up_command(
             pruner.repack_packs().into_iter(),
             opts.warm_up_command.as_ref().unwrap(),
         )?;
     }
-    wait(opts.warm_up_wait).await;
+    wait(opts.warm_up_wait);
 
     if !opts.dry_run {
-        pruner.do_prune(be, opts, config).await?;
+        pruner.do_prune(be, opts, config)?;
     }
     Ok(())
 }
@@ -835,7 +827,7 @@ impl Pruner {
             .collect()
     }
 
-    async fn do_prune(
+    fn do_prune(
         mut self,
         be: &impl DecryptFullBackend,
         opts: Opts,
@@ -885,8 +877,7 @@ impl Pruner {
                 let p = progress_counter("removing unindexed packs...");
                 let existing_packs: Vec<_> =
                     self.existing_packs.into_iter().map(|(id, _)| id).collect();
-                be.delete_list(FileType::Pack, true, existing_packs, p)
-                    .await?;
+                be.delete_list(FileType::Pack, true, existing_packs, p)?;
             } else {
                 info!("marking not needed unindexed pack files for deletion...");
                 for (id, size) in self.existing_packs {
@@ -896,7 +887,7 @@ impl Pruner {
                         time: Some(Local::now()),
                         blobs: Vec::new(),
                     };
-                    indexer.write().await.add_remove(pack).await?;
+                    indexer.write().unwrap().add_remove(pack)?;
                 }
             }
         }
@@ -933,7 +924,7 @@ impl Pruner {
                     PackToDo::Keep => {
                         // keep pack: add to new index
                         let pack = pack.into_index_pack();
-                        indexer.write().await.add(pack).await?;
+                        indexer.write().unwrap().add(pack)?;
                     }
                     PackToDo::Repack => {
                         // TODO: repack in parallel
@@ -948,9 +939,9 @@ impl Pruner {
                                 BlobType::Tree => &mut tree_repacker,
                             };
                             if opts.fast_repack {
-                                repacker.add_fast(&pack.id, blob).await?;
+                                repacker.add_fast(&pack.id, blob)?;
                             } else {
-                                repacker.add(&pack.id, blob).await?;
+                                repacker.add(&pack.id, blob)?;
                             }
                             p.inc(blob.length as u64);
                         }
@@ -959,7 +950,7 @@ impl Pruner {
                         } else {
                             // mark pack for removal
                             let pack = pack.into_index_pack_with_time(self.time);
-                            indexer.write().await.add_remove(pack).await?;
+                            indexer.write().unwrap().add_remove(pack)?;
                         }
                     }
                     PackToDo::MarkDelete => {
@@ -968,7 +959,7 @@ impl Pruner {
                         } else {
                             // mark pack for removal
                             let pack = pack.into_index_pack_with_time(self.time);
-                            indexer.write().await.add_remove(pack).await?;
+                            indexer.write().unwrap().add_remove(pack)?;
                         }
                     }
                     PackToDo::KeepMarked => {
@@ -977,40 +968,37 @@ impl Pruner {
                         } else {
                             // keep pack: add to new index
                             let pack = pack.into_index_pack();
-                            indexer.write().await.add_remove(pack).await?;
+                            indexer.write().unwrap().add_remove(pack)?;
                         }
                     }
                     PackToDo::Recover => {
                         // recover pack: add to new index in section packs
                         let pack = pack.into_index_pack_with_time(self.time);
-                        indexer.write().await.add(pack).await?;
+                        indexer.write().unwrap().add(pack)?;
                     }
                     PackToDo::Delete => delete_pack(pack),
                 }
             }
             indexes_remove.push(index.id);
         }
-        tree_repacker.finalize().await?;
-        data_repacker.finalize().await?;
-        indexer.write().await.finalize().await?;
+        tree_repacker.finalize()?;
+        data_repacker.finalize()?;
+        indexer.write().unwrap().finalize()?;
         p.finish();
 
         if !data_packs_remove.is_empty() {
             let p = progress_counter("removing old data packs...");
-            be.delete_list(FileType::Pack, false, data_packs_remove, p)
-                .await?;
+            be.delete_list(FileType::Pack, false, data_packs_remove, p)?;
         }
 
         if !tree_packs_remove.is_empty() {
             let p = progress_counter("removing old tree packs...");
-            be.delete_list(FileType::Pack, true, tree_packs_remove, p)
-                .await?;
+            be.delete_list(FileType::Pack, true, tree_packs_remove, p)?;
         }
 
         if !indexes_remove.is_empty() {
             let p = progress_counter("removing old index files...");
-            be.delete_list(FileType::Index, true, indexes_remove, p)
-                .await?;
+            be.delete_list(FileType::Index, true, indexes_remove, p)?;
         }
 
         Ok(())
@@ -1087,30 +1075,32 @@ impl PackInfo {
 }
 
 // find used blobs in repo
-async fn find_used_blobs(
+fn find_used_blobs(
     index: &(impl IndexedBackend + Unpin),
     ignore_snaps: Vec<Id>,
 ) -> Result<HashMap<Id, u8>> {
     let ignore_snaps: HashSet<_> = ignore_snaps.into_iter().collect();
 
     let p = progress_counter("reading snapshots...");
+    let list = index
+        .be()
+        .list(FileType::Snapshot)?
+        .into_iter()
+        .filter(|id| !ignore_snaps.contains(id))
+        .collect();
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(p.clone())
-        .await?
-        // TODO: it would even better to give ignore_snaps to the streaming function instead
-        // if reading and then filtering the snapshot
-        .try_filter(|(id, _)| future::ready(!ignore_snaps.contains(id)))
-        .map_ok(|(_, snap)| snap.tree)
-        .try_collect()
-        .await?;
+        .stream_list::<SnapshotFile>(list, p.clone())?
+        .into_iter()
+        .map(|(_, snap)| snap.tree)
+        .collect();
     p.finish();
 
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();
     let p = progress_counter("finding used blobs...");
 
-    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p).await?;
-    while let Some(item) = tree_streamer.try_next().await? {
+    let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
+    while let Some(item) = tree_streamer.next().transpose()? {
         let (_, tree) = item;
         for node in tree.nodes() {
             match node.node_type() {

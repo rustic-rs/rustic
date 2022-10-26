@@ -43,7 +43,7 @@ pub(super) struct Opts {
     ids: Vec<String>,
 }
 
-pub(super) async fn execute(
+pub(super) fn execute(
     be: &impl DecryptReadBackend,
     mut opts: Opts,
     config_file: RusticConfig,
@@ -51,10 +51,9 @@ pub(super) async fn execute(
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     let groups = match &opts.ids[..] {
-        [] => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by).await?,
+        [] => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by)?,
         [id] if id == "latest" => {
-            SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by)
-                .await?
+            SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by)?
                 .into_iter()
                 .map(|(group, mut snaps)| {
                     snaps.sort_unstable();
@@ -67,7 +66,7 @@ pub(super) async fn execute(
         }
         _ => vec![(
             SnapshotGroup::default(),
-            SnapshotFile::from_ids(be, &opts.ids).await?,
+            SnapshotFile::from_ids(be, &opts.ids)?,
         )],
     };
 

@@ -27,16 +27,16 @@ Look at the [FAQ][3] or open an issue!
 
 Improvements:
  * Allows using cold storage (e.g. AWS Glacier) repos which are only read in the `restore` command + supports warm-up
- * Completely lock-free pruning; option `instant-delete` is available
+ * All operations are completely lock-free as rustic supoorts two-phase-pruning (prune option `instant-delete` is available)
  * Supports configuration in a config file ([example config files](https://github.com/rustic-rs/rustic/tree/main/examples))
  * Huge decrease in memory requirement
  * Already faster than restic for most operations (but not yet fully speed optimized)
- * Cleaner concent of logging output; posibility to write logs to a log file
+ * Cleaner concept of logging output; posibility to write logs to a log file
  * `rustic repair` command allows to repair some kinds of broken repositories
  * `backup` command can use `.gitignore` files
  * `restore` uses existing files; also option `--delete` available
  * Snapshots save much more information, available in `snapshots` command
- * Allows to save some options in the config file via the command `config`
+ * Allows to save repository options in the repository config file via the command `config`
  * New command `repo-info`
  * `check` command checks and uses cache; option `--trust-cache` is available
  * Option `prune --fast-repack` for faster repacking

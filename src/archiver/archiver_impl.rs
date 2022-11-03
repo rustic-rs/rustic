@@ -104,7 +104,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.summary.total_dirsize_processed += size;
     }
 
-    pub fn add_entry(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
+    pub fn add_entry(
+        &mut self,
+        path: &Path,
+        real_path: &Path,
+        node: Node,
+        p: ProgressBar,
+    ) -> Result<()> {
         let basepath = if node.is_dir() {
             path
         } else {
@@ -135,7 +141,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         match node.node_type() {
             NodeType::File => {
-                self.backup_file(path, node, p)?;
+                self.backup_file(real_path, node, p)?;
             }
             NodeType::Dir => {}          // is already handled, see above
             _ => self.add_file(node, 0), // all other cases: just save the given node

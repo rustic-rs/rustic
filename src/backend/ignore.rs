@@ -165,9 +165,14 @@ impl Iterator for LocalSource {
     type Item = Result<(PathBuf, Node)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.walker
-            .next()
-            .map(|e| map_entry(e?, self.with_atime, &self.cache))
+        match self.walker.next() {
+            // ignore root dir, i.e. an entry with depth 0 of type dir
+            Some(Ok(entry)) if entry.depth() == 0 && entry.file_type().unwrap().is_dir() => {
+                self.walker.next()
+            }
+            item => item,
+        }
+        .map(|e| map_entry(e?, self.with_atime, &self.cache))
     }
 }
 

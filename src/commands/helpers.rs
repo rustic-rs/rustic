@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::process::Command;
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{bail, Result};
@@ -39,6 +40,17 @@ pub fn get_key(be: &impl ReadBackend, password: Option<String>) -> Result<Key> {
     bail!("incorrect password!");
 }
 
+fn progress_intervall() -> Duration {
+    let env_name = "RUSTIC_PROGRESS_INTERVAL";
+    std::env::var(env_name)
+        .map(|var| {
+            humantime::Duration::from_str(&var)
+                .expect("{env_name}: please provide a valid duration")
+                .into()
+        })
+        .unwrap_or(Duration::from_millis(100))
+}
+
 pub fn progress_spinner(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
     let p = ProgressBar::new(0).with_style(
         ProgressStyle::default_bar()
@@ -46,7 +58,7 @@ pub fn progress_spinner(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
             .unwrap(),
     );
     p.set_prefix(prefix);
-    p.enable_steady_tick(Duration::from_millis(100));
+    p.enable_steady_tick(progress_intervall());
     p
 }
 
@@ -56,8 +68,8 @@ pub fn progress_counter(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
             .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}")
             .unwrap(),
     );
-    p.enable_steady_tick(Duration::from_millis(100));
     p.set_prefix(prefix);
+    p.enable_steady_tick(progress_intervall());
     p
 }
 
@@ -78,7 +90,7 @@ pub fn progress_bytes(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
             .unwrap()
             );
     p.set_prefix(prefix);
-    p.enable_steady_tick(Duration::from_millis(100));
+    p.enable_steady_tick(progress_intervall());
     p
 }
 

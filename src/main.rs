@@ -39,6 +39,7 @@ mod crypto;
 mod id;
 mod index;
 mod repo;
+mod visual;
 
 fn main() -> Result<()> {
     commands::execute()

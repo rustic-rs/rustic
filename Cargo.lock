@@ -1678,6 +1678,7 @@ dependencies = [
  "chrono",
  "clap",
  "clap_complete",
+ "console",
  "crossbeam-channel",
  "derivative",
  "derive-getters",

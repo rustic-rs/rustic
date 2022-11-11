@@ -6,6 +6,9 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use bytesize::ByteSize;
+use comfy_table::{
+    presets::ASCII_MARKDOWN, Attribute, Cell, CellAlignment, ContentArrangement, Table,
+};
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use log::*;
@@ -148,4 +151,35 @@ pub fn wait(d: Option<humantime::Duration>) {
         std::thread::sleep(*wait);
         p.finish();
     }
+}
+
+// Helpers for table output
+
+pub fn bold_cell<T: ToString>(s: T) -> Cell {
+    Cell::new(s).add_attribute(Attribute::Bold)
+}
+
+pub fn table() -> Table {
+    let mut table = Table::new();
+    table
+        .load_preset(ASCII_MARKDOWN)
+        .set_content_arrangement(ContentArrangement::Dynamic);
+    table
+}
+
+pub fn table_with_titles<I: IntoIterator<Item = T>, T: ToString>(titles: I) -> Table {
+    let mut table = table();
+    table.set_header(titles.into_iter().map(bold_cell));
+    table
+}
+
+pub fn table_right_from<I: IntoIterator<Item = T>, T: ToString>(start: usize, titles: I) -> Table {
+    let mut table = table_with_titles(titles);
+    // set alignment of all rows except first start row
+    table
+        .column_iter_mut()
+        .skip(start)
+        .for_each(|c| c.set_cell_alignment(CellAlignment::Right));
+
+    table
 }

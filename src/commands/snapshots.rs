@@ -2,11 +2,11 @@ use std::time::Duration;
 
 use anyhow::Result;
 use clap::Parser;
+use comfy_table::Cell;
 use humantime::format_duration;
 use itertools::Itertools;
-use prettytable::{format, row, Table};
 
-use super::{bytes, RusticConfig};
+use super::{bold_cell, bytes, table, table_right_from, RusticConfig};
 use crate::backend::DecryptReadBackend;
 use crate::repo::{
     DeleteOption, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion,
@@ -104,21 +104,34 @@ pub(super) fn execute(
                     0 => format!("{}", sn.id),
                     count => format!("{} (+{})", sn.id, count),
                 };
-                row![id, time, sn.hostname, tags, paths, r->files, r->dirs, r->size]
+                [
+                    id,
+                    time.to_string(),
+                    sn.hostname,
+                    tags,
+                    paths,
+                    files,
+                    dirs,
+                    size,
+                ]
             };
 
-            let mut table: Table = snapshots
+            let mut table = table_right_from(
+                5,
+                [
+                    "ID", "Time", "Host", "Tags", "Paths", "Files", "Dirs", "Size",
+                ],
+            );
+
+            let snapshots: Vec<_> = snapshots
                 .into_iter()
                 .group_by(|sn| if opts.all { sn.id } else { sn.tree })
                 .into_iter()
                 .map(|(_, mut g)| (g.next().unwrap(), g.count()))
                 .map(snap_to_table)
                 .collect();
-            table.set_titles(
-                row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", br->"Files",br->"Dirs", br->"Size"],
-            );
-            table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-            table.printstd();
+            table.add_rows(snapshots);
+            println!("{table}");
         }
         println!("{} snapshot(s)", count);
     }
@@ -127,31 +140,35 @@ pub(super) fn execute(
 }
 
 fn display_snap(sn: SnapshotFile) {
-    let mut table = Table::new();
+    let mut table = table();
 
-    table.add_row(row![b->"Snapshot", b->sn.id.to_hex()]);
+    let mut add_entry = |title: &str, value: String| {
+        table.add_row([bold_cell(title), Cell::new(value)]);
+    };
+
+    add_entry("Snapshot", sn.id.to_hex());
     // note that if original was not set, it is set to sn.id by the load process
     if sn.original != Some(sn.id) {
-        table.add_row(row![b->"Original ID", sn.original.unwrap().to_hex()]);
+        add_entry("Original ID", sn.original.unwrap().to_hex());
     }
-    table.add_row(row![b->"Time", sn.time.format("%Y-%m-%d %H:%M:%S")]);
-    table.add_row(row![b->"Host", sn.hostname]);
-    table.add_row(row![b->"Tags", sn.tags.formatln()]);
+    add_entry("Time", sn.time.format("%Y-%m-%d %H:%M:%S").to_string());
+    add_entry("Host", sn.hostname);
+    add_entry("Tags", sn.tags.formatln());
     let delete = match sn.delete {
         DeleteOption::NotSet => "not set".to_string(),
         DeleteOption::Never => "never".to_string(),
         DeleteOption::After(t) => format!("after {}", t.format("%Y-%m-%d %H:%M:%S")),
     };
-    table.add_row(row![b->"Delete", delete]);
-    table.add_row(row![b->"Paths", sn.paths.formatln()]);
+    add_entry("Delete", delete);
+    add_entry("Paths", sn.paths.formatln());
     let parent = match sn.parent {
         None => "no parent snapshot".to_string(),
         Some(p) => p.to_hex(),
     };
-    table.add_row(row![b->"Parent", parent]);
+    add_entry("Parent", parent);
     if let Some(summary) = sn.summary {
-        table.add_row(row![]);
-        table.add_row(row![b->"Command", summary.command]);
+        add_entry("", "".to_string());
+        add_entry("Command", summary.command);
 
         let source = format!(
             "files: {} / dirs: {} / size: {}",
@@ -159,23 +176,21 @@ fn display_snap(sn: SnapshotFile) {
             summary.total_dirs_processed,
             bytes(summary.total_bytes_processed)
         );
-        table.add_row(row![b->"Source", source]);
-
-        table.add_row(row![]);
+        add_entry("Source", source);
+        add_entry("", "".to_string());
 
         let files = format!(
             "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
             summary.files_new, summary.files_changed, summary.files_unmodified,
         );
-        table.add_row(row![b->"Files", files]);
+        add_entry("Files", files);
 
         let trees = format!(
             "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
             summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified,
         );
-        table.add_row(row![b->"Dirs", trees]);
-
-        table.add_row(row![]);
+        add_entry("Dirs", trees);
+        add_entry("", "".to_string());
 
         let written = format!(
             "data:  {:>10} blobs / raw: {:>10} / packed: {:>10}\n\
@@ -191,7 +206,7 @@ fn display_snap(sn: SnapshotFile) {
             bytes(summary.data_added),
             bytes(summary.data_added_packed),
         );
-        table.add_row(row![b->"Added to repo", written]);
+        add_entry("Added to repo", written);
 
         let duration = format!(
             "backup start: {} / backup end: {} / backup duration: {}\n\
@@ -201,9 +216,8 @@ fn display_snap(sn: SnapshotFile) {
             format_duration(Duration::from_secs_f64(summary.backup_duration)),
             format_duration(Duration::from_secs_f64(summary.total_duration))
         );
-        table.add_row(row![b->"Duration", duration]);
+        add_entry("Duration", duration);
     }
-    table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-    table.printstd();
+    println!("{table}");
     println!();
 }

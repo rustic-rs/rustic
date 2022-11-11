@@ -5,11 +5,10 @@ use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use clap::{AppSettings, Parser};
 use derivative::Derivative;
 use merge::Merge;
-use prettytable::{format, row, Table};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
-use super::{progress_counter, prune, RusticConfig};
+use super::{progress_counter, prune, table_with_titles, RusticConfig};
 use crate::backend::{Cache, DecryptFullBackend, FileType};
 use crate::repo::{
     ConfigFile, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
@@ -89,7 +88,8 @@ pub(super) fn execute(
         snapshots.sort_unstable_by(|sn1, sn2| sn1.cmp(sn2).reverse());
         let latest_time = snapshots[0].time;
         let mut group_keep = opts.config.keep.clone();
-        let mut table = Table::new();
+        let mut table =
+            table_with_titles(["ID", "Time", "Host", "Tags", "Paths", "Action", "Reason"]);
 
         let mut iter = snapshots.iter().peekable();
         let mut last = None;
@@ -123,18 +123,22 @@ pub(super) fn execute(
 
             let tags = sn.tags.formatln();
             let paths = sn.paths.formatln();
-            let time = sn.time.format("%Y-%m-%d %H:%M:%S");
-            table.add_row(row![sn.id, time, sn.hostname, tags, paths, action, reason]);
+            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+            table.add_row([
+                sn.id.to_string(),
+                time,
+                sn.hostname.to_string(),
+                tags,
+                paths,
+                action.to_string(),
+                reason,
+            ]);
 
             last = Some(sn);
         }
-        table.set_titles(
-            row![b->"ID", b->"Time", b->"Host", b->"Tags", b->"Paths", b->"Action", br->"Reason"],
-        );
-        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
 
         println!();
-        table.printstd();
+        println!("{table}");
         println!();
     }
 
@@ -290,7 +294,7 @@ impl KeepOptions {
         latest_time: DateTime<Local>,
     ) -> Option<String> {
         let mut keep = false;
-        let mut reason = String::new();
+        let mut reason = Vec::new();
 
         if self
             .keep_ids
@@ -298,12 +302,12 @@ impl KeepOptions {
             .any(|id| sn.id.to_hex().starts_with(id))
         {
             keep = true;
-            reason.push_str("id\n");
+            reason.push("id");
         }
 
         if !self.keep_tags.is_empty() && sn.tags.matches(&self.keep_tags) {
             keep = true;
-            reason.push_str("tags\n");
+            reason.push("tags");
         }
 
         let keep_checks = [
@@ -356,17 +360,15 @@ impl KeepOptions {
                 if *counter > 0 {
                     *counter -= 1;
                     keep = true;
-                    reason.push_str(reason1);
-                    reason.push('\n');
+                    reason.push(reason1);
                 }
                 if sn.time + Duration::from_std(*within).unwrap() > latest_time {
                     keep = true;
-                    reason.push_str(reason2);
-                    reason.push('\n');
+                    reason.push(reason2);
                 }
             }
         }
 
-        keep.then_some(reason)
+        keep.then_some(reason.join("\n"))
     }
 }

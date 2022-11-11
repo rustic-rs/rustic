@@ -200,16 +200,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
 
         if !self.index.has_tree(&id) {
-            match self.tree_packer.add(&chunk, &id)? {
-                0 => {}
-                packed_size => {
-                    self.summary.tree_blobs += 1;
-                    self.summary.data_added += dirsize;
-                    self.summary.data_added_packed += packed_size;
-                    self.summary.data_added_trees += dirsize;
-                    self.summary.data_added_trees_packed += packed_size;
-                }
-            }
+            self.tree_packer.add(&chunk, &id)?;
         }
         self.add_dir(node, dirsize);
         Ok(())
@@ -260,7 +251,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 filesize += size;
 
                 content.push(id);
-                self.process_data_junk(id, &chunk, size, &p)?;
+                self.process_data_junk(id, chunk, size, &p)?;
                 Ok(())
             })?;
 
@@ -273,21 +264,12 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
     fn process_data_junk(
         &mut self,
         id: Id,
-        chunk: &[u8],
+        chunk: Vec<u8>,
         size: u64,
         p: &ProgressBar,
     ) -> Result<()> {
         if !self.index.has_data(&id) {
-            match self.data_packer.add(chunk, &id)? {
-                0 => {}
-                packed_size => {
-                    self.summary.data_blobs += 1;
-                    self.summary.data_added += size;
-                    self.summary.data_added_packed += packed_size;
-                    self.summary.data_added_files += size;
-                    self.summary.data_added_files_packed += packed_size;
-                }
-            }
+            self.data_packer.add(&chunk, &id)?
         }
         p.inc(size);
         Ok(())
@@ -302,12 +284,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
         self.snap.tree = id;
 
-        self.data_packer.finalize()?;
-        self.tree_packer.finalize()?;
-        {
-            let indexer = self.indexer.write().unwrap();
-            indexer.finalize()?;
-        }
+        let stats = self.data_packer.finalize()?;
+        self.summary.data_blobs += stats.blobs;
+        self.summary.data_added += stats.data;
+        self.summary.data_added_packed += stats.data_packed;
+        self.summary.data_added_files += stats.data;
+        self.summary.data_added_files_packed += stats.data_packed;
+
+        let stats = self.tree_packer.finalize()?;
+        self.summary.tree_blobs += stats.blobs;
+        self.summary.data_added += stats.data;
+        self.summary.data_added_packed += stats.data_packed;
+        self.summary.data_added_trees += stats.data;
+        self.summary.data_added_trees_packed += stats.data_packed;
+
+        self.indexer.write().unwrap().finalize()?;
+
         let end_time = Local::now();
         self.summary.backup_duration = (end_time - self.summary.backup_start)
             .to_std()?

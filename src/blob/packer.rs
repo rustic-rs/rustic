@@ -1,5 +1,6 @@
 use integer_sqrt::IntegerSquareRoot;
 use std::num::NonZeroU32;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, Result};
@@ -64,19 +65,13 @@ impl PackSizer {
         self.current_size += added as u64;
     }
 }
+
+#[derive(Clone)]
 pub struct Packer<BE: DecryptWriteBackend> {
-    be: BE,
-    blob_type: BlobType,
-    file: BytesMut,
-    size: u32,
-    count: u32,
-    created: SystemTime,
-    index: IndexPack,
-    indexer: SharedIndexer<BE>,
-    hasher: Hasher,
-    file_writer: Actor<(Bytes, Id, IndexPack)>,
+    raw_packer: Arc<RwLock<RawPacker<BE>>>,
+    key: BE::Key,
     zstd: Option<i32>,
-    pack_sizer: PackSizer,
+    indexer: SharedIndexer<BE>,
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
@@ -87,16 +82,118 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         config: &ConfigFile,
         total_size: u64,
     ) -> Result<Self> {
-        let file_writer = Actor::new(
+        let key = be.key().clone();
+        let raw_packer = Arc::new(RwLock::new(RawPacker::new(
+            be,
+            blob_type,
+            indexer.clone(),
+            config,
+            total_size,
+        )?));
+        let zstd = config.zstd()?;
+
+        Ok(Self {
+            raw_packer,
+            key,
+            zstd,
+            indexer,
+        })
+    }
+
+    /// adds the blob to the packfile
+    pub fn add(&self, data: &[u8], id: &Id) -> Result<()> {
+        // compute size limit based on total size and size bounds
+        self.add_with_sizelimit(data, id, None)
+    }
+
+    /// adds the blob to the packfile, allows specifying a size limit for the pack file
+    pub fn add_with_sizelimit(&self, data: &[u8], id: &Id, size_limit: Option<u32>) -> Result<()> {
+        // only add if this blob is not present
+        if self.indexer.read().unwrap().has(id) || self.raw_packer.read().unwrap().has(id) {
+            return Ok(());
+        }
+
+        let key = self.key.clone();
+        let zstd = self.zstd;
+
+        let data_len: u32 = data.len().try_into()?;
+        let (data, uncompressed_length) = match zstd {
+            None => (
+                key.encrypt_data(data)
+                    .map_err(|_| anyhow!("crypto error"))?,
+                None,
+            ),
+            // compress if requested
+            Some(level) => (
+                key.encrypt_data(&encode_all(data, level)?)
+                    .map_err(|_| anyhow!("crypto error"))?,
+                NonZeroU32::new(data_len),
+            ),
+        };
+        self.add_raw(&data, id, data_len as u64, uncompressed_length, size_limit)
+    }
+
+    /// adds the already encrypted (and maybe compressed) blob to the packfile
+    pub fn add_raw(
+        &self,
+        data: &[u8],
+        id: &Id,
+        data_len: u64,
+        uncompressed_length: Option<NonZeroU32>,
+        size_limit: Option<u32>,
+    ) -> Result<()> {
+        self.raw_packer.write().unwrap().add_raw(
+            data,
+            id,
+            data_len,
+            uncompressed_length,
+            size_limit,
+        )
+    }
+
+    pub fn finalize(self) -> Result<PackerStats> {
+        self.raw_packer.write().unwrap().finalize()
+    }
+}
+
+#[derive(Default)]
+pub struct PackerStats {
+    pub blobs: u64,
+    pub data: u64,
+    pub data_packed: u64,
+}
+
+pub struct RawPacker<BE: DecryptWriteBackend> {
+    be: BE,
+    blob_type: BlobType,
+    file: BytesMut,
+    size: u32,
+    count: u32,
+    created: SystemTime,
+    index: IndexPack,
+    hasher: Hasher,
+    file_writer: Option<Actor<(Bytes, Id, IndexPack)>>,
+    pack_sizer: PackSizer,
+    stats: PackerStats,
+}
+
+impl<BE: DecryptWriteBackend> RawPacker<BE> {
+    pub fn new(
+        be: BE,
+        blob_type: BlobType,
+        indexer: SharedIndexer<BE>,
+        config: &ConfigFile,
+        total_size: u64,
+    ) -> Result<Self> {
+        let file_writer = Some(Actor::new(
             FileWriterHandle {
                 be: be.clone(),
-                indexer: indexer.clone(),
+                indexer,
                 cacheable: blob_type.is_cacheable(),
             },
             1,
             1,
-        );
-        let zstd = config.zstd()?;
+        ));
         let pack_sizer = PackSizer::from_config(config, blob_type, total_size);
         Ok(Self {
             be,
@@ -106,18 +203,17 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
             count: 0,
             created: SystemTime::now(),
             index: IndexPack::default(),
-            indexer,
             hasher: Hasher::new(),
             file_writer,
-            zstd,
             pack_sizer,
+            stats: PackerStats::default(),
         })
     }
 
-    pub fn finalize(mut self) -> Result<()> {
+    pub fn finalize(&mut self) -> Result<PackerStats> {
         self.save()?;
-        self.file_writer.finalize()?;
-        Ok(())
+        self.file_writer.take().unwrap().finalize()?;
+        Ok(std::mem::take(&mut self.stats))
     }
 
     pub fn write_data(&mut self, data: &[u8]) -> Result<u32> {
@@ -128,56 +224,21 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(len)
     }
 
-    // adds the blob to the packfile; returns the actually added size
-    pub fn add(&mut self, data: &[u8], id: &Id) -> Result<u64> {
-        // compute size limit based on total size and size bounds
-        let size_limit = self.pack_sizer.pack_size();
-        self.add_with_sizelimit(data, id, size_limit)
-    }
-
-    // adds the blob to the packfile; returns the actually added size
-    pub fn add_with_sizelimit(&mut self, data: &[u8], id: &Id, size_limit: u32) -> Result<u64> {
-        // only add if this blob is not present
-        if self.has(id) {
-            return Ok(0);
-        }
-        {
-            let indexer = self.indexer.read().unwrap();
-            if indexer.has(id) {
-                return Ok(0);
-            }
-        }
-
-        // compress if requested
-        let data_len: u32 = data.len().try_into()?;
-        let key = self.be.key();
-
-        let (data, uncompressed_length) = match self.zstd {
-            None => (
-                key.encrypt_data(data)
-                    .map_err(|_| anyhow!("crypto error"))?,
-                None,
-            ),
-            Some(level) => (
-                key.encrypt_data(&encode_all(data, level)?)
-                    .map_err(|_| anyhow!("crypto error"))?,
-                NonZeroU32::new(data_len),
-            ),
-        };
-
-        // add using current total_size as repo_size
-        self.add_raw(&data, id, uncompressed_length, size_limit)?;
-        Ok(data.len().try_into()?)
-    }
-
     // adds the already compressed/encrypted blob to the packfile without any check
     pub fn add_raw(
         &mut self,
         data: &[u8],
         id: &Id,
+        data_len: u64,
         uncompressed_length: Option<NonZeroU32>,
-        size_limit: u32,
+        size_limit: Option<u32>,
     ) -> Result<()> {
+        self.stats.blobs += 1;
+        self.stats.data += data_len;
+        let data_len_packed: u64 = data.len().try_into()?;
+        self.stats.data_packed += data_len_packed;
+
+        let size_limit = size_limit.unwrap_or_else(|| self.pack_sizer.pack_size());
         let offset = self.size;
         let len = self.write_data(data)?;
         self.index
@@ -232,7 +293,10 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         // write file to backend
         let index = std::mem::take(&mut self.index);
         let file = std::mem::replace(&mut self.file, BytesMut::new());
-        self.file_writer.send((file.into(), id, index))?;
+        self.file_writer
+            .as_ref()
+            .unwrap()
+            .send((file.into(), id, index))?;
 
         Ok(())
     }
@@ -323,7 +387,7 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         total_size: u64,
     ) -> Result<Self> {
         let packer = Packer::new(be.clone(), blob_type, indexer, config, total_size)?;
-        let size_limit = packer.pack_sizer.pack_size();
+        let size_limit = PackSizer::from_config(config, blob_type, total_size).pack_size();
         Ok(Self {
             be,
             packer,
@@ -331,7 +395,7 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         })
     }
 
-    pub fn add_fast(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
+    pub fn add_fast(&self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
         let data = self.be.read_partial(
             FileType::Pack,
             pack_id,
@@ -339,12 +403,17 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
             blob.offset,
             blob.length,
         )?;
-        self.packer
-            .add_raw(&data, &blob.id, blob.uncompressed_length, self.size_limit)?;
+        self.packer.add_raw(
+            &data,
+            &blob.id,
+            0,
+            blob.uncompressed_length,
+            Some(self.size_limit),
+        )?;
         Ok(())
     }
 
-    pub fn add(&mut self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
+    pub fn add(&self, pack_id: &Id, blob: &IndexBlob) -> Result<()> {
         let data = self.be.read_encrypted_partial(
             FileType::Pack,
             pack_id,
@@ -354,11 +423,11 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
             blob.uncompressed_length,
         )?;
         self.packer
-            .add_with_sizelimit(&data, &blob.id, self.size_limit)?;
+            .add_with_sizelimit(&data, &blob.id, Some(self.size_limit))?;
         Ok(())
     }
 
-    pub fn finalize(self) -> Result<()> {
+    pub fn finalize(self) -> Result<PackerStats> {
         self.packer.finalize()
     }
 }

@@ -76,6 +76,8 @@ pub struct SnapshotFile {
     pub program_version: String,
     pub parent: Option<Id>,
     pub tree: Id,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label: String,
     pub paths: StringList,
     #[serde(default)]
     pub hostname: String,
@@ -175,6 +177,10 @@ impl SnapshotFile {
             false => Ordering::Equal,
             true => self.hostname.cmp(&other.hostname),
         }
+        .then_with(|| match crit.label {
+            false => Ordering::Equal,
+            true => self.label.cmp(&other.label),
+        })
         .then_with(|| match crit.paths {
             false => Ordering::Equal,
             true => self.paths.cmp(&other.paths),
@@ -188,6 +194,9 @@ impl SnapshotFile {
     fn has_group(&self, group: &SnapshotGroup) -> bool {
         (match &group.hostname {
             Some(val) => val == &self.hostname,
+            None => true,
+        }) && (match &group.label {
+            Some(val) => val == &self.label,
             None => true,
         }) && (match &group.paths {
             Some(val) => val == &self.paths,
@@ -250,6 +259,7 @@ impl SnapshotFile {
         self.paths.matches(&filter.filter_paths)
             && self.tags.matches(&filter.filter_tags)
             && (filter.filter_host.is_empty() || filter.filter_host.contains(&self.hostname))
+            && (filter.filter_label.is_empty() || filter.filter_label.contains(&self.label))
     }
 
     /// Add tag lists to snapshot. return wheter snapshot was changed
@@ -315,6 +325,16 @@ impl Ord for SnapshotFile {
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SnapshotFilter {
+    /// Hostname to filter (can be specified multiple times)
+    #[clap(long, value_name = "HOSTNAME")]
+    #[merge(strategy=merge::vec::overwrite_empty)]
+    filter_host: Vec<String>,
+
+    /// Label to filter (can be specified multiple times)
+    #[clap(long, value_name = "LABEL")]
+    #[merge(strategy=merge::vec::overwrite_empty)]
+    filter_label: Vec<String>,
+
     /// Path list to filter (can be specified multiple times)
     #[clap(long, value_name = "PATH[,PATH,..]")]
     #[serde_as(as = "Vec<DisplayFromStr>")]
@@ -326,16 +346,12 @@ pub struct SnapshotFilter {
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_tags: Vec<StringList>,
-
-    /// Hostname to filter (can be specified multiple times)
-    #[clap(long, value_name = "HOSTNAME")]
-    #[merge(strategy=merge::vec::overwrite_empty)]
-    filter_host: Vec<String>,
 }
 
 #[derive(Default)]
 pub struct SnapshotGroupCriterion {
     hostname: bool,
+    label: bool,
     paths: bool,
     tags: bool,
 }
@@ -347,6 +363,7 @@ impl FromStr for SnapshotGroupCriterion {
         for val in s.split(',') {
             match val {
                 "host" => crit.hostname = true,
+                "label" => crit.label = true,
                 "paths" => crit.paths = true,
                 "tags" => crit.tags = true,
                 "" => continue,
@@ -358,9 +375,10 @@ impl FromStr for SnapshotGroupCriterion {
 }
 
 #[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Serialize)]
 pub struct SnapshotGroup {
     hostname: Option<String>,
+    label: Option<String>,
     paths: Option<StringList>,
     tags: Option<StringList>,
 }
@@ -371,6 +389,9 @@ impl Display for SnapshotGroup {
 
         if let Some(host) = &self.hostname {
             out.push(format!("host [{host}]"));
+        }
+        if let Some(label) = &self.label {
+            out.push(format!("label [{label}]"));
         }
         if let Some(paths) = &self.paths {
             out.push(format!("paths [{paths}]"));
@@ -388,13 +409,14 @@ impl SnapshotGroup {
     pub fn from_sn(sn: &SnapshotFile, crit: &SnapshotGroupCriterion) -> Self {
         Self {
             hostname: crit.hostname.then(|| sn.hostname.clone()),
+            label: crit.label.then(|| sn.label.clone()),
             paths: crit.paths.then(|| sn.paths.clone()),
             tags: crit.tags.then(|| sn.tags.clone()),
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.hostname.is_none() && self.paths.is_none() && self.tags.is_none()
+        self == &Self::default()
     }
 }
 

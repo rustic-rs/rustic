@@ -40,7 +40,7 @@ pub(super) struct Opts {
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 #[serde(default, rename_all = "kebab-case")]
 struct ConfigOpts {
-    /// Group snapshots by any combination of host,paths,tags (default: "host,paths")
+    /// Group snapshots by any combination of host,label,paths,tags (default: "host,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     group_by: Option<SnapshotGroupCriterion>,
@@ -125,13 +125,14 @@ pub(super) fn execute(
             let paths = sn.paths.formatln();
             let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
             table.add_row([
-                sn.id.to_string(),
-                time,
-                sn.hostname.to_string(),
-                tags,
-                paths,
-                action.to_string(),
-                reason,
+                &sn.id.to_string(),
+                &time,
+                &sn.hostname,
+                &sn.label,
+                &tags,
+                &paths,
+                action,
+                &reason,
             ]);
 
             last = Some(sn);

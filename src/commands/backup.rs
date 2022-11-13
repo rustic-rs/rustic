@@ -49,6 +49,10 @@ pub(super) struct Opts {
     #[merge(strategy = merge::bool::overwrite_false)]
     ignore_inode: bool,
 
+    /// Label snapshot with given label
+    #[clap(long, value_name = "LABEL")]
+    label: Option<String>,
+
     /// Tags to add to backup (can be specified multiple times)
     #[clap(long, value_name = "TAG[,TAG,..]")]
     #[serde_as(as = "Vec<DisplayFromStr>")]
@@ -205,6 +209,7 @@ pub(super) fn execute(
             time,
             parent: parent.map(|sn| sn.id),
             hostname,
+            label: opts.label.unwrap_or_default(),
             delete,
             summary: Some(SnapshotSummary {
                 command: command.clone(),

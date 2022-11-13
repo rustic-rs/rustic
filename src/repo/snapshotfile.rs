@@ -69,6 +69,11 @@ impl DeleteOption {
 pub struct SnapshotFile {
     #[derivative(Default(value = "Local::now()"))]
     pub time: DateTime<Local>,
+    #[derivative(Default(
+        value = "\"rustic \".to_string() + option_env!(\"PROJECT_VERSION\").unwrap_or(env!(\"CARGO_PKG_VERSION\"))"
+    ))]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub program_version: String,
     pub parent: Option<Id>,
     pub tree: Id,
     pub paths: StringList,

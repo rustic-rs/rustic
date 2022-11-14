@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use chrono::Local;
 use indicatif::ProgressBar;
@@ -62,7 +62,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             index.total_size(&BlobType::Tree),
         )?;
         Ok(Self {
-            path: PathBuf::from("/"),
+            path: PathBuf::default(),
             tree: Tree::new(),
             parent,
             stack: Vec::new(),
@@ -121,22 +121,29 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.finish_trees(basepath)?;
 
         let missing_dirs = basepath.strip_prefix(&self.path)?;
-        for p in missing_dirs.iter() {
-            // new subdir
+        for p in missing_dirs.components() {
             self.path.push(p);
-            let tree = std::mem::replace(&mut self.tree, Tree::new());
-            if self.path == path {
-                // use Node and return
-                let new_parent = self.parent.sub_parent(&node)?;
-                let parent = std::mem::replace(&mut self.parent, new_parent);
-                self.stack.push((node, tree, parent));
-                return Ok(());
-            } else {
-                let node = Node::new_node(p, NodeType::Dir, Metadata::default());
-                let new_parent = self.parent.sub_parent(&node)?;
-                let parent = std::mem::replace(&mut self.parent, new_parent);
-                self.stack.push((node, tree, parent));
-            };
+            match p {
+                // ignore prefix or root dir
+                Component::Prefix(_) | Component::RootDir => {}
+                // new subdir
+                Component::Normal(p) => {
+                    let tree = std::mem::replace(&mut self.tree, Tree::new());
+                    if self.path == path {
+                        // use Node and return
+                        let new_parent = self.parent.sub_parent(&node)?;
+                        let parent = std::mem::replace(&mut self.parent, new_parent);
+                        self.stack.push((node, tree, parent));
+                        return Ok(());
+                    } else {
+                        let node = Node::new_node(p, NodeType::Dir, Metadata::default());
+                        let new_parent = self.parent.sub_parent(&node)?;
+                        let parent = std::mem::replace(&mut self.parent, new_parent);
+                        self.stack.push((node, tree, parent));
+                    }
+                }
+                _ => bail!("path should not contain current or parent dir, path: {basepath:?}"),
+            }
         }
 
         match node.node_type() {

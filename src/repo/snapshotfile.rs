@@ -191,7 +191,7 @@ impl SnapshotFile {
         })
     }
 
-    fn has_group(&self, group: &SnapshotGroup) -> bool {
+    pub fn has_group(&self, group: &SnapshotGroup) -> bool {
         (match &group.hostname {
             Some(val) => val == &self.hostname,
             None => true,
@@ -348,7 +348,7 @@ pub struct SnapshotFilter {
     filter_tags: Vec<StringList>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Deserialize)]
 pub struct SnapshotGroupCriterion {
     hostname: bool,
     label: bool,

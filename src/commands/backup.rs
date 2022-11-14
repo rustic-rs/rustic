@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Local};
@@ -18,7 +19,10 @@ use crate::backend::{
 };
 use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
-use crate::repo::{ConfigFile, DeleteOption, SnapshotFile, SnapshotSummary, StringList};
+use crate::repo::{
+    ConfigFile, DeleteOption, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotSummary,
+    StringList,
+};
 
 #[serde_as]
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
@@ -29,6 +33,10 @@ pub(super) struct Opts {
     #[clap(long, short = 'n')]
     #[merge(strategy = merge::bool::overwrite_false)]
     dry_run: bool,
+
+    /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,paths)
+    #[clap(long, short = 'g', value_name = "CRITERION")]
+    group_by: Option<SnapshotGroupCriterion>,
 
     /// Snapshot to use as parent
     #[clap(long, value_name = "SNAPSHOT", conflicts_with = "force")]
@@ -177,28 +185,6 @@ pub(super) fn execute(
             }
         };
 
-        let parent = match (backup_stdin, opts.force, opts.parent.clone()) {
-            (true, _, _) | (false, true, _) => None,
-            (false, false, None) => SnapshotFile::latest(
-                &be,
-                |snap| snap.hostname == hostname && snap.paths.contains(&backup_path_str),
-                progress_counter(""),
-            )
-            .ok(),
-            (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
-        };
-
-        let parent_tree = match &parent {
-            Some(snap) => {
-                info!("using parent {}", snap.id);
-                Some(snap.tree)
-            }
-            None => {
-                info!("using no parent");
-                None
-            }
-        };
-
         let delete = match (opts.delete_never, opts.delete_after) {
             (true, _) => DeleteOption::Never,
             (_, Some(d)) => DeleteOption::After(time + Duration::from_std(*d)?),
@@ -207,7 +193,6 @@ pub(super) fn execute(
 
         let mut snap = SnapshotFile {
             time,
-            parent: parent.map(|sn| sn.id),
             hostname,
             label: opts.label.unwrap_or_default(),
             delete,
@@ -219,6 +204,34 @@ pub(super) fn execute(
         };
         snap.paths.add(backup_path_str.clone());
         snap.set_tags(opts.tag.clone());
+
+        // get suitable snapshot group from snapshot and opts.group_by. This is used to filter snapshots for the parent detection
+        let group = SnapshotGroup::from_sn(
+            &snap,
+            &opts
+                .group_by
+                .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,paths").unwrap()),
+        );
+
+        let parent = match (backup_stdin, opts.force, opts.parent.clone()) {
+            (true, _, _) | (false, true, _) => None,
+            (false, false, None) => {
+                SnapshotFile::latest(&be, |snap| snap.has_group(&group), progress_counter("")).ok()
+            }
+            (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
+        };
+
+        let parent_tree = match &parent {
+            Some(parent) => {
+                info!("using parent {}", parent.id);
+                snap.parent = Some(parent.id);
+                Some(parent.tree)
+            }
+            None => {
+                info!("using no parent");
+                None
+            }
+        };
 
         let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode);
 

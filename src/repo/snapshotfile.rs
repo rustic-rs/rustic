@@ -94,6 +94,7 @@ pub struct SnapshotFile {
     pub delete: DeleteOption,
 
     pub summary: Option<SnapshotSummary>,
+    pub description: Option<String>,
 
     #[serde(default, skip_serializing_if = "Id::is_null")]
     pub id: Id,

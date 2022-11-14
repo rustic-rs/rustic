@@ -221,6 +221,9 @@ fn display_snap(sn: SnapshotFile) {
         );
         add_entry("Duration", duration);
     }
+    if let Some(description) = sn.description {
+        add_entry("Description", description);
+    }
     println!("{table}");
     println!();
 }

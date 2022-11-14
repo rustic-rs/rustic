@@ -67,6 +67,14 @@ pub(super) struct Opts {
     #[merge(strategy = merge::vec::overwrite_empty)]
     tag: Vec<StringList>,
 
+    /// Add description to snapshot
+    #[clap(long, value_name = "DESCRIPTION")]
+    description: Option<String>,
+
+    /// Add description to snapshot from file
+    #[clap(long, value_name = "FILE", conflicts_with = "description")]
+    description_from: Option<PathBuf>,
+
     /// Mark snapshot as uneraseable
     #[clap(long, conflicts_with = "delete-after")]
     #[merge(strategy = merge::bool::overwrite_false)]
@@ -200,8 +208,15 @@ pub(super) fn execute(
                 command: command.clone(),
                 ..Default::default()
             }),
+            description: opts.description,
             ..Default::default()
         };
+
+        // use description from description file if it is given
+        if let Some(file) = opts.description_from {
+            snap.description = Some(std::fs::read_to_string(file)?);
+        }
+
         snap.paths.add(backup_path_str.clone());
         snap.set_tags(opts.tag.clone());
 

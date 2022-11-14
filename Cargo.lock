@@ -1317,15 +1317,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "path-absolutize"
-version = "3.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f1d4993b16f7325d90c18c3c6a3327db7808752db8d208cea0acee0abd52c52"
-dependencies = [
- "path-dedot",
-]
-
-[[package]]
 name = "path-dedot"
 version = "3.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1706,7 +1697,7 @@ dependencies = [
  "merge",
  "nix",
  "pariter",
- "path-absolutize",
+ "path-dedot",
  "prettytable-rs",
  "quickcheck",
  "quickcheck_macros",

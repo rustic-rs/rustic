@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use chrono::{Duration, Local};
 use clap::{AppSettings, Parser};
 use gethostname::gethostname;
 use log::*;
 use merge::Merge;
-use path_absolutize::*;
+use path_dedot::ParseDot;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -106,12 +106,6 @@ pub(super) fn execute(
 
     let zstd = config.zstd()?;
 
-    if let Some(path) = &opts.as_path {
-        if !path.is_absolute() {
-            bail!("path {path:?} is not an absolute path. Please use --path-from only with absolute paths!");
-        }
-    }
-
     let mut config_opts: Vec<Opts> = config_file.get("backup.sources")?;
 
     let sources = match (opts.sources.is_empty(), config_opts.is_empty()) {
@@ -156,9 +150,13 @@ pub(super) fn execute(
         let backup_path = if backup_stdin {
             PathBuf::from(&opts.stdin_filename)
         } else {
-            PathBuf::from(&source).absolutize()?.to_path_buf()
+            PathBuf::from(&source).parse_dot()?.to_path_buf()
         };
-        let backup_path_str = opts.as_path.as_ref().unwrap_or(&backup_path);
+        let as_path = match opts.as_path {
+            None => None,
+            Some(p) => Some(p.parse_dot()?.to_path_buf()),
+        };
+        let backup_path_str = as_path.as_ref().unwrap_or(&backup_path);
         let backup_path_str = backup_path_str
             .to_str()
             .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path_str))?
@@ -253,7 +251,7 @@ pub(super) fn execute(
                         warn!("ignoring error {}\n", e)
                     }
                     Ok((path, node)) => {
-                        let snapshot_path = if let Some(as_path) = &opts.as_path {
+                        let snapshot_path = if let Some(as_path) = &as_path {
                             as_path
                                 .clone()
                                 .join(path.strip_prefix(&backup_path).unwrap())

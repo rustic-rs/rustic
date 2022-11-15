@@ -13,7 +13,6 @@ use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
-use crate::id::Id;
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
 use crate::repo::{ConfigFile, SnapshotFile, SnapshotSummary};
 
@@ -193,7 +192,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 self.summary.dirs_new += 1;
             }
             _ => {
-                // "Matched" trees where the subree id does not match or unmach
+                // "Matched" trees where the subree id does not match or unmached trees
                 debug!("changed   tree: {:?} {}", self.path, dirsize_bytes);
                 self.summary.dirs_changed += 1;
             }
@@ -235,43 +234,34 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let chunk_iter = ChunkIter::new(r, *node.meta().size() as usize, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
+        let index = self.index.clone();
+        let data_packer = self.data_packer.clone();
 
         chunk_iter
             .into_iter()
             // TODO: This parallelization works pretty well for big files. For small files this produces a lot of
             // unneccessary overhead. Maybe use a parallel hashing actor?
-            .parallel_map(|chunk| {
+            .parallel_map(move |chunk| {
                 let chunk = chunk?;
                 let id = hash(&chunk);
-                Ok((chunk, id))
+                let size = chunk.len() as u64;
+
+                if !index.has_data(&id) {
+                    data_packer.add(&chunk, &id)?
+                }
+                p.inc(size);
+                Ok((id, size))
             })
             .try_for_each(|data: Result<_>| -> Result<_> {
-                let (chunk, id) = data?;
-                let size = chunk.len() as u64;
-                filesize += size;
-
+                let (id, size) = data?;
                 content.push(id);
-                self.process_data_junk(id, chunk, size, &p)?;
+                filesize += size;
                 Ok(())
             })?;
 
         let mut node = node;
         node.set_content(content);
         self.add_file(node, filesize);
-        Ok(())
-    }
-
-    fn process_data_junk(
-        &mut self,
-        id: Id,
-        chunk: Vec<u8>,
-        size: u64,
-        p: &ProgressBar,
-    ) -> Result<()> {
-        if !self.index.has_data(&id) {
-            self.data_packer.add(&chunk, &id)?
-        }
-        p.inc(size);
         Ok(())
     }
 

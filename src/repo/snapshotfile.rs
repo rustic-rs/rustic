@@ -63,12 +63,12 @@ impl DeleteOption {
     }
 }
 
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
 #[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
 #[derivative(Default)]
 pub struct SnapshotFile {
     #[derivative(Default(value = "Local::now()"))]
     pub time: DateTime<Local>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<Id>,
     pub tree: Id,
     pub paths: StringList,
@@ -82,12 +82,10 @@ pub struct SnapshotFile {
     pub gid: u32,
     #[serde(default)]
     pub tags: StringList,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub original: Option<Id>,
     #[serde(default, skip_serializing_if = "DeleteOption::is_not_set")]
     pub delete: DeleteOption,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<SnapshotSummary>,
 
     #[serde(default, skip_serializing_if = "Id::is_null")]
@@ -354,13 +352,11 @@ impl FromStr for SnapshotGroupCriterion {
     }
 }
 
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
 #[derive(Default, Debug, Serialize)]
 pub struct SnapshotGroup {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     hostname: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     paths: Option<StringList>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     tags: Option<StringList>,
 }
 

@@ -52,7 +52,6 @@ serde-aux = "4"
 # other dependencies
 bytes = "1"
 chrono = { version = "0.4", default_features = false, features = ["clock", "serde"] }
-
 zstd = "0.11"
 enum-map = "2"
 enum-map-derive = "0.10"
@@ -76,7 +75,7 @@ clap_complete = "3.2.4"
 directories = "4"
 toml = "0.5"
 merge = "0.1"
-serde_with = "2"
+serde_with = "2.1"
 rpassword = "7"
 prettytable-rs = {version = "0.9", default-features = false }
 bytesize = "1"

@@ -5,30 +5,21 @@ use crate::backend::{FileType, RepoFile};
 use crate::blob::BlobType;
 use crate::id::Id;
 
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConfigFile {
     pub version: u32,
     pub id: Id,
     pub chunker_polynomial: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_hot: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compression: Option<i32>, // note that Some(0) means no compression.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub treepack_size: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub treepack_growfactor: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub treepack_size_limit: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub datapack_size: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub datapack_growfactor: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub datapack_size_limit: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_packsize_tolerate_percent: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_packsize_tolerate_percent: Option<u32>,
 }
 

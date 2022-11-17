@@ -8,13 +8,11 @@ use crate::backend::{FileType, ReadBackend};
 use crate::crypto::{CryptoKey, Key};
 use crate::id::Id;
 
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyFile {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     hostname: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     username: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     created: Option<DateTime<Local>>,
     kdf: String,
     #[serde(rename = "N")]

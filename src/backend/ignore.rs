@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use bytesize::ByteSize;
-use chrono::{TimeZone, Utc};
+use chrono::{Local, TimeZone, Utc};
 use clap::Parser;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
 use log::*;
@@ -200,14 +200,22 @@ fn map_entry(
         .get_group_by_gid(gid)
         .map(|g| g.name().to_str().unwrap().to_string());
 
-    let mtime = Some(Utc.timestamp(m.mtime(), m.mtime_nsec().try_into()?).into());
+    let mtime = Utc
+        .timestamp_opt(m.mtime(), m.mtime_nsec().try_into()?)
+        .single()
+        .map(|dt| dt.with_timezone(&Local));
     let atime = if with_atime {
-        Some(Utc.timestamp(m.atime(), m.atime_nsec().try_into()?).into())
+        Utc.timestamp_opt(m.atime(), m.atime_nsec().try_into()?)
+            .single()
+            .map(|dt| dt.with_timezone(&Local))
     } else {
         // TODO: Use None here?
         mtime
     };
-    let ctime = Some(Utc.timestamp(m.ctime(), m.ctime_nsec().try_into()?).into());
+    let ctime = Utc
+        .timestamp_opt(m.ctime(), m.ctime_nsec().try_into()?)
+        .single()
+        .map(|dt| dt.with_timezone(&Local));
     let size = if m.is_dir() { 0 } else { m.len() };
     let mode = map_mode_to_go(m.mode());
     let inode = m.ino();

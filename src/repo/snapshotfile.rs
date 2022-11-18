@@ -451,9 +451,6 @@ impl StringList {
     }
 
     pub fn formatln(&self) -> String {
-        self.0
-            .iter()
-            .map(|p| p.to_string() + "\n")
-            .collect::<String>()
+        self.0.join("\n")
     }
 }

@@ -13,7 +13,6 @@ use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
-use crate::id::Id;
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
 use crate::repo::{ConfigFile, SnapshotFile, SnapshotSummary};
 
@@ -193,23 +192,14 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 self.summary.dirs_new += 1;
             }
             _ => {
-                // "Matched" trees where the subree id does not match or unmach
+                // "Matched" trees where the subree id does not match or unmached trees
                 debug!("changed   tree: {:?} {}", self.path, dirsize_bytes);
                 self.summary.dirs_changed += 1;
             }
         }
 
         if !self.index.has_tree(&id) {
-            match self.tree_packer.add(&chunk, &id)? {
-                0 => {}
-                packed_size => {
-                    self.summary.tree_blobs += 1;
-                    self.summary.data_added += dirsize;
-                    self.summary.data_added_packed += packed_size;
-                    self.summary.data_added_trees += dirsize;
-                    self.summary.data_added_trees_packed += packed_size;
-                }
-            }
+            self.tree_packer.add(&chunk, &id)?;
         }
         self.add_dir(node, dirsize);
         Ok(())
@@ -244,52 +234,34 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let chunk_iter = ChunkIter::new(r, *node.meta().size() as usize, &self.poly);
         let mut content = Vec::new();
         let mut filesize: u64 = 0;
+        let index = self.index.clone();
+        let data_packer = self.data_packer.clone();
 
         chunk_iter
             .into_iter()
             // TODO: This parallelization works pretty well for big files. For small files this produces a lot of
             // unneccessary overhead. Maybe use a parallel hashing actor?
-            .parallel_map(|chunk| {
+            .parallel_map(move |chunk| {
                 let chunk = chunk?;
                 let id = hash(&chunk);
-                Ok((chunk, id))
+                let size = chunk.len() as u64;
+
+                if !index.has_data(&id) {
+                    data_packer.add(&chunk, &id)?
+                }
+                p.inc(size);
+                Ok((id, size))
             })
             .try_for_each(|data: Result<_>| -> Result<_> {
-                let (chunk, id) = data?;
-                let size = chunk.len() as u64;
-                filesize += size;
-
+                let (id, size) = data?;
                 content.push(id);
-                self.process_data_junk(id, &chunk, size, &p)?;
+                filesize += size;
                 Ok(())
             })?;
 
         let mut node = node;
         node.set_content(content);
         self.add_file(node, filesize);
-        Ok(())
-    }
-
-    fn process_data_junk(
-        &mut self,
-        id: Id,
-        chunk: &[u8],
-        size: u64,
-        p: &ProgressBar,
-    ) -> Result<()> {
-        if !self.index.has_data(&id) {
-            match self.data_packer.add(chunk, &id)? {
-                0 => {}
-                packed_size => {
-                    self.summary.data_blobs += 1;
-                    self.summary.data_added += size;
-                    self.summary.data_added_packed += packed_size;
-                    self.summary.data_added_files += size;
-                    self.summary.data_added_files_packed += packed_size;
-                }
-            }
-        }
-        p.inc(size);
         Ok(())
     }
 
@@ -302,12 +274,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
         self.snap.tree = id;
 
-        self.data_packer.finalize()?;
-        self.tree_packer.finalize()?;
-        {
-            let indexer = self.indexer.write().unwrap();
-            indexer.finalize()?;
-        }
+        let stats = self.data_packer.finalize()?;
+        self.summary.data_blobs += stats.blobs;
+        self.summary.data_added += stats.data;
+        self.summary.data_added_packed += stats.data_packed;
+        self.summary.data_added_files += stats.data;
+        self.summary.data_added_files_packed += stats.data_packed;
+
+        let stats = self.tree_packer.finalize()?;
+        self.summary.tree_blobs += stats.blobs;
+        self.summary.data_added += stats.data;
+        self.summary.data_added_packed += stats.data_packed;
+        self.summary.data_added_trees += stats.data;
+        self.summary.data_added_trees_packed += stats.data_packed;
+
+        self.indexer.write().unwrap().finalize()?;
+
         let end_time = Local::now();
         self.summary.backup_duration = (end_time - self.summary.backup_start)
             .to_std()?

@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
@@ -8,6 +9,7 @@ use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derive_more::Add;
 use log::*;
+use rayon::prelude::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
 use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType, ReadBackend};
@@ -827,12 +829,7 @@ impl Pruner {
             .collect()
     }
 
-    fn do_prune(
-        mut self,
-        be: &impl DecryptFullBackend,
-        opts: Opts,
-        config: ConfigFile,
-    ) -> Result<()> {
+    fn do_prune(self, be: &impl DecryptFullBackend, opts: Opts, config: ConfigFile) -> Result<()> {
         let zstd = config.zstd()?;
         let mut be = be.clone();
         be.set_zstd(zstd);
@@ -855,7 +852,7 @@ impl Pruner {
                     * HeaderEntry::ENTRY_LEN_COMPRESSED as u64
         });
 
-        let mut tree_repacker = Repacker::new(
+        let tree_repacker = Repacker::new(
             be.clone(),
             BlobType::Tree,
             indexer.clone(),
@@ -863,7 +860,7 @@ impl Pruner {
             size_after_prune[BlobType::Tree],
         )?;
 
-        let mut data_repacker = Repacker::new(
+        let data_repacker = Repacker::new(
             be.clone(),
             BlobType::Data,
             indexer.clone(),
@@ -906,85 +903,99 @@ impl Pruner {
         p.set_length(self.stats.size.sum().repack - self.stats.size.sum().repackrm);
 
         let mut indexes_remove = Vec::new();
-        let mut tree_packs_remove = Vec::new();
-        let mut data_packs_remove = Vec::new();
+        let tree_packs_remove = Arc::new(Mutex::new(Vec::new()));
+        let data_packs_remove = Arc::new(Mutex::new(Vec::new()));
 
-        let mut delete_pack = |pack: PrunePack| {
+        let delete_pack = |pack: PrunePack| {
             // delete pack
             match pack.blob_type {
-                BlobType::Data => data_packs_remove.push(pack.id),
-                BlobType::Tree => tree_packs_remove.push(pack.id),
+                BlobType::Data => data_packs_remove.lock().unwrap().push(pack.id),
+                BlobType::Tree => tree_packs_remove.lock().unwrap().push(pack.id),
             }
         };
 
-        for index in self.index_files {
-            for pack in index.packs.into_iter() {
-                match pack.to_do {
-                    PackToDo::Undecided => bail!("pack {} got no decicion what to do", pack.id),
-                    PackToDo::Keep => {
+        let used_ids = Arc::new(Mutex::new(self.used_ids));
+
+        let packs: Vec<_> = self
+            .index_files
+            .into_iter()
+            .map(|index| {
+                indexes_remove.push(index.id);
+                index
+            })
+            .flat_map(|index| index.packs)
+            .collect();
+
+        packs.into_par_iter().try_for_each(|pack| {
+            match pack.to_do {
+                PackToDo::Undecided => bail!("pack {} got no decicion what to do", pack.id),
+                PackToDo::Keep => {
+                    // keep pack: add to new index
+                    let pack = pack.into_index_pack();
+                    indexer.write().unwrap().add(pack)?;
+                }
+                PackToDo::Repack => {
+                    // TODO: repack in parallel
+                    for blob in &pack.blobs {
+                        if used_ids.lock().unwrap().remove(&blob.id).is_none() {
+                            // don't save duplicate blobs
+                            continue;
+                        }
+
+                        let repacker = match blob.tpe {
+                            BlobType::Data => &data_repacker,
+                            BlobType::Tree => &tree_repacker,
+                        };
+                        if opts.fast_repack {
+                            repacker.add_fast(&pack.id, blob)?;
+                        } else {
+                            repacker.add(&pack.id, blob)?;
+                        }
+                        p.inc(blob.length as u64);
+                    }
+                    if opts.instant_delete {
+                        delete_pack(pack);
+                    } else {
+                        // mark pack for removal
+                        let pack = pack.into_index_pack_with_time(self.time);
+                        indexer.write().unwrap().add_remove(pack)?;
+                    }
+                }
+                PackToDo::MarkDelete => {
+                    if opts.instant_delete {
+                        delete_pack(pack);
+                    } else {
+                        // mark pack for removal
+                        let pack = pack.into_index_pack_with_time(self.time);
+                        indexer.write().unwrap().add_remove(pack)?;
+                    }
+                }
+                PackToDo::KeepMarked => {
+                    if opts.instant_delete {
+                        delete_pack(pack);
+                    } else {
                         // keep pack: add to new index
                         let pack = pack.into_index_pack();
-                        indexer.write().unwrap().add(pack)?;
+                        indexer.write().unwrap().add_remove(pack)?;
                     }
-                    PackToDo::Repack => {
-                        // TODO: repack in parallel
-                        for blob in &pack.blobs {
-                            if self.used_ids.remove(&blob.id).is_none() {
-                                // don't save duplicate blobs
-                                continue;
-                            }
-
-                            let repacker = match blob.tpe {
-                                BlobType::Data => &mut data_repacker,
-                                BlobType::Tree => &mut tree_repacker,
-                            };
-                            if opts.fast_repack {
-                                repacker.add_fast(&pack.id, blob)?;
-                            } else {
-                                repacker.add(&pack.id, blob)?;
-                            }
-                            p.inc(blob.length as u64);
-                        }
-                        if opts.instant_delete {
-                            delete_pack(pack);
-                        } else {
-                            // mark pack for removal
-                            let pack = pack.into_index_pack_with_time(self.time);
-                            indexer.write().unwrap().add_remove(pack)?;
-                        }
-                    }
-                    PackToDo::MarkDelete => {
-                        if opts.instant_delete {
-                            delete_pack(pack);
-                        } else {
-                            // mark pack for removal
-                            let pack = pack.into_index_pack_with_time(self.time);
-                            indexer.write().unwrap().add_remove(pack)?;
-                        }
-                    }
-                    PackToDo::KeepMarked => {
-                        if opts.instant_delete {
-                            delete_pack(pack);
-                        } else {
-                            // keep pack: add to new index
-                            let pack = pack.into_index_pack();
-                            indexer.write().unwrap().add_remove(pack)?;
-                        }
-                    }
-                    PackToDo::Recover => {
-                        // recover pack: add to new index in section packs
-                        let pack = pack.into_index_pack_with_time(self.time);
-                        indexer.write().unwrap().add(pack)?;
-                    }
-                    PackToDo::Delete => delete_pack(pack),
                 }
+                PackToDo::Recover => {
+                    // recover pack: add to new index in section packs
+                    let pack = pack.into_index_pack_with_time(self.time);
+                    indexer.write().unwrap().add(pack)?;
+                }
+                PackToDo::Delete => delete_pack(pack),
             }
-            indexes_remove.push(index.id);
-        }
+            Ok(())
+        })?;
         tree_repacker.finalize()?;
         data_repacker.finalize()?;
         indexer.write().unwrap().finalize()?;
         p.finish();
+
+        // get variables out of Arc<Mutex<_>>
+        let data_packs_remove = std::mem::take::<Vec<_>>(&mut data_packs_remove.lock().unwrap());
+        let tree_packs_remove = std::mem::take::<Vec<_>>(&mut tree_packs_remove.lock().unwrap());
 
         if !data_packs_remove.is_empty() {
             let p = progress_counter("removing old data packs...");

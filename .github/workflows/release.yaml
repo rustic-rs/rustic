@@ -51,6 +51,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -68,6 +70,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: 
           key: ${{ matrix.job.target }}
+      - name: Set Version
+        shell: bash
+        run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
         uses: actions-rs/cargo@v1
         with:

@@ -43,7 +43,7 @@ use log::*;
 use rustic_config::RusticConfig;
 
 #[derive(Parser)]
-#[clap(about, version)]
+#[clap(about, name="rustic", version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
 struct Opts {
     #[clap(flatten, help_heading = "GLOBAL OPTIONS")]
     global: GlobalOpts,

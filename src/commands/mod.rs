@@ -309,7 +309,7 @@ pub fn execute() -> Result<()> {
     match cmd {
         Command::Backup(opts) => backup::execute(&dbe, opts, config, config_file, command)?,
         Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config)?,
-        Command::Cat(opts) => cat::execute(&dbe, opts)?,
+        Command::Cat(opts) => cat::execute(&dbe, opts, config_file)?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts)?,
         Command::Completions(_) => {} // already handled above
         Command::Diff(opts) => diff::execute(&dbe, opts)?,
@@ -317,11 +317,11 @@ pub fn execute() -> Result<()> {
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(&dbe, key, opts)?,
         Command::List(opts) => list::execute(&dbe, opts)?,
-        Command::Ls(opts) => ls::execute(&dbe, opts)?,
+        Command::Ls(opts) => ls::execute(&dbe, opts, config_file)?,
         Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file)?,
         Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![])?,
-        Command::Restore(opts) => restore::execute(&dbe, opts)?,
+        Command::Restore(opts) => restore::execute(&dbe, opts, config_file)?,
         Command::Repair(opts) => repair::execute(&dbe, opts, config_file, &config)?,
         Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts)?,
         Command::Tag(opts) => tag::execute(&dbe, opts, config_file)?,

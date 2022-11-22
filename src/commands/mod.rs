@@ -312,7 +312,7 @@ pub fn execute() -> Result<()> {
         Command::Cat(opts) => cat::execute(&dbe, opts, config_file)?,
         Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts)?,
         Command::Completions(_) => {} // already handled above
-        Command::Diff(opts) => diff::execute(&dbe, opts)?,
+        Command::Diff(opts) => diff::execute(&dbe, opts, config_file)?,
         Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file)?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(&dbe, key, opts)?,

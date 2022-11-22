@@ -3,17 +3,20 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Result};
 use clap::Parser;
 
-use super::progress_counter;
+use super::{progress_counter, RusticConfig};
 use crate::backend::{DecryptReadBackend, LocalSource, LocalSourceOptions};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::index::IndexBackend;
-use crate::repo::SnapshotFile;
+use crate::repo::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 pub(super) struct Opts {
     #[clap(flatten)]
     ignore_opts: LocalSourceOptions,
+
+    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
+    filter: SnapshotFilter,
 
     /// Reference snapshot/path
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
@@ -24,7 +27,11 @@ pub(super) struct Opts {
     snap2: String,
 }
 
-pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(
+    be: &impl DecryptReadBackend,
+    mut opts: Opts,
+    config_file: RusticConfig,
+) -> Result<()> {
     let (id1, path1) = arg_to_snap_path(&opts.snap1, "");
     let (id2, path2) = arg_to_snap_path(&opts.snap2, path1);
 
@@ -50,8 +57,10 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
         }
         (Some(id1), None) => {
             // diff between snapshot and local path
+            config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+
             let p = progress_spinner("getting snapshot...");
-            let snap1 = SnapshotFile::from_id(be, id1)?;
+            let snap1 = SnapshotFile::from_str(be, id1, |sn| sn.matches(&opts.filter), p.clone())?;
             p.finish();
 
             let index = IndexBackend::new(be, progress_counter(""))?;

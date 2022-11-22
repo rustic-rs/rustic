@@ -3,21 +3,31 @@ use clap::Parser;
 use std::path::Path;
 
 use super::progress_counter;
+use super::rustic_config::RusticConfig;
 use crate::backend::DecryptReadBackend;
 use crate::blob::{NodeStreamer, Tree};
 use crate::index::IndexBackend;
-use crate::repo::SnapshotFile;
+use crate::repo::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 pub(super) struct Opts {
+    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
+    filter: SnapshotFilter,
+
     /// Snapshot/path to list
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 }
 
-pub(super) fn execute(be: &(impl DecryptReadBackend + Unpin), opts: Opts) -> Result<()> {
+pub(super) fn execute(
+    be: &impl DecryptReadBackend,
+    mut opts: Opts,
+    config_file: RusticConfig,
+) -> Result<()> {
+    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
-    let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter(""))?;
+    let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;
     let index = IndexBackend::new(be, progress_counter(""))?;
     let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
 

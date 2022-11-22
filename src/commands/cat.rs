@@ -5,11 +5,12 @@ use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 
 use super::progress_counter;
+use super::rustic_config::RusticConfig;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{BlobType, Tree};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::SnapshotFile;
+use crate::repo::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -41,12 +42,19 @@ struct IdOpt {
 
 #[derive(Parser)]
 struct TreeOpts {
+    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
+    filter: SnapshotFilter,
+
     /// Snapshot/path of the tree to display
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 }
 
-pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
+pub(super) fn execute(
+    be: &impl DecryptReadBackend,
+    opts: Opts,
+    config_file: RusticConfig,
+) -> Result<()> {
     match opts.command {
         Command::Config => cat_file(be, FileType::Config, IdOpt::default()),
         Command::Index(opt) => cat_file(be, FileType::Index, opt),
@@ -55,7 +63,7 @@ pub(super) fn execute(be: &impl DecryptReadBackend, opts: Opts) -> Result<()> {
         Command::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt),
         Command::DataBlob(opt) => cat_blob(be, BlobType::Data, opt),
         // special treatment for cating a tree within a snapshot
-        Command::Tree(opts) => cat_tree(be, opts),
+        Command::Tree(opts) => cat_tree(be, opts, config_file),
     }
 }
 
@@ -75,9 +83,15 @@ fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<(
     Ok(())
 }
 
-fn cat_tree(be: &impl DecryptReadBackend, opts: TreeOpts) -> Result<()> {
+fn cat_tree(
+    be: &impl DecryptReadBackend,
+    mut opts: TreeOpts,
+    config_file: RusticConfig,
+) -> Result<()> {
+    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
-    let snap = SnapshotFile::from_str(be, id, |_| true, progress_counter(""))?;
+    let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;
     let index = IndexBackend::new(be, progress_counter(""))?;
     let id = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
     let data = index.blob_from_backend(&BlobType::Tree, &id)?;

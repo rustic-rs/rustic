@@ -52,7 +52,7 @@ serde-aux = "4"
 # other dependencies
 bytes = "1"
 chrono = { version = "0.4", default_features = false, features = ["clock", "serde"] }
-zstd = "0.11"
+zstd = "0.12"
 enum-map = "2"
 enum-map-derive = "0.10"
 self_update = {version = "0.32", default-features = false, features = ["rustls", "archive-tar", "compression-flate2"] }

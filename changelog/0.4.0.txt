@@ -1,0 +1,21 @@
+Changes in version 0.4.0:
+
+Bugs fixed:
+- Fixed a bug in the CI which sometimes made building beta executables fail.
+
+New features:
+- Snapshots now allow to use a label, to add a description and save the program version used.
+- diff: diff can now compare snapshots with local dirs.
+- backup: Added option --as-path.
+- backup: Allow to use and save relative paths.
+- backup: Added option --ignore-devid.
+- backup: Now uses more parallelization.
+- prune: Repacking is now parallel.
+- New commands repair index/snapshots.
+- Better support for using latest as snapshot.
+- UI/progress bars: Added support for env variable RUSTIC_PROGRESS_INTERVALL.
+- Simplified the code in some places.
+
+Changes under the hood:
+- rustic no longer uses async Rust.
+- Replaced prettytables by comfytable. (Thanks @JMarkin)

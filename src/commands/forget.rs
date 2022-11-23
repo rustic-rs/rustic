@@ -88,8 +88,9 @@ pub(super) fn execute(
         snapshots.sort_unstable_by(|sn1, sn2| sn1.cmp(sn2).reverse());
         let latest_time = snapshots[0].time;
         let mut group_keep = opts.config.keep.clone();
-        let mut table =
-            table_with_titles(["ID", "Time", "Host", "Tags", "Paths", "Action", "Reason"]);
+        let mut table = table_with_titles([
+            "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
+        ]);
 
         let mut iter = snapshots.iter().peekable();
         let mut last = None;

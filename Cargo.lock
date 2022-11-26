@@ -1732,6 +1732,7 @@ dependencies = [
  "integer-sqrt",
  "itertools",
  "lazy_static",
+ "libc",
  "log",
  "merge",
  "nix",

@@ -86,6 +86,7 @@ users = "0.11"
 itertools = "0.10"
 simplelog = "0.12"
 comfy-table = "6.1.2"
+libc="0.2"
 
 [dev-dependencies]
 rstest = "0.15"

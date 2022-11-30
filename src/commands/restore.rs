@@ -81,7 +81,7 @@ pub(super) fn execute(
     let index = IndexBackend::new(be, progress_counter(""))?;
     let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
 
-    let dest = LocalBackend::new(&opts.dest);
+    let dest = LocalBackend::new(&opts.dest)?;
 
     let p = progress_spinner("collecting file information...");
     let file_infos = allocate_and_collect(&dest, index.clone(), tree, &opts)?;

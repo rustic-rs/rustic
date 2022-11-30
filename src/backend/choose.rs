@@ -18,9 +18,9 @@ impl ChooseBackend {
         Ok(match url.split_once(':') {
             Some(("rclone", path)) => Rclone(RcloneBackend::new(path)?),
             Some(("rest", path)) => Rest(RestBackend::new(path)),
-            Some(("local", path)) => Local(LocalBackend::new(path)),
+            Some(("local", path)) => Local(LocalBackend::new(path)?),
             Some((backend, _)) => bail!("backend {backend} is not supported!"),
-            None => Local(LocalBackend::new(url)),
+            None => Local(LocalBackend::new(url)?),
         })
     }
 }

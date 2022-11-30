@@ -108,7 +108,7 @@ impl RcloneBackend {
         let url = "http://".to_string() + &user + ":" + &password + "@" + &url[7..];
 
         debug!("using REST backend with url {url}.");
-        let rest = RestBackend::new(&url);
+        let rest = RestBackend::new(&url)?;
         Ok(Self {
             _child_data: Arc::new(ChildToKill(child)),
             rest,

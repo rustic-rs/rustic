@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use anyhow::Result;
+use log::warn;
 
 use crate::blob::{Node, Tree};
 use crate::id::Id;
@@ -22,11 +23,16 @@ pub enum ParentResult<T> {
 
 impl<BE: IndexedBackend> Parent<BE> {
     pub fn new(be: &BE, tree_id: Option<Id>, ignore_ctime: bool, ignore_inode: bool) -> Self {
-        // if tree_id is given, load tree from backend. Turn errors into None.
-        // TODO: print warning when loading failed
+        // if tree_id is given, try to load tree from backend.
         let tree = match tree_id {
             None => None,
-            Some(id) => Tree::from_backend(be, id).ok(),
+            Some(tree_id) => match Tree::from_backend(be, tree_id) {
+                Ok(tree) => Some(tree),
+                Err(err) => {
+                    warn!("ignoring error when loading parent tree {tree_id}: {err}");
+                    None
+                }
+            },
         };
         Self {
             tree,
@@ -87,16 +93,20 @@ impl<BE: IndexedBackend> Parent<BE> {
 
     pub fn sub_parent(&mut self, node: &Node) -> Result<Self> {
         let tree = match self.p_node(node) {
-            None => None,
-            Some(p_node) => {
-                if p_node.node_type() == node.node_type() {
-                    // TODO: print warning when loading failed
-                    let tree = p_node.subtree.unwrap();
-                    Some(Tree::from_backend(&self.be, tree).ok()).flatten()
-                } else {
+            Some(p_node) if p_node.node_type() == node.node_type() => match p_node.subtree {
+                Some(tree_id) => match Tree::from_backend(&self.be, tree_id) {
+                    Ok(tree) => Some(tree),
+                    Err(err) => {
+                        warn!("ignoring error when loading parent tree {tree_id}: {err}");
+                        None
+                    }
+                },
+                None => {
+                    warn!("ignoring parent node {}: is no tree!", p_node.name);
                     None
                 }
-            }
+            },
+            _ => None,
         };
         Ok(Self {
             tree,

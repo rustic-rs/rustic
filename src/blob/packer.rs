@@ -109,8 +109,13 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     /// adds the blob to the packfile, allows specifying a size limit for the pack file
     pub fn add_with_sizelimit(&self, data: &[u8], id: &Id, size_limit: Option<u32>) -> Result<()> {
         // only add if this blob is not present
-        if self.indexer.read().unwrap().has(id) || self.raw_packer.read().unwrap().has(id) {
-            return Ok(());
+        if self.indexer.read().unwrap().has(id) {
+            // Note: This is within two if clauses , because here the indexer lock is already released.
+            // using "if self.indexer.read().unwrap().has(id) || self.raw_packer.read().unwrap().has(id)"
+            // can lead to a deadlock as the indexer lock is hold too long (and also needed within raw_packer!)
+            if self.raw_packer.read().unwrap().has(id) {
+                return Ok(());
+            }
         }
 
         let key = self.key.clone();

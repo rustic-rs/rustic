@@ -7,6 +7,7 @@ use chrono::{DateTime, Local};
 use clap::Parser;
 use derivative::Derivative;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use log::*;
 use merge::Merge;
 use serde::{Deserialize, Serialize};
@@ -219,27 +220,12 @@ impl SnapshotFile {
         snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(crit, sn2));
 
         let mut result = Vec::new();
-
-        if snaps.is_empty() {
-            return Ok(result);
+        for (group, snaps) in &snaps
+            .into_iter()
+            .group_by(|sn| SnapshotGroup::from_sn(&sn, crit))
+        {
+            result.push((group, snaps.collect()));
         }
-
-        let mut iter = snaps.into_iter();
-
-        let snap = iter.next().unwrap();
-        let mut group = SnapshotGroup::from_sn(&snap, crit);
-        let mut result_group = vec![snap];
-
-        for snap in iter {
-            if snap.has_group(&group) {
-                result_group.push(snap);
-            } else {
-                result.push((group, result_group));
-                group = SnapshotGroup::from_sn(&snap, crit);
-                result_group = vec![snap]
-            }
-        }
-        result.push((group, result_group));
 
         Ok(result)
     }

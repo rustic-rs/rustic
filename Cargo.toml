@@ -89,6 +89,6 @@ comfy-table = "6.1.2"
 libc="0.2"
 
 [dev-dependencies]
-rstest = "0.15"
+rstest = "0.16"
 quickcheck = "1"
 quickcheck_macros = "1"

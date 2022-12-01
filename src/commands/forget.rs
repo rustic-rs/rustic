@@ -204,6 +204,16 @@ pub(super) struct KeepOptions {
     #[merge(strategy=merge::num::overwrite_zero)]
     keep_monthly: u32,
 
+    /// Keep the last N quarter-yearly snapshots
+    #[clap(long, value_name = "N", default_value = "0")]
+    #[merge(strategy=merge::num::overwrite_zero)]
+    keep_quarter_yearly: u32,
+
+    /// Keep the last N half-yearly snapshots
+    #[clap(long, value_name = "N", default_value = "0")]
+    #[merge(strategy=merge::num::overwrite_zero)]
+    keep_half_yearly: u32,
+
     /// Keep the last N yearly snapshots
     #[clap(long, short = 'y', value_name = "N", default_value = "0")]
     #[merge(strategy=merge::num::overwrite_zero)]
@@ -244,6 +254,20 @@ pub(super) struct KeepOptions {
     #[merge(strategy=overwrite_zero_duration)]
     keep_within_monthly: humantime::Duration,
 
+    /// Keep quarter-yearly snapshots newer than DURATION relative to latest snapshot
+    #[clap(long, value_name = "DURATION", default_value = "0y")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
+    #[serde_as(as = "DisplayFromStr")]
+    #[merge(strategy=overwrite_zero_duration)]
+    keep_within_quarter_yearly: humantime::Duration,
+
+    /// Keep half-yearly snapshots newer than DURATION relative to latest snapshot
+    #[clap(long, value_name = "DURATION", default_value = "0y")]
+    #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
+    #[serde_as(as = "DisplayFromStr")]
+    #[merge(strategy=overwrite_zero_duration)]
+    keep_within_half_yearly: humantime::Duration,
+
     /// Keep yearly snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0y")]
     #[derivative(Default(value = "std::time::Duration::ZERO.into()"))]
@@ -265,6 +289,16 @@ fn always_false(_sn1: &SnapshotFile, _sn2: &SnapshotFile) -> bool {
 fn equal_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year()
+}
+
+fn equal_half_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
+    let (t1, t2) = (sn1.time, sn2.time);
+    t1.year() == t2.year() && t1.month0() / 6 == t2.month0() / 6
+}
+
+fn equal_quarter_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
+    let (t1, t2) = (sn1.time, sn2.time);
+    t1.year() == t2.year() && t1.month0() / 3 == t2.month0() / 3
 }
 
 fn equal_month(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
@@ -347,6 +381,20 @@ impl KeepOptions {
                 "monthly",
                 self.keep_within_monthly,
                 "within monthly",
+            ),
+            (
+                equal_quarter_year,
+                &mut self.keep_quarter_yearly,
+                "quarter-yearly",
+                self.keep_within_quarter_yearly,
+                "within quarter-yearly",
+            ),
+            (
+                equal_half_year,
+                &mut self.keep_half_yearly,
+                "half-yearly",
+                self.keep_within_half_yearly,
+                "within half-yearly",
             ),
             (
                 equal_year,

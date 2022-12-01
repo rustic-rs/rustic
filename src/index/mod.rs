@@ -123,8 +123,8 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
 
     fn new_from_collector(be: &BE, p: ProgressBar, mut collector: IndexCollector) -> Result<Self> {
         p.set_prefix("reading index...");
-        for (_, i) in be.stream_all::<IndexFile>(p.clone())? {
-            collector.extend(i.packs);
+        for index in be.stream_all::<IndexFile>(p.clone())? {
+            collector.extend(index?.1.packs);
         }
 
         p.finish();

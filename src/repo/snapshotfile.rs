@@ -140,7 +140,8 @@ impl SnapshotFile {
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
 
-        for (id, mut snap) in be.stream_all::<SnapshotFile>(p.clone())? {
+        for snap in be.stream_all::<SnapshotFile>(p.clone())? {
+            let (id, mut snap) = snap?;
             if !pred(&snap) {
                 continue;
             }
@@ -167,11 +168,10 @@ impl SnapshotFile {
     /// Get a Vector of SnapshotFile from the backend by list of (parts of the) ids
     pub fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
         let ids = be.find_ids(FileType::Snapshot, ids)?;
-        Ok(be
-            .stream_list::<Self>(ids, ProgressBar::hidden())?
+        be.stream_list::<Self>(ids, ProgressBar::hidden())?
             .into_iter()
-            .map(Self::set_id)
-            .collect())
+            .map_ok(Self::set_id)
+            .try_collect()
     }
 
     fn cmp_group(&self, crit: &SnapshotGroupCriterion, other: &Self) -> Ordering {
@@ -222,7 +222,7 @@ impl SnapshotFile {
         let mut result = Vec::new();
         for (group, snaps) in &snaps
             .into_iter()
-            .group_by(|sn| SnapshotGroup::from_sn(&sn, crit))
+            .group_by(|sn| SnapshotGroup::from_sn(sn, crit))
         {
             result.push((group, snaps.collect()));
         }
@@ -234,12 +234,11 @@ impl SnapshotFile {
         be: &B,
         filter: &SnapshotFilter,
     ) -> Result<Vec<Self>> {
-        Ok(be
-            .stream_all::<SnapshotFile>(ProgressBar::hidden())?
+        be.stream_all::<SnapshotFile>(ProgressBar::hidden())?
             .into_iter()
-            .map(Self::set_id)
-            .filter(|sn| sn.matches(filter))
-            .collect())
+            .map_ok(Self::set_id)
+            .filter_ok(|sn| sn.matches(filter))
+            .try_collect()
     }
 
     pub fn matches(&self, filter: &SnapshotFilter) -> bool {

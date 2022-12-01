@@ -37,7 +37,7 @@ pub trait DecryptReadBackend: ReadBackend {
     ) -> Result<Bytes> {
         let mut data = self.decrypt(&self.read_partial(tpe, id, cacheable, offset, length)?)?;
         if let Some(length) = uncompressed_length {
-            data = decode_all(&*data).unwrap();
+            data = decode_all(&*data)?;
             if data.len() != length.get() as usize {
                 bail!("length of uncompressed data does not match!");
             }
@@ -50,20 +50,24 @@ pub trait DecryptReadBackend: ReadBackend {
         Ok(serde_json::from_slice(&data)?)
     }
 
-    fn stream_all<F: RepoFile>(&self, p: ProgressBar) -> Result<Receiver<(Id, F)>> {
+    fn stream_all<F: RepoFile>(&self, p: ProgressBar) -> Result<Receiver<Result<(Id, F)>>> {
         let list = self.list(F::TYPE)?;
         self.stream_list(list, p)
     }
 
-    fn stream_list<F: RepoFile>(&self, list: Vec<Id>, p: ProgressBar) -> Result<Receiver<(Id, F)>> {
+    fn stream_list<F: RepoFile>(
+        &self,
+        list: Vec<Id>,
+        p: ProgressBar,
+    ) -> Result<Receiver<Result<(Id, F)>>> {
         p.set_length(list.len() as u64);
         let (tx, rx) = unbounded();
 
         list.into_par_iter()
             .for_each_with((self, p, tx), |(be, p, tx), id| {
-                let file = be.get_file::<F>(&id).unwrap();
+                let file = be.get_file::<F>(&id).map(|file| (id, file));
                 p.inc(1);
-                tx.send((id, file)).unwrap();
+                tx.send(file).unwrap();
             });
         Ok(rx)
     }

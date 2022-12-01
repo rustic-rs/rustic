@@ -4,6 +4,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use clap::Parser;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use log::*;
 use rayon::prelude::*;
 use zstd::stream::decode_all;
@@ -31,7 +32,7 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(
-    be: &(impl DecryptReadBackend + Unpin),
+    be: &impl DecryptReadBackend,
     cache: &Option<Cache>,
     hot_be: &Option<impl ReadBackend>,
     raw_be: &impl ReadBackend,
@@ -211,7 +212,8 @@ fn check_packs(
     };
 
     let p = progress_counter("reading index...");
-    for (_, index) in be.stream_all::<IndexFile>(p.clone())? {
+    for index in be.stream_all::<IndexFile>(p.clone())? {
+        let index = index?.1;
         index_collector.extend(index.packs.clone());
         for p in index.packs {
             process_pack(p);
@@ -254,14 +256,14 @@ fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Resul
 }
 
 // check if all snapshots and contained trees can be loaded and contents exist in the index
-fn check_snapshots(index: &(impl IndexedBackend + Unpin)) -> Result<()> {
+fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
     let p = progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
         .stream_all::<SnapshotFile>(p.clone())?
         .iter()
-        .map(|(_, snap)| snap.tree)
-        .collect();
+        .map_ok(|(_, snap)| snap.tree)
+        .try_collect()?;
     p.finish();
 
     let p = progress_counter("checking trees...");

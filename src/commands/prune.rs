@@ -8,6 +8,7 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derive_more::Add;
+use itertools::Itertools;
 use log::*;
 use rayon::prelude::*;
 
@@ -101,7 +102,8 @@ pub(super) fn execute(
     let p = progress_counter("reading index...");
     let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
-    for (id, index) in be.stream_all::<IndexFile>(p.clone())? {
+    for index in be.stream_all::<IndexFile>(p.clone())? {
+        let (id, index) = index?;
         index_collector.extend(index.packs.clone());
         // we add the trees from packs_to_delete to the index such that searching for
         // used blobs doesn't abort if they are already marked for deletion
@@ -1103,8 +1105,8 @@ fn find_used_blobs(
         .be()
         .stream_list::<SnapshotFile>(list, p.clone())?
         .into_iter()
-        .map(|(_, snap)| snap.tree)
-        .collect();
+        .map_ok(|(_, snap)| snap.tree)
+        .try_collect()?;
     p.finish();
 
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();

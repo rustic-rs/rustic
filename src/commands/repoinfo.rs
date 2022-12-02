@@ -55,7 +55,8 @@ pub(super) fn execute(
     let mut info_delete = BlobTypeMap::<Info>::default();
 
     let p = progress_counter("scanning index...");
-    for (_, index) in be.stream_all::<IndexFile>(p.clone())? {
+    for index in be.stream_all::<IndexFile>(p.clone())? {
+        let index = index?.1;
         for pack in &index.packs {
             info[pack.blob_type()].add_pack(pack);
 

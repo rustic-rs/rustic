@@ -7,6 +7,7 @@ use chrono::{DateTime, Local};
 use clap::Parser;
 use derivative::Derivative;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use log::*;
 use merge::Merge;
 use serde::{Deserialize, Serialize};
@@ -139,7 +140,8 @@ impl SnapshotFile {
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
 
-        for (id, mut snap) in be.stream_all::<SnapshotFile>(p.clone())? {
+        for snap in be.stream_all::<SnapshotFile>(p.clone())? {
+            let (id, mut snap) = snap?;
             if !pred(&snap) {
                 continue;
             }
@@ -166,11 +168,10 @@ impl SnapshotFile {
     /// Get a Vector of SnapshotFile from the backend by list of (parts of the) ids
     pub fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
         let ids = be.find_ids(FileType::Snapshot, ids)?;
-        Ok(be
-            .stream_list::<Self>(ids, ProgressBar::hidden())?
+        be.stream_list::<Self>(ids, ProgressBar::hidden())?
             .into_iter()
-            .map(Self::set_id)
-            .collect())
+            .map_ok(Self::set_id)
+            .try_collect()
     }
 
     fn cmp_group(&self, crit: &SnapshotGroupCriterion, other: &Self) -> Ordering {
@@ -219,27 +220,12 @@ impl SnapshotFile {
         snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(crit, sn2));
 
         let mut result = Vec::new();
-
-        if snaps.is_empty() {
-            return Ok(result);
+        for (group, snaps) in &snaps
+            .into_iter()
+            .group_by(|sn| SnapshotGroup::from_sn(sn, crit))
+        {
+            result.push((group, snaps.collect()));
         }
-
-        let mut iter = snaps.into_iter();
-
-        let snap = iter.next().unwrap();
-        let mut group = SnapshotGroup::from_sn(&snap, crit);
-        let mut result_group = vec![snap];
-
-        for snap in iter {
-            if snap.has_group(&group) {
-                result_group.push(snap);
-            } else {
-                result.push((group, result_group));
-                group = SnapshotGroup::from_sn(&snap, crit);
-                result_group = vec![snap]
-            }
-        }
-        result.push((group, result_group));
 
         Ok(result)
     }
@@ -248,12 +234,11 @@ impl SnapshotFile {
         be: &B,
         filter: &SnapshotFilter,
     ) -> Result<Vec<Self>> {
-        Ok(be
-            .stream_all::<SnapshotFile>(ProgressBar::hidden())?
+        be.stream_all::<SnapshotFile>(ProgressBar::hidden())?
             .into_iter()
-            .map(Self::set_id)
-            .filter(|sn| sn.matches(filter))
-            .collect())
+            .map_ok(Self::set_id)
+            .filter_ok(|sn| sn.matches(filter))
+            .try_collect()
     }
 
     pub fn matches(&self, filter: &SnapshotFilter) -> bool {

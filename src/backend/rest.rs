@@ -22,6 +22,7 @@ impl CheckError for Response {
     fn check_error(self) -> std::result::Result<Response, Error<reqwest::Error>> {
         match self.error_for_status() {
             Ok(t) => Ok(t),
+            // Note: status() always give Some(_) as it is called from a Response
             Err(err) if err.status().unwrap().is_client_error() => Err(Error::Permanent(err)),
             Err(err) => Err(Error::Transient {
                 err,
@@ -58,17 +59,17 @@ fn notify(err: reqwest::Error, duration: Duration) {
 }
 
 impl RestBackend {
-    pub fn new(url: &str) -> Self {
+    pub fn new(url: &str) -> Result<Self> {
         let url = if url.ends_with('/') {
-            Url::parse(url).unwrap()
+            Url::parse(url)?
         } else {
             // add a trailing '/' if there is none
             let mut url = url.to_string();
             url.push('/');
-            Url::parse(&url).unwrap()
+            Url::parse(&url)?
         };
 
-        Self {
+        Ok(Self {
             url,
             client: Client::new(),
             backoff: MaybeBackoff(Some(
@@ -76,21 +77,21 @@ impl RestBackend {
                     .with_max_elapsed_time(Some(Duration::from_secs(600)))
                     .build(),
             )),
-        }
+        })
     }
 
-    fn url(&self, tpe: FileType, id: &Id) -> String {
-        let hex_id = id.to_hex();
+    fn url(&self, tpe: FileType, id: &Id) -> Result<Url> {
         let id_path = match tpe {
             FileType::Config => "config".to_string(),
             _ => {
+                let hex_id = id.to_hex();
                 let mut path = tpe.name().to_string();
                 path.push('/');
                 path.push_str(&hex_id);
                 path
             }
         };
-        self.url.join(&id_path).unwrap().into()
+        Ok(self.url.join(&id_path)?)
     }
 }
 
@@ -119,27 +120,25 @@ impl ReadBackend for RestBackend {
     }
 
     fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        let url = if tpe == FileType::Config {
+            self.url.join("config")?
+        } else {
+            let mut path = tpe.name().to_string();
+            path.push('/');
+            self.url.join(&path)?
+        };
+
         Ok(backoff::retry_notify(
             self.backoff.clone(),
             || {
                 if tpe == FileType::Config {
                     return Ok(
-                        match self
-                            .client
-                            .head(self.url.join("config").unwrap())
-                            .send()?
-                            .status()
-                            .is_success()
-                        {
+                        match self.client.head(url.clone()).send()?.status().is_success() {
                             true => vec![(Id::default(), 0)],
                             false => Vec::new(),
                         },
                     );
                 }
-
-                let mut path = tpe.name().to_string();
-                path.push('/');
-                let url = self.url.join(&path).unwrap();
 
                 // format which is delivered by the REST-service
                 #[derive(Deserialize)]
@@ -150,7 +149,7 @@ impl ReadBackend for RestBackend {
 
                 let list = self
                     .client
-                    .get(url)
+                    .get(url.clone())
                     .header("Accept", "application/vnd.x.restic.rest.v2")
                     .send()?
                     .check_error()?
@@ -162,12 +161,13 @@ impl ReadBackend for RestBackend {
     }
 
     fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        let url = self.url(tpe, id)?;
         Ok(backoff::retry_notify(
             self.backoff.clone(),
             || {
                 Ok(self
                     .client
-                    .get(self.url(tpe, id))
+                    .get(url.clone())
                     .send()?
                     .check_error()?
                     .bytes()?
@@ -188,12 +188,13 @@ impl ReadBackend for RestBackend {
     ) -> Result<Bytes> {
         let offset2 = offset + length - 1;
         let header_value = format!("bytes={}-{}", offset, offset2);
+        let url = self.url(tpe, id)?;
         Ok(backoff::retry_notify(
             self.backoff.clone(),
             || {
                 Ok(self
                     .client
-                    .get(self.url(tpe, id))
+                    .get(url.clone())
                     .header("Range", header_value.clone())
                     .send()?
                     .check_error()?
@@ -208,13 +209,11 @@ impl ReadBackend for RestBackend {
 
 impl WriteBackend for RestBackend {
     fn create(&self) -> Result<()> {
+        let url = self.url.join("?create=true")?;
         Ok(backoff::retry_notify(
             self.backoff.clone(),
             || {
-                self.client
-                    .post(self.url.join("?create=true").unwrap())
-                    .send()?
-                    .check_error()?;
+                self.client.post(url.clone()).send()?.check_error()?;
                 Ok(())
             },
             notify,
@@ -223,10 +222,11 @@ impl WriteBackend for RestBackend {
 
     fn write_bytes(&self, tpe: FileType, id: &Id, _cacheable: bool, buf: Bytes) -> Result<()> {
         trace!("writing tpe: {:?}, id: {}", &tpe, &id);
-        let req_builder = self.client.post(self.url(tpe, id)).body(buf);
+        let req_builder = self.client.post(self.url(tpe, id)?).body(buf);
         Ok(backoff::retry_notify(
             self.backoff.clone(),
             || {
+                // Note: try_clone() always gives Some(_) as the body is Bytes which is clonable
                 req_builder.try_clone().unwrap().send()?.check_error()?;
                 Ok(())
             },
@@ -236,13 +236,11 @@ impl WriteBackend for RestBackend {
 
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
+        let url = self.url(tpe, id)?;
         Ok(backoff::retry_notify(
             self.backoff.clone(),
             || {
-                self.client
-                    .delete(self.url(tpe, id))
-                    .send()?
-                    .check_error()?;
+                self.client.delete(url.clone()).send()?.check_error()?;
                 Ok(())
             },
             notify,

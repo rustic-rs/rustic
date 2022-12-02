@@ -140,7 +140,8 @@ fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
     };
 
     let p = progress_counter("reading index...");
-    for (index_id, index) in be.stream_all::<IndexFile>(p.clone())? {
+    for index in be.stream_all::<IndexFile>(p.clone())? {
+        let (index_id, index) = index?;
         let mut new_index = IndexFile::default();
         let mut changed = false;
         for p in index.packs {

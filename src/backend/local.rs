@@ -21,10 +21,10 @@ pub struct LocalBackend {
 }
 
 impl LocalBackend {
-    pub fn new(path: &str) -> Self {
+    pub fn new(path: &str) -> Result<Self> {
         let path = path.into();
-        fs::create_dir_all(&path).unwrap();
-        Self { path }
+        fs::create_dir_all(&path)?;
+        Ok(Self { path })
     }
 
     fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
@@ -68,10 +68,7 @@ impl ReadBackend for LocalBackend {
 
         if tpe == FileType::Config {
             return Ok(match path.exists() {
-                true => vec![(
-                    Id::default(),
-                    path.metadata().unwrap().len().try_into().unwrap(),
-                )],
+                true => vec![(Id::default(), path.metadata()?.len().try_into()?)],
                 false => Vec::new(),
             });
         }
@@ -79,25 +76,14 @@ impl ReadBackend for LocalBackend {
         let walker = WalkDir::new(path)
             .into_iter()
             .filter_map(walkdir::Result::ok)
-            .filter(|e| {
-                // only use files with length of 64 which are valid hex
-                // TODO: maybe add an option which warns if other files exist?
-                e.file_type().is_file()
-                    && e.file_name().len() == 64
-                    && e.file_name().is_ascii()
-                    && e.file_name()
-                        .to_str()
-                        .unwrap()
-                        .chars()
-                        .into_iter()
-                        .all(|c| ('0'..='9').contains(&c) || ('a'..='f').contains(&c))
+            .filter(|e| e.file_type().is_file())
+            .map(|e| -> Result<_> {
+                Ok((
+                    Id::from_hex(&e.file_name().to_string_lossy())?,
+                    e.metadata()?.len().try_into()?,
+                ))
             })
-            .map(|e| {
-                (
-                    Id::from_hex(e.file_name().to_str().unwrap()).unwrap(),
-                    e.metadata().unwrap().len().try_into().unwrap(),
-                )
-            });
+            .filter_map(Result::ok);
 
         Ok(walker.collect())
     }
@@ -115,8 +101,8 @@ impl ReadBackend for LocalBackend {
         length: u32,
     ) -> Result<Bytes> {
         let mut file = File::open(self.path(tpe, id))?;
-        file.seek(SeekFrom::Start(offset.try_into().unwrap()))?;
-        let mut vec = vec![0; length.try_into().unwrap()];
+        file.seek(SeekFrom::Start(offset.try_into()?))?;
+        let mut vec = vec![0; length.try_into()?];
         file.read_exact(&mut vec)?;
         Ok(vec.into())
     }
@@ -265,8 +251,8 @@ impl LocalBackend {
         let filename = self.path.join(item);
         let mut file = File::open(&filename)?;
         file.seek(SeekFrom::Start(offset))?;
-        let mut vec = vec![0; length.try_into().unwrap()];
-        file.read_exact(&mut vec).unwrap();
+        let mut vec = vec![0; length.try_into()?];
+        file.read_exact(&mut vec)?;
         Ok(vec.into())
     }
 

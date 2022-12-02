@@ -78,7 +78,7 @@ merge = "0.1"
 serde_with = "2.1"
 rpassword = "7"
 bytesize = "1"
-indicatif = "0.17"
+indicatif = "=0.17.0" # until https://github.com/console-rs/indicatif/issues/493 is fixed.
 path-dedot = "3"
 gethostname = "0.4"
 humantime = "2"

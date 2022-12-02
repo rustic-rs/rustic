@@ -21,7 +21,8 @@ Binaries for the latest development version are available [here](https://github.
 
 ## Have a question?
 
-Look at the [FAQ][3] or open an issue!
+Look at the [FAQ][3] or ask in the [Discussions][4]. Also [opening issues][5] is highly welcomed if you want to report something
+not working or if you would like to ask for a new feature!
 
 ## Comparison with restic:
 
@@ -83,3 +84,5 @@ dual licensed as above, without any additional terms or conditions.
 [1]: https://github.com/restic/restic
 [2]: https://github.com/restic/restic/blob/master/doc/design.rst
 [3]: https://github.com/rustic-rs/rustic/blob/main/FAQ.md
+[4]: https://github.com/rustic-rs/rustic/discussions
+[5]: https://github.com/rustic-rs/rustic/issues/new/choose

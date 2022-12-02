@@ -85,8 +85,7 @@ pub fn progress_bytes(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
             ProgressStyle::default_bar()
             .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
                  match (s.pos(), s.len()){
-                    (0, _) => write!(w,"-"),
-                    (pos,Some(len)) => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
+                    (pos,Some(len)) if pos != 0 => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
                     (_, _) => write!(w,"-"),
                 }.unwrap())
             .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")

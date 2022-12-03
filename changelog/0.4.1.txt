@@ -1,0 +1,11 @@
+Changes in version 0.4.1:
+
+Bugs fixed:
+- Fixed a possible deadlock in the archiver which could cause `rustic backup` to hang.
+- Piping output no longer panices (this allows e.g. to pipe into `head`).
+- Fixed progress bar showing 0B/s instead of real rate.
+
+New features:
+- backup: Errors reading the parent now print a warning instead of being silently ignored.
+- forget: Allow to keep quarter- and half-yearly.
+- Improved the error handling for some situations.

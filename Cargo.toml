@@ -43,7 +43,7 @@ scrypt = { version = "0.10", default-features = false }
 cdc = "0.1"
 integer-sqrt = "0.1"
 # serialization
-base64 = "0.13"
+base64 = "0.20"
 binrw = "0.10"
 hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }

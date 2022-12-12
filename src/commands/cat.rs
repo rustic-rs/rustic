@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 
@@ -93,7 +93,8 @@ fn cat_tree(
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;
     let index = IndexBackend::new(be, progress_counter(""))?;
-    let id = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
+    let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
+    let id = node.subtree.ok_or_else(|| anyhow!("{path} is no dir"))?;
     let data = index.blob_from_backend(&BlobType::Tree, &id)?;
     println!("{}", String::from_utf8(data.to_vec())?);
 

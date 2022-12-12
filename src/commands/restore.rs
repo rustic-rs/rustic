@@ -79,12 +79,12 @@ pub(super) fn execute(
     let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;
 
     let index = IndexBackend::new(be, progress_counter(""))?;
-    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
+    let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
 
     let dest = LocalBackend::new(&opts.dest)?;
 
     let p = progress_spinner("collecting file information...");
-    let file_infos = allocate_and_collect(&dest, index.clone(), tree, &opts)?;
+    let file_infos = allocate_and_collect(&dest, index.clone(), &node, &opts)?;
     p.finish();
     info!("total restore size: {}", bytes(file_infos.total_size));
     if file_infos.matched_size > 0 {
@@ -113,7 +113,7 @@ pub(super) fn execute(
 
     if !opts.dry_run {
         let p = progress_spinner("setting metadata...");
-        restore_metadata(&dest, index, tree, &opts)?;
+        restore_metadata(&dest, index, &node, &opts)?;
         p.finish();
     }
 
@@ -125,7 +125,7 @@ pub(super) fn execute(
 fn allocate_and_collect(
     dest: &LocalBackend,
     index: impl IndexedBackend + Unpin,
-    tree: Id,
+    node: &Node,
     opts: &Opts,
 ) -> Result<FileInfos> {
     let dest_path = Path::new(&opts.dest);
@@ -231,7 +231,7 @@ fn allocate_and_collect(
         .filter_map(Result::ok); // TODO: print out the ignored error
     let mut next_dst = dst_iter.next();
 
-    let mut node_streamer = NodeStreamer::new(index.clone(), tree)?;
+    let mut node_streamer = NodeStreamer::new(index.clone(), node)?;
     let mut next_node = node_streamer.next().transpose()?;
 
     loop {
@@ -353,11 +353,11 @@ fn restore_contents(
 fn restore_metadata(
     dest: &LocalBackend,
     index: impl IndexedBackend + Unpin,
-    tree: Id,
+    node: &Node,
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    let mut node_streamer = NodeStreamer::new(index, tree)?;
+    let mut node_streamer = NodeStreamer::new(index, node)?;
     let mut dir_stack = Vec::new();
     while let Some((path, node)) = node_streamer.next().transpose()? {
         match node.node_type() {

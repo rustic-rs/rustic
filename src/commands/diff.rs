@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 
 use super::{progress_counter, RusticConfig};
@@ -46,12 +46,12 @@ pub(super) fn execute(
             let snap2 = &snaps[1];
 
             let index = IndexBackend::new(be, progress_counter(""))?;
-            let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
-            let id2 = Tree::subtree_id(&index, snap2.tree, Path::new(path2))?;
+            let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
+            let node2 = Tree::node_from_path(&index, snap2.tree, Path::new(path2))?;
 
             diff(
-                NodeStreamer::new(index.clone(), id1)?,
-                NodeStreamer::new(index, id2)?,
+                NodeStreamer::new(index.clone(), &node1)?,
+                NodeStreamer::new(index, &node2)?,
                 true,
             )
         }
@@ -64,14 +64,25 @@ pub(super) fn execute(
             p.finish();
 
             let index = IndexBackend::new(be, progress_counter(""))?;
-            let id1 = Tree::subtree_id(&index, snap1.tree, Path::new(path1))?;
+            let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
             let path2 = PathBuf::from(path2);
+            let is_dir = path2
+                .metadata()
+                .with_context(|| format!("Error accessing {path2:?}"))?
+                .is_dir();
             let src = LocalSource::new(opts.ignore_opts, path2.clone())?.map(|item| {
                 let (path, node) = item?;
-                Ok((path.strip_prefix(&path2)?.to_path_buf(), node))
+                let path = if is_dir {
+                    // remove given path prefix for dirs as local path
+                    path.strip_prefix(&path2)?.to_path_buf()
+                } else {
+                    // ensure that we really get the filename if local path is a file
+                    path2.file_name().unwrap().into()
+                };
+                Ok((path, node))
             });
 
-            diff(NodeStreamer::new(index, id1)?, src, false)
+            diff(NodeStreamer::new(index, &node1)?, src, false)
         }
         (None, _) => bail!("cannot use local path as first argument"),
     }

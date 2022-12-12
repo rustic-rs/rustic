@@ -1,4 +1,4 @@
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -142,7 +142,7 @@ impl WriteBackend for LocalBackend {
 
 impl LocalBackend {
     pub fn remove_dir(&self, dirname: impl AsRef<Path>) -> Result<()> {
-        Ok(fs::remove_dir(dirname)?)
+        Ok(fs::remove_dir_all(dirname)?)
     }
 
     pub fn remove_file(&self, filename: impl AsRef<Path>) -> Result<()> {
@@ -208,10 +208,14 @@ impl LocalBackend {
         Ok(())
     }
 
-    pub fn create_file(&self, item: impl AsRef<Path>, size: u64) -> Result<()> {
+    // set_length sets the length of the given file. If it doesn't exist, create a new (empty) one with given length
+    pub fn set_length(&self, item: impl AsRef<Path>, size: u64) -> Result<()> {
         let filename = self.path.join(item);
-        let f = fs::File::create(filename)?;
-        f.set_len(size)?;
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(filename)?
+            .set_len(size)?;
         Ok(())
     }
 

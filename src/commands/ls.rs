@@ -29,9 +29,9 @@ pub(super) fn execute(
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;
     let index = IndexBackend::new(be, progress_counter(""))?;
-    let tree = Tree::subtree_id(&index, snap.tree, Path::new(path))?;
+    let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
 
-    for item in NodeStreamer::new(index, tree)? {
+    for item in NodeStreamer::new(index, &node)? {
         let (path, _) = item?;
         println!("{:?} ", path);
     }

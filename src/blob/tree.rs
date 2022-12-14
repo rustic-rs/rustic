@@ -1,8 +1,9 @@
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::mem;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use derive_getters::Getters;
 use indicatif::ProgressBar;
@@ -12,7 +13,7 @@ use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::IndexedBackend;
 
-use super::Node;
+use super::{Metadata, Node, NodeType};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Tree {
@@ -54,22 +55,25 @@ impl Tree {
         Ok(serde_json::from_slice(&data)?)
     }
 
-    pub fn subtree_id(be: &impl IndexedBackend, mut id: Id, path: &Path) -> Result<Id> {
-        for p in path.iter() {
-            let p = p.to_str().unwrap();
-            // TODO: check for root instead
-            if p == "/" {
-                continue;
+    pub fn node_from_path(be: &impl IndexedBackend, id: Id, path: &Path) -> Result<Node> {
+        let mut node = Node::new_node(OsStr::new(""), NodeType::Dir, Metadata::default());
+        node.set_subtree(id);
+        for p in path.components() {
+            match p {
+                Component::RootDir | Component::Prefix(_) => {}
+                Component::Normal(p) => {
+                    let id = node.subtree().ok_or_else(|| anyhow!("{p:?} is no dir"))?;
+                    let tree = Tree::from_backend(be, id)?;
+                    node = tree
+                        .nodes
+                        .into_iter()
+                        .find(|node| node.name() == p)
+                        .ok_or_else(|| anyhow!("{p:?} not found"))?;
+                }
+                _ => bail!("path should not contain current or parent dir, path: {path:?}"),
             }
-            let tree = Tree::from_backend(be, id)?;
-            let node = tree
-                .nodes()
-                .iter()
-                .find(|node| node.name() == p)
-                .ok_or_else(|| anyhow!("{} not found", p))?;
-            id = node.subtree().ok_or_else(|| anyhow!("{} is no dir", p))?;
         }
-        Ok(id)
+        Ok(node)
     }
 }
 
@@ -97,8 +101,14 @@ impl<BE> NodeStreamer<BE>
 where
     BE: IndexedBackend,
 {
-    pub fn new(be: BE, id: Id) -> Result<Self> {
-        let inner = Tree::from_backend(&be, id)?.nodes.into_iter();
+    pub fn new(be: BE, node: &Node) -> Result<Self> {
+        let inner = if node.is_dir() {
+            Tree::from_backend(&be, node.subtree.unwrap())?
+                .nodes
+                .into_iter()
+        } else {
+            vec![node.clone()].into_iter()
+        };
         Ok(Self {
             inner,
             open_iterators: Vec::new(),

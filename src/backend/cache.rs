@@ -225,7 +225,7 @@ impl Cache {
         let mut file = fs::OpenOptions::new()
             .create(true)
             .write(true)
-            .open(&filename)?;
+            .open(filename)?;
         file.write_all(&buf)?;
         Ok(())
     }

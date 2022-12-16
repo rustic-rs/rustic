@@ -140,7 +140,7 @@ fn check_cache_files(
         return Ok(());
     }
 
-    let total_size = files.iter().map(|(_, size)| *size as u64).sum();
+    let total_size = files.values().map(|size| *size as u64).sum();
     p.set_length(total_size);
 
     files.into_par_iter()

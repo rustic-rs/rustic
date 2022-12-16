@@ -874,8 +874,7 @@ impl Pruner {
         if !self.existing_packs.is_empty() {
             if opts.instant_delete {
                 let p = progress_counter("removing unindexed packs...");
-                let existing_packs: Vec<_> =
-                    self.existing_packs.into_iter().map(|(id, _)| id).collect();
+                let existing_packs: Vec<_> = self.existing_packs.into_keys().collect();
                 be.delete_list(FileType::Pack, true, existing_packs, p)?;
             } else {
                 info!("marking not needed unindexed pack files for deletion...");

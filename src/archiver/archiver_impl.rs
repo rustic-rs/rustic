@@ -7,7 +7,7 @@ use bytesize::ByteSize;
 use chrono::Local;
 use indicatif::ProgressBar;
 use log::*;
-use pariter::IteratorExt;
+use rayon::prelude::*;
 
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
@@ -227,37 +227,31 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
     pub fn backup_reader(
         &mut self,
-        r: impl Read + 'static,
+        r: impl Read + Send + 'static,
         node: Node,
         p: ProgressBar,
     ) -> Result<()> {
-        let chunk_iter = ChunkIter::new(r, *node.meta().size() as usize, &self.poly);
-        let mut content = Vec::new();
-        let mut filesize: u64 = 0;
-        let index = self.index.clone();
-        let data_packer = self.data_packer.clone();
-
-        chunk_iter
-            .into_iter()
-            // TODO: This parallelization works pretty well for big files. For small files this produces a lot of
-            // unneccessary overhead. Maybe use a parallel hashing actor?
-            .parallel_map(move |chunk| {
+        let mut chunks: Vec<_> = ChunkIter::new(r, *node.meta().size() as usize, &self.poly)
+            .enumerate() // see below
+            .par_bridge()
+            .map(|(num, chunk)| {
                 let chunk = chunk?;
                 let id = hash(&chunk);
                 let size = chunk.len() as u64;
 
-                if !index.has_data(&id) {
-                    data_packer.add(&chunk, &id)?
+                if !self.index.has_data(&id) {
+                    self.data_packer.add(&chunk, &id)?
                 }
                 p.inc(size);
-                Ok((id, size))
+                Ok((num, id, size))
             })
-            .try_for_each(|data: Result<_>| -> Result<_> {
-                let (id, size) = data?;
-                content.push(id);
-                filesize += size;
-                Ok(())
-            })?;
+            .collect::<Result<_>>()?;
+
+        // As par_bridge doesn't guarantee to keep the order, we sort by the enumeration
+        chunks.par_sort_unstable_by_key(|x| x.0);
+
+        let filesize = chunks.iter().map(|x| x.2).sum();
+        let content = chunks.into_iter().map(|x| x.1).collect();
 
         let mut node = node;
         node.set_content(content);

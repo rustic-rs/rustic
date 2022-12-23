@@ -5,7 +5,7 @@ use clap::{AppSettings, Parser};
 use super::{progress_counter, RusticConfig};
 use crate::backend::{DecryptFullBackend, FileType};
 use crate::id::Id;
-use crate::repo::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
+use crate::repofile::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
 
 #[derive(Parser)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]

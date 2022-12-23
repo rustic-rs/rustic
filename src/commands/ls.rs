@@ -7,7 +7,7 @@ use super::rustic_config::RusticConfig;
 use crate::backend::DecryptReadBackend;
 use crate::blob::{NodeStreamer, Tree};
 use crate::index::IndexBackend;
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 pub(super) struct Opts {

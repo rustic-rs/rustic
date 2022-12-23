@@ -3,7 +3,7 @@ use clap::Parser;
 use indicatif::ProgressBar;
 
 use crate::backend::{DecryptReadBackend, FileType};
-use crate::repo::IndexFile;
+use crate::repofile::IndexFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {

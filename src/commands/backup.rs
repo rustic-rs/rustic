@@ -19,7 +19,7 @@ use crate::backend::{
 };
 use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
-use crate::repo::{
+use crate::repofile::{
     ConfigFile, DeleteOption, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotSummary,
     StringList,
 };

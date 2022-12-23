@@ -10,7 +10,7 @@ use indicatif::ProgressBar;
 use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::BlobType;
 use crate::id::Id;
-use crate::repo::{IndexBlob, IndexFile};
+use crate::repofile::{IndexBlob, IndexFile};
 
 mod binarysorted;
 mod indexer;

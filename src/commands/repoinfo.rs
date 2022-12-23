@@ -7,7 +7,7 @@ use super::{bytes, progress_counter, table_right_from};
 use crate::backend::{DecryptReadBackend, ReadBackend, ALL_FILE_TYPES};
 use crate::blob::{BlobType, BlobTypeMap, Sum};
 use crate::index::IndexEntry;
-use crate::repo::{IndexFile, IndexPack};
+use crate::repofile::{IndexFile, IndexPack};
 
 #[derive(Parser)]
 pub(super) struct Opts;

@@ -10,7 +10,7 @@ use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{BlobType, Tree};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 pub(super) struct Opts {

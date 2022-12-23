@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use super::{BlobType, IndexEntry, ReadIndex};
 use crate::blob::BlobTypeMap;
 use crate::id::Id;
-use crate::repo::{IndexBlob, IndexPack};
+use crate::repofile::{IndexBlob, IndexPack};
 use rayon::prelude::*;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -245,7 +245,7 @@ impl ReadIndex for Index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repo::IndexFile;
+    use crate::repofile::IndexFile;
 
     const JSON_INDEX: &str = r#"
 {"packs":[{"id":"217f145b63fbc10267f5a686186689ea3389bed0d6a54b50ffc84d71f99eb7fa",

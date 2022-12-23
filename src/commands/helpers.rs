@@ -17,7 +17,7 @@ use rpassword::prompt_password;
 
 use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
 use crate::crypto::Key;
-use crate::repo::{find_key_in_backend, Id};
+use crate::repofile::{find_key_in_backend, Id};
 
 const MAX_PASSWORD_RETRIES: usize = 5;
 

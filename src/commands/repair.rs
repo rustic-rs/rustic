@@ -8,7 +8,7 @@ use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
 use crate::blob::{BlobType, NodeType, Packer, Tree};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
-use crate::repo::{
+use crate::repofile::{
     ConfigFile, IndexFile, IndexPack, PackHeader, PackHeaderRef, SnapshotFile, SnapshotFilter,
     StringList,
 };

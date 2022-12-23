@@ -15,7 +15,7 @@ use crate::backend::{
     Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
     HotColdBackend, ReadBackend,
 };
-use crate::repo::ConfigFile;
+use crate::repofile::ConfigFile;
 
 mod backup;
 mod cat;

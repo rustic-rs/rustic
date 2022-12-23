@@ -14,7 +14,7 @@ use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
-use crate::repo::{ConfigFile, SnapshotFile, SnapshotSummary};
+use crate::repofile::{ConfigFile, SnapshotFile, SnapshotSummary};
 
 use super::{Parent, ParentResult};
 

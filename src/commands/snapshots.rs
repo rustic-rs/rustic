@@ -8,7 +8,7 @@ use itertools::Itertools;
 
 use super::{bold_cell, bytes, table, table_right_from, RusticConfig};
 use crate::backend::DecryptReadBackend;
-use crate::repo::{
+use crate::repofile::{
     DeleteOption, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion,
 };
 

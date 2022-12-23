@@ -16,7 +16,7 @@ use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
-use crate::repo::{
+use crate::repofile::{
     IndexFile, IndexPack, PackHeader, PackHeaderLength, PackHeaderRef, SnapshotFile,
 };
 

@@ -20,7 +20,7 @@ use crate::blob::{
 use crate::commands::helpers::progress_spinner;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer, ReadIndex};
-use crate::repo::{ConfigFile, HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile};
+use crate::repofile::{ConfigFile, HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile};
 
 #[derive(Parser)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]

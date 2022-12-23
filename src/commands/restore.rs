@@ -21,7 +21,7 @@ use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]

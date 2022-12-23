@@ -8,7 +8,7 @@ use crate::backend::{DecryptReadBackend, LocalSource, LocalSourceOptions};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::index::IndexBackend;
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
 
 #[derive(Parser)]
 pub(super) struct Opts {

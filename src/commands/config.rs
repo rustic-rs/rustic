@@ -3,7 +3,7 @@ use bytesize::ByteSize;
 use clap::{AppSettings, Parser};
 
 use crate::backend::{DecryptBackend, DecryptFullBackend, DecryptWriteBackend, WriteBackend};
-use crate::repo::ConfigFile;
+use crate::repofile::ConfigFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {

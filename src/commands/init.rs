@@ -9,7 +9,7 @@ use crate::backend::{DecryptBackend, DecryptWriteBackend, FileType, WriteBackend
 use crate::chunker;
 use crate::crypto::{hash, Key};
 use crate::id::Id;
-use crate::repo::{ConfigFile, KeyFile};
+use crate::repofile::{ConfigFile, KeyFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {

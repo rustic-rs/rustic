@@ -7,7 +7,7 @@ use rpassword::{prompt_password, read_password_from_bufread};
 
 use crate::backend::{FileType, WriteBackend};
 use crate::crypto::{hash, Key};
-use crate::repo::KeyFile;
+use crate::repofile::KeyFile;
 
 #[derive(Parser)]
 pub(super) struct Opts {

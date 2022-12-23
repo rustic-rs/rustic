@@ -7,7 +7,7 @@ use anyhow::Result;
 
 use crate::backend::DecryptWriteBackend;
 use crate::id::Id;
-use crate::repo::{IndexFile, IndexPack};
+use crate::repofile::{IndexFile, IndexPack};
 
 pub type SharedIndexer<BE> = Arc<RwLock<Indexer<BE>>>;
 

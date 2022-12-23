@@ -10,7 +10,7 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use super::{progress_counter, prune, table_with_titles, RusticConfig};
 use crate::backend::{Cache, DecryptFullBackend, FileType};
-use crate::repo::{
+use crate::repofile::{
     ConfigFile, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
 };
 

@@ -90,7 +90,9 @@ impl RcloneBackend {
             match line.find(SEARCHSTRING) {
                 Some(result) => {
                     if let Some(url) = line.get(result + SEARCHSTRING.len()..) {
-                        break url.trim_end().to_string();
+                        // rclone > 1.61 adds brackets around the url, so remove those
+                        let brackets: &[_] = &['[', ']'];
+                        break url.trim_end().trim_matches(brackets).to_string();
                     }
                 }
                 None if !line.is_empty() => info!("rclone output: {line}"),

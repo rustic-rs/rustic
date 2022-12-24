@@ -18,6 +18,7 @@ mod cat;
 mod check;
 mod completions;
 mod config;
+mod copy;
 mod diff;
 mod forget;
 mod helpers;
@@ -90,6 +91,9 @@ enum Command {
 
     /// Check the repository
     Check(check::Opts),
+
+    /// Copy snapshots to another repository
+    Copy(copy::Opts),
 
     /// Compare two snapshots/paths
     ///
@@ -205,6 +209,7 @@ pub fn execute() -> Result<()> {
         Command::Cat(opts) => cat::execute(repo, opts, config_file)?,
         Command::Check(opts) => check::execute(repo, opts)?,
         Command::Completions(_) => {} // already handled above
+        Command::Copy(opts) => copy::execute(repo, opts, config_file)?,
         Command::Diff(opts) => diff::execute(repo, opts, config_file)?,
         Command::Forget(opts) => forget::execute(repo, opts, config_file)?,
         Command::Init(_) => {} // already handled above

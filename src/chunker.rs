@@ -16,7 +16,7 @@ fn default_predicate(x: u64) -> bool {
     (x & SPLITMASK) == 0
 }
 
-pub struct ChunkIter<R: Read> {
+pub struct ChunkIter<R: Read + Send> {
     buf: Vec<u8>,
     pos: usize,
     reader: R,
@@ -28,7 +28,7 @@ pub struct ChunkIter<R: Read> {
     finished: bool,
 }
 
-impl<R: Read> ChunkIter<R> {
+impl<R: Read + Send> ChunkIter<R> {
     pub fn new(reader: R, size_hint: usize, poly: &Polynom64) -> Self {
         Self {
             buf: Vec::with_capacity(4 * KB),
@@ -44,7 +44,7 @@ impl<R: Read> ChunkIter<R> {
     }
 }
 
-impl<R: Read> Iterator for ChunkIter<R> {
+impl<R: Read + Send> Iterator for ChunkIter<R> {
     type Item = io::Result<Vec<u8>>;
 
     fn next(&mut self) -> Option<io::Result<Vec<u8>>> {

@@ -19,6 +19,7 @@ use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend};
 use crate::repofile::{
     IndexFile, IndexPack, PackHeader, PackHeaderLength, PackHeaderRef, SnapshotFile,
 };
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -31,13 +32,11 @@ pub(super) struct Opts {
     read_data: bool,
 }
 
-pub(super) fn execute(
-    be: &impl DecryptReadBackend,
-    cache: &Option<Cache>,
-    hot_be: &Option<impl ReadBackend>,
-    raw_be: &impl ReadBackend,
-    opts: Opts,
-) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
+    let be = &repo.dbe;
+    let cache = &repo.cache;
+    let hot_be = &repo.be_hot;
+    let raw_be = &repo.be;
     if !opts.trust_cache {
         if let Some(cache) = &cache {
             for file_type in [FileType::Snapshot, FileType::Index] {

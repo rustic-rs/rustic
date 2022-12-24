@@ -12,6 +12,7 @@ use crate::repofile::{
     ConfigFile, IndexFile, IndexPack, PackHeader, PackHeaderRef, SnapshotFile, SnapshotFilter,
     StringList,
 };
+use crate::repository::OpenRepository;
 
 use super::rustic_config::RusticConfig;
 use super::{progress_counter, progress_spinner, wait, warm_up, warm_up_command};
@@ -80,15 +81,10 @@ struct SnapOpts {
     ids: Vec<String>,
 }
 
-pub(super) fn execute(
-    be: &impl DecryptFullBackend,
-    opts: Opts,
-    config_file: RusticConfig,
-    config: &ConfigFile,
-) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, opts: Opts, config_file: RusticConfig) -> Result<()> {
     match opts.command {
-        Command::Index(opt) => repair_index(be, opt),
-        Command::Snapshots(opt) => repair_snaps(be, opt, config_file, config),
+        Command::Index(opt) => repair_index(&repo.dbe, opt),
+        Command::Snapshots(opt) => repair_snaps(&repo.dbe, opt, config_file, &repo.config),
     }
 }
 

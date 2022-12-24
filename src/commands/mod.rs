@@ -1,21 +1,17 @@
 use std::fs::File;
-use std::io::BufReader;
 use std::path::PathBuf;
-use std::process;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use merge::Merge;
-use rpassword::read_password_from_bufread;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use simplelog::*;
 
-use crate::backend::{
-    Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, FileType,
-    HotColdBackend, ReadBackend,
-};
-use crate::repofile::ConfigFile;
+use crate::backend::{FileType, ReadBackend};
+use crate::repository::{Repository, RepositoryOptions};
+
+use helpers::*;
 
 mod backup;
 mod cat;
@@ -38,8 +34,6 @@ mod self_update;
 mod snapshots;
 mod tag;
 
-use helpers::*;
-use log::*;
 use rustic_config::RusticConfig;
 
 #[derive(Parser)]
@@ -47,6 +41,9 @@ use rustic_config::RusticConfig;
 struct Opts {
     #[clap(flatten, help_heading = "GLOBAL OPTIONS")]
     global: GlobalOpts,
+
+    #[clap(flatten, help_heading = "REPOSITORY OPTIONS")]
+    repository: RepositoryOptions,
 
     /// Config profile to use. This parses the file <PROFILE>.toml in the config directory.
     #[clap(
@@ -66,38 +63,6 @@ struct Opts {
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 struct GlobalOpts {
-    /// Repository to use
-    #[clap(short, long, global = true, env = "RUSTIC_REPOSITORY")]
-    repository: Option<String>,
-
-    /// Repository to use as hot storage
-    #[clap(long, global = true, env = "RUSTIC_REPO_HOT")]
-    repo_hot: Option<String>,
-
-    /// Password of the repository - WARNING: Using --password can reveal the password in the process list!
-    #[clap(long, global = true, env = "RUSTIC_PASSWORD")]
-    password: Option<String>,
-
-    /// File to read the password from
-    #[clap(
-        short,
-        long,
-        global = true,
-        parse(from_os_str),
-        env = "RUSTIC_PASSWORD_FILE",
-        conflicts_with = "password"
-    )]
-    password_file: Option<PathBuf>,
-
-    /// Command to read the password from
-    #[clap(
-        long,
-        global = true,
-        env = "RUSTIC_PASSWORD_COMMAND",
-        conflicts_with_all = &["password", "password-file"],
-    )]
-    password_command: Option<String>,
-
     /// Use this log level [default: info]
     #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
     #[serde_as(as = "Option<DisplayFromStr>")]
@@ -107,21 +72,6 @@ struct GlobalOpts {
     /// Note: warnings and errors are still additionally printed unless they are ignored by --log-level
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE")]
     log_file: Option<PathBuf>,
-
-    /// Don't use a cache.
-    #[clap(long, global = true, env = "RUSTIC_NO_CACHE")]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    no_cache: bool,
-
-    /// Use this dir as cache dir instead of the standard cache dir
-    #[clap(
-        long,
-        global = true,
-        parse(from_os_str),
-        conflicts_with = "no-cache",
-        env = "RUSTIC_CACHE_DIR"
-    )]
-    cache_dir: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -237,94 +187,37 @@ pub fn execute() -> Result<()> {
         .collect::<Vec<_>>()
         .join(" ");
 
-    let be = match &opts.repository {
-        Some(repo) => ChooseBackend::from_url(repo)?,
-        None => bail!("No repository given. Please use the --repository option."),
-    };
+    let mut repo_opts = args.repository;
+    config_file.merge_into("repository", &mut repo_opts)?;
+    config_file.merge_into("global", &mut repo_opts)?; // deprecated, but repo-options were originally under [global]
+    let repo = Repository::new(repo_opts)?;
 
-    let be_hot = opts
-        .repo_hot
-        .map(|repo| ChooseBackend::from_url(&repo))
-        .transpose()?;
+    if let Command::Init(opts) = args.command {
+        let config_ids = repo.be.list(FileType::Config)?;
+        return init::execute(&repo.be, &repo.be_hot, opts, repo.password()?, config_ids);
+    }
 
-    let password = match (opts.password, opts.password_file, opts.password_command) {
-        (Some(pwd), _, _) => Some(pwd),
-        (_, Some(file), _) => {
-            let mut file = BufReader::new(File::open(file)?);
-            Some(read_password_from_bufread(&mut file)?)
-        }
-        (_, _, Some(command)) => {
-            let mut commands: Vec<_> = command.split(' ').collect();
-            let output = process::Command::new(commands[0])
-                .args(&mut commands[1..])
-                .output()?;
+    let repo = repo.open()?;
 
-            let mut pwd = BufReader::new(&*output.stdout);
-            Some(read_password_from_bufread(&mut pwd)?)
-        }
-        (None, None, None) => None,
-    };
-
-    let config_ids = be.list(FileType::Config)?;
-
-    let (cmd, key, dbe, cache, be, be_hot, config) = match (args.command, config_ids.len()) {
-        (Command::Init(opts), _) => return init::execute(&be, &be_hot, opts, password, config_ids),
-        (cmd, 1) => {
-            let be = HotColdBackend::new(be, be_hot.clone());
-            if let Some(be_hot) = &be_hot {
-                let mut keys = be.list_with_size(FileType::Key)?;
-                keys.sort_unstable_by_key(|key| key.0);
-                let mut hot_keys = be_hot.list_with_size(FileType::Key)?;
-                hot_keys.sort_unstable_by_key(|key| key.0);
-                if keys != hot_keys {
-                    bail!("keys from repo and repo-hot do not match. Aborting.");
-                }
-            }
-
-            let key = get_key(&be, password)?;
-            info!("password is correct.");
-
-            let dbe = DecryptBackend::new(&be, key.clone());
-            let config: ConfigFile = dbe.get_file(&config_ids[0])?;
-            match (config.is_hot == Some(true), be_hot.is_some()) {
-                (true, false) => bail!("repository is a hot repository!\nPlease use as --repo-hot in combination with the normal repo. Aborting."),
-                (false, true) => bail!("repo-hot is not a hot repository! Aborting."),
-                _ => {}
-            }
-            let cache = (!opts.no_cache)
-                .then(|| Cache::new(config.id, opts.cache_dir).ok())
-                .flatten();
-            match &cache {
-                None => info!("using no cache"),
-                Some(cache) => info!("using cache at {}", cache.location()),
-            }
-            let be_cached = CachedBackend::new(be.clone(), cache.clone());
-            let dbe = DecryptBackend::new(&be_cached, key.clone());
-            (cmd, key, dbe, cache, be, be_hot, config)
-        }
-        (_, 0) => bail!("No config file found. Is there a repo?"),
-        _ => bail!("More than one config file. Aborting."),
-    };
-
-    match cmd {
-        Command::Backup(opts) => backup::execute(&dbe, opts, config, config_file, command)?,
-        Command::Config(opts) => config::execute(&dbe, &be_hot, opts, config)?,
-        Command::Cat(opts) => cat::execute(&dbe, opts, config_file)?,
-        Command::Check(opts) => check::execute(&dbe, &cache, &be_hot, &be, opts)?,
+    match args.command {
+        Command::Backup(opts) => backup::execute(repo, opts, config_file, command)?,
+        Command::Config(opts) => config::execute(repo, opts)?,
+        Command::Cat(opts) => cat::execute(repo, opts, config_file)?,
+        Command::Check(opts) => check::execute(repo, opts)?,
         Command::Completions(_) => {} // already handled above
-        Command::Diff(opts) => diff::execute(&dbe, opts, config_file)?,
-        Command::Forget(opts) => forget::execute(&dbe, cache, opts, config, config_file)?,
+        Command::Diff(opts) => diff::execute(repo, opts, config_file)?,
+        Command::Forget(opts) => forget::execute(repo, opts, config_file)?,
         Command::Init(_) => {} // already handled above
-        Command::Key(opts) => key::execute(&dbe, key, opts)?,
-        Command::List(opts) => list::execute(&dbe, opts)?,
-        Command::Ls(opts) => ls::execute(&dbe, opts, config_file)?,
+        Command::Key(opts) => key::execute(repo, opts)?,
+        Command::List(opts) => list::execute(repo, opts)?,
+        Command::Ls(opts) => ls::execute(repo, opts, config_file)?,
         Command::SelfUpdate(_) => {} // already handled above
-        Command::Snapshots(opts) => snapshots::execute(&dbe, opts, config_file)?,
-        Command::Prune(opts) => prune::execute(&dbe, cache, opts, config, vec![])?,
-        Command::Restore(opts) => restore::execute(&dbe, opts, config_file)?,
-        Command::Repair(opts) => repair::execute(&dbe, opts, config_file, &config)?,
-        Command::Repoinfo(opts) => repoinfo::execute(&dbe, &be_hot, opts)?,
-        Command::Tag(opts) => tag::execute(&dbe, opts, config_file)?,
+        Command::Snapshots(opts) => snapshots::execute(repo, opts, config_file)?,
+        Command::Prune(opts) => prune::execute(repo, opts, vec![])?,
+        Command::Restore(opts) => restore::execute(repo, opts, config_file)?,
+        Command::Repair(opts) => repair::execute(repo, opts, config_file)?,
+        Command::Repoinfo(opts) => repoinfo::execute(repo, opts)?,
+        Command::Tag(opts) => tag::execute(repo, opts, config_file)?,
     };
 
     Ok(())

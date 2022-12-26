@@ -83,6 +83,10 @@ impl Node {
         self.node_type == NodeType::Dir
     }
 
+    pub fn is_symlink(&self) -> bool {
+        matches!(self.node_type, NodeType::Symlink { linktarget: _ })
+    }
+
     pub fn set_subtree(&mut self, id: Id) {
         self.subtree = Some(id);
     }

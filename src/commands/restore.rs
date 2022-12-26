@@ -2,9 +2,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::Read;
 use std::num::NonZeroU32;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
+use chrono::{Local, TimeZone, Utc};
 use clap::{AppSettings, Parser};
 use derive_getters::Dissolve;
 use ignore::{DirEntry, WalkBuilder};
@@ -43,6 +45,10 @@ pub(super) struct Opts {
     /// Warm up needed data pack files by only requesting them without processing
     #[clap(long)]
     warm_up: bool,
+
+    /// Don't trust the mtime of existing files; always read file to check if the contents are ok
+    #[clap(long)]
+    ignore_mtime: bool,
 
     /// Warm up needed data pack files by running the command with %id replaced by pack id
     #[clap(long, conflicts_with = "warm-up")]
@@ -84,9 +90,21 @@ pub(super) fn execute(
     let dest = LocalBackend::new(&opts.dest)?;
 
     let p = progress_spinner("collecting file information...");
-    let file_infos = allocate_and_collect(&dest, index.clone(), &node, &opts)?;
+    let (file_infos, stats) = allocate_and_collect(&dest, index.clone(), &node, &opts)?;
     p.finish();
-    info!("total restore size: {}", bytes(file_infos.total_size));
+
+    let fs = stats.file;
+    println!(
+        "Files:  {} to restore, {} unchanged, {} verified, {} to modify, {} additional",
+        fs.restore, fs.unchanged, fs.verified, fs.modify, fs.additional
+    );
+    let ds = stats.dir;
+    println!(
+        "Dirs:   {} to restore, {} to modify, {} additional",
+        ds.restore, fs.modify, ds.additional
+    );
+
+    info!("total restore size: {}", bytes(file_infos.restore_size));
     if file_infos.matched_size > 0 {
         info!(
             "using {} of existing file contents.",
@@ -94,7 +112,7 @@ pub(super) fn execute(
         );
     }
 
-    if file_infos.total_size == file_infos.matched_size {
+    if file_infos.restore_size == 0 {
         info!("all file contents are fine.");
     } else {
         if opts.warm_up {
@@ -115,10 +133,25 @@ pub(super) fn execute(
         let p = progress_spinner("setting metadata...");
         restore_metadata(&dest, index, &node, &opts)?;
         p.finish();
+        info!("restore done.");
     }
 
-    info!("restore done.");
     Ok(())
+}
+
+#[derive(Default)]
+struct FileStats {
+    restore: u64,
+    unchanged: u64,
+    verified: u64,
+    modify: u64,
+    additional: u64,
+}
+
+#[derive(Default)]
+struct RestoreStats {
+    file: FileStats,
+    dir: FileStats,
 }
 
 /// collect restore information, scan existing files and allocate non-existing files
@@ -127,14 +160,13 @@ fn allocate_and_collect(
     index: impl IndexedBackend + Unpin,
     node: &Node,
     opts: &Opts,
-) -> Result<FileInfos> {
+) -> Result<(FileInfos, RestoreStats)> {
     let dest_path = Path::new(&opts.dest);
+    let mut stats = RestoreStats::default();
 
     let mut file_infos = FileInfos::new();
     let mut additional_existing = false;
-    // Dir stack is needed to process removal of dirs AFTER the content has been processed.
-    // This is the same logic as in restore_metadata -> TODO: consollidate!
-    let mut dir_stack = Vec::new();
+    let mut removed_dir = None;
 
     let mut process_existing = |entry: &DirEntry| -> Result<_> {
         if entry.depth() == 0 {
@@ -143,32 +175,36 @@ fn allocate_and_collect(
         }
 
         debug!("additional {:?}", entry.path());
-
+        if entry.file_type().unwrap().is_dir() {
+            stats.dir.additional += 1;
+        } else {
+            stats.file.additional += 1;
+        }
         match (
             opts.delete,
             opts.dry_run,
             entry.file_type().unwrap().is_dir(),
         ) {
             (true, true, true) => {
-                println!("would have removed the existing dir: {:?}", entry.path())
+                info!("would have removed the additional dir: {:?}", entry.path())
             }
             (true, true, false) => {
-                println!("would have removed the existing file: {:?}", entry.path())
+                info!("would have removed the additional file: {:?}", entry.path())
             }
             (true, false, true) => {
-                // remove all non-parent dirs in stack
-                while let Some(stackpath) = dir_stack.last() {
-                    if !entry.path().starts_with(stackpath) {
-                        let path = dir_stack.pop().unwrap();
-                        dest.remove_dir(path)?;
-                    } else {
-                        break;
+                let path = entry.path();
+                match &removed_dir {
+                    Some(dir) if path.starts_with(dir) => {}
+                    _ => {
+                        dest.remove_dir(path)
+                            .with_context(|| format!("error removing {path:?}"))?;
+                        removed_dir = Some(path.to_path_buf());
                     }
                 }
-                // push current path to the stack
-                dir_stack.push(entry.path().to_path_buf());
             }
-            (true, false, false) => dest.remove_file(entry.path())?,
+            (true, false, false) => dest
+                .remove_file(entry.path())
+                .with_context(|| format!("error removing {:?}", entry.path()))?,
             (false, _, _) => {
                 additional_existing = true;
             }
@@ -181,11 +217,14 @@ fn allocate_and_collect(
         match node.node_type() {
             NodeType::Dir => {
                 if exists {
+                    stats.dir.modify += 1;
                     trace!("existing dir {path:?}");
                 } else {
+                    stats.dir.restore += 1;
                     debug!("to restore: {path:?}");
                     if !opts.dry_run {
-                        dest.create_dir(path)?;
+                        dest.create_dir(path)
+                            .with_context(|| format!("error creating {path:?}"))?;
                     }
                 }
             }
@@ -193,26 +232,38 @@ fn allocate_and_collect(
                 // collect blobs needed for restoring
                 match (
                     exists,
-                    file_infos.add_file(dest, node, path.clone(), &index)?,
+                    file_infos
+                        .add_file(dest, node, path.clone(), &index, opts.ignore_mtime)
+                        .with_context(|| format!("error collecting information for {path:?}"))?,
                 ) {
-                    (true, (None, true)) => debug!("to modify: {path:?}"),
-                    (true, (None, false)) => trace!("identical file: {path:?}"),
-                    (false, (None, _)) => {
-                        error!("non-existing file, but restore algo returned existing file??!??")
+                    // Note that exists = false and Existing or Verified can happen if the file is changed between scanning the dir
+                    // and calling add_file. So we don't care about exists but trust add_file here.
+                    (_, AddFileResult::Existing) => {
+                        stats.file.unchanged += 1;
+                        trace!("identical file: {path:?}");
                     }
-                    (false, (Some(size), _)) => {
+                    (_, AddFileResult::Verified) => {
+                        stats.file.verified += 1;
+                        trace!("verified identical file: {path:?}");
+                    }
+                    // TODO: The differentiation between files to modify and files to create could be done only by add_file
+                    // Currently, add_file never returns Modify, but always New, so we differentiate based on exists
+                    (true, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
+                        stats.file.modify += 1;
+                        debug!("to modify: {path:?}");
+                        if !opts.dry_run {
+                            // set the right file size
+                            dest.set_length(path, size)
+                                .with_context(|| format!("error setting length for {path:?}"))?;
+                        }
+                    }
+                    (false, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
+                        stats.file.restore += 1;
                         debug!("to restore: {path:?}");
                         if !opts.dry_run {
                             // create the file as it doesn't exist
-                            dest.create_file(path, size)?;
-                        }
-                    }
-                    (true, (Some(size), _)) => {
-                        debug!("to modify: {path:?} (exists with different size)");
-                        if !opts.dry_run {
-                            // remove file and re-create as it doesn't exist with right size
-                            dest.remove_file(dest_path.join(path))?;
-                            dest.create_file(path, size)?;
+                            dest.set_length(path, size)
+                                .with_context(|| format!("error creating {path:?}"))?;
                         }
                     }
                 }
@@ -249,8 +300,12 @@ fn allocate_and_collect(
                 }
                 Ordering::Equal => {
                     // process existing node
-                    // TODO: This fails or behaves wrong if the type of the existing node
-                    // does not match the type of the node in the snapshot!
+                    if node.is_dir() != dst.file_type().unwrap().is_dir()
+                        || (node.is_symlink() != dst.file_type().unwrap().is_symlink())
+                    {
+                        // if types do not match, first remove the existing file
+                        process_existing(dst)?;
+                    }
                     process_node(path, node, true)?;
                     next_dst = dst_iter.next();
                     next_node = node_streamer.next().transpose()?;
@@ -271,12 +326,7 @@ fn allocate_and_collect(
         warn!("Note: additionals entries exist in destination");
     }
 
-    // empty dir stack and remove dirs
-    for path in dir_stack.into_iter().rev() {
-        dest.remove_dir(path)?;
-    }
-
-    Ok(file_infos)
+    Ok((file_infos, stats))
 }
 
 /// restore_contents restores all files contents as described by file_infos
@@ -286,10 +336,10 @@ fn restore_contents(
     dest: &LocalBackend,
     file_infos: FileInfos,
 ) -> Result<()> {
-    let (filenames, restore_info, total_size, matched_size) = file_infos.dissolve();
+    let (filenames, restore_info, total_size, _) = file_infos.dissolve();
 
     let p = progress_bytes("restoring file contents...");
-    p.set_length(total_size - matched_size);
+    p.set_length(total_size);
 
     const MAX_READER: usize = 20;
     let pool = ThreadPoolBuilder::new().num_threads(MAX_READER).build()?;
@@ -411,7 +461,7 @@ fn set_metadata(dest: &LocalBackend, path: &PathBuf, node: &Node, opts: &Opts) {
 struct FileInfos {
     names: Filenames,
     r: RestoreInfo,
-    total_size: u64,
+    restore_size: u64,
     matched_size: u64,
 }
 
@@ -442,12 +492,19 @@ struct FileLocation {
     matches: bool, //indicates that the file exists and these contents are already correct
 }
 
+enum AddFileResult {
+    Existing,
+    Verified,
+    New(u64),
+    Modify(u64),
+}
+
 impl FileInfos {
     fn new() -> Self {
         Self {
             names: Vec::new(),
             r: HashMap::new(),
-            total_size: 0,
+            restore_size: 0,
             matched_size: 0,
         }
     }
@@ -460,53 +517,74 @@ impl FileInfos {
         file: &Node,
         name: PathBuf,
         index: &impl IndexedBackend,
-    ) -> Result<(Option<u64>, bool)> {
+        ignore_mtime: bool,
+    ) -> Result<AddFileResult> {
         let mut open_file = dest.get_matching_file(&name, *file.meta().size());
-        let mut file_pos = 0;
-        let mut has_unmatched = false;
-        if !file.content().is_empty() {
-            let file_idx = self.names.len();
-            self.names.push(name);
-            for id in file.content().iter() {
-                let ie = index
-                    .get_data(id)
-                    .ok_or_else(|| anyhow!("did not find id {} in index", id))?;
-                let bl = BlobLocation {
-                    offset: *ie.offset(),
-                    length: *ie.length(),
-                    uncompressed_length: *ie.uncompressed_length(),
-                };
+        let file_meta = file.meta();
 
-                let matches = match &mut open_file {
-                    Some(file) => {
-                        // Existing file content; check if SHA256 matches
-                        let mut vec = vec![0; ie.data_length() as usize];
-                        file.read_exact(&mut vec).is_ok() && id == &hash(&vec)
-                    }
-                    None => false,
-                };
-                let length = bl.data_length();
-                self.total_size += length;
-                if matches {
-                    self.matched_size += length;
-                } else {
-                    has_unmatched = true;
+        if !ignore_mtime {
+            if let Some(meta) = open_file.as_ref().map(|f| f.metadata()).transpose()? {
+                // TODO: This is the same logic as in backend/ignore.rs => consollidate!
+                let mtime = Utc
+                    .timestamp_opt(meta.mtime(), meta.mtime_nsec().try_into()?)
+                    .single()
+                    .map(|dt| dt.with_timezone(&Local));
+                if meta.len() == file_meta.size && mtime == file_meta.mtime {
+                    // File exists with fitting mtime => we suspect this file is ok!
+                    debug!("file {name:?} exists with suitable size and mtime, accepting it!");
+                    self.matched_size += file_meta.size;
+                    return Ok(AddFileResult::Existing);
                 }
-
-                let pack = self.r.entry(*ie.pack()).or_insert_with(HashMap::new);
-                let blob_location = pack.entry(bl).or_insert_with(Vec::new);
-                blob_location.push(FileLocation {
-                    file_idx,
-                    file_start: file_pos,
-                    matches,
-                });
-
-                file_pos += ie.data_length() as u64;
             }
         }
 
-        // Tell to allocate the size only if the file does NOT exist with matching size
-        Ok((open_file.is_none().then_some(file_pos), has_unmatched))
+        let file_idx = self.names.len();
+        self.names.push(name);
+        let mut file_pos = 0;
+        let mut has_unmatched = false;
+        for id in file.content().iter() {
+            let ie = index
+                .get_data(id)
+                .ok_or_else(|| anyhow!("did not find id {} in index", id))?;
+            let bl = BlobLocation {
+                offset: *ie.offset(),
+                length: *ie.length(),
+                uncompressed_length: *ie.uncompressed_length(),
+            };
+            let length = bl.data_length();
+
+            let matches = match &mut open_file {
+                Some(file) => {
+                    // Existing file content; check if SHA256 matches
+                    let mut vec = vec![0; length as usize];
+                    file.read_exact(&mut vec).is_ok() && id == &hash(&vec)
+                }
+                None => false,
+            };
+
+            let pack = self.r.entry(*ie.pack()).or_insert_with(HashMap::new);
+            let blob_location = pack.entry(bl).or_insert_with(Vec::new);
+            blob_location.push(FileLocation {
+                file_idx,
+                file_start: file_pos,
+                matches,
+            });
+
+            if matches {
+                self.matched_size += length;
+            } else {
+                self.restore_size += length;
+                has_unmatched = true;
+            }
+
+            file_pos += length;
+        }
+
+        match (has_unmatched, open_file.is_some()) {
+            (true, true) => Ok(AddFileResult::Modify(file_pos)),
+            (true, false) => Ok(AddFileResult::New(file_pos)),
+            (false, _) => Ok(AddFileResult::Verified),
+        }
     }
 
     fn to_packs(&self) -> Vec<Id> {

@@ -94,7 +94,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         length: u32,
     ) -> Result<Bytes>;
 
-    fn find_starts_with(&self, tpe: FileType, vec: &[String]) -> Result<Vec<Result<Id>>> {
+    fn find_starts_with(&self, tpe: FileType, vec: &[String]) -> Result<Vec<Id>> {
         #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum MapResult<T> {
             None,
@@ -114,7 +114,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
             }
         }
 
-        Ok(results
+        results
             .into_iter()
             .enumerate()
             .map(|(i, id)| match id {
@@ -122,7 +122,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
                 MapResult::None => Err(anyhow!("no suitable id found for {}", &vec[i])),
                 MapResult::NonUnique => Err(anyhow!("id {} is not unique", &vec[i])),
             })
-            .collect())
+            .collect()
     }
 
     fn find_id(&self, tpe: FileType, id: &str) -> Result<Id> {
@@ -130,16 +130,10 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     }
 
     fn find_ids(&self, tpe: FileType, ids: &[String]) -> Result<Vec<Id>> {
-        let long_ids: Vec<_> = ids.iter().map(|id| Id::from_hex(id)).collect();
-
-        Ok(match long_ids.iter().all(Result::is_ok) {
-            true => long_ids.into_iter().map(Result::unwrap).collect(),
-            // if the given id param are not full Ids, search for a suitable one
-            false => self
-                .find_starts_with(tpe, ids)?
-                .into_iter()
-                .collect::<Result<Vec<_>>>()?,
-        })
+        ids.iter()
+            .map(|id| Ok(Id::from_hex(id)?))
+            .collect::<Result<Vec<_>>>()
+            .or_else(|_| self.find_starts_with(tpe, ids))
     }
 }
 

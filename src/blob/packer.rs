@@ -14,7 +14,7 @@ use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
 use crate::crypto::{CryptoKey, Hasher};
 use crate::id::Id;
 use crate::index::SharedIndexer;
-use crate::repo::{ConfigFile, IndexBlob, IndexPack, PackHeaderLength, PackHeaderRef};
+use crate::repofile::{ConfigFile, IndexBlob, IndexPack, PackHeaderLength, PackHeaderRef};
 
 const KB: u32 = 1024;
 const MB: u32 = 1024 * KB;

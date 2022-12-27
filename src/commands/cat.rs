@@ -10,7 +10,8 @@ use crate::backend::{DecryptReadBackend, FileType};
 use crate::blob::{BlobType, Tree};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -50,11 +51,8 @@ struct TreeOpts {
     snap: String,
 }
 
-pub(super) fn execute(
-    be: &impl DecryptReadBackend,
-    opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, opts: Opts, config_file: RusticConfig) -> Result<()> {
+    let be = &repo.dbe;
     match opts.command {
         Command::Config => cat_file(be, FileType::Config, IdOpt::default()),
         Command::Index(opt) => cat_file(be, FileType::Index, opt),

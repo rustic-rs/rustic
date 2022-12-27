@@ -13,34 +13,12 @@ use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use log::*;
 use rayon::ThreadPoolBuilder;
-use rpassword::prompt_password;
 
-use crate::backend::{DecryptReadBackend, FileType, ReadBackend};
-use crate::crypto::Key;
-use crate::repo::{find_key_in_backend, Id};
-
-const MAX_PASSWORD_RETRIES: usize = 5;
+use crate::backend::{DecryptReadBackend, FileType};
+use crate::repofile::Id;
 
 pub fn bytes(b: u64) -> String {
     ByteSize(b).to_string_as(true)
-}
-
-pub fn get_key(be: &impl ReadBackend, password: Option<String>) -> Result<Key> {
-    for _ in 0..MAX_PASSWORD_RETRIES {
-        match &password {
-            // if password is given, directly return the result of find_key_in_backend and don't retry
-            Some(pass) => return find_key_in_backend(be, pass, None),
-            None => {
-                // TODO: Differentiate between wrong password and other error!
-                if let Ok(key) =
-                    find_key_in_backend(be, &prompt_password("enter repository password: ")?, None)
-                {
-                    return Ok(key);
-                }
-            }
-        }
-    }
-    bail!("incorrect password!");
 }
 
 fn progress_intervall() -> Duration {

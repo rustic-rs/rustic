@@ -7,18 +7,15 @@ use super::{bytes, progress_counter, table_right_from};
 use crate::backend::{DecryptReadBackend, ReadBackend, ALL_FILE_TYPES};
 use crate::blob::{BlobType, BlobTypeMap, Sum};
 use crate::index::IndexEntry;
-use crate::repo::{IndexFile, IndexPack};
+use crate::repofile::{IndexFile, IndexPack};
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts;
 
-pub(super) fn execute(
-    be: &impl DecryptReadBackend,
-    hot_be: &Option<impl ReadBackend>,
-    _opts: Opts,
-) -> Result<()> {
-    fileinfo("repository files", be)?;
-    if let Some(hot_be) = hot_be {
+pub(super) fn execute(repo: OpenRepository, _opts: Opts) -> Result<()> {
+    fileinfo("repository files", &repo.be)?;
+    if let Some(hot_be) = &repo.be_hot {
         fileinfo("hot repository files", hot_be)?;
     }
 
@@ -55,7 +52,7 @@ pub(super) fn execute(
     let mut info_delete = BlobTypeMap::<Info>::default();
 
     let p = progress_counter("scanning index...");
-    for index in be.stream_all::<IndexFile>(p.clone())? {
+    for index in repo.dbe.stream_all::<IndexFile>(p.clone())? {
         let index = index?.1;
         for pack in &index.packs {
             info[pack.blob_type()].add_pack(pack);

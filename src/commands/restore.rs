@@ -21,7 +21,8 @@ use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend};
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
@@ -68,10 +69,11 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(
-    be: &(impl DecryptReadBackend + Unpin),
+    repo: OpenRepository,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
+    let be = &repo.dbe;
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     if let Some(command) = &opts.warm_up_command {

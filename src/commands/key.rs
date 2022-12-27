@@ -7,7 +7,8 @@ use rpassword::{prompt_password, read_password_from_bufread};
 
 use crate::backend::{FileType, WriteBackend};
 use crate::crypto::{hash, Key};
-use crate::repo::KeyFile;
+use crate::repofile::KeyFile;
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -47,9 +48,9 @@ pub(crate) struct KeyOpts {
     pub(crate) with_created: bool,
 }
 
-pub(super) fn execute(be: &impl WriteBackend, key: Key, opts: Opts) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Add(opt) => add_key(be, key, opt),
+        Command::Add(opt) => add_key(&repo.dbe, repo.key, opt),
     }
 }
 

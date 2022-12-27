@@ -13,16 +13,13 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
 use crate::archiver::{Archiver, Parent};
-use crate::backend::{
-    DecryptFullBackend, DecryptWriteBackend, DryRunBackend, LocalSource, LocalSourceOptions,
-    ReadSource,
-};
+use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource};
 use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
-use crate::repo::{
-    ConfigFile, DeleteOption, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotSummary,
-    StringList,
+use crate::repofile::{
+    DeleteOption, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotSummary, StringList,
 };
+use crate::repository::OpenRepository;
 
 #[serde_as]
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
@@ -116,15 +113,12 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(
-    be: &impl DecryptFullBackend,
+    repo: OpenRepository,
     opts: Opts,
-    config: ConfigFile,
     config_file: RusticConfig,
     command: String,
 ) -> Result<()> {
     let time = Local::now();
-
-    let zstd = config.zstd()?;
 
     let mut config_opts: Vec<Opts> = config_file.get("backup.sources")?;
 
@@ -140,7 +134,7 @@ pub(super) fn execute(
         }
     };
 
-    let index = IndexBackend::only_full_trees(&be.clone(), progress_counter(""))?;
+    let index = IndexBackend::only_full_trees(&repo.dbe, progress_counter(""))?;
 
     for source in sources {
         let mut opts = opts.clone();
@@ -162,8 +156,7 @@ pub(super) fn execute(
         // merge "backup" section from config file, if given
         config_file.merge_into("backup", &mut opts)?;
 
-        let mut be = DryRunBackend::new(be.clone(), opts.dry_run);
-        be.set_zstd(zstd);
+        let be = DryRunBackend::new(repo.dbe.clone(), opts.dry_run);
         info!("starting to backup \"{source}\"...");
         let index = index.clone();
         let backup_stdin = source == "-";
@@ -251,7 +244,7 @@ pub(super) fn execute(
         let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode);
 
         let snap = if backup_stdin {
-            let mut archiver = Archiver::new(be, index, &config, parent, snap)?;
+            let mut archiver = Archiver::new(be, index, &repo.config, parent, snap)?;
             let p = progress_bytes("starting backup from stdin...");
             archiver.backup_reader(
                 std::io::stdin(),
@@ -277,7 +270,7 @@ pub(super) fn execute(
                 p.set_length(size);
             };
             p.set_prefix("backing up...");
-            let mut archiver = Archiver::new(be, index.clone(), &config, parent, snap)?;
+            let mut archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;
             for item in src {
                 match item {
                     Err(e) => {

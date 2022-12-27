@@ -13,14 +13,15 @@ use log::*;
 use rayon::prelude::*;
 
 use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
-use crate::backend::{Cache, DecryptFullBackend, DecryptReadBackend, FileType, ReadBackend};
+use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType, ReadBackend};
 use crate::blob::{
     BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
 };
 use crate::commands::helpers::progress_spinner;
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer, ReadIndex};
-use crate::repo::{ConfigFile, HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile};
+use crate::repofile::{HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile};
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
@@ -86,14 +87,9 @@ pub(super) struct Opts {
     warm_up_wait: Option<humantime::Duration>,
 }
 
-pub(super) fn execute(
-    be: &(impl DecryptFullBackend + Unpin),
-    cache: Option<Cache>,
-    opts: Opts,
-    config: ConfigFile,
-    ignore_snaps: Vec<Id>,
-) -> Result<()> {
-    if config.version < 2 && opts.repack_uncompressed {
+pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -> Result<()> {
+    let be = &repo.dbe;
+    if repo.config.version < 2 && opts.repack_uncompressed {
         bail!("--repack-uncompressed makes no sense for v1 repo!");
     }
 
@@ -113,12 +109,12 @@ pub(super) fn execute(
     }
     p.finish();
 
-    if let Some(cache) = &cache {
+    if let Some(cache) = &repo.cache {
         let p = progress_spinner("cleaning up packs from cache...");
         cache.remove_not_in_list(FileType::Pack, index_collector.tree_packs())?;
         p.finish();
     }
-    match (cache.is_some(), opts.cache_only) {
+    match (repo.cache.is_some(), opts.cache_only) {
         (true, true) => return Ok(()),
         (false, true) => {
             warn!("Warning: option --cache-only used without a cache.");
@@ -145,8 +141,8 @@ pub(super) fn execute(
     pruner.check()?;
     let repack_cacheable_only = opts
         .repack_cacheable_only
-        .unwrap_or_else(|| config.is_hot == Some(true));
-    let pack_sizer = total_size.map(|tpe, size| PackSizer::from_config(&config, tpe, size));
+        .unwrap_or_else(|| repo.config.is_hot == Some(true));
+    let pack_sizer = total_size.map(|tpe, size| PackSizer::from_config(&repo.config, tpe, size));
     pruner.decide_packs(
         Duration::from_std(*opts.keep_pack)?,
         Duration::from_std(*opts.keep_delete)?,
@@ -176,7 +172,7 @@ pub(super) fn execute(
     wait(opts.warm_up_wait);
 
     if !opts.dry_run {
-        pruner.do_prune(be, opts, config)?;
+        pruner.do_prune(repo, opts)?;
     }
     Ok(())
 }
@@ -831,10 +827,8 @@ impl Pruner {
             .collect()
     }
 
-    fn do_prune(self, be: &impl DecryptFullBackend, opts: Opts, config: ConfigFile) -> Result<()> {
-        let zstd = config.zstd()?;
-        let mut be = be.clone();
-        be.set_zstd(zstd);
+    fn do_prune(self, repo: OpenRepository, opts: Opts) -> Result<()> {
+        let be = repo.dbe;
 
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
 
@@ -858,7 +852,7 @@ impl Pruner {
             be.clone(),
             BlobType::Tree,
             indexer.clone(),
-            &config,
+            &repo.config,
             size_after_prune[BlobType::Tree],
         )?;
 
@@ -866,7 +860,7 @@ impl Pruner {
             be.clone(),
             BlobType::Data,
             indexer.clone(),
-            &config,
+            &repo.config,
             size_after_prune[BlobType::Data],
         )?;
 

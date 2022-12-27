@@ -7,6 +7,11 @@
 
 # global options: These options are used for all commands. 
 [global]
+log-level = "debug"
+log-file = "/log/rustic.log"
+
+# repository options: These options define which backend to use and which password to use. 
+[repository]
 repository = "/tmp/rustic"
 password = "mySecretPassword" 
 

@@ -48,7 +48,7 @@ Current limitations:
  
 ## Open points:
  * [ ] Add tests and benchmarks
- * [ ] Add missing commands: copy, dump, find, mount
+ * [ ] Add missing commands: dump, find, mount
  * [ ] Improve error handling
  * [ ] Parallelize the code even more and optimize for speed where useful
 

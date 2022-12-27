@@ -7,10 +7,10 @@ use humantime::format_duration;
 use itertools::Itertools;
 
 use super::{bold_cell, bytes, table, table_right_from, RusticConfig};
-use crate::backend::DecryptReadBackend;
-use crate::repo::{
+use crate::repofile::{
     DeleteOption, SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion,
 };
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -44,16 +44,16 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(
-    be: &impl DecryptReadBackend,
+    repo: OpenRepository,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     let groups = match &opts.ids[..] {
-        [] => SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by)?,
+        [] => SnapshotFile::group_from_backend(&repo.dbe, &opts.filter, &opts.group_by)?,
         [id] if id == "latest" => {
-            SnapshotFile::group_from_backend(be, &opts.filter, &opts.group_by)?
+            SnapshotFile::group_from_backend(&repo.dbe, &opts.filter, &opts.group_by)?
                 .into_iter()
                 .map(|(group, mut snaps)| {
                     snaps.sort_unstable();
@@ -66,7 +66,7 @@ pub(super) fn execute(
         }
         _ => vec![(
             SnapshotGroup::default(),
-            SnapshotFile::from_ids(be, &opts.ids)?,
+            SnapshotFile::from_ids(&repo.dbe, &opts.ids)?,
         )],
     };
 

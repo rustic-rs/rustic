@@ -37,7 +37,8 @@ mod commands;
 mod crypto;
 mod id;
 mod index;
-mod repo;
+mod repofile;
+mod repository;
 
 fn main() -> Result<()> {
     // this is a workaround until unix_sigpipe (https://github.com/rust-lang/rust/issues/97889) is available.

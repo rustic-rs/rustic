@@ -4,11 +4,12 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 
 use super::{progress_counter, RusticConfig};
-use crate::backend::{DecryptReadBackend, LocalSource, LocalSourceOptions};
+use crate::backend::{LocalSource, LocalSourceOptions};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::index::IndexBackend;
-use crate::repo::{SnapshotFile, SnapshotFilter};
+use crate::repofile::{SnapshotFile, SnapshotFilter};
+use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -28,10 +29,11 @@ pub(super) struct Opts {
 }
 
 pub(super) fn execute(
-    be: &impl DecryptReadBackend,
+    repo: OpenRepository,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
+    let be = &repo.dbe;
     let (id1, path1) = arg_to_snap_path(&opts.snap1, "");
     let (id2, path2) = arg_to_snap_path(&opts.snap2, path1);
 

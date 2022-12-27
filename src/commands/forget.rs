@@ -152,7 +152,7 @@ pub(super) fn execute(
         ),
         (false, false) => {
             let p = progress_counter("removing snapshots...");
-            be.delete_list(FileType::Snapshot, true, forget_snaps.clone(), p)?;
+            be.delete_list(FileType::Snapshot, true, forget_snaps.iter(), p)?;
         }
     }
 

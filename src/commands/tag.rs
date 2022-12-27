@@ -111,10 +111,10 @@ pub(super) fn execute(
         ),
         (false, false) => {
             let p = progress_counter("saving new snapshots...");
-            be.save_list(snapshots, p)?;
+            be.save_list(snapshots.iter(), p)?;
 
             let p = progress_counter("deleting old snapshots...");
-            be.delete_list(FileType::Snapshot, true, old_snap_ids, p)?;
+            be.delete_list(FileType::Snapshot, true, old_snap_ids.iter(), p)?;
         }
     }
     Ok(())

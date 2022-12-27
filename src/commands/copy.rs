@@ -157,7 +157,7 @@ fn copy(
     indexer.write().unwrap().finalize()?;
 
     let p = progress_counter("saving snapshots...");
-    be_dest.save_list(snapshots, p)?;
+    be_dest.save_list(snapshots.iter(), p)?;
     Ok(())
 }
 

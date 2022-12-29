@@ -170,9 +170,7 @@ impl ReadBackend for RestBackend {
                     .get(url.clone())
                     .send()?
                     .check_error()?
-                    .bytes()?
-                    .into_iter()
-                    .collect())
+                    .bytes()?)
             },
             notify,
         )?)
@@ -198,9 +196,7 @@ impl ReadBackend for RestBackend {
                     .header("Range", header_value.clone())
                     .send()?
                     .check_error()?
-                    .bytes()?
-                    .into_iter()
-                    .collect())
+                    .bytes()?)
             },
             notify,
         )?)

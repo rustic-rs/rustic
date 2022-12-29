@@ -869,7 +869,7 @@ impl Pruner {
             if opts.instant_delete {
                 let p = progress_counter("removing unindexed packs...");
                 let existing_packs: Vec<_> = self.existing_packs.into_keys().collect();
-                be.delete_list(FileType::Pack, true, existing_packs, p)?;
+                be.delete_list(FileType::Pack, true, existing_packs.iter(), p)?;
             } else {
                 info!("marking not needed unindexed pack files for deletion...");
                 for (id, size) in self.existing_packs {
@@ -988,23 +988,24 @@ impl Pruner {
         indexer.write().unwrap().finalize()?;
         p.finish();
 
+        // remove old index files first as they may reference pack files which are removed soon.
+        if !indexes_remove.is_empty() {
+            let p = progress_counter("removing old index files...");
+            be.delete_list(FileType::Index, true, indexes_remove.iter(), p)?;
+        }
+
         // get variables out of Arc<Mutex<_>>
-        let data_packs_remove = std::mem::take::<Vec<_>>(&mut data_packs_remove.lock().unwrap());
-        let tree_packs_remove = std::mem::take::<Vec<_>>(&mut tree_packs_remove.lock().unwrap());
+        let data_packs_remove = data_packs_remove.lock().unwrap();
+        let tree_packs_remove = tree_packs_remove.lock().unwrap();
 
         if !data_packs_remove.is_empty() {
             let p = progress_counter("removing old data packs...");
-            be.delete_list(FileType::Pack, false, data_packs_remove, p)?;
+            be.delete_list(FileType::Pack, false, data_packs_remove.iter(), p)?;
         }
 
         if !tree_packs_remove.is_empty() {
             let p = progress_counter("removing old tree packs...");
-            be.delete_list(FileType::Pack, true, tree_packs_remove, p)?;
-        }
-
-        if !indexes_remove.is_empty() {
-            let p = progress_counter("removing old index files...");
-            be.delete_list(FileType::Index, true, indexes_remove, p)?;
+            be.delete_list(FileType::Pack, true, tree_packs_remove.iter(), p)?;
         }
 
         Ok(())

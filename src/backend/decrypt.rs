@@ -83,28 +83,34 @@ pub trait DecryptWriteBackend: WriteBackend {
         self.hash_write_full(F::TYPE, &data)
     }
 
-    fn save_list<F: RepoFile>(&self, list: Vec<F>, p: ProgressBar) -> Result<()> {
+    fn save_list<'a, F: RepoFile, I: ExactSizeIterator<Item = &'a F> + Send>(
+        &self,
+        list: I,
+        p: ProgressBar,
+    ) -> Result<()> {
         p.set_length(list.len() as u64);
-        list.par_iter().for_each(|file| {
-            self.save_file(file).unwrap();
+        list.par_bridge().try_for_each(|file| -> Result<_> {
+            self.save_file(file)?;
             p.inc(1);
-        });
+            Ok(())
+        })?;
         p.finish();
         Ok(())
     }
 
-    fn delete_list(
+    fn delete_list<'a, I: ExactSizeIterator<Item = &'a Id> + Send>(
         &self,
         tpe: FileType,
         cacheable: bool,
-        list: Vec<Id>,
+        list: I,
         p: ProgressBar,
     ) -> Result<()> {
         p.set_length(list.len() as u64);
-        list.par_iter().for_each(|id| {
+        list.par_bridge().try_for_each(|id| -> Result<_> {
             self.remove(tpe, id, cacheable).unwrap();
             p.inc(1);
-        });
+            Ok(())
+        })?;
 
         p.finish();
         Ok(())

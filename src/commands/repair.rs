@@ -272,7 +272,7 @@ fn repair_snaps(
             be.delete_list(
                 FileType::Snapshot,
                 true,
-                delete,
+                delete.iter(),
                 progress_counter("remove defect snapshots"),
             )?;
         }

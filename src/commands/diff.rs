@@ -1,13 +1,15 @@
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 
 use super::{progress_counter, RusticConfig};
-use crate::backend::{LocalSource, LocalSourceOptions};
+use crate::backend::{LocalBackend, LocalSource, LocalSourceOptions};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
-use crate::index::IndexBackend;
+use crate::crypto::hash;
+use crate::index::{IndexBackend, ReadIndex};
 use crate::repofile::{SnapshotFile, SnapshotFilter};
 use crate::repository::OpenRepository;
 
@@ -26,6 +28,14 @@ pub(super) struct Opts {
     /// New snapshot/path or local path [default for PATH2: PATH1]
     #[clap(value_name = "SNAPSHOT2[:PATH2]|PATH2")]
     snap2: String,
+
+    /// show differences in metadata
+    #[clap(long)]
+    metadata: bool,
+
+    /// don't check for different file contents
+    #[clap(long)]
+    no_content: bool,
 }
 
 pub(super) fn execute(
@@ -54,7 +64,9 @@ pub(super) fn execute(
             diff(
                 NodeStreamer::new(index.clone(), &node1)?,
                 NodeStreamer::new(index, &node2)?,
-                true,
+                opts.no_content,
+                |_path, node1, node2| Ok(node1.content() == node2.content()),
+                opts.metadata,
             )
         }
         (Some(id1), None) => {
@@ -67,6 +79,7 @@ pub(super) fn execute(
 
             let index = IndexBackend::new(be, progress_counter(""))?;
             let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
+            let local = LocalBackend::new(path2)?;
             let path2 = PathBuf::from(path2);
             let is_dir = path2
                 .metadata()
@@ -84,7 +97,13 @@ pub(super) fn execute(
                 Ok((path, node))
             });
 
-            diff(NodeStreamer::new(index, &node1)?, src, false)
+            diff(
+                NodeStreamer::new(index.clone(), &node1)?,
+                src,
+                opts.no_content,
+                |path, node1, _node2| identical_content_local(&local, &index, path, node1),
+                opts.metadata,
+            )
         }
         (None, _) => bail!("cannot use local path as first argument"),
     }
@@ -103,10 +122,39 @@ fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>
     }
 }
 
+fn identical_content_local(
+    local: &LocalBackend,
+    index: &impl ReadIndex,
+    path: &Path,
+    node: &Node,
+) -> Result<bool> {
+    let mut open_file = match local.get_matching_file(path, *node.meta().size()) {
+        Some(file) => file,
+        None => return Ok(false),
+    };
+
+    for id in node.content() {
+        let ie = index
+            .get_data(id)
+            .ok_or_else(|| anyhow!("did not find id {} in index", id))?;
+        let length = ie.data_length();
+
+        // check if SHA256 matches
+        let mut vec = vec![0; length as usize];
+        if open_file.read_exact(&mut vec).is_ok() && id == &hash(&vec) {
+            continue;
+        }
+        return Ok(false);
+    }
+    Ok(true)
+}
+
 fn diff(
     mut tree_streamer1: impl Iterator<Item = Result<(PathBuf, Node)>>,
     mut tree_streamer2: impl Iterator<Item = Result<(PathBuf, Node)>>,
-    check_content: bool,
+    no_content: bool,
+    file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
+    metadata: bool,
 ) -> Result<()> {
     let mut item1 = tree_streamer1.next().transpose()?;
     let mut item2 = tree_streamer2.next().transpose()?;
@@ -135,12 +183,12 @@ fn diff(
                 let node1 = &i1.1;
                 let node2 = &i2.1;
                 match node1.node_type() {
-                    tpe if tpe != node2.node_type() => println!("M    {:?}", path), // type was changed
-                    NodeType::File if node1.meta() != node2.meta() => {
+                    tpe if tpe != node2.node_type() => println!("T    {:?}", path), // type was changed
+                    NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
                         println!("M    {:?}", path)
                     }
-                    NodeType::File if check_content && node1.content() != node2.content() => {
-                        println!("M    {:?}", path)
+                    NodeType::File if metadata && node1.meta() != node2.meta() => {
+                        println!("U    {:?}", path)
                     }
                     NodeType::Symlink { linktarget } => {
                         if let NodeType::Symlink {
@@ -148,7 +196,7 @@ fn diff(
                         } = node2.node_type()
                         {
                             if *linktarget != *linktarget2 {
-                                println!("M    {:?}", path)
+                                println!("U    {:?}", path)
                             }
                         }
                     }

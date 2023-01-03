@@ -84,7 +84,7 @@ humantime = "2"
 users = "0.11"
 itertools = "0.10"
 simplelog = "0.12"
-comfy-table = "6.1.2"
+comfy-table = "6.1.4"
 libc="0.2"
 
 [dev-dependencies]

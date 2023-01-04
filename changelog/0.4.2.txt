@@ -1,0 +1,17 @@
+Changes in version 0.4.2:
+
+Bugs fixed:
+- rclone backend did not work with unexpected version output. This is now fixed, also support for rclone > 1.61 is added.
+- restore: restore with existing files/dirs but wrong type did not succeed. This is fixed now.
+- All command except `backup` and `prune` did not compress snapshot and index files, even for v2 repos. This is now fixed.
+
+New features:
+- Added the `copy` command: Many targets are supported and a nice output table shows which snapshots are to be copied. See also #358.
+- The syntax <SNAPSHOT>:<PATH> now also works if <PATH> is a file, e.g. in the `restore` command.
+- restore: Existing files with correct size and mtime are not read by default; new option --verify-existing.
+- restore: Improved output of what restore is about to do (also in --dry-run mode).
+- diff: Make output more similar to `restic diff`; added option `--metadata`.
+- diff: When diffing with a local dir, local files are now read and the content is compared; new option --no-content.
+- backup: Improved parallelization.
+- Updated to Rust 1.66 and many updates of dependent crate versions.
+- Some minor code and performance improvements.

@@ -47,9 +47,9 @@ pub(super) struct Opts {
     #[clap(long)]
     warm_up: bool,
 
-    /// Don't trust the mtime of existing files; always read file to check if the contents are ok
+    /// Always read and verify existing files (don't trust correct modification time and file size)
     #[clap(long)]
-    ignore_mtime: bool,
+    verify_existing: bool,
 
     /// Warm up needed data pack files by running the command with %id replaced by pack id
     #[clap(long, conflicts_with = "warm-up")]
@@ -235,7 +235,7 @@ fn allocate_and_collect(
                 match (
                     exists,
                     file_infos
-                        .add_file(dest, node, path.clone(), &index, opts.ignore_mtime)
+                        .add_file(dest, node, path.clone(), &index, opts.verify_existing)
                         .with_context(|| format!("error collecting information for {path:?}"))?,
                 ) {
                     // Note that exists = false and Existing or Verified can happen if the file is changed between scanning the dir

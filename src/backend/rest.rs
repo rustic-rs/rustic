@@ -120,6 +120,7 @@ impl ReadBackend for RestBackend {
     }
 
     fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        trace!("listing tpe: {tpe:?}");
         let url = if tpe == FileType::Config {
             self.url.join("config")?
         } else {
@@ -161,6 +162,7 @@ impl ReadBackend for RestBackend {
     }
 
     fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        trace!("reading tpe: {tpe:?}, id: {id}");
         let url = self.url(tpe, id)?;
         Ok(backoff::retry_notify(
             self.backoff.clone(),
@@ -184,6 +186,7 @@ impl ReadBackend for RestBackend {
         offset: u32,
         length: u32,
     ) -> Result<Bytes> {
+        trace!("reading tpe: {tpe:?}, id: {id}, offset: {offset}, length: {length}");
         let offset2 = offset + length - 1;
         let header_value = format!("bytes={}-{}", offset, offset2);
         let url = self.url(tpe, id)?;

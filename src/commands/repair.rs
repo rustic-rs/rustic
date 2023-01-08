@@ -185,7 +185,16 @@ fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
         debug!("reading pack {id}...");
         let mut pack = IndexPack::default();
         pack.set_id(id);
-        pack.blobs = PackHeader::from_file(be, id, size_hint, packsize)?.into_blobs();
+
+        match PackHeader::from_file(be, id, size_hint, packsize) {
+            Err(err) => {
+                warn!("error reading pack {id} (not processed): {err}");
+                continue;
+            }
+            Ok(header) => {
+                pack.blobs = header.into_blobs();
+            }
+        }
         if !opts.dry_run {
             indexer.write().unwrap().add_with(pack, to_delete)?;
         }

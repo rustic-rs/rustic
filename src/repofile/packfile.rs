@@ -1,7 +1,8 @@
 use std::num::NonZeroU32;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use binrw::{io::Cursor, BinRead, BinWrite};
+use log::*;
 
 use crate::backend::FileType;
 use crate::id::Id;
@@ -175,6 +176,11 @@ impl PackHeader {
         // get header length from the file
         let size_real =
             PackHeaderLength::from_binary(&data.split_off(size_guess as usize))?.to_u32();
+        trace!("header size: {size_real}");
+
+        if size_real > pack_size {
+            bail!("Header is longer than file? Header size: {size_real}, file size: {pack_size}");
+        }
 
         // now read the header
         let data = if size_real <= size_guess {

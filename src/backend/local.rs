@@ -47,6 +47,7 @@ impl ReadBackend for LocalBackend {
     }
 
     fn list(&self, tpe: FileType) -> Result<Vec<Id>> {
+        trace!("listing tpe: {tpe:?}");
         if tpe == FileType::Config {
             return Ok(match self.path.join("config").exists() {
                 true => vec![Id::default()],
@@ -64,6 +65,7 @@ impl ReadBackend for LocalBackend {
     }
 
     fn list_with_size(&self, tpe: FileType) -> Result<Vec<(Id, u32)>> {
+        trace!("listing tpe: {tpe:?}");
         let path = self.path.join(tpe.name());
 
         if tpe == FileType::Config {
@@ -89,6 +91,7 @@ impl ReadBackend for LocalBackend {
     }
 
     fn read_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
+        trace!("reading tpe: {tpe:?}, id: {id}");
         Ok(fs::read(self.path(tpe, id))?.into())
     }
 
@@ -100,6 +103,7 @@ impl ReadBackend for LocalBackend {
         offset: u32,
         length: u32,
     ) -> Result<Bytes> {
+        trace!("reading tpe: {tpe:?}, id: {id}, offset: {offset}, length: {length}");
         let mut file = File::open(self.path(tpe, id))?;
         file.seek(SeekFrom::Start(offset.try_into()?))?;
         let mut vec = vec![0; length.try_into()?];
@@ -133,7 +137,7 @@ impl WriteBackend for LocalBackend {
     }
 
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
-        trace!("writing tpe: {:?}, id: {}", &tpe, &id);
+        trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
         fs::remove_file(filename)?;
         Ok(())

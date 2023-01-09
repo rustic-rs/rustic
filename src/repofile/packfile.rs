@@ -178,8 +178,8 @@ impl PackHeader {
             PackHeaderLength::from_binary(&data.split_off(size_guess as usize))?.to_u32();
         trace!("header size: {size_real}");
 
-        if size_real > pack_size {
-            bail!("Header is longer than file? Header size: {size_real}, file size: {pack_size}");
+        if size_real + LENGTH_LEN > pack_size {
+            bail!("Read header length is too large! Length: {size_real}, file size: {pack_size}");
         }
 
         // now read the header
@@ -192,11 +192,31 @@ impl PackHeader {
             be.read_partial(FileType::Pack, &id, false, offset, size_real)?
         };
 
-        Self::from_binary(&be.decrypt(&data)?)
+        let header = Self::from_binary(&be.decrypt(&data)?)?;
+
+        if header.size() != size_real {
+            bail!("Read header length doesn't match header contents! Length: {size_real}, computed: {}", header.size());
+        }
+
+        if header.pack_size() != pack_size {
+            bail!("pack size computed from header doesn't match real pack isch! Computed: {}, real: {pack_size}", header.pack_size());
+        }
+
+        Ok(header)
     }
 
     pub fn into_blobs(self) -> Vec<IndexBlob> {
         self.0
+    }
+
+    // calculate the pack header size from the contained blobs
+    pub fn size(&self) -> u32 {
+        PackHeaderRef(&self.0).size()
+    }
+
+    // calculate the pack size from the contained blobs
+    pub fn pack_size(&self) -> u32 {
+        PackHeaderRef(&self.0).pack_size()
     }
 }
 

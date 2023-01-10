@@ -4,7 +4,10 @@ use anyhow::Result;
 use clap::{AppSettings, Parser, Subcommand};
 use log::*;
 
-use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
+use crate::backend::{
+    DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend, FileType, ReadBackend,
+    WriteBackend,
+};
 use crate::blob::{BlobType, NodeType, Packer, Tree};
 use crate::id::Id;
 use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
@@ -15,7 +18,7 @@ use crate::repofile::{
 use crate::repository::OpenRepository;
 
 use super::rustic_config::RusticConfig;
-use super::{progress_counter, progress_spinner, wait, warm_up, warm_up_command};
+use super::{progress_counter, progress_spinner, warm_up_wait};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -40,18 +43,6 @@ struct IndexOpts {
     // Read all data packs, i.e. completely re-create the index
     #[clap(long)]
     read_all: bool,
-
-    /// Warm up needed data pack files by only requesting them without processing
-    #[clap(long)]
-    warm_up: bool,
-
-    /// Warm up needed data pack files by running the command with %id replaced by pack id
-    #[clap(long, conflicts_with = "warm-up")]
-    warm_up_command: Option<String>,
-
-    /// Duration (e.g. 10m) to wait after warm up before doing the actual restore
-    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
-    warm_up_wait: Option<humantime::Duration>,
 }
 
 #[derive(Default, Parser)]
@@ -83,12 +74,13 @@ struct SnapOpts {
 
 pub(super) fn execute(repo: OpenRepository, opts: Opts, config_file: RusticConfig) -> Result<()> {
     match opts.command {
-        Command::Index(opt) => repair_index(&repo.dbe, opt),
+        Command::Index(opt) => repair_index(&repo, opt),
         Command::Snapshots(opt) => repair_snaps(&repo.dbe, opt, config_file, &repo.config),
     }
 }
 
-fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
+fn repair_index(repo: &OpenRepository, opts: IndexOpts) -> Result<()> {
+    let be = &repo.dbe;
     let p = progress_spinner("listing packs...");
     let mut packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
     p.finish();
@@ -162,21 +154,7 @@ fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
     // process packs which are listed but not contained in the index
     pack_read_header.extend(packs.into_iter().map(|(id, size)| (id, false, None, size)));
 
-    if opts.warm_up {
-        warm_up(be, pack_read_header.iter().map(|(id, _, _, _)| *id))?;
-        if opts.dry_run {
-            return Ok(());
-        }
-    } else if opts.warm_up_command.is_some() {
-        warm_up_command(
-            pack_read_header.iter().map(|(id, _, _, _)| *id),
-            opts.warm_up_command.as_ref().unwrap(),
-        )?;
-        if opts.dry_run {
-            return Ok(());
-        }
-    }
-    wait(opts.warm_up_wait);
+    warm_up_wait(repo, pack_read_header.iter().map(|(id, _, _, _)| *id), true)?;
 
     let indexer = Indexer::new(be.clone()).into_shared();
     let p = progress_counter("reading pack headers");

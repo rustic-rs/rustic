@@ -14,7 +14,7 @@ use log::*;
 use rayon::ThreadPoolBuilder;
 
 use super::rustic_config::RusticConfig;
-use super::{bytes, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
+use super::{bytes, progress_bytes, progress_counter, warm_up_wait};
 use crate::backend::{DecryptReadBackend, FileType, LocalBackend};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
@@ -117,15 +117,7 @@ pub(super) fn execute(
     if file_infos.restore_size == 0 {
         info!("all file contents are fine.");
     } else {
-        if opts.warm_up {
-            warm_up(be, file_infos.to_packs().into_iter())?;
-        } else if opts.warm_up_command.is_some() {
-            warm_up_command(
-                file_infos.to_packs().into_iter(),
-                opts.warm_up_command.as_ref().unwrap(),
-            )?;
-        }
-        wait(opts.warm_up_wait);
+        warm_up_wait(&repo, file_infos.to_packs().into_iter(), !opts.dry_run)?;
         if !opts.dry_run {
             restore_contents(be, &dest, file_infos)?;
         }

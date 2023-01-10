@@ -61,8 +61,12 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
 
     let index_collector = check_packs(be, hot_be, opts.read_data)?;
 
-    if !opts.trust_cache {
-        if let Some(cache) = &cache {
+    if let Some(cache) = &cache {
+        let p = progress_spinner("cleaning up packs from cache...");
+        cache.remove_not_in_list(FileType::Pack, index_collector.tree_packs())?;
+        p.finish();
+
+        if !opts.trust_cache {
             let p = progress_bytes("checking packs in cache...");
             // TODO: Make concurrency (5) customizable
             check_cache_files(5, cache, raw_be, FileType::Pack, p)?;

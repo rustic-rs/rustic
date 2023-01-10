@@ -53,10 +53,6 @@ pub(super) struct Opts {
     #[clap(long)]
     instant_delete: bool,
 
-    /// Only remove unneded pack file from local cache. Do not change the repository at all.
-    #[clap(long)]
-    cache_only: bool,
-
     /// Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting
     #[clap(long)]
     fast_repack: bool,
@@ -108,20 +104,6 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
         index_files.push((id, index))
     }
     p.finish();
-
-    if let Some(cache) = &repo.cache {
-        let p = progress_spinner("cleaning up packs from cache...");
-        cache.remove_not_in_list(FileType::Pack, index_collector.tree_packs())?;
-        p.finish();
-    }
-    match (repo.cache.is_some(), opts.cache_only) {
-        (true, true) => return Ok(()),
-        (false, true) => {
-            warn!("Warning: option --cache-only used without a cache.");
-            return Ok(());
-        }
-        _ => {}
-    }
 
     let (used_ids, total_size) = {
         let index = index_collector.into_index();

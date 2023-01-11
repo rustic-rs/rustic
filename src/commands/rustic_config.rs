@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use merge::Merge;
 use serde::Deserialize;
@@ -23,10 +23,11 @@ impl RusticConfig {
             // TODO: This should be log::info! - however, the logging config
             // can be stored in the config file and is needed to initialize the logger
             eprintln!("using config {}", path.display());
-            let data = std::fs::read_to_string(path)?;
-            toml::from_str(&data)?
+            let data = std::fs::read_to_string(path).context("error reading config file")?;
+            toml::from_str(&data).context("error reading TOML from config file")?
         } else {
-            toml::from_str("")?
+            eprintln!("using no config file ({} doesn't exist)", path.display());
+            Value::Array(Vec::new())
         };
 
         Ok(RusticConfig(config))

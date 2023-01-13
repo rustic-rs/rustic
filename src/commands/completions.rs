@@ -29,5 +29,5 @@ fn generate_completion<G: Generator>(shell: G) {
         &mut command,
         env!("CARGO_BIN_NAME"),
         &mut std::io::stdout(),
-    )
+    );
 }

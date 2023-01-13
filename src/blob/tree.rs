@@ -36,7 +36,7 @@ impl Tree {
     }
 
     pub fn add(&mut self, node: Node) {
-        self.nodes.push(node)
+        self.nodes.push(node);
     }
 
     pub fn serialize(&self) -> Result<(Vec<u8>, Id)> {

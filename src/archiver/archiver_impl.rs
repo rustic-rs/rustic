@@ -240,7 +240,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 let size = chunk.len() as u64;
 
                 if !self.index.has_data(&id) {
-                    self.data_packer.add(&chunk, &id)?
+                    self.data_packer.add(&chunk, &id)?;
                 }
                 p.inc(size);
                 Ok((num, id, size))

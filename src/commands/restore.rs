@@ -78,9 +78,9 @@ pub(super) fn execute(
 
     if let Some(command) = &opts.warm_up_command {
         if !command.contains("%id") {
-            bail!("warm-up command must contain %id!")
+            bail!("warm-up command must contain %id!");
         }
-        info!("using warm-up command {command}")
+        info!("using warm-up command {command}");
     }
 
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
@@ -188,10 +188,10 @@ fn allocate_and_collect(
             entry.file_type().unwrap().is_dir(),
         ) {
             (true, true, true) => {
-                info!("would have removed the additional dir: {:?}", entry.path())
+                info!("would have removed the additional dir: {:?}", entry.path());
             }
             (true, true, false) => {
-                info!("would have removed the additional file: {:?}", entry.path())
+                info!("would have removed the additional file: {:?}", entry.path());
             }
             (true, false, true) => {
                 let path = entry.path();
@@ -391,7 +391,7 @@ fn restore_contents(
                                 p.inc(size);
                             });
                         }
-                    })
+                    });
                 }
             }
         }

@@ -327,9 +327,9 @@ pub fn map_mode_from_go(go_mode: u32) -> u32 {
     let mut mode = go_mode & MODE_PERM;
 
     if go_mode & GO_MODE_SOCKET > 0 {
-        mode |= S_IFSOCK
+        mode |= S_IFSOCK;
     } else if go_mode & GO_MODE_SYMLINK > 0 {
-        mode |= S_IFLNK
+        mode |= S_IFLNK;
     } else if go_mode & GO_MODE_DEVICE > 0 && go_mode & GO_MODE_CHARDEV == 0 {
         mode |= S_IFBLK;
     } else if go_mode & GO_MODE_DIR > 0 {

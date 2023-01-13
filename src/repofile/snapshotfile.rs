@@ -444,13 +444,13 @@ impl StringList {
 
     pub fn add_list(&mut self, sl: StringList) {
         for s in sl.0 {
-            self.add(s)
+            self.add(s);
         }
     }
 
     pub fn add_all(&mut self, string_lists: Vec<StringList>) {
         for sl in string_lists {
-            self.add_list(sl)
+            self.add_list(sl);
         }
     }
 

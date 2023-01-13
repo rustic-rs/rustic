@@ -101,7 +101,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
         // used blobs doesn't abort if they are already marked for deletion
         index_collector.extend(index.packs_to_delete.clone());
 
-        index_files.push((id, index))
+        index_files.push((id, index));
     }
     p.finish();
 
@@ -540,7 +540,7 @@ impl Pruner {
                             } else {
                                 // other partly used pack => candidate for repacking
                                 self.repack_candidates
-                                    .push((pi, PartlyUsed, index_num, pack_num))
+                                    .push((pi, PartlyUsed, index_num, pack_num));
                             }
                         }
                         (true, 0, _) => {

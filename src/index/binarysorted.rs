@@ -183,13 +183,13 @@ impl IntoIterator for Index {
     fn into_iter(mut self) -> Self::IntoIter {
         for (_, tc) in self.0.iter_mut() {
             if let EntriesVariants::FullEntries(entries) = &mut tc.entries {
-                entries.par_sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
+                entries.par_sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx));
             }
         }
         PackIndexes {
             c: Index(self.0.map(|_, mut tc| {
                 if let EntriesVariants::FullEntries(entries) = &mut tc.entries {
-                    entries.par_sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx))
+                    entries.par_sort_unstable_by(|e1, e2| e1.pack_idx.cmp(&e2.pack_idx));
                 }
 
                 TypeIndex {

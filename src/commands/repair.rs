@@ -127,7 +127,7 @@ fn repair_index(be: &impl DecryptFullBackend, opts: IndexOpts) -> Result<()> {
                         Some(PackHeaderRef::from_index_pack(&p).size()),
                         index_size,
                     ));
-                    *changed = true
+                    *changed = true;
                 } else {
                     new_index.add(p, to_delete);
                 }

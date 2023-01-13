@@ -103,8 +103,9 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
         }
         let mut results = vec![MapResult::None; vec.len()];
         for id in self.list(tpe)? {
+            let id_hex = id.to_hex();
             for (i, v) in vec.iter().enumerate() {
-                if id.to_hex().starts_with(v) {
+                if id_hex.starts_with(v) {
                     if results[i] == MapResult::None {
                         results[i] = MapResult::Some(id);
                     } else {

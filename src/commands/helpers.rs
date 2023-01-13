@@ -78,15 +78,14 @@ pub fn warm_up_command(packs: impl ExactSizeIterator<Item = Id>, command: &str) 
     let p = progress_counter("warming up packs...");
     p.set_length(packs.len() as u64);
     for pack in packs {
-        let id = pack.to_hex();
-        let actual_command = command.replace("%id", &id);
+        let actual_command = command.replace("%id", &pack.to_hex());
         debug!("calling {actual_command}...");
         let mut commands: Vec<_> = actual_command.split(' ').collect();
         let status = Command::new(commands[0])
             .args(&mut commands[1..])
             .status()?;
         if !status.success() {
-            bail!("warm-up command was not successful for pack {id}. {status}");
+            bail!("warm-up command was not successful for pack {pack:?}. {status}");
         }
     }
     p.finish();

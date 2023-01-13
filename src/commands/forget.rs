@@ -332,10 +332,11 @@ impl KeepOptions {
         let mut keep = false;
         let mut reason = Vec::new();
 
+        let snapshot_id_hex = sn.id.to_hex();
         if self
             .keep_ids
             .iter()
-            .any(|id| sn.id.to_hex().starts_with(id))
+            .any(|id| snapshot_id_hex.starts_with(id))
         {
             keep = true;
             reason.push("id");

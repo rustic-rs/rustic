@@ -203,6 +203,7 @@ pub fn execute() -> Result<()> {
 
     let repo = repo.open()?;
 
+    #[allow(clippy::match_same_arms)]
     match args.command {
         Command::Backup(opts) => backup::execute(repo, opts, config_file, command)?,
         Command::Config(opts) => config::execute(repo, opts)?,

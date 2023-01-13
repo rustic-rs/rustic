@@ -122,7 +122,6 @@ impl LocalSource {
 
         if !opts.exclude_if_present.is_empty() {
             walk_builder.filter_entry(move |entry| match entry.file_type() {
-                None => true,
                 Some(tpe) if tpe.is_dir() => {
                     for file in &opts.exclude_if_present {
                         if entry.path().join(file).exists() {
@@ -131,7 +130,7 @@ impl LocalSource {
                     }
                     true
                 }
-                Some(_) => true,
+                _ => true,
             });
         }
 

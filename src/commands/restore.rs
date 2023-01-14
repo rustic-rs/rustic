@@ -331,8 +331,8 @@ fn allocate_and_collect(
     Ok((file_infos, stats))
 }
 
-/// restore_contents restores all files contents as described by file_infos
-/// using the ReadBackend be and writing them into the LocalBackend dest.
+/// [`restore_contents`] restores all files contents as described by `file_infos`
+/// using the [`DecryptReadBackend`] `be` and writing them into the [`LocalBackend`] `dest`.
 fn restore_contents(
     be: &impl DecryptReadBackend,
     dest: &LocalBackend,
@@ -511,7 +511,7 @@ impl FileInfos {
         }
     }
 
-    /// Add the file to FilesInfos using index to get blob information.
+    /// Add the file to [`FileInfos`] using `index` to get blob information.
     /// Returns the computed length of the file
     fn add_file(
         &mut self,

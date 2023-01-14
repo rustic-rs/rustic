@@ -122,10 +122,10 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
     }
 }
 
-/// random_poly returns an random irreducible polynomial of degree 53
+/// [`random_poly`] returns an random irreducible polynomial of degree 53
 /// (largest prime number below 64-8)
 /// There are (2^53-2/53) irreducible polynomials of degree 53 in
-/// F_2[X], c.f. Michael O. Rabin (1981): "Fingerprinting by Random
+/// `F_2[X]`, c.f. Michael O. Rabin (1981): "Fingerprinting by Random
 /// Polynomials", page 4. If no polynomial could be found in one
 /// million tries, an error is returned.
 pub fn random_poly() -> Result<u64> {

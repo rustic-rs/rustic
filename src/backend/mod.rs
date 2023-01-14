@@ -29,7 +29,7 @@ use node::Node;
 pub use rclone::*;
 pub use rest::*;
 
-/// All FileTypes which are located in separated directories
+/// All [`FileType`]s which are located in separated directories
 pub const ALL_FILE_TYPES: [FileType; 4] = [
     FileType::Key,
     FileType::Snapshot,

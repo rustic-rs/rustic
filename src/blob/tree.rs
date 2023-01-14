@@ -86,7 +86,7 @@ impl IntoIterator for Tree {
     }
 }
 
-/// NodeStreamer recursively streams all nodes of a given tree including all subtrees in-order
+/// [`NodeStreamer`] recursively streams all nodes of a given tree including all subtrees in-order
 pub struct NodeStreamer<BE>
 where
     BE: IndexedBackend,
@@ -157,7 +157,7 @@ where
     }
 }
 
-/// TreeStreamerOnce recursively visits all trees and subtrees, but each tree ID only once
+/// [`TreeStreamerOnce`] recursively visits all trees and subtrees, but each tree ID only once
 pub struct TreeStreamerOnce {
     visited: HashSet<Id>,
     queue_in: Option<Sender<(PathBuf, Id, usize)>>,

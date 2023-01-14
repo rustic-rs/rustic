@@ -46,7 +46,7 @@ struct Opts {
     #[clap(flatten, help_heading = "REPOSITORY OPTIONS")]
     repository: RepositoryOptions,
 
-    /// Config profile to use. This parses the file <PROFILE>.toml in the config directory.
+    /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
     #[clap(
         short = 'P',
         long,

@@ -38,7 +38,7 @@ impl IndexEntry {
         }
     }
 
-    /// Get a blob described by IndexEntry from the backend
+    /// Get a blob described by [`IndexEntry`] from the backend
     pub fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Bytes> {
         let data = be.read_encrypted_partial(
             FileType::Pack,

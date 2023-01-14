@@ -113,7 +113,7 @@ impl SnapshotFile {
         snap
     }
 
-    /// Get a SnapshotFile from the backend
+    /// Get a [`SnapshotFile`] from the backend
     pub fn from_backend<B: DecryptReadBackend>(be: &B, id: &Id) -> Result<Self> {
         Ok(Self::set_id((*id, be.get_file(id)?)))
     }
@@ -130,7 +130,7 @@ impl SnapshotFile {
         }
     }
 
-    /// Get the latest SnapshotFile from the backend
+    /// Get the latest [`SnapshotFile`] from the backend
     pub fn latest<B: DecryptReadBackend>(
         be: &B,
         predicate: impl FnMut(&Self) -> bool + Send + Sync,
@@ -158,14 +158,14 @@ impl SnapshotFile {
         latest.ok_or_else(|| anyhow!("no snapshots found"))
     }
 
-    /// Get a SnapshotFile from the backend by (part of the) id
+    /// Get a [`SnapshotFile`] from the backend by (part of the) id
     pub fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> Result<Self> {
         info!("getting snapshot...");
         let id = be.find_id(FileType::Snapshot, id)?;
         SnapshotFile::from_backend(be, &id)
     }
 
-    /// Get a Vector of SnapshotFile from the backend by list of (parts of the) ids
+    /// Get a Vector of [`SnapshotFile`] from the backend by list of (parts of the) ids
     pub fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> Result<Vec<Self>> {
         let ids = be.find_ids(FileType::Snapshot, ids)?;
         be.stream_list::<Self>(ids, ProgressBar::hidden())?
@@ -209,7 +209,7 @@ impl SnapshotFile {
         })
     }
 
-    /// Get SnapshotFiles which match the filter grouped by the group criterion
+    /// Get [`SnapshotFile`]s which match the filter grouped by the group criterion
     /// from the backend
     pub fn group_from_backend<B: DecryptReadBackend>(
         be: &B,

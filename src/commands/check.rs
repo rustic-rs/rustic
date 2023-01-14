@@ -143,7 +143,7 @@ fn check_cache_files(
         return Ok(());
     }
 
-    let total_size = files.values().map(|size| *size as u64).sum();
+    let total_size = files.values().map(|size| u64::from(*size)).sum();
     p.set_length(total_size);
 
     files
@@ -168,7 +168,7 @@ fn check_cache_files(
                 (Ok(_), Ok(_)) => {} // everything ok
             }
 
-            p.inc(size as u64);
+            p.inc(u64::from(size));
         });
 
     p.finish();

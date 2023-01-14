@@ -334,7 +334,7 @@ fn repair_tree<BE: DecryptWriteBackend>(
                             match be.get_data(&blob) {
                                 Some(ie) => {
                                     new_content.push(blob);
-                                    new_size += ie.data_length() as u64;
+                                    new_size += u64::from(ie.data_length());
                                 }
                                 None => {
                                     file_changed = true;

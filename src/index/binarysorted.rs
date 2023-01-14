@@ -110,7 +110,7 @@ impl Extend<IndexPack> for IndexCollector {
             let idx = self.0[blob_type].packs.len();
             self.0[blob_type].packs.push((p.id, size));
 
-            self.0[blob_type].total_size += size as u64;
+            self.0[blob_type].total_size += u64::from(size);
 
             match &mut self.0[blob_type].entries {
                 EntriesVariants::None => {}

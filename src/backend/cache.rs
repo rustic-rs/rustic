@@ -211,7 +211,7 @@ impl Cache {
             &offset
         );
         let mut file = File::open(self.path(tpe, id))?;
-        file.seek(SeekFrom::Start(offset as u64))?;
+        file.seek(SeekFrom::Start(u64::from(offset)))?;
         let mut vec = vec![0; length as usize];
         file.read_exact(&mut vec)?;
         trace!("cache hit!");

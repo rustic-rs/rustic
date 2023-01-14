@@ -74,7 +74,7 @@ impl KeyFile {
             hostname,
             username,
             kdf: "scrypt".to_string(),
-            n: 2_u32.pow(params.log_n() as u32),
+            n: 2_u32.pow(u32::from(params.log_n())),
             r: params.r(),
             p: params.p(),
             created: with_created.then(Local::now),

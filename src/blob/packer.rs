@@ -57,12 +57,14 @@ impl PackSizer {
     pub fn size_ok(&self, size: u32) -> bool {
         let target_size = self.pack_size();
         // Note: we cast to u64 so that no overflow can occur in the multiplications
-        size as u64 * 100 >= target_size as u64 * self.min_packsize_tolerate_percent as u64
-            && size as u64 * 100 <= target_size as u64 * self.max_packsize_tolerate_percent as u64
+        u64::from(size) * 100
+            >= u64::from(target_size) * u64::from(self.min_packsize_tolerate_percent)
+            && u64::from(size) * 100
+                <= u64::from(target_size) * u64::from(self.max_packsize_tolerate_percent)
     }
 
     fn add_size(&mut self, added: u32) {
-        self.current_size += added as u64;
+        self.current_size += u64::from(added);
     }
 }
 
@@ -135,7 +137,13 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
                 NonZeroU32::new(data_len),
             ),
         };
-        self.add_raw(&data, id, data_len as u64, uncompressed_length, size_limit)
+        self.add_raw(
+            &data,
+            id,
+            u64::from(data_len),
+            uncompressed_length,
+            size_limit,
+        )
     }
 
     /// adds the already encrypted (and maybe compressed) blob to the packfile

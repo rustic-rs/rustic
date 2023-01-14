@@ -230,7 +230,7 @@ fn repair_snaps(
         BlobType::Tree,
         indexer.clone(),
         config,
-        index.total_size(&BlobType::Tree),
+        index.total_size(BlobType::Tree),
     )?;
 
     for mut snap in snapshots {

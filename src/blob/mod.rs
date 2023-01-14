@@ -23,7 +23,7 @@ pub enum BlobType {
 }
 
 impl BlobType {
-    pub fn is_cacheable(&self) -> bool {
+    pub fn is_cacheable(self) -> bool {
         match self {
             BlobType::Tree => true,
             BlobType::Data => false,

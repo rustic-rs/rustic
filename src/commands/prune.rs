@@ -107,7 +107,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
 
     let (used_ids, total_size) = {
         let index = index_collector.into_index();
-        let total_size = BlobTypeMap::init(|blob_type| index.total_size(&blob_type));
+        let total_size = BlobTypeMap::init(|blob_type| index.total_size(blob_type));
         let indexed_be = IndexBackend::new_from_index(&be.clone(), index);
         let used_ids = find_used_blobs(&indexed_be, ignore_snaps)?;
         (used_ids, total_size)

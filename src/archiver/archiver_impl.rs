@@ -51,14 +51,14 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             BlobType::Data,
             indexer.clone(),
             config,
-            index.total_size(&BlobType::Data),
+            index.total_size(BlobType::Data),
         )?;
         let tree_packer = Packer::new(
             be.clone(),
             BlobType::Tree,
             indexer.clone(),
             config,
-            index.total_size(&BlobType::Tree),
+            index.total_size(BlobType::Tree),
         )?;
         Ok(Self {
             path: PathBuf::default(),
@@ -231,7 +231,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         node: Node,
         p: ProgressBar,
     ) -> Result<()> {
-        let mut chunks: Vec<_> = ChunkIter::new(r, *node.meta().size() as usize, &self.poly)
+        let mut chunks: Vec<_> = ChunkIter::new(r, *node.meta().size() as usize, self.poly)
             .enumerate() // see below
             .par_bridge()
             .map(|(num, chunk)| {

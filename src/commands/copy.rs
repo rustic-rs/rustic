@@ -98,14 +98,14 @@ fn copy(
         BlobType::Data,
         indexer.clone(),
         &repo_dest.config,
-        index.total_size(&BlobType::Data),
+        index.total_size(BlobType::Data),
     )?;
     let tree_packer = Packer::new(
         be_dest.clone(),
         BlobType::Tree,
         indexer.clone(),
         &repo_dest.config,
-        index.total_size(&BlobType::Tree),
+        index.total_size(BlobType::Tree),
     )?;
 
     let p = progress_counter("copying blobs in snapshots...");

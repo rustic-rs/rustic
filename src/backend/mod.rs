@@ -47,8 +47,8 @@ pub enum FileType {
 }
 
 impl FileType {
-    pub fn name(&self) -> &str {
-        match &self {
+    pub fn name(self) -> &'static str {
+        match self {
             FileType::Config => "config",
             FileType::Snapshot => "snapshots",
             FileType::Index => "index",
@@ -57,7 +57,7 @@ impl FileType {
         }
     }
 
-    pub fn is_cacheable(&self) -> bool {
+    pub fn is_cacheable(self) -> bool {
         match self {
             FileType::Config | FileType::Key | FileType::Pack => false,
             FileType::Snapshot | FileType::Index => true,

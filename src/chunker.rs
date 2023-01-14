@@ -81,7 +81,7 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
         }
 
         self.rabin
-            .reset_and_prefill_window(&mut vec[vec.len() - 64..vec.len()].iter().cloned());
+            .reset_and_prefill_window(&mut vec[vec.len() - 64..vec.len()].iter().copied());
 
         loop {
             if vec.len() >= self.max_size {

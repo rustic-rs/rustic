@@ -18,9 +18,9 @@ pub trait DecryptReadBackend: ReadBackend {
 
     fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> Result<Bytes> {
         let decrypted = self.decrypt(&self.read_full(tpe, id)?)?;
-        Ok(match decrypted[0] {
-            b'{' | b'[' => decrypted,          // not compressed
-            2 => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
+        Ok(match decrypted.first() {
+            Some(b'{' | b'[') => decrypted,          // not compressed
+            Some(2) => decode_all(&decrypted[1..])?, // 2 indicates compressed data following
             _ => bail!("not supported"),
         }
         .into())

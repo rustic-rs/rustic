@@ -112,10 +112,10 @@ pub(super) fn execute(
                     ("remove", "id argument".to_string())
                 } else {
                     match group_keep.matches(sn, last, iter.peek().is_some(), latest_time) {
-                        None if default_keep => ("keep", "".to_string()),
+                        None if default_keep => ("keep", String::new()),
                         None => {
                             forget_snaps.push(sn.id);
-                            ("remove", "".to_string())
+                            ("remove", String::new())
                         }
                         Some(reason) => ("keep", reason),
                     }

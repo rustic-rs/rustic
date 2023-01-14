@@ -31,8 +31,8 @@ impl LocalBackend {
         let hex_id = id.to_hex();
         match tpe {
             FileType::Config => self.path.join("config"),
-            FileType::Pack => self.path.join("data").join(&hex_id[0..2]).join(&hex_id),
-            _ => self.path.join(tpe.name()).join(&hex_id),
+            FileType::Pack => self.path.join("data").join(&hex_id[0..2]).join(hex_id),
+            _ => self.path.join(tpe.name()).join(hex_id),
         }
     }
 }

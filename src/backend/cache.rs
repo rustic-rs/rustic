@@ -146,7 +146,7 @@ impl Cache {
 
     fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
         let hex_id = id.to_hex();
-        self.path.join(tpe.name()).join(&hex_id[0..2]).join(&hex_id)
+        self.path.join(tpe.name()).join(&hex_id[0..2]).join(hex_id)
     }
 
     pub fn list_with_size(&self, tpe: FileType) -> Result<HashMap<Id, u32>> {

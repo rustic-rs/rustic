@@ -20,7 +20,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
             for index in repo.dbe.stream_all::<IndexFile>(ProgressBar::hidden())? {
                 for pack in index?.1.packs {
                     for blob in pack.blobs {
-                        println!("{:?} {}", blob.tpe, blob.id.to_hex());
+                        println!("{:?} {:?}", blob.tpe, blob.id);
                     }
                 }
             }
@@ -34,7 +34,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
     };
 
     for id in repo.be.list(tpe)? {
-        println!("{}", id.to_hex());
+        println!("{:?}", id);
     }
 
     Ok(())

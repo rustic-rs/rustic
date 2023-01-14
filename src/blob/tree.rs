@@ -49,7 +49,7 @@ impl Tree {
     pub fn from_backend(be: &impl IndexedBackend, id: Id) -> Result<Self> {
         let data = be
             .get_tree(&id)
-            .ok_or_else(|| anyhow!("blob {} not found in index", id.to_hex()))?
+            .ok_or_else(|| anyhow!("blob {id:?} not found in index"))?
             .read_data(be.be())?;
 
         Ok(serde_json::from_slice(&data)?)

@@ -39,7 +39,7 @@ sha2 = "0.10"
 rand = "0.8"
 scrypt = { version = "0.10", default-features = false }
 # chunker / packer
-cdc = "0.1"
+# cdc = "0.1"
 integer-sqrt = "0.1"
 # serialization
 base64 = "0.20"

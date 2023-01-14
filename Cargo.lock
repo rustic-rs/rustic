@@ -212,12 +212,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cdc"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f421655f68953d1cae92f72da23d7842679bd413e96735dac14ba1bbdf1c155b"
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1719,7 +1713,6 @@ dependencies = [
  "bytes",
  "bytesize",
  "cachedir",
- "cdc",
  "chrono",
  "clap",
  "clap_complete",

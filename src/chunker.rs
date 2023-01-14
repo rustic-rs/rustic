@@ -1,8 +1,9 @@
 use std::io::{self, Read};
 
 use anyhow::{anyhow, Result};
-use cdc::{Polynom, Polynom64, Rabin64, RollingHash64};
 use rand::{thread_rng, Rng};
+
+use crate::cdc::{Polynom, Polynom64, Rabin64, RollingHash64};
 
 const SPLITMASK: u64 = (1u64 << 20) - 1;
 const KB: usize = 1024;
@@ -115,7 +116,7 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
             let byte = self.buf[self.pos];
             vec.push(byte);
             self.pos += 1;
-            self.rabin.slide(&byte);
+            self.rabin.slide(byte);
         }
         self.size_hint -= vec.len();
         Some(Ok(vec))

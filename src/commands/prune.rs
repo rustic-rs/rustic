@@ -589,9 +589,9 @@ impl Pruner {
         };
 
         self.repack_candidates.sort_unstable_by_key(|rc| rc.0);
-        let mut resize_packs: BlobTypeMap<Vec<_>> = Default::default();
-        let mut do_repack: BlobTypeMap<bool> = Default::default();
-        let mut repack_size: BlobTypeMap<u64> = Default::default();
+        let mut resize_packs = BlobTypeMap::<Vec<_>>::default();
+        let mut do_repack = BlobTypeMap::default();
+        let mut repack_size = BlobTypeMap::<u64>::default();
 
         for (pi, repack_reason, index_num, pack_num) in std::mem::take(&mut self.repack_candidates)
         {

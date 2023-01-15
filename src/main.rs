@@ -24,7 +24,14 @@
     unused_allocation,
     unused_comparisons,
     unused_parens,
-    while_true
+    while_true,
+    clippy::cast_lossless,
+    clippy::default_trait_access,
+    clippy::doc_markdown,
+    clippy::manual_string_new,
+    clippy::match_same_arms,
+    clippy::semicolon_if_nothing_returned,
+    clippy::trivially_copy_pass_by_ref
 )]
 
 use anyhow::Result;

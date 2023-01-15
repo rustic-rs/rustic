@@ -18,6 +18,7 @@ use nom::{
 };
 use rpassword::{prompt_password, read_password_from_bufread};
 use serde::Deserialize;
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::backend::{
     Cache, CachedBackend, ChooseBackend, DecryptBackend, DecryptReadBackend, DecryptWriteBackend,
@@ -26,6 +27,7 @@ use crate::backend::{
 use crate::crypto::Key;
 use crate::repofile::{find_key_in_backend, ConfigFile};
 
+#[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct RepositoryOptions {
@@ -75,10 +77,26 @@ pub struct RepositoryOptions {
         env = "RUSTIC_CACHE_DIR"
     )]
     cache_dir: Option<PathBuf>,
+
+    /// Warm up needed data pack files by only requesting them without processing
+    #[clap(long, global = true)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub(crate) warm_up: bool,
+
+    /// Warm up needed data pack files by running the command with %id replaced by pack id
+    #[clap(long, global = true, conflicts_with = "warm-up")]
+    pub(crate) warm_up_command: Option<String>,
+
+    /// Duration (e.g. 10m) to wait after warm up
+    #[clap(long, global = true, value_name = "DURATION")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub(crate) warm_up_wait: Option<humantime::Duration>,
 }
 
 // parse a command
-fn parse_command<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Vec<&'a str>, E> {
+pub(crate) fn parse_command<'a, E: ParseError<&'a str>>(
+    input: &'a str,
+) -> IResult<&'a str, Vec<&'a str>, E> {
     separated_list0(
         // a command is a list
         multispace1, // separated by one or more spaces
@@ -209,7 +227,7 @@ impl Repository {
                 _ => {}
             }
         let cache = (!self.opts.no_cache)
-            .then(|| Cache::new(config.id, self.opts.cache_dir).ok())
+            .then(|| Cache::new(config.id, self.opts.cache_dir.clone()).ok())
             .flatten();
         match &cache {
             None => info!("using no cache"),
@@ -228,6 +246,7 @@ impl Repository {
             be: self.be,
             be_hot: self.be_hot,
             config,
+            opts: self.opts,
         })
     }
 }
@@ -240,6 +259,7 @@ pub struct OpenRepository {
     pub(crate) cache: Option<Cache>,
     pub(crate) dbe: DecryptBackend<CachedBackend<HotColdBackend<ChooseBackend>>, Key>,
     pub(crate) config: ConfigFile,
+    pub(crate) opts: RepositoryOptions,
 }
 
 const MAX_PASSWORD_RETRIES: usize = 5;

@@ -4,7 +4,7 @@ use std::process::Command;
 use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use bytesize::ByteSize;
 use comfy_table::{
     presets::ASCII_MARKDOWN, Attribute, Cell, CellAlignment, ContentArrangement, Table,
@@ -14,8 +14,9 @@ use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use log::*;
 use rayon::ThreadPoolBuilder;
 
-use crate::backend::{DecryptReadBackend, FileType};
+use crate::backend::{FileType, ReadBackend};
 use crate::repofile::Id;
+use crate::repository::{parse_command, OpenRepository};
 
 pub fn bytes(b: u64) -> String {
     ByteSize(b).to_string_as(true)
@@ -74,28 +75,45 @@ pub fn progress_bytes(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
     p
 }
 
+pub fn warm_up_wait(
+    repo: &OpenRepository,
+    packs: impl ExactSizeIterator<Item = Id>,
+    wait: bool,
+) -> Result<()> {
+    if repo.opts.warm_up_command.is_some() {
+        warm_up_command(packs, repo.opts.warm_up_command.as_ref().unwrap())?;
+    } else if repo.opts.warm_up {
+        warm_up(&repo.be, packs)?;
+    }
+    if wait {
+        if let Some(wait) = repo.opts.warm_up_wait {
+            let p = progress_spinner(format!("waiting {}...", wait));
+            std::thread::sleep(*wait);
+            p.finish();
+        }
+    }
+    Ok(())
+}
+
 pub fn warm_up_command(packs: impl ExactSizeIterator<Item = Id>, command: &str) -> Result<()> {
     let p = progress_counter("warming up packs...");
     p.set_length(packs.len() as u64);
     for pack in packs {
         let actual_command = command.replace("%id", &pack.to_hex());
         debug!("calling {actual_command}...");
-        let mut commands: Vec<_> = actual_command.split(' ').collect();
+        let mut commands = parse_command::<()>(&actual_command)?.1;
         let status = Command::new(commands[0])
             .args(&mut commands[1..])
             .status()?;
         if !status.success() {
-            bail!("warm-up command was not successful for pack {pack:?}. {status}");
+            warn!("warm-up command was not successful for pack {pack:?}. {status}");
         }
     }
     p.finish();
     Ok(())
 }
 
-pub fn warm_up(
-    be: &impl DecryptReadBackend,
-    packs: impl ExactSizeIterator<Item = Id>,
-) -> Result<()> {
+pub fn warm_up(be: &impl ReadBackend, packs: impl ExactSizeIterator<Item = Id>) -> Result<()> {
     let mut be = be.clone();
     be.set_option("retry", "false")?;
 
@@ -119,14 +137,6 @@ pub fn warm_up(
     p.finish();
 
     Ok(())
-}
-
-pub fn wait(d: Option<humantime::Duration>) {
-    if let Some(wait) = d {
-        let p = progress_spinner(format!("waiting {}...", wait));
-        std::thread::sleep(*wait);
-        p.finish();
-    }
 }
 
 // Helpers for table output

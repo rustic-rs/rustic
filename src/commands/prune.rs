@@ -12,7 +12,7 @@ use itertools::Itertools;
 use log::*;
 use rayon::prelude::*;
 
-use super::{bytes, no_progress, progress_bytes, progress_counter, wait, warm_up, warm_up_command};
+use super::{bytes, no_progress, progress_bytes, progress_counter, warm_up_wait};
 use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType, ReadBackend};
 use crate::blob::{
     BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
@@ -69,18 +69,6 @@ pub(super) struct Opts {
     /// Do not repack packs which only needs to be resized
     #[clap(long)]
     no_resize: bool,
-
-    /// Warm up needed data pack files by only requesting them without processing
-    #[clap(long)]
-    warm_up: bool,
-
-    /// Warm up needed data pack files by running the command with %id replaced by pack id
-    #[clap(long, conflicts_with = "warm-up")]
-    warm_up_command: Option<String>,
-
-    /// Duration (e.g. 10m) to wait after warm up before doing the actual restore
-    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
-    warm_up_wait: Option<humantime::Duration>,
 }
 
 pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -> Result<()> {
@@ -143,15 +131,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
     pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
 
-    if opts.warm_up {
-        warm_up(be, pruner.repack_packs().into_iter())?;
-    } else if opts.warm_up_command.is_some() {
-        warm_up_command(
-            pruner.repack_packs().into_iter(),
-            opts.warm_up_command.as_ref().unwrap(),
-        )?;
-    }
-    wait(opts.warm_up_wait);
+    warm_up_wait(&repo, pruner.repack_packs().into_iter(), !opts.dry_run)?;
 
     if !opts.dry_run {
         pruner.do_prune(repo, opts)?;

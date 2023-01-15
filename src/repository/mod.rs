@@ -7,6 +7,15 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::*;
 use merge::Merge;
+use nom::{
+    branch::alt,
+    bytes::complete::{is_not, tag},
+    character::complete::multispace1,
+    error::ParseError,
+    multi::separated_list0,
+    sequence::delimited,
+    IResult,
+};
 use rpassword::{prompt_password, read_password_from_bufread};
 use serde::Deserialize;
 
@@ -68,6 +77,20 @@ pub struct RepositoryOptions {
     cache_dir: Option<PathBuf>,
 }
 
+// parse a command
+fn parse_command<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Vec<&'a str>, E> {
+    separated_list0(
+        // a command is a list
+        multispace1, // separated by one or more spaces
+        alt((
+            // and containing either
+            delimited(tag("\""), is_not("\""), tag("\"")), // strings wrapped in "", or
+            delimited(tag("'"), is_not("'"), tag("'")),    // strigns wrapped in '', or
+            is_not(" \t\r\n"),                             // strings not containing any space
+        )),
+    )(input)
+}
+
 pub struct Repository {
     pub(crate) name: String,
     pub(crate) be: HotColdBackend<ChooseBackend>,
@@ -120,7 +143,8 @@ impl Repository {
                 ))
             }
             (_, _, Some(command)) => {
-                let mut commands: Vec<_> = command.split(' ').collect();
+                let mut commands = parse_command::<()>(command)?.1;
+                debug!("commands: {commands:?}");
                 let output = Command::new(commands[0])
                     .args(&mut commands[1..])
                     .output()

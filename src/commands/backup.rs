@@ -13,7 +13,7 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
 use crate::archiver::{Archiver, Parent};
-use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource};
+use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource, ReadSourceEntry};
 use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
 use crate::repofile::{
@@ -267,24 +267,24 @@ pub(super) fn execute(
             let p = progress_bytes("determining size...");
             if !p.is_hidden() {
                 let size = src.size()?;
-                p.set_length(size);
+                if let Some(size) = size {
+                    p.set_length(size);
+                }
             };
             p.set_prefix("backing up...");
             let mut archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;
-            for item in src {
+            for item in src.entries() {
                 match item {
                     Err(e) => {
                         warn!("ignoring error {}\n", e);
                     }
-                    Ok((path, node)) => {
+                    Ok(ReadSourceEntry { path, node, open }) => {
                         let snapshot_path = if let Some(as_path) = &as_path {
-                            as_path
-                                .clone()
-                                .join(path.strip_prefix(&backup_path).unwrap())
+                            as_path.join(path.strip_prefix(&backup_path).unwrap())
                         } else {
                             path.clone()
                         };
-                        if let Err(e) = archiver.add_entry(&snapshot_path, &path, node, p.clone()) {
+                        if let Err(e) = archiver.add_entry(&snapshot_path, &path, node, open, p.clone()) {
                             warn!("ignoring error {} for {:?}\n", e, path);
                         }
                     }

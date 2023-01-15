@@ -144,10 +144,20 @@ pub trait WriteBackend: ReadBackend {
     fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
 }
 
-pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {
+pub struct ReadSourceEntry<F> {
+    pub path: PathBuf,
+    pub node: Node,
+    pub open: Option<F>,
+}
+
+pub trait ReadSource {
     type Reader: Read;
-    fn read(path: &Path) -> Result<Self::Reader>;
-    fn size(&self) -> Result<u64>;
+    type Open: FnOnce(&Path) -> Result<Self::Reader>;
+    type Iter: Iterator<Item = Result<ReadSourceEntry<Self::Open>>>;
+
+    fn size(&self) -> Result<Option<u64>>;
+
+    fn entries(self) -> Self::Iter;
 }
 
 pub trait WriteSource: Clone {

@@ -12,6 +12,7 @@ use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use users::{Groups, Users, UsersCache};
+use crate::backend::ReadSourceEntry;
 
 use super::{node::Metadata, node::NodeType, Node, ReadSource};
 
@@ -147,12 +148,14 @@ impl LocalSource {
     }
 }
 
+type OpenReaderFn = fn(&Path) -> Result<File>;
+
 impl ReadSource for LocalSource {
     type Reader = File;
-    fn read(path: &Path) -> Result<Self::Reader> {
-        Ok(File::open(path)?)
-    }
-    fn size(&self) -> Result<u64> {
+    type Open = OpenReaderFn;
+    type Iter = Self;
+
+    fn size(&self) -> Result<Option<u64>> {
         let mut size = 0;
         for entry in self.builder.build() {
             if let Err(e) = entry.and_then(|e| e.metadata()).map(|m| {
@@ -161,12 +164,16 @@ impl ReadSource for LocalSource {
                 warn!("ignoring error {}", e);
             }
         }
-        Ok(size)
+        Ok(Some(size))
+    }
+
+    fn entries(self) -> Self::Iter {
+        self
     }
 }
 
 impl Iterator for LocalSource {
-    type Item = Result<(PathBuf, Node)>;
+    type Item = Result<ReadSourceEntry<OpenReaderFn>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.walker.next() {
@@ -186,7 +193,7 @@ fn map_entry(
     with_atime: bool,
     ignore_devid: bool,
     cache: &UsersCache,
-) -> Result<(PathBuf, Node)> {
+) -> Result<ReadSourceEntry<OpenReaderFn>> {
     let name = entry.file_name();
     let m = entry.metadata()?;
 
@@ -258,7 +265,17 @@ fn map_entry(
     } else {
         Node::new_node(name, NodeType::File, meta)
     };
-    Ok((entry.path().to_path_buf(), node))
+    Ok(
+        ReadSourceEntry {
+            path: entry.into_path(),
+            node,
+            open: Some(open_file),
+        }
+    )
+}
+
+fn open_file(path: &Path) -> Result<File> {
+    File::open(path).map_err(Into::into)
 }
 
 const MODE_PERM: u32 = 0o777; // permission bits

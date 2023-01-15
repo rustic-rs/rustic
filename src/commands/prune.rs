@@ -101,13 +101,13 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
         // used blobs doesn't abort if they are already marked for deletion
         index_collector.extend(index.packs_to_delete.clone());
 
-        index_files.push((id, index))
+        index_files.push((id, index));
     }
     p.finish();
 
     let (used_ids, total_size) = {
         let index = index_collector.into_index();
-        let total_size = BlobTypeMap::init(|blob_type| index.total_size(&blob_type));
+        let total_size = BlobTypeMap::init(|blob_type| index.total_size(blob_type));
         let indexed_be = IndexBackend::new_from_index(&be.clone(), index);
         let used_ids = find_used_blobs(&indexed_be, ignore_snaps)?;
         (used_ids, total_size)
@@ -311,41 +311,41 @@ impl PrunePack {
         match todo {
             PackToDo::Undecided => panic!("not possible"),
             PackToDo::Keep => {
-                stats.blobs[tpe].used += pi.used_blobs as u64;
-                stats.blobs[tpe].unused += pi.unused_blobs as u64;
-                stats.size[tpe].used += pi.used_size as u64;
-                stats.size[tpe].unused += pi.unused_size as u64;
+                stats.blobs[tpe].used += u64::from(pi.used_blobs);
+                stats.blobs[tpe].unused += u64::from(pi.unused_blobs);
+                stats.size[tpe].used += u64::from(pi.used_size);
+                stats.size[tpe].unused += u64::from(pi.unused_size);
                 stats.packs.keep += 1;
             }
             PackToDo::Repack => {
-                stats.blobs[tpe].used += pi.used_blobs as u64;
-                stats.blobs[tpe].unused += pi.unused_blobs as u64;
-                stats.size[tpe].used += pi.used_size as u64;
-                stats.size[tpe].unused += pi.unused_size as u64;
+                stats.blobs[tpe].used += u64::from(pi.used_blobs);
+                stats.blobs[tpe].unused += u64::from(pi.unused_blobs);
+                stats.size[tpe].used += u64::from(pi.used_size);
+                stats.size[tpe].unused += u64::from(pi.unused_size);
                 stats.packs.repack += 1;
-                stats.blobs[tpe].repack += (pi.unused_blobs + pi.used_blobs) as u64;
-                stats.blobs[tpe].repackrm += pi.unused_blobs as u64;
-                stats.size[tpe].repack += (pi.unused_size + pi.used_size) as u64;
-                stats.size[tpe].repackrm += pi.unused_size as u64;
+                stats.blobs[tpe].repack += u64::from(pi.unused_blobs + pi.used_blobs);
+                stats.blobs[tpe].repackrm += u64::from(pi.unused_blobs);
+                stats.size[tpe].repack += u64::from(pi.unused_size + pi.used_size);
+                stats.size[tpe].repackrm += u64::from(pi.unused_size);
             }
 
             PackToDo::MarkDelete => {
-                stats.blobs[tpe].unused += pi.unused_blobs as u64;
-                stats.size[tpe].unused += pi.unused_size as u64;
-                stats.blobs[tpe].remove += pi.unused_blobs as u64;
-                stats.size[tpe].remove += pi.unused_size as u64;
+                stats.blobs[tpe].unused += u64::from(pi.unused_blobs);
+                stats.size[tpe].unused += u64::from(pi.unused_size);
+                stats.blobs[tpe].remove += u64::from(pi.unused_blobs);
+                stats.size[tpe].remove += u64::from(pi.unused_size);
             }
             PackToDo::Recover => {
                 stats.packs_to_delete.recover += 1;
-                stats.size_to_delete.recover += self.size as u64;
+                stats.size_to_delete.recover += u64::from(self.size);
             }
             PackToDo::Delete => {
                 stats.packs_to_delete.remove += 1;
-                stats.size_to_delete.remove += self.size as u64;
+                stats.size_to_delete.remove += u64::from(self.size);
             }
             PackToDo::KeepMarked => {
                 stats.packs_to_delete.keep += 1;
-                stats.size_to_delete.keep += self.size as u64;
+                stats.size_to_delete.keep += u64::from(self.size);
             }
         }
         self.to_do = todo;
@@ -540,7 +540,7 @@ impl Pruner {
                             } else {
                                 // other partly used pack => candidate for repacking
                                 self.repack_candidates
-                                    .push((pi, PartlyUsed, index_num, pack_num))
+                                    .push((pi, PartlyUsed, index_num, pack_num));
                             }
                         }
                         (true, 0, _) => {
@@ -589,9 +589,9 @@ impl Pruner {
         };
 
         self.repack_candidates.sort_unstable_by_key(|rc| rc.0);
-        let mut resize_packs: BlobTypeMap<Vec<_>> = Default::default();
-        let mut do_repack: BlobTypeMap<bool> = Default::default();
-        let mut repack_size: BlobTypeMap<u64> = Default::default();
+        let mut resize_packs = BlobTypeMap::<Vec<_>>::default();
+        let mut do_repack = BlobTypeMap::default();
+        let mut repack_size = BlobTypeMap::<u64>::default();
 
         for (pi, repack_reason, index_num, pack_num) in std::mem::take(&mut self.repack_candidates)
         {
@@ -599,7 +599,7 @@ impl Pruner {
             let blob_type = pi.blob_type;
 
             let total_repack_size: u64 = repack_size.into_values().sum();
-            if total_repack_size + pi.used_size as u64 >= max_repack
+            if total_repack_size + u64::from(pi.used_size) >= max_repack
                 || (self.stats.size.sum().unused_after_prune() < max_unused
                     && repack_reason == PartlyUsed
                     && blob_type == BlobType::Data)
@@ -608,10 +608,10 @@ impl Pruner {
                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
             } else if repack_reason == SizeMismatch {
                 resize_packs[blob_type].push((pi, index_num, pack_num));
-                repack_size[blob_type] += pi.used_size as u64;
+                repack_size[blob_type] += u64::from(pi.used_size);
             } else {
                 pack.set_todo(PackToDo::Repack, &pi, &mut self.stats);
-                repack_size[blob_type] += pi.used_size as u64;
+                repack_size[blob_type] += u64::from(pi.used_size);
                 do_repack[blob_type] = true;
             }
         }
@@ -619,7 +619,7 @@ impl Pruner {
             // packs in resize_packs are only repacked if we anyway repack this blob type or
             // if the target pack size is reached for the blob type.
             let todo = if do_repack[blob_type]
-                || repack_size[blob_type] > pack_sizer[blob_type].pack_size() as u64
+                || repack_size[blob_type] > u64::from(pack_sizer[blob_type].pack_size())
             {
                 PackToDo::Repack
             } else {
@@ -672,7 +672,7 @@ impl Pruner {
 
         // all remaining packs in existing_packs are unreferenced packs
         for size in self.existing_packs.values() {
-            self.stats.size_unref += *size as u64;
+            self.stats.size_unref += u64::from(*size);
         }
 
         Ok(())
@@ -827,7 +827,7 @@ impl Pruner {
         let size_after_prune = BlobTypeMap::init(|blob_type| {
             self.stats.size[blob_type].total_after_prune()
                 + self.stats.blobs[blob_type].total_after_prune()
-                    * HeaderEntry::ENTRY_LEN_COMPRESSED as u64
+                    * u64::from(HeaderEntry::ENTRY_LEN_COMPRESSED)
         });
 
         let tree_repacker = Repacker::new(
@@ -928,7 +928,7 @@ impl Pruner {
                         } else {
                             repacker.add(&pack.id, blob)?;
                         }
-                        p.inc(blob.length as u64);
+                        p.inc(u64::from(blob.length));
                     }
                     if opts.instant_delete {
                         delete_pack(pack);
@@ -1016,8 +1016,8 @@ impl Ord for PackInfo {
             // then order such that packs with highest
             // ratio unused/used space are picked first.
             // This is equivalent to ordering by unused / total space.
-            (other.unused_size as u64 * self.used_size as u64)
-                .cmp(&(self.unused_size as u64 * other.used_size as u64)),
+            (u64::from(other.unused_size) * u64::from(self.used_size))
+                .cmp(&(u64::from(self.unused_size) * u64::from(other.used_size))),
         )
     }
 }

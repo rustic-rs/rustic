@@ -274,7 +274,7 @@ pub(super) fn execute(
             for item in src {
                 match item {
                     Err(e) => {
-                        warn!("ignoring error {}\n", e)
+                        warn!("ignoring error {}\n", e);
                     }
                     Ok((path, node)) => {
                         let snapshot_path = if let Some(as_path) = &as_path {

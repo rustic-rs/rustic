@@ -18,7 +18,7 @@ impl Hasher {
     }
 
     pub fn update(&mut self, data: &[u8]) {
-        self.0.update(data)
+        self.0.update(data);
     }
 
     pub fn finalize(&mut self) -> Id {

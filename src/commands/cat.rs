@@ -75,7 +75,7 @@ fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<(
 
 fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id)?;
-    let data = IndexBackend::new(be, ProgressBar::hidden())?.blob_from_backend(&tpe, &id)?;
+    let data = IndexBackend::new(be, ProgressBar::hidden())?.blob_from_backend(tpe, &id)?;
     print!("{}", String::from_utf8(data.to_vec())?);
 
     Ok(())
@@ -93,7 +93,7 @@ fn cat_tree(
     let index = IndexBackend::new(be, progress_counter(""))?;
     let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
     let id = node.subtree.ok_or_else(|| anyhow!("{path} is no dir"))?;
-    let data = index.blob_from_backend(&BlobType::Tree, &id)?;
+    let data = index.blob_from_backend(BlobType::Tree, &id)?;
     println!("{}", String::from_utf8(data.to_vec())?);
 
     Ok(())

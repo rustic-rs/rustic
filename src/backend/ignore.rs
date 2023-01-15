@@ -122,7 +122,6 @@ impl LocalSource {
 
         if !opts.exclude_if_present.is_empty() {
             walk_builder.filter_entry(move |entry| match entry.file_type() {
-                None => true,
                 Some(tpe) if tpe.is_dir() => {
                     for file in &opts.exclude_if_present {
                         if entry.path().join(file).exists() {
@@ -131,7 +130,7 @@ impl LocalSource {
                     }
                     true
                 }
-                Some(_) => true,
+                _ => true,
             });
         }
 
@@ -290,8 +289,8 @@ const S_ISUID: u32 = 0o4000; // set-user-ID bit (see execve(2))
 const S_ISGID: u32 = 0o2000; // set-group-ID bit (see below)
 const S_ISVTX: u32 = 0o1000; // sticky bit (see below)
 
-/// map st_mode from POSIX (inode(7)) to golang's definition (https://pkg.go.dev/io/fs#ModeType)
-/// Note, that it only sets the bits os.ModePerm | os.ModeType | os.ModeSetuid | os.ModeSetgid | os.ModeSticky
+/// map `st_mode` from POSIX (`inode(7)`) to golang's definition (<https://pkg.go.dev/io/fs#ModeType>)
+/// Note, that it only sets the bits `os.ModePerm | os.ModeType | os.ModeSetuid | os.ModeSetgid | os.ModeSticky`
 /// to stay compatible with the restic implementation
 fn map_mode_to_go(mode: u32) -> u32 {
     let mut go_mode = mode & MODE_PERM;
@@ -321,15 +320,15 @@ fn map_mode_to_go(mode: u32) -> u32 {
     go_mode
 }
 
-/// map gloangs mode definition (https://pkg.go.dev/io/fs#ModeType) to t_mode from POSIX (inode(7))
-/// This is the inverse function to map_mode_to_go()
+/// map golangs mode definition (<https://pkg.go.dev/io/fs#ModeType>) to `st_mode` from POSIX (`inode(7)`)
+/// This is the inverse function to [`map_mode_to_go`]
 pub fn map_mode_from_go(go_mode: u32) -> u32 {
     let mut mode = go_mode & MODE_PERM;
 
     if go_mode & GO_MODE_SOCKET > 0 {
-        mode |= S_IFSOCK
+        mode |= S_IFSOCK;
     } else if go_mode & GO_MODE_SYMLINK > 0 {
-        mode |= S_IFLNK
+        mode |= S_IFLNK;
     } else if go_mode & GO_MODE_DEVICE > 0 && go_mode & GO_MODE_CHARDEV == 0 {
         mode |= S_IFBLK;
     } else if go_mode & GO_MODE_DIR > 0 {
@@ -339,6 +338,7 @@ pub fn map_mode_from_go(go_mode: u32) -> u32 {
     } else if go_mode & GO_MODE_FIFO > 0 {
         mode |= S_IFIFO;
     } else if go_mode & GO_MODE_IRREG > 0 {
+        // note that POSIX specifies regular files, whereas golang specifies irregular files
     } else {
         mode |= S_IFREG;
     }

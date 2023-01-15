@@ -88,18 +88,8 @@ impl HeaderEntry {
     // the length of this header entry
     fn length(&self) -> u32 {
         match &self {
-            Self::Data { len: _, id: _ } => Self::ENTRY_LEN,
-            Self::Tree { len: _, id: _ } => Self::ENTRY_LEN,
-            Self::CompData {
-                len: _,
-                len_data: _,
-                id: _,
-            } => Self::ENTRY_LEN_COMPRESSED,
-            Self::CompTree {
-                len: _,
-                len_data: _,
-                id: _,
-            } => Self::ENTRY_LEN_COMPRESSED,
+            Self::Data { .. } | Self::Tree { .. } => Self::ENTRY_LEN,
+            Self::CompData { .. } | Self::CompTree { .. } => Self::ENTRY_LEN_COMPRESSED,
         }
     }
 

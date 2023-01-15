@@ -170,7 +170,7 @@ fn display_snap(sn: SnapshotFile) {
     };
     add_entry("Parent", parent);
     if let Some(summary) = sn.summary {
-        add_entry("", "".to_string());
+        add_entry("", String::new());
         add_entry("Command", summary.command);
 
         let source = format!(
@@ -180,7 +180,7 @@ fn display_snap(sn: SnapshotFile) {
             bytes(summary.total_bytes_processed)
         );
         add_entry("Source", source);
-        add_entry("", "".to_string());
+        add_entry("", String::new());
 
         let files = format!(
             "new: {:>10} / changed: {:>10} / unchanged: {:>10}",
@@ -193,7 +193,7 @@ fn display_snap(sn: SnapshotFile) {
             summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified,
         );
         add_entry("Dirs", trees);
-        add_entry("", "".to_string());
+        add_entry("", String::new());
 
         let written = format!(
             "data:  {:>10} blobs / raw: {:>10} / packed: {:>10}\n\

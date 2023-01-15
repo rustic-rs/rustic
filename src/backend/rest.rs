@@ -42,7 +42,7 @@ impl Backoff for MaybeBackoff {
 
     fn reset(&mut self) {
         if let Some(b) = self.0.as_mut() {
-            b.reset()
+            b.reset();
         }
     }
 }

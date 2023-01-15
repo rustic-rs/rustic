@@ -38,7 +38,7 @@ impl IndexEntry {
         }
     }
 
-    /// Get a blob described by IndexEntry from the backend
+    /// Get a blob described by [`IndexEntry`] from the backend
     pub fn read_data<B: DecryptReadBackend>(&self, be: &B) -> Result<Bytes> {
         let data = be.read_encrypted_partial(
             FileType::Pack,
@@ -60,24 +60,24 @@ impl IndexEntry {
 }
 
 pub trait ReadIndex {
-    fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry>;
-    fn total_size(&self, tpe: &BlobType) -> u64;
-    fn has(&self, tpe: &BlobType, id: &Id) -> bool;
+    fn get_id(&self, tpe: BlobType, id: &Id) -> Option<IndexEntry>;
+    fn total_size(&self, tpe: BlobType) -> u64;
+    fn has(&self, tpe: BlobType, id: &Id) -> bool;
 
     fn get_tree(&self, id: &Id) -> Option<IndexEntry> {
-        self.get_id(&BlobType::Tree, id)
+        self.get_id(BlobType::Tree, id)
     }
 
     fn get_data(&self, id: &Id) -> Option<IndexEntry> {
-        self.get_id(&BlobType::Data, id)
+        self.get_id(BlobType::Data, id)
     }
 
     fn has_tree(&self, id: &Id) -> bool {
-        self.has(&BlobType::Tree, id)
+        self.has(BlobType::Tree, id)
     }
 
     fn has_data(&self, id: &Id) -> bool {
-        self.has(&BlobType::Data, id)
+        self.has(BlobType::Data, id)
     }
 }
 
@@ -86,7 +86,7 @@ pub trait IndexedBackend: ReadIndex + Clone + Sync + Send + 'static {
 
     fn be(&self) -> &Self::Backend;
 
-    fn blob_from_backend(&self, tpe: &BlobType, id: &Id) -> Result<Bytes> {
+    fn blob_from_backend(&self, tpe: BlobType, id: &Id) -> Result<Bytes> {
         match self.get_id(tpe, id) {
             None => Err(anyhow!("blob not found in index")),
             Some(ie) => ie.read_data(self.be()),
@@ -101,14 +101,14 @@ pub struct IndexBackend<BE: DecryptReadBackend> {
 }
 
 impl<BE: DecryptReadBackend> ReadIndex for IndexBackend<BE> {
-    fn get_id(&self, tpe: &BlobType, id: &Id) -> Option<IndexEntry> {
+    fn get_id(&self, tpe: BlobType, id: &Id) -> Option<IndexEntry> {
         self.index.get_id(tpe, id)
     }
 
-    fn total_size(&self, tpe: &BlobType) -> u64 {
+    fn total_size(&self, tpe: BlobType) -> u64 {
         self.index.total_size(tpe)
     }
-    fn has(&self, tpe: &BlobType, id: &Id) -> bool {
+    fn has(&self, tpe: BlobType, id: &Id) -> bool {
         self.index.has(tpe, id)
     }
 }

@@ -33,13 +33,13 @@ pub(super) fn execute(repo: OpenRepository, _opts: Opts) -> Result<()> {
     impl Info {
         fn add(&mut self, ie: IndexEntry) {
             self.count += 1;
-            self.size += *ie.length() as u64;
-            self.data_size += ie.data_length() as u64;
+            self.size += u64::from(*ie.length());
+            self.data_size += u64::from(ie.data_length());
         }
 
         fn add_pack(&mut self, ip: &IndexPack) {
             self.pack_count += 1;
-            let size = ip.pack_size() as u64;
+            let size = u64::from(ip.pack_size());
             self.total_pack_size += size;
             self.min_pack_size = self.min_pack_size.min(size);
             self.max_pack_size = self.max_pack_size.max(size);
@@ -135,7 +135,7 @@ fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
     for tpe in ALL_FILE_TYPES {
         let list = be.list_with_size(tpe)?;
         let count = list.len();
-        let size = list.iter().map(|f| f.1 as u64).sum();
+        let size = list.iter().map(|f| u64::from(f.1)).sum();
         table.add_row([format!("{:?}", tpe), count.to_string(), bytes(size)]);
         total_count += count;
         total_size += size;

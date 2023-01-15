@@ -155,7 +155,7 @@ pub fn escape_filename(name: &OsStr) -> String {
                     for b in &after_valid[..invalid_sequence_length] {
                         write!(s, "\\x{b:02x}").unwrap();
                     }
-                    input = &after_valid[invalid_sequence_length..]
+                    input = &after_valid[invalid_sequence_length..];
                 } else {
                     for b in after_valid {
                         write!(s, "\\x{b:02x}").unwrap();
@@ -193,7 +193,7 @@ pub fn unescape_filename(s: &str) -> Result<OsString> {
                         // hex
                         'x' => {
                             let hex = take(&mut chars, 2);
-                            u.push(u8::from_str_radix(&hex, 16)?)
+                            u.push(u8::from_str_radix(&hex, 16)?);
                         }
                         // unicode
                         'u' => {

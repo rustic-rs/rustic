@@ -34,7 +34,7 @@ pub struct Id(
     [u8; LEN],
 );
 
-/// IdError describes the errors that can be returned by processing IDs
+/// [`IdError`] describes the errors that can be returned by processing IDs
 #[derive(Error, Debug)]
 pub enum IdError {
     #[error("Hex decoding error")]

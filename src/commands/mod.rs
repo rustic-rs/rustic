@@ -46,7 +46,7 @@ struct Opts {
     #[clap(flatten, help_heading = "REPOSITORY OPTIONS")]
     repository: RepositoryOptions,
 
-    /// Config profile to use. This parses the file <PROFILE>.toml in the config directory.
+    /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
     #[clap(
         short = 'P',
         long,
@@ -203,6 +203,7 @@ pub fn execute() -> Result<()> {
 
     let repo = repo.open()?;
 
+    #[allow(clippy::match_same_arms)]
     match args.command {
         Command::Backup(opts) => backup::execute(repo, opts, config_file, command)?,
         Command::Config(opts) => config::execute(repo, opts)?,

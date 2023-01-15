@@ -29,13 +29,13 @@ pub struct ChunkIter<R: Read + Send> {
 }
 
 impl<R: Read + Send> ChunkIter<R> {
-    pub fn new(reader: R, size_hint: usize, poly: &Polynom64) -> Self {
+    pub fn new(reader: R, size_hint: usize, poly: Polynom64) -> Self {
         Self {
             buf: Vec::with_capacity(4 * KB),
             pos: 0,
             reader,
             predicate: default_predicate,
-            rabin: Rabin64::new_with_polynom(6, poly),
+            rabin: Rabin64::new_with_polynom(6, &poly),
             size_hint, // size hint is used to optimize memory allocation; this should be an upper bound on the size
             min_size: MIN_SIZE,
             max_size: MAX_SIZE,
@@ -81,7 +81,7 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
         }
 
         self.rabin
-            .reset_and_prefill_window(&mut vec[vec.len() - 64..vec.len()].iter().cloned());
+            .reset_and_prefill_window(&mut vec[vec.len() - 64..vec.len()].iter().copied());
 
         loop {
             if vec.len() >= self.max_size {
@@ -122,10 +122,10 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
     }
 }
 
-/// random_poly returns an random irreducible polynomial of degree 53
+/// [`random_poly`] returns an random irreducible polynomial of degree 53
 /// (largest prime number below 64-8)
 /// There are (2^53-2/53) irreducible polynomials of degree 53 in
-/// F_2[X], c.f. Michael O. Rabin (1981): "Fingerprinting by Random
+/// `F_2[X]`, c.f. Michael O. Rabin (1981): "Fingerprinting by Random
 /// Polynomials", page 4. If no polynomial could be found in one
 /// million tries, an error is returned.
 pub fn random_poly() -> Result<u64> {
@@ -165,7 +165,7 @@ impl PolynomExtend for Polynom64 {
     // Finite Fields".
     fn irreducible(&self) -> bool {
         for i in 1..=self.degree() / 2 {
-            if self.gcd(&qp(i, self)) != 1 {
+            if self.gcd(&qp(i, *self)) != 1 {
                 return false;
             }
         }
@@ -219,17 +219,17 @@ impl PolynomExtend for Polynom64 {
 
 // qp computes the polynomial (x^(2^p)-x) mod g. This is needed for the
 // reducibility test.
-fn qp(p: i32, g: &Polynom64) -> Polynom64 {
+fn qp(p: i32, g: Polynom64) -> Polynom64 {
     // start with x
     let mut res: Polynom64 = 2;
 
     for _ in 0..p {
         // repeatedly square res
-        res = res.mulmod(&res, g);
+        res = res.mulmod(&res, &g);
     }
 
     // add x
-    res.add(&2).modulo(g)
+    res.add(&2).modulo(&g)
 }
 
 #[cfg(test)]
@@ -243,7 +243,7 @@ mod tests {
         let mut reader = Cursor::new(empty);
 
         let poly = random_poly().unwrap();
-        let chunker = ChunkIter::new(&mut reader, 0, &poly);
+        let chunker = ChunkIter::new(&mut reader, 0, poly);
 
         let chunks: Vec<_> = chunker.into_iter().collect();
         assert_eq!(0, chunks.len());
@@ -255,7 +255,7 @@ mod tests {
         let mut reader = Cursor::new(empty);
 
         let poly = random_poly().unwrap();
-        let chunker = ChunkIter::new(&mut reader, 100, &poly);
+        let chunker = ChunkIter::new(&mut reader, 100, poly);
 
         let chunks: Vec<_> = chunker.into_iter().collect();
         assert_eq!(0, chunks.len());
@@ -266,7 +266,7 @@ mod tests {
         let mut reader = repeat(0u8);
 
         let poly = random_poly().unwrap();
-        let mut chunker = ChunkIter::new(&mut reader, usize::MAX, &poly);
+        let mut chunker = ChunkIter::new(&mut reader, usize::MAX, poly);
 
         let chunk = chunker.next().unwrap().unwrap();
         assert_eq!(MIN_SIZE, chunk.len());

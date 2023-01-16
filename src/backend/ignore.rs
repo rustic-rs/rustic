@@ -2,7 +2,8 @@ use std::fs::{read_link, File};
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use crate::backend::{ReadSourceEntry, ReadSourceOpen};
+use anyhow::{Context, Result};
 use bytesize::ByteSize;
 use chrono::{Local, TimeZone, Utc};
 use clap::Parser;
@@ -12,7 +13,6 @@ use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use users::{Groups, Users, UsersCache};
-use crate::backend::ReadSourceEntry;
 
 use super::{node::Metadata, node::NodeType, Node, ReadSource};
 
@@ -148,11 +148,18 @@ impl LocalSource {
     }
 }
 
-type OpenReaderFn = fn(&Path) -> Result<File>;
+pub struct OpenFile;
+
+impl ReadSourceOpen for OpenFile {
+    type Reader = File;
+
+    fn open(self, path: &Path) -> Result<Self::Reader> {
+        File::open(path).with_context(|| format!("Unable to open {}", path.display()))
+    }
+}
 
 impl ReadSource for LocalSource {
-    type Reader = File;
-    type Open = OpenReaderFn;
+    type Open = OpenFile;
     type Iter = Self;
 
     fn size(&self) -> Result<Option<u64>> {
@@ -173,7 +180,7 @@ impl ReadSource for LocalSource {
 }
 
 impl Iterator for LocalSource {
-    type Item = Result<ReadSourceEntry<OpenReaderFn>>;
+    type Item = Result<ReadSourceEntry<OpenFile>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.walker.next() {
@@ -193,7 +200,7 @@ fn map_entry(
     with_atime: bool,
     ignore_devid: bool,
     cache: &UsersCache,
-) -> Result<ReadSourceEntry<OpenReaderFn>> {
+) -> Result<ReadSourceEntry<OpenFile>> {
     let name = entry.file_name();
     let m = entry.metadata()?;
 
@@ -265,17 +272,11 @@ fn map_entry(
     } else {
         Node::new_node(name, NodeType::File, meta)
     };
-    Ok(
-        ReadSourceEntry {
-            path: entry.into_path(),
-            node,
-            open: Some(open_file),
-        }
-    )
-}
-
-fn open_file(path: &Path) -> Result<File> {
-    File::open(path).map_err(Into::into)
+    Ok(ReadSourceEntry {
+        path: entry.into_path(),
+        node,
+        open: Some(OpenFile),
+    })
 }
 
 const MODE_PERM: u32 = 0o777; // permission bits

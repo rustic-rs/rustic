@@ -8,7 +8,7 @@ use indicatif::ProgressBar;
 use log::*;
 use rayon::prelude::*;
 
-use crate::backend::DecryptWriteBackend;
+use crate::backend::{DecryptWriteBackend, ReadSourceOpen};
 use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
@@ -102,12 +102,12 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.summary.total_dirsize_processed += size;
     }
 
-    pub fn add_entry<R: Read + Send + 'static>(
+    pub fn add_entry(
         &mut self,
         path: &Path,
         real_path: &Path,
         node: Node,
-        open_fn: Option<impl FnOnce(&Path) -> Result<R>>,
+        open: Option<impl ReadSourceOpen>,
         p: ProgressBar,
     ) -> Result<()> {
         let basepath = if node.is_dir() {
@@ -147,9 +147,9 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         match node.node_type() {
             NodeType::File => {
-                let open_fn =
-                    open_fn.expect("ReadSourceEntry should always provide a reader for file types");
-                self.backup_file(real_path, node, open_fn, p)?;
+                let open =
+                    open.expect("ReadSourceEntry should always provide a reader for file types");
+                self.backup_file(real_path, node, open, p)?;
             }
             NodeType::Dir => {}          // is already handled, see above
             _ => self.add_file(node, 0), // all other cases: just save the given node
@@ -207,11 +207,11 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         Ok(())
     }
 
-    pub fn backup_file<R: Read + Send + 'static>(
+    pub fn backup_file(
         &mut self,
         path: &Path,
         node: Node,
-        open_fn: impl FnOnce(&Path) -> Result<R>,
+        opener: impl ReadSourceOpen,
         p: ProgressBar,
     ) -> Result<()> {
         if let ParentResult::Matched(p_node) = self.parent.is_parent(&node) {
@@ -229,7 +229,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 );
             }
         }
-        let f = open_fn(path)?;
+        let f = opener.open(path)?;
         self.backup_reader(f, node, p)
     }
 

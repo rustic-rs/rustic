@@ -87,6 +87,8 @@ itertools = "0.10"
 simplelog = "0.12"
 comfy-table = "6.1.4"
 libc="0.2"
+tar = "0.4"
+ouroboros = "0.15"
 
 [dev-dependencies]
 rstest = "0.16"

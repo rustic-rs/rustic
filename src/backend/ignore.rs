@@ -310,7 +310,7 @@ const S_ISVTX: u32 = 0o1000; // sticky bit (see below)
 /// map `st_mode` from POSIX (`inode(7)`) to golang's definition (<https://pkg.go.dev/io/fs#ModeType>)
 /// Note, that it only sets the bits `os.ModePerm | os.ModeType | os.ModeSetuid | os.ModeSetgid | os.ModeSticky`
 /// to stay compatible with the restic implementation
-fn map_mode_to_go(mode: u32) -> u32 {
+pub(crate) fn map_mode_to_go(mode: u32) -> u32 {
     let mut go_mode = mode & MODE_PERM;
 
     match mode & S_IFFORMAT {

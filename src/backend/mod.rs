@@ -17,6 +17,7 @@ pub mod local;
 pub mod node;
 pub mod rclone;
 pub mod rest;
+pub mod tar;
 
 pub use self::ignore::*;
 pub use cache::*;

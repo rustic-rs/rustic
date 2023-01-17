@@ -14,7 +14,9 @@ use serde_with::{serde_as, DisplayFromStr};
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
 use crate::archiver::{Archiver, Parent};
 use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource, ReadSourceEntry};
+use crate::backend::tar::TarSource;
 use crate::blob::{Metadata, Node, NodeType};
+use crate::commands::helpers::progress_spinner;
 use crate::index::IndexBackend;
 use crate::repofile::{
     DeleteOption, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotSummary, StringList,
@@ -86,6 +88,11 @@ pub(super) struct Opts {
     #[clap(long, value_name = "FILENAME", default_value = "stdin")]
     #[merge(skip)]
     stdin_filename: String,
+
+    /// When backing up from stdin, treat stdin as a tar archive
+    #[clap(long)]
+    #[merge(skip)]
+    stdin_tar: bool,
 
     /// Manually set backup path in snapshot
     #[clap(long, value_name = "PATH")]
@@ -244,23 +251,52 @@ pub(super) fn execute(
         let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode);
 
         let snap = if backup_stdin {
-            let mut archiver = Archiver::new(be, index, &repo.config, parent, snap)?;
-            let p = progress_bytes("starting backup from stdin...");
-            archiver.backup_reader(
-                std::io::stdin(),
-                Node::new(
-                    backup_path_str,
-                    NodeType::File,
-                    Metadata::default(),
-                    None,
-                    None,
-                ),
-                p.clone(),
-            )?;
+            if !opts.stdin_tar {
+                let mut archiver = Archiver::new(be, index, &repo.config, parent, snap)?;
+                let p = progress_bytes("starting backup from stdin...");
+                archiver.backup_reader(
+                    std::io::stdin(),
+                    Node::new(
+                        backup_path_str,
+                        NodeType::File,
+                        Metadata::default(),
+                        None,
+                        None,
+                    ),
+                    p.clone(),
+                )?;
 
-            let snap = archiver.finalize_snapshot()?;
-            p.finish_with_message("done");
-            snap
+                let snap = archiver.finalize_snapshot()?;
+                p.finish_with_message("done");
+                snap
+            } else {
+                let mut archive = tar::Archive::new(std::io::stdin());
+                archive.set_ignore_zeros(true);
+                let src = TarSource::new(archive)?;
+                let p = progress_spinner("backing up from piped tar archive");
+
+                let mut archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;
+                for item in src.entries() {
+                    match item {
+                        Err(e) => {
+                            warn!("ignoring error {}\n", e);
+                        }
+                        Ok(ReadSourceEntry { path, node, open }) => {
+                            let snapshot_path = if let Some(as_path) = &as_path {
+                                as_path.join(path.strip_prefix(&backup_path).unwrap())
+                            } else {
+                                path.clone()
+                            };
+                            if let Err(e) = archiver.add_entry(&snapshot_path, &path, node, open, p.clone()) {
+                                warn!("ignoring error {} for {:?}\n", e, path);
+                            }
+                        }
+                    }
+                }
+                let snap = archiver.finalize_snapshot()?;
+                p.finish_with_message("done");
+                snap
+            }
         } else {
             let src = LocalSource::new(opts.ignore_opts.clone(), backup_path.clone())?;
 

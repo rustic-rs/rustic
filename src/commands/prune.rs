@@ -1012,29 +1012,65 @@ impl PackInfo {
             unused_size: 0,
         };
 
-        // check if the pack has used blobs which are no duplicates
-        let needed_pack = pack
-            .blobs
-            .iter()
-            .any(|blob| used_ids.get(&blob.id) == Some(&1));
-
-        for blob in &pack.blobs {
-            let count = used_ids.get_mut(&blob.id);
-            match count {
+        // We search all blobs in the pack for needed ones. We do this by already marking
+        // and decreasing the used blob counter for the processed blobs. If the counter
+        // was decreased to 0, the blob and therefore the pack is actually used.
+        // Note that by this processing, we are also able to handle duplicate blobs within a pack
+        // correctly.
+        // If we found a needed blob, we stop and process the information that the pack is actually needed.
+        let first_needed = pack.blobs.iter().position(|blob| {
+            match used_ids.get_mut(&blob.id) {
                 None | Some(0) => {
                     pi.unused_size += blob.length;
                     pi.unused_blobs += 1;
                 }
-                Some(count) if needed_pack => {
-                    pi.used_size += blob.length;
-                    pi.used_blobs += 1;
-                    *count = 0;
-                }
                 Some(count) => {
-                    // mark as unused and decrease counter
-                    pi.unused_size += blob.length;
-                    pi.unused_blobs += 1;
+                    // decrease counter
                     *count -= 1;
+                    if *count == 0 {
+                        // blob is actually needed
+                        pi.used_size += blob.length;
+                        pi.used_blobs += 1;
+                        return true; // break the search
+                    } else {
+                        // blob is not needed
+                        pi.unused_size += blob.length;
+                        pi.unused_blobs += 1;
+                    }
+                }
+            }
+            false // continue with next blob
+        });
+
+        if let Some(first_needed) = first_needed {
+            // The pack is actually needed.
+            // We reprocess the blobs up to the first needed one and mark all blobs which are genarally needed as used.
+            for blob in &pack.blobs[..first_needed] {
+                match used_ids.get_mut(&blob.id) {
+                    None | Some(0) => {} // already correctly marked
+                    Some(count) => {
+                        // remark blob as used
+                        pi.unused_size -= blob.length;
+                        pi.unused_blobs -= 1;
+                        pi.used_size += blob.length;
+                        pi.used_blobs += 1;
+                        *count = 0; // count = 0 indicates to other packs that the blob is not needed anymore.
+                    }
+                }
+            }
+            // Then we process the remaining blobs and mark all blobs which are generally needed as used in this blob
+            for blob in &pack.blobs[first_needed + 1..] {
+                match used_ids.get_mut(&blob.id) {
+                    None | Some(0) => {
+                        pi.unused_size += blob.length;
+                        pi.unused_blobs += 1;
+                    }
+                    Some(count) => {
+                        // blob is used in this pack
+                        pi.used_size += blob.length;
+                        pi.used_blobs += 1;
+                        *count = 0; // count = 0 indicates to other packs that the blob is not needed anymore.
+                    }
                 }
             }
         }

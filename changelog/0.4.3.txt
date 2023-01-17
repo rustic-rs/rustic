@@ -1,0 +1,13 @@
+Changes in version 0.4.3:
+
+Bugs fixed:
+- A bug in `prune` could lead to removal of needed data in the case of duplicate blobs within one pack. This is fixed.
+- An inaccuracy in the packer could lead to identical blobs saved within the same pack. This is fixed.
+- check: Reported errors when the cache contained more pack files than the repository. This is fixed.
+- password-command didn't work correctly when calling a shell with an argument. This is fixed.
+
+New features:
+- warm-up options can now be configured in the config file.
+- repair index: Added better debug output and error handling.
+- Added better error handling when opening a repository.
+- Improved allocations when parsing/printing ids.

@@ -155,13 +155,18 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         uncompressed_length: Option<NonZeroU32>,
         size_limit: Option<u32>,
     ) -> Result<()> {
-        self.raw_packer.write().unwrap().add_raw(
-            data,
-            id,
-            data_len,
-            uncompressed_length,
-            size_limit,
-        )
+        // only add if this blob is not present
+        if self.indexer.read().unwrap().has(id) {
+            Ok(())
+        } else {
+            self.raw_packer.write().unwrap().add_raw(
+                data,
+                id,
+                data_len,
+                uncompressed_length,
+                size_limit,
+            )
+        }
     }
 
     pub fn finalize(self) -> Result<PackerStats> {
@@ -246,6 +251,10 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
         uncompressed_length: Option<NonZeroU32>,
         size_limit: Option<u32>,
     ) -> Result<()> {
+        if self.has(id) {
+            return Ok(());
+        }
+
         self.stats.blobs += 1;
         self.stats.data += data_len;
         let data_len_packed: u64 = data.len().try_into()?;

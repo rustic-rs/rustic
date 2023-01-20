@@ -189,16 +189,21 @@ fn allocate_and_collect(
                 let path = entry.path();
                 match &removed_dir {
                     Some(dir) if path.starts_with(dir) => {}
-                    _ => {
-                        dest.remove_dir(path)
-                            .with_context(|| format!("error removing {path:?}"))?;
-                        removed_dir = Some(path.to_path_buf());
-                    }
+                    _ => match dest.remove_dir(path) {
+                        Ok(()) => {
+                            removed_dir = Some(path.to_path_buf());
+                        }
+                        Err(err) => {
+                            error!("error removing {path:?}: {err}");
+                        }
+                    },
                 }
             }
-            (true, false, false) => dest
-                .remove_file(entry.path())
-                .with_context(|| format!("error removing {:?}", entry.path()))?,
+            (true, false, false) => {
+                if let Err(err) = dest.remove_file(entry.path()) {
+                    error!("error removing {:?}: {err}", entry.path());
+                }
+            }
             (false, _, _) => {
                 additional_existing = true;
             }

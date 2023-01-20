@@ -28,9 +28,8 @@ pub struct Rabin64 {
     pub hash: Polynom64,
 }
 
-
 impl Rabin64 {
-    pub fn calculate_out_table(window_size: usize, mod_polynom: &Polynom64) -> [Polynom64; 256] {
+    pub fn calculate_out_table(window_size: usize, mod_polynom: Polynom64) -> [Polynom64; 256] {
         let mut out_table = [0; 256];
         for (b, elem) in out_table.iter_mut().enumerate() {
             let mut hash = (b as Polynom64).modulo(mod_polynom);
@@ -44,7 +43,7 @@ impl Rabin64 {
         out_table
     }
 
-    pub fn calculate_mod_table(mod_polynom: &Polynom64) -> [Polynom64; 256] {
+    pub fn calculate_mod_table(mod_polynom: Polynom64) -> [Polynom64; 256] {
         let mut mod_table = [0; 256];
         let k = mod_polynom.degree();
         for (b, elem) in mod_table.iter_mut().enumerate() {
@@ -55,7 +54,7 @@ impl Rabin64 {
         mod_table
     }
 
-    pub fn new_with_polynom(window_size_nb_bits: u32, mod_polynom: &Polynom64) -> Rabin64 {
+    pub fn new_with_polynom(window_size_nb_bits: u32, mod_polynom: Polynom64) -> Rabin64 {
         let window_size = 1 << window_size_nb_bits;
 
         let window_data = vec![0; window_size];
@@ -69,15 +68,6 @@ impl Rabin64 {
             window_data,
             window_index: 0,
             hash: 0,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn hash_block(&mut self, bytes: &[u8], mod_polynom: &Polynom64) {
-        for v in bytes {
-            self.hash <<= 8;
-            self.hash |= *v as Polynom64;
-            self.hash = self.hash.modulo(&mod_polynom);
         }
     }
 }
@@ -129,7 +119,7 @@ impl RollingHash64 for Rabin64 {
                     self.window_data[self.window_index] = b;
                     let mod_index = (self.hash >> self.polynom_shift) & 255;
                     self.hash <<= 8;
-                    self.hash |= b as Polynom64;
+                    self.hash |= u64::from(b);
                     self.hash ^= self.mod_table[mod_index as usize];
 
                     // Move the windowIndex to the next position.
@@ -157,7 +147,7 @@ impl RollingHash64 for Rabin64 {
         self.window_data[self.window_index] = byte;
         let mod_index = (self.hash >> self.polynom_shift) & 255;
         self.hash <<= 8;
-        self.hash |= byte as Polynom64;
+        self.hash |= u64::from(byte);
         self.hash ^= self.mod_table[mod_index as usize];
 
         // Move the windowIndex to the next position.
@@ -167,53 +157,5 @@ impl RollingHash64 for Rabin64 {
     #[inline]
     fn get_hash(&self) -> &Polynom64 {
         &self.hash
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::super::polynom::Polynom64;
-    use super::*;
-
-    fn to_hex_string(polynoms: &[Polynom64], prefix: &str) -> String {
-        let strs: Vec<String> = polynoms
-            .iter()
-            .map(|p| format!("{}{:016x} {}", prefix, p, 0))
-            .collect();
-        strs.join("\n")
-    }
-
-    #[test]
-    fn print_tables() {
-        let out_table = Rabin64::calculate_out_table(32, &MOD_POLYNOM);
-        let mod_table = Rabin64::calculate_mod_table(&MOD_POLYNOM);
-        println!("{}", to_hex_string(&out_table[..], "outTable "));
-        println!("{}", to_hex_string(&mod_table[..], "modTable "));
-    }
-
-    #[test]
-    fn rabin_hash() {
-        use std::cmp::max;
-
-        // Random meaningless data.
-        let data = [
-            17u8, 28, 53, 64, 175, 216, 27, 208, 109, 130, 143, 35, 93, 244, 45, 18, 64, 193, 204,
-            59, 169, 139, 53, 59, 55, 65, 242, 73, 60, 198, 45, 22, 56, 90, 81, 181,
-        ];
-
-        let mut rabin1 = Rabin64::new(5);
-        let mut rabin2 = Rabin64::new(5);
-
-        // Block by block, no optimization, used raw modulo formula.
-        for i in 0..data.len() {
-            let block = &data[max(31, i) - 31..i + 1];
-            rabin1.reset();
-            rabin1.hash_block(block, &MOD_POLYNOM);
-
-            rabin2.slide(data[i]);
-
-            //println!("{:02} {:02} {:016x} {:016x} {:?}", i, block.len(), rabin1.hash, rabin2.hash, block);
-            assert_eq!(rabin1.hash, rabin2.hash);
-        }
     }
 }

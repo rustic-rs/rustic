@@ -231,16 +231,16 @@ impl LocalBackend {
                 symlink(linktarget, filename)?;
             }
             NodeType::Dev { device } => {
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(not(any(target_os = "macos", target_os = "openbsd")))]
                 let device = *device;
-                #[cfg(target_os = "macos")]
+                #[cfg(any(target_os = "macos", target_os = "openbsd"))]
                 let device = *device as i32;
                 mknod(&filename, SFlag::S_IFBLK, Mode::empty(), device)?;
             }
             NodeType::Chardev { device } => {
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(not(any(target_os = "macos", target_os = "openbsd")))]
                 let device = *device;
-                #[cfg(target_os = "macos")]
+                #[cfg(any(target_os = "macos", target_os = "openbsd"))]
                 let device = *device as i32;
                 mknod(&filename, SFlag::S_IFCHR, Mode::empty(), device)?;
             }

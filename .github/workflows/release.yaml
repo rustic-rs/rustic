@@ -47,6 +47,12 @@ jobs:
             architecture: i686
             binary-postfix: ""
             use-cross: true
+          - os: openbsd-latest
+            os-name: openbsd
+            target: x86_64-unknown-openbsd
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: true
 
     steps:
       - name: Checkout repository

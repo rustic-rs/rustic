@@ -1,8 +1,9 @@
 use std::io::{self, Read};
 
 use anyhow::{anyhow, Result};
-use cdc::{Polynom, Polynom64, Rabin64, RollingHash64};
 use rand::{thread_rng, Rng};
+
+use crate::cdc::{Polynom, Polynom64, Rabin64, RollingHash64};
 
 const SPLITMASK: u64 = (1u64 << 20) - 1;
 const KB: usize = 1024;
@@ -35,7 +36,7 @@ impl<R: Read + Send> ChunkIter<R> {
             pos: 0,
             reader,
             predicate: default_predicate,
-            rabin: Rabin64::new_with_polynom(6, &poly),
+            rabin: Rabin64::new_with_polynom(6, poly),
             size_hint, // size hint is used to optimize memory allocation; this should be an upper bound on the size
             min_size: MIN_SIZE,
             max_size: MAX_SIZE,
@@ -115,7 +116,7 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
             let byte = self.buf[self.pos];
             vec.push(byte);
             self.pos += 1;
-            self.rabin.slide(&byte);
+            self.rabin.slide(byte);
         }
         self.size_hint -= vec.len();
         Some(Ok(vec))
@@ -150,9 +151,9 @@ pub fn random_poly() -> Result<u64> {
 
 trait PolynomExtend {
     fn irreducible(&self) -> bool;
-    fn gcd(&self, other: &Self) -> Self;
-    fn add(&self, other: &Self) -> Self;
-    fn mulmod(&self, other: &Self, modulo: &Self) -> Self;
+    fn gcd(self, other: Self) -> Self;
+    fn add(self, other: Self) -> Self;
+    fn mulmod(self, other: Self, modulo: Self) -> Self;
 }
 
 // implementation goes along the lines of
@@ -165,51 +166,51 @@ impl PolynomExtend for Polynom64 {
     // Finite Fields".
     fn irreducible(&self) -> bool {
         for i in 1..=self.degree() / 2 {
-            if self.gcd(&qp(i, *self)) != 1 {
+            if self.gcd(qp(i, *self)) != 1 {
                 return false;
             }
         }
         true
     }
 
-    fn gcd(&self, other: &Self) -> Self {
-        if other == &0 {
-            return *self;
+    fn gcd(self, other: Self) -> Self {
+        if other == 0 {
+            return self;
         }
 
-        if self == &0 {
-            return *other;
+        if self == 0 {
+            return other;
         }
 
         if self.degree() < other.degree() {
-            self.gcd(&other.modulo(self))
+            self.gcd(other.modulo(self))
         } else {
-            other.gcd(&self.modulo(other))
+            other.gcd(self.modulo(other))
         }
     }
 
-    fn add(&self, other: &Self) -> Self {
-        *self ^ *other
+    fn add(self, other: Self) -> Self {
+        self ^ other
     }
 
-    fn mulmod(&self, other: &Self, modulo: &Self) -> Self {
-        if self == &0 || other == &0 {
+    fn mulmod(self, other: Self, modulo: Self) -> Self {
+        if self == 0 || other == 0 {
             return 0;
         }
 
         let mut res: Polynom64 = 0;
-        let mut a = *self;
-        let mut b = *other;
+        let mut a = self;
+        let mut b = other;
 
         if b & 1 > 0 {
-            res = res.add(&a).modulo(modulo);
+            res = res.add(a).modulo(modulo);
         }
 
         while b != 0 {
             a = (a << 1).modulo(modulo);
             b >>= 1;
             if b & 1 > 0 {
-                res = res.add(&a).modulo(modulo);
+                res = res.add(a).modulo(modulo);
             }
         }
 
@@ -225,11 +226,11 @@ fn qp(p: i32, g: Polynom64) -> Polynom64 {
 
     for _ in 0..p {
         // repeatedly square res
-        res = res.mulmod(&res, &g);
+        res = res.mulmod(res, g);
     }
 
     // add x
-    res.add(&2).modulo(&g)
+    res.add(2).modulo(g)
 }
 
 #[cfg(test)]

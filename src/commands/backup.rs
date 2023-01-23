@@ -11,7 +11,7 @@ use serde::Deserialize;
 use toml::Value;
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
-use crate::archiver::{Archiver, Parent};
+use crate::archiver::{Archiver, Parent, ParentResult};
 use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource};
 use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
@@ -213,6 +213,7 @@ pub(super) fn execute(
             let mut archiver = Archiver::new(be, index, &repo.config, parent, snap)?;
             let p = progress_bytes("starting backup from stdin...");
             archiver.backup_reader(
+                &PathBuf::new(),
                 std::io::stdin(),
                 Node::new(
                     opts.stdin_filename,
@@ -221,6 +222,7 @@ pub(super) fn execute(
                     None,
                     None,
                 ),
+                ParentResult::NotFound,
                 p.clone(),
             )?;
 
@@ -236,27 +238,8 @@ pub(super) fn execute(
                 p.set_length(size);
             };
             p.set_prefix("backing up...");
-            let mut archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;
-            for item in src {
-                match item {
-                    Err(e) => {
-                        warn!("ignoring error {}\n", e);
-                    }
-                    Ok((path, node)) => {
-                        let snapshot_path = if let Some(as_path) = &as_path {
-                            as_path
-                                .clone()
-                                .join(path.strip_prefix(&backup_path[0]).unwrap())
-                        } else {
-                            path.clone()
-                        };
-                        if let Err(e) = archiver.add_entry(&snapshot_path, &path, node, p.clone()) {
-                            warn!("ignoring error {} for {:?}\n", e, path);
-                        }
-                    }
-                }
-            }
-            let snap = archiver.finalize_snapshot()?;
+            let archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;
+            let snap = archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?;
             p.finish_with_message("done");
             snap
         };

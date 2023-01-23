@@ -1,36 +1,25 @@
-use std::fs::File;
 use std::io::Read;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Result};
-use bytesize::ByteSize;
+use anyhow::Result;
 use chrono::Local;
 use indicatif::ProgressBar;
 use log::*;
-use rayon::prelude::*;
 
 use crate::backend::DecryptWriteBackend;
-use crate::blob::{BlobType, Metadata, Node, NodeType, Packer, Tree};
-use crate::chunker::ChunkIter;
-use crate::crypto::hash;
+use crate::blob::{BlobType, Node};
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
-use crate::repofile::{ConfigFile, SnapshotFile, SnapshotSummary};
+use crate::repofile::{ConfigFile, SnapshotFile};
 
-use super::{Parent, ParentResult};
+use super::{FileArchiver, Parent, ParentResult, TreeArchiver, TreeIterator};
 
 pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
-    path: PathBuf,
-    tree: Tree,
+    file_archiver: FileArchiver<BE, I>,
+    tree_archiver: TreeArchiver<BE, I>,
     parent: Parent<I>,
-    stack: Vec<(Node, Tree, Parent<I>)>,
-    index: I,
     indexer: SharedIndexer<BE>,
-    data_packer: Packer<BE>,
-    tree_packer: Packer<BE>,
     be: BE,
-    poly: u64,
     snap: SnapshotFile,
-    summary: SnapshotSummary,
 }
 
 impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
@@ -44,240 +33,108 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let indexer = Indexer::new(be.clone()).into_shared();
         let mut summary = snap.summary.take().unwrap();
         summary.backup_start = Local::now();
-        let poly = config.poly()?;
 
-        let data_packer = Packer::new(
-            be.clone(),
-            BlobType::Data,
-            indexer.clone(),
-            config,
-            index.total_size(BlobType::Data),
-        )?;
-        let tree_packer = Packer::new(
-            be.clone(),
-            BlobType::Tree,
-            indexer.clone(),
-            config,
-            index.total_size(BlobType::Tree),
-        )?;
+        let file_archiver = FileArchiver::new(be.clone(), index.clone(), indexer.clone(), config)?;
+        let tree_archiver = TreeArchiver::new(be.clone(), index, indexer.clone(), config, summary)?;
         Ok(Self {
-            path: PathBuf::default(),
-            tree: Tree::new(),
+            file_archiver,
+            tree_archiver,
             parent,
-            stack: Vec::new(),
-            index,
-            data_packer,
-            tree_packer,
             be,
-            poly,
             indexer,
             snap,
-            summary,
         })
     }
 
-    pub fn add_file(&mut self, node: Node, size: u64) {
-        let filename = self.path.join(node.name());
-        match self.parent.is_parent(&node) {
-            ParentResult::Matched(_) => {
-                debug!("unchanged file: {:?}", filename);
-                self.summary.files_unmodified += 1;
+    pub fn archive(
+        mut self,
+        src: impl Iterator<Item = Result<(PathBuf, Node)>>,
+        backup_path: &Path,
+        as_path: Option<&PathBuf>,
+        p: &ProgressBar,
+    ) -> Result<SnapshotFile> {
+        // filter out errors and handle as_path
+        let iter = src.filter_map(|item| match item {
+            Err(e) => {
+                warn!("ignoring error {}\n", e);
+                None
             }
-            ParentResult::NotMatched => {
-                debug!("changed   file: {:?}", filename);
-                self.summary.files_changed += 1;
+            Ok((path, node)) => {
+                let snapshot_path = if let Some(as_path) = as_path {
+                    as_path
+                        .clone()
+                        .join(path.strip_prefix(backup_path).unwrap())
+                } else {
+                    path.clone()
+                };
+                Some(if node.is_dir() {
+                    (snapshot_path, path, node)
+                } else {
+                    (
+                        snapshot_path
+                            .parent()
+                            .expect("file path should have a parent!")
+                            .to_path_buf(),
+                        path,
+                        node,
+                    )
+                })
             }
-            ParentResult::NotFound => {
-                debug!("new       file: {:?}", filename);
-                self.summary.files_new += 1;
+        });
+        // handle beginning and ending of trees
+        let iter = TreeIterator::new(iter);
+
+        // use parent snapshot
+        let iter = iter.filter_map(|item| match self.parent.process(item) {
+            Ok(item) => Some(item),
+            Err(err) => {
+                warn!("ignoring error reading parent snapshot: {err:?}");
+                None
             }
-        }
-        self.tree.add(node);
-        self.summary.total_files_processed += 1;
-        self.summary.total_bytes_processed += size;
-    }
+        });
 
-    pub fn add_dir(&mut self, node: Node, size: u64) {
-        self.tree.add(node);
-        self.summary.total_dirs_processed += 1;
-        self.summary.total_dirsize_processed += size;
-    }
-
-    pub fn add_entry(
-        &mut self,
-        path: &Path,
-        real_path: &Path,
-        node: Node,
-        p: ProgressBar,
-    ) -> Result<()> {
-        let basepath = if node.is_dir() {
-            path
-        } else {
-            path.parent()
-                .ok_or_else(|| anyhow!("file path should have a parent!"))?
-        };
-
-        self.finish_trees(basepath)?;
-
-        let missing_dirs = basepath.strip_prefix(&self.path)?;
-        for p in missing_dirs.components() {
-            self.path.push(p);
-            match p {
-                // ignore prefix or root dir
-                Component::Prefix(_) | Component::RootDir => {}
-                // new subdir
-                Component::Normal(p) => {
-                    let tree = std::mem::replace(&mut self.tree, Tree::new());
-                    if self.path == path {
-                        // use Node and return
-                        let new_parent = self.parent.sub_parent(&node)?;
-                        let parent = std::mem::replace(&mut self.parent, new_parent);
-                        self.stack.push((node, tree, parent));
-                        return Ok(());
-                    } else {
-                        let node = Node::new_node(p, NodeType::Dir, Metadata::default());
-                        let new_parent = self.parent.sub_parent(&node)?;
-                        let parent = std::mem::replace(&mut self.parent, new_parent);
-                        self.stack.push((node, tree, parent));
-                    }
-                }
-                _ => bail!("path should not contain current or parent dir, path: {basepath:?}"),
+        // archive files
+        let iter = iter.filter_map(|item| match self.file_archiver.process(item, p.clone()) {
+            Ok(item) => Some(item),
+            Err(err) => {
+                warn!("ignoring error: {err:?}");
+                None
             }
+        });
+
+        // save items in trees
+        for item in iter {
+            self.tree_archiver.add(item)?;
         }
 
-        match node.node_type() {
-            NodeType::File => {
-                self.backup_file(real_path, node, p)?;
-            }
-            NodeType::Dir => {}          // is already handled, see above
-            _ => self.add_file(node, 0), // all other cases: just save the given node
-        }
-        Ok(())
-    }
-
-    pub fn finish_trees(&mut self, path: &Path) -> Result<()> {
-        while !path.starts_with(&self.path) {
-            // save tree and go back to parent dir
-            let (chunk, id) = self.tree.serialize()?;
-
-            let (mut node, tree, parent) = self
-                .stack
-                .pop()
-                .ok_or_else(|| anyhow!("tree stack empty??"))?;
-
-            node.set_subtree(id);
-            self.tree = tree;
-            self.parent = parent;
-
-            self.backup_tree(node, chunk)?;
-            self.path.pop();
-        }
-        Ok(())
-    }
-
-    pub fn backup_tree(&mut self, node: Node, chunk: Vec<u8>) -> Result<()> {
-        let dirsize = chunk.len() as u64;
-        let dirsize_bytes = ByteSize(dirsize).to_string_as(true);
-        let id = node.subtree().unwrap();
-
-        match self.parent.is_parent(&node) {
-            ParentResult::Matched(p_node) if node.subtree() == p_node.subtree() => {
-                debug!("unchanged tree: {:?}", self.path);
-                self.add_dir(node, dirsize);
-                self.summary.dirs_unmodified += 1;
-                return Ok(());
-            }
-            ParentResult::NotFound => {
-                debug!("new       tree: {:?} {}", self.path, dirsize_bytes);
-                self.summary.dirs_new += 1;
-            }
-            _ => {
-                // "Matched" trees where the subree id does not match or unmached trees
-                debug!("changed   tree: {:?} {}", self.path, dirsize_bytes);
-                self.summary.dirs_changed += 1;
-            }
-        }
-
-        if !self.index.has_tree(&id) {
-            self.tree_packer.add(&chunk, &id)?;
-        }
-        self.add_dir(node, dirsize);
-        Ok(())
-    }
-
-    pub fn backup_file(&mut self, path: &Path, node: Node, p: ProgressBar) -> Result<()> {
-        if let ParentResult::Matched(p_node) = self.parent.is_parent(&node) {
-            if p_node.content().iter().all(|id| self.index.has_data(id)) {
-                let size = *p_node.meta().size();
-                let mut node = node;
-                node.set_content(p_node.content().to_vec());
-                self.add_file(node, size);
-                p.inc(size);
-                return Ok(());
-            } else {
-                warn!(
-                    "missing blobs in index for unchanged file {:?}; re-reading file",
-                    self.path.join(node.name())
-                );
-            }
-        }
-        let f = File::open(path)?;
-        self.backup_reader(f, node, p)
+        let snap = self.finalize_snapshot()?;
+        Ok(snap)
     }
 
     pub fn backup_reader(
         &mut self,
+        path: &Path,
         r: impl Read + Send + 'static,
         node: Node,
+        parent: ParentResult<()>,
         p: ProgressBar,
     ) -> Result<()> {
-        let mut chunks: Vec<_> = ChunkIter::new(r, *node.meta().size() as usize, self.poly)
-            .enumerate() // see below
-            .par_bridge()
-            .map(|(num, chunk)| {
-                let chunk = chunk?;
-                let id = hash(&chunk);
-                let size = chunk.len() as u64;
-
-                if !self.index.has_data(&id) {
-                    self.data_packer.add(&chunk, &id)?;
-                }
-                p.inc(size);
-                Ok((num, id, size))
-            })
-            .collect::<Result<_>>()?;
-
-        // As par_bridge doesn't guarantee to keep the order, we sort by the enumeration
-        chunks.par_sort_unstable_by_key(|x| x.0);
-
-        let filesize = chunks.iter().map(|x| x.2).sum();
-        let content = chunks.into_iter().map(|x| x.1).collect();
-
-        let mut node = node;
-        node.set_content(content);
-        self.add_file(node, filesize);
+        let (node, filesize) = self.file_archiver.backup_reader(r, node, p)?;
+        self.tree_archiver.add_file(path, node, parent, filesize);
         Ok(())
     }
 
     pub fn finalize_snapshot(mut self) -> Result<SnapshotFile> {
-        self.finish_trees(&PathBuf::from("/"))?;
-
-        let (chunk, id) = self.tree.serialize()?;
-        if !self.index.has_tree(&id) {
-            self.tree_packer.add(&chunk, &id)?;
-        }
+        let stats = self.file_archiver.finalize()?;
+        let (id, mut summary) = self.tree_archiver.finalize()?;
+        stats.apply(&mut summary, BlobType::Data);
         self.snap.tree = id;
-
-        let stats = self.data_packer.finalize()?;
-        stats.apply(&mut self.summary, BlobType::Data);
-
-        let stats = self.tree_packer.finalize()?;
-        stats.apply(&mut self.summary, BlobType::Tree);
 
         self.indexer.write().unwrap().finalize()?;
 
-        self.summary.finalize(self.snap.time)?;
-        self.snap.summary = Some(self.summary);
+        summary.finalize(self.snap.time)?;
+        self.snap.summary = Some(summary);
+
         let id = self.be.save_file(&self.snap)?;
         self.snap.id = id;
 

@@ -146,9 +146,7 @@ pub(super) fn execute(
 
     match (forget_snaps.is_empty(), opts.dry_run) {
         (true, _) => println!("nothing to remove"),
-        (false, true) => println!(
-            "would have removed the following snapshots:\n {forget_snaps:?}"
-        ),
+        (false, true) => println!("would have removed the following snapshots:\n {forget_snaps:?}"),
         (false, false) => {
             let p = progress_counter("removing snapshots...");
             be.delete_list(FileType::Snapshot, true, forget_snaps.iter(), p)?;

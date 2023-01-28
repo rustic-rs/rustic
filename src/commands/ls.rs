@@ -34,7 +34,7 @@ pub(super) fn execute(
 
     for item in NodeStreamer::new(index, &node)? {
         let (path, _) = item?;
-        println!("{:?} ", path);
+        println!("{path:?} ");
     }
 
     Ok(())

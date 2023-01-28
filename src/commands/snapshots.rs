@@ -134,7 +134,7 @@ pub(super) fn execute(
             table.add_rows(snapshots);
             println!("{table}");
         }
-        println!("{} snapshot(s)", count);
+        println!("{count} snapshot(s)");
     }
 
     Ok(())

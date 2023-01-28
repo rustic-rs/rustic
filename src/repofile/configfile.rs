@@ -42,7 +42,7 @@ impl ConfigFile {
         Self {
             version,
             id,
-            chunker_polynomial: format!("{:x}", poly),
+            chunker_polynomial: format!("{poly:x}"),
             ..Self::default()
         }
     }

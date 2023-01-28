@@ -147,8 +147,7 @@ pub(super) fn execute(
     match (forget_snaps.is_empty(), opts.dry_run) {
         (true, _) => println!("nothing to remove"),
         (false, true) => println!(
-            "would have removed the following snapshots:\n {:?}",
-            forget_snaps
+            "would have removed the following snapshots:\n {forget_snaps:?}"
         ),
         (false, false) => {
             let p = progress_counter("removing snapshots...");

@@ -136,11 +136,11 @@ fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
         let list = be.list_with_size(tpe)?;
         let count = list.len();
         let size = list.iter().map(|f| u64::from(f.1)).sum();
-        table.add_row([format!("{:?}", tpe), count.to_string(), bytes(size)]);
+        table.add_row([format!("{tpe:?}"), count.to_string(), bytes(size)]);
         total_count += count;
         total_size += size;
     }
-    println!("{}", text);
+    println!("{text}");
     table.add_row([
         "Total".to_string(),
         total_count.to_string(),

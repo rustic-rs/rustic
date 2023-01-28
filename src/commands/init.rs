@@ -66,7 +66,7 @@ pub(super) fn execute(
         hot_be.create()?;
         hot_be.write_bytes(FileType::Key, &id, false, data)?;
     }
-    println!("key {} successfully added.", id);
+    println!("key {id} successfully added.");
 
     // save config
     let dbe = DecryptBackend::new(be, key.clone());
@@ -77,7 +77,7 @@ pub(super) fn execute(
         config.is_hot = Some(true);
         dbe.save_file(&config)?;
     }
-    println!("repository {} successfully created.", repo_id);
+    println!("repository {repo_id} successfully created.");
 
     Ok(())
 }

@@ -106,8 +106,7 @@ pub(super) fn execute(
     match (old_snap_ids.is_empty(), opts.dry_run) {
         (true, _) => println!("no snapshot changed."),
         (false, true) => println!(
-            "would have modified the following snapshots:\n {:?}",
-            old_snap_ids
+            "would have modified the following snapshots:\n {old_snap_ids:?}"
         ),
         (false, false) => {
             let p = progress_counter("saving new snapshots...");

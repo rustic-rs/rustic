@@ -188,7 +188,7 @@ impl ReadBackend for RestBackend {
     ) -> Result<Bytes> {
         trace!("reading tpe: {tpe:?}, id: {id}, offset: {offset}, length: {length}");
         let offset2 = offset + length - 1;
-        let header_value = format!("bytes={}-{}", offset, offset2);
+        let header_value = format!("bytes={offset}-{offset2}");
         let url = self.url(tpe, id)?;
         Ok(backoff::retry_notify(
             self.backoff.clone(),

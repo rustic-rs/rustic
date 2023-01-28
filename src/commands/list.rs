@@ -34,7 +34,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
     };
 
     for id in repo.be.list(tpe)? {
-        println!("{:?}", id);
+        println!("{id:?}");
     }
 
     Ok(())

@@ -68,6 +68,6 @@ fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> {
     let id = hash(&data);
     be.write_bytes(FileType::Key, &id, false, data.into())?;
 
-    println!("key {} successfully added.", id);
+    println!("key {id} successfully added.");
     Ok(())
 }

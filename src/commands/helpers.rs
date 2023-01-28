@@ -87,7 +87,7 @@ pub fn warm_up_wait(
     }
     if wait {
         if let Some(wait) = repo.opts.warm_up_wait {
-            let p = progress_spinner(format!("waiting {}...", wait));
+            let p = progress_spinner(format!("waiting {wait}..."));
             std::thread::sleep(*wait);
             p.finish();
         }

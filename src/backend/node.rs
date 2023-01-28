@@ -248,7 +248,7 @@ mod tests {
     #[quickcheck]
     fn escape_unescape_is_identity(bytes: Vec<u8>) -> bool {
         let name = OsStr::from_bytes(&bytes);
-        name == &match unescape_filename(&escape_filename(name)) {
+        name == match unescape_filename(&escape_filename(name)) {
             Ok(s) => s,
             Err(_) => return false,
         }
@@ -274,7 +274,7 @@ mod tests {
     #[case(b"\xf0\x9f\x92\xaf", "\u{01f4af}")]
     fn escape_cases(#[case] input: &[u8], #[case] expected: &str) {
         let name = OsStr::from_bytes(input);
-        assert_eq!(expected, escape_filename(name))
+        assert_eq!(expected, escape_filename(name));
     }
 
     #[rstest]
@@ -298,6 +298,6 @@ mod tests {
     #[case(r#"\U0001f4af"#, b"\xf0\x9f\x92\xaf")]
     fn unescape_cases(#[case] input: &str, #[case] expected: &[u8]) {
         let expected = OsStr::from_bytes(expected);
-        assert_eq!(expected, unescape_filename(input).unwrap())
+        assert_eq!(expected, unescape_filename(input).unwrap());
     }
 }

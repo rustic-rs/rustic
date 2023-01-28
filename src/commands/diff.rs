@@ -183,12 +183,12 @@ fn diff(
                 let node1 = &i1.1;
                 let node2 = &i2.1;
                 match node1.node_type() {
-                    tpe if tpe != node2.node_type() => println!("T    {:?}", path), // type was changed
+                    tpe if tpe != node2.node_type() => println!("T    {path:?}"), // type was changed
                     NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
-                        println!("M    {:?}", path);
+                        println!("M    {path:?}");
                     }
                     NodeType::File if metadata && node1.meta() != node2.meta() => {
-                        println!("U    {:?}", path);
+                        println!("U    {path:?}");
                     }
                     NodeType::Symlink { linktarget } => {
                         if let NodeType::Symlink {
@@ -196,7 +196,7 @@ fn diff(
                         } = node2.node_type()
                         {
                             if *linktarget != *linktarget2 {
-                                println!("U    {:?}", path);
+                                println!("U    {path:?}");
                             }
                         }
                     }

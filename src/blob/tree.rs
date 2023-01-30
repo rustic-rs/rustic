@@ -1,4 +1,5 @@
-use std::collections::HashSet;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashSet};
 use std::ffi::OsStr;
 use std::mem;
 use std::path::{Component, Path, PathBuf};
@@ -254,4 +255,125 @@ impl Iterator for TreeStreamerOnce {
         }
         Some(Ok((path, tree)))
     }
+}
+
+pub fn merge_trees(
+    be: &impl IndexedBackend,
+    trees: Vec<Id>,
+    cmp: &impl Fn(Node, Node) -> Ordering,
+    save: &impl Fn(Tree) -> Result<Id>,
+) -> Result<Id> {
+    // We store nodes with the index of the tree in an Binary Heap where we sort only by node name
+    struct SortedNode(Node, usize);
+    impl PartialEq for SortedNode {
+        fn eq(&self, other: &Self) -> bool {
+            self.0.name == other.0.name
+        }
+    }
+    impl PartialOrd for SortedNode {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            self.0.name.partial_cmp(&other.0.name).map(|o| o.reverse())
+        }
+    }
+    impl Eq for SortedNode {}
+    impl Ord for SortedNode {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.0.name.cmp(&other.0.name).reverse()
+        }
+    }
+
+    // TODO: Eliminate duplicate ids
+
+    // Handle simple special cases
+    match trees.len() {
+        0 => bail!("merge_trees: cannot merge 0 trees!"),
+        1 => return Ok(trees[0]),
+        _ => {}
+    }
+
+    let mut tree_iters: Vec<_> = trees
+        .into_iter()
+        .map(|id| Tree::from_backend(be, id).map(|tree| tree.into_iter()))
+        .collect::<Result<_>>()?;
+
+    // fill Heap with first elements from all trees
+    let mut elems = BinaryHeap::new();
+    for (num, iter) in tree_iters.iter_mut().enumerate() {
+        if let Some(node) = iter.next() {
+            elems.push(SortedNode(node, num));
+        }
+    }
+
+    let mut tree = Tree::new();
+    let (mut node, mut num) = match elems.pop() {
+        None => {
+            return save(tree);
+        }
+        Some(SortedNode(node, num)) => (node, num),
+    };
+
+    let mut nodes = Vec::new();
+    loop {
+        // push next elemet from tree_iters[0] (if any is left) into BinaryHeap
+        if let Some(next_node) = tree_iters[num].next() {
+            elems.push(SortedNode(next_node, num));
+        }
+
+        match elems.pop() {
+            None => {
+                // Add node to nodes list
+                nodes.push(node);
+                // no node left to proceed, merge nodes and quit
+                tree.add(merge_nodes(be, nodes, cmp, save)?);
+                break;
+            }
+            Some(SortedNode(new_node, new_num)) if node.name != new_node.name => {
+                // Add node to nodes list
+                nodes.push(node);
+                // next node has other name; merge present nodes
+                tree.add(merge_nodes(be, nodes, cmp, save)?);
+                nodes = Vec::new();
+                // use this node as new node
+                (node, num) = (new_node, new_num);
+            }
+            Some(SortedNode(new_node, new_num)) => {
+                // Add node to nodes list
+                nodes.push(node);
+                // use this node as new node
+                (node, num) = (new_node, new_num);
+            }
+        };
+    }
+    save(tree)
+}
+
+fn merge_nodes(
+    be: &impl IndexedBackend,
+    mut nodes: Vec<Node>,
+    cmp: &impl Fn(Node, Node) -> Ordering,
+    save: &impl Fn(Tree) -> Result<Id>,
+) -> Result<Node> {
+    // Handle simple special cases
+    match nodes.len() {
+        0 => bail!("merge_nodes: cannot merge 0 nodes!"),
+        1 => return Ok(nodes.swap_remove(0)),
+        _ => {}
+    }
+
+    let trees: Vec<_> = nodes
+        .iter()
+        .filter(|node| node.is_dir())
+        .map(|node| node.subtree().unwrap())
+        .collect();
+
+    let mut node = nodes
+        .into_iter()
+        .max_by(|n1, n2| n1.meta.mtime.cmp(&n2.meta.mtime))
+        .unwrap();
+
+    // if this is a dir, merge with all other dirs
+    if node.is_dir() {
+        node.subtree = Some(merge_trees(be, trees, cmp, save)?);
+    }
+    Ok(node)
 }

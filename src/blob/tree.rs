@@ -13,6 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::IndexedBackend;
+use crate::repofile::SnapshotSummary;
 
 use super::{Metadata, Node, NodeType};
 
@@ -260,8 +261,9 @@ impl Iterator for TreeStreamerOnce {
 pub fn merge_trees(
     be: &impl IndexedBackend,
     trees: Vec<Id>,
-    cmp: &impl Fn(Node, Node) -> Ordering,
-    save: &impl Fn(Tree) -> Result<Id>,
+    cmp: &impl Fn(&Node, &Node) -> Ordering,
+    save: &impl Fn(Tree) -> Result<(Id, u64)>,
+    summary: &mut SnapshotSummary,
 ) -> Result<Id> {
     // We store nodes with the index of the tree in an Binary Heap where we sort only by node name
     struct SortedNode(Node, usize);
@@ -282,18 +284,9 @@ pub fn merge_trees(
         }
     }
 
-    // TODO: Eliminate duplicate ids
-
-    // Handle simple special cases
-    match trees.len() {
-        0 => bail!("merge_trees: cannot merge 0 trees!"),
-        1 => return Ok(trees[0]),
-        _ => {}
-    }
-
     let mut tree_iters: Vec<_> = trees
-        .into_iter()
-        .map(|id| Tree::from_backend(be, id).map(|tree| tree.into_iter()))
+        .iter()
+        .map(|id| Tree::from_backend(be, *id).map(|tree| tree.into_iter()))
         .collect::<Result<_>>()?;
 
     // fill Heap with first elements from all trees
@@ -307,7 +300,11 @@ pub fn merge_trees(
     let mut tree = Tree::new();
     let (mut node, mut num) = match elems.pop() {
         None => {
-            return save(tree);
+            let (id, size) = save(tree)?;
+            summary.dirs_unmodified += 1;
+            summary.total_dirs_processed += 1;
+            summary.total_dirsize_processed += size;
+            return Ok(id);
         }
         Some(SortedNode(node, num)) => (node, num),
     };
@@ -324,14 +321,14 @@ pub fn merge_trees(
                 // Add node to nodes list
                 nodes.push(node);
                 // no node left to proceed, merge nodes and quit
-                tree.add(merge_nodes(be, nodes, cmp, save)?);
+                tree.add(merge_nodes(be, nodes, cmp, save, summary)?);
                 break;
             }
             Some(SortedNode(new_node, new_num)) if node.name != new_node.name => {
                 // Add node to nodes list
                 nodes.push(node);
                 // next node has other name; merge present nodes
-                tree.add(merge_nodes(be, nodes, cmp, save)?);
+                tree.add(merge_nodes(be, nodes, cmp, save, summary)?);
                 nodes = Vec::new();
                 // use this node as new node
                 (node, num) = (new_node, new_num);
@@ -344,36 +341,39 @@ pub fn merge_trees(
             }
         };
     }
-    save(tree)
+    let (id, size) = save(tree)?;
+    if trees.contains(&id) {
+        summary.dirs_unmodified += 1;
+    } else {
+        summary.dirs_changed += 1;
+    }
+    summary.total_dirs_processed += 1;
+    summary.total_dirsize_processed += size;
+    Ok(id)
 }
 
 fn merge_nodes(
     be: &impl IndexedBackend,
-    mut nodes: Vec<Node>,
-    cmp: &impl Fn(Node, Node) -> Ordering,
-    save: &impl Fn(Tree) -> Result<Id>,
+    nodes: Vec<Node>,
+    cmp: &impl Fn(&Node, &Node) -> Ordering,
+    save: &impl Fn(Tree) -> Result<(Id, u64)>,
+    summary: &mut SnapshotSummary,
 ) -> Result<Node> {
-    // Handle simple special cases
-    match nodes.len() {
-        0 => bail!("merge_nodes: cannot merge 0 nodes!"),
-        1 => return Ok(nodes.swap_remove(0)),
-        _ => {}
-    }
-
     let trees: Vec<_> = nodes
         .iter()
         .filter(|node| node.is_dir())
         .map(|node| node.subtree().unwrap())
         .collect();
 
-    let mut node = nodes
-        .into_iter()
-        .max_by(|n1, n2| n1.meta.mtime.cmp(&n2.meta.mtime))
-        .unwrap();
+    let mut node = nodes.into_iter().max_by(|n1, n2| cmp(n1, n2)).unwrap();
 
     // if this is a dir, merge with all other dirs
     if node.is_dir() {
-        node.subtree = Some(merge_trees(be, trees, cmp, save)?);
+        node.subtree = Some(merge_trees(be, trees, cmp, save, summary)?);
+    } else {
+        summary.files_unmodified += 1;
+        summary.total_files_processed += 1;
+        summary.total_bytes_processed += node.meta.size;
     }
     Ok(node)
 }

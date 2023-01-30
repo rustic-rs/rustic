@@ -27,6 +27,7 @@ mod init;
 mod key;
 mod list;
 mod ls;
+mod merge_cmd;
 mod prune;
 mod repair;
 mod repoinfo;
@@ -118,6 +119,9 @@ enum Command {
 
     /// List file contents of a snapshot
     Ls(ls::Opts),
+
+    /// Merge snapshots
+    Merge(merge_cmd::Opts),
 
     /// Show a detailed overview of the snapshots within the repository
     Snapshots(snapshots::Opts),
@@ -221,6 +225,7 @@ pub fn execute() -> Result<()> {
         Command::Key(opts) => key::execute(repo, opts)?,
         Command::List(opts) => list::execute(repo, opts)?,
         Command::Ls(opts) => ls::execute(repo, opts, config_file)?,
+        Command::Merge(opts) => merge_cmd::execute(repo, opts, config_file, command)?,
         Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(repo, opts, config_file)?,
         Command::Prune(opts) => prune::execute(repo, opts, vec![])?,

@@ -38,6 +38,7 @@ Improvements:
  * `restore` uses existing files; also option `--delete` available
  * Snapshots save much more information, available in `snapshots` command
  * Allows to save repository options in the repository config file via the command `config`
+ * New command `merge`
  * New command `repo-info`
  * `check` command checks and uses cache; option `--trust-cache` is available
  * Option `prune --fast-repack` for faster repacking

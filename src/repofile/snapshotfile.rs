@@ -28,7 +28,7 @@ pub struct SnapshotOptions {
     #[clap(long, value_name = "LABEL")]
     label: Option<String>,
 
-    /// Tags to add to backup (can be specified multiple times)
+    /// Tags to add to snapshot (can be specified multiple times)
     #[clap(long, value_name = "TAG[,TAG,..]")]
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy = merge::vec::overwrite_empty)]
@@ -573,6 +573,10 @@ impl StringList {
 
     pub fn formatln(&self) -> String {
         self.0.join("\n")
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<String> {
+        self.0.iter()
     }
 }
 

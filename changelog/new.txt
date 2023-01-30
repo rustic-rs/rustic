@@ -8,6 +8,7 @@ Bugs fixed:
 
 New features:
 - New command dump has been added.
+- New command merge has been added.
 - Extra or wrong fields in the config file now lead to rustic complaining and aborting.
 - backup: Paths are now sanitized from command arguments and config file before matching and applying the configuration.
 - check --read-data: progress bar now also shows total bytes to check and ETA.

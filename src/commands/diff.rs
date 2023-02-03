@@ -85,7 +85,7 @@ pub(super) fn execute(
                 .metadata()
                 .with_context(|| format!("Error accessing {path2:?}"))?
                 .is_dir();
-            let src = LocalSource::new(opts.ignore_opts, path2.clone())?.map(|item| {
+            let src = LocalSource::new(opts.ignore_opts, &[&path2])?.map(|item| {
                 let (path, node) = item?;
                 let path = if is_dir {
                     // remove given path prefix for dirs as local path

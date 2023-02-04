@@ -54,7 +54,11 @@ impl<BE: WriteBackend> ReadBackend for HotColdBackend<BE> {
 
 impl<BE: WriteBackend> WriteBackend for HotColdBackend<BE> {
     fn create(&self) -> Result<()> {
-        self.be.create()
+        self.be.create()?;
+        if let Some(be) = &self.hot_be {
+            be.create()?;
+        }
+        Ok(())
     }
 
     fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> Result<()> {

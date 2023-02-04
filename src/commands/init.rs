@@ -60,12 +60,7 @@ pub(super) fn execute(
     let data: Bytes = serde_json::to_vec(&keyfile)?.into();
     let id = hash(&data);
     be.create()?;
-    be.write_bytes(FileType::Key, &id, false, data.clone())?;
-
-    if let Some(hot_be) = hot_be {
-        hot_be.create()?;
-        hot_be.write_bytes(FileType::Key, &id, false, data)?;
-    }
+    be.write_bytes(FileType::Key, &id, false, data)?;
     println!("key {id} successfully added.");
 
     // save config

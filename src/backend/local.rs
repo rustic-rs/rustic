@@ -114,6 +114,8 @@ impl ReadBackend for LocalBackend {
 
 impl WriteBackend for LocalBackend {
     fn create(&self) -> Result<()> {
+        trace!("creating repo at {:?}", self.path);
+
         for tpe in ALL_FILE_TYPES {
             fs::create_dir_all(self.path.join(tpe.name()))?;
         }

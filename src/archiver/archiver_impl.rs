@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
@@ -7,11 +6,11 @@ use indicatif::ProgressBar;
 use log::*;
 
 use crate::backend::{DecryptWriteBackend, ReadSource, ReadSourceEntry};
-use crate::blob::{BlobType, Node};
+use crate::blob::BlobType;
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
 use crate::repofile::{ConfigFile, SnapshotFile};
 
-use super::{FileArchiver, Parent, ParentResult, TreeArchiver, TreeIterator};
+use super::{FileArchiver, Parent, TreeArchiver, TreeIterator};
 
 pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     file_archiver: FileArchiver<BE, I>,
@@ -53,6 +52,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         as_path: Option<&PathBuf>,
         p: &ProgressBar,
     ) -> Result<SnapshotFile> {
+        if !p.is_hidden() {
+            if let Some(size) = src.size()? {
+                p.set_length(size);
+            }
+        };
+        p.set_prefix("backing up...");
+
         // filter out errors and handle as_path
         let iter = src.entries().filter_map(|item| match item {
             Err(e) => {
@@ -108,20 +114,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         }
 
         let snap = self.finalize_snapshot()?;
+        p.finish_with_message("done");
         Ok(snap)
-    }
-
-    pub fn backup_reader(
-        &mut self,
-        path: &Path,
-        r: impl Read + Send + 'static,
-        node: Node,
-        parent: ParentResult<()>,
-        p: ProgressBar,
-    ) -> Result<()> {
-        let (node, filesize) = self.file_archiver.backup_reader(r, node, p)?;
-        self.tree_archiver.add_file(path, node, parent, filesize);
-        Ok(())
     }
 
     pub fn finalize_snapshot(mut self) -> Result<SnapshotFile> {

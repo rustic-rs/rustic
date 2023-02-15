@@ -17,6 +17,7 @@ pub mod local;
 pub mod node;
 pub mod rclone;
 pub mod rest;
+pub mod stdin;
 
 pub use self::ignore::*;
 pub use cache::*;
@@ -28,6 +29,7 @@ pub use local::*;
 use node::Node;
 pub use rclone::*;
 pub use rest::*;
+pub use stdin::*;
 
 /// All [`FileType`]s which are located in separated directories
 pub const ALL_FILE_TYPES: [FileType; 4] = [

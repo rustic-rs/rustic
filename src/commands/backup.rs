@@ -11,9 +11,8 @@ use serde::Deserialize;
 use toml::Value;
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
-use crate::archiver::{Archiver, Parent, ParentResult};
-use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource};
-use crate::blob::{Metadata, Node, NodeType};
+use crate::archiver::{Archiver, Parent};
+use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, StdinSource};
 use crate::index::IndexBackend;
 use crate::repofile::{
     PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotOptions,
@@ -209,40 +208,15 @@ pub(super) fn execute(
 
         let parent = Parent::new(&index, parent_tree, opts.ignore_ctime, opts.ignore_inode);
 
-        let snap = if backup_stdin {
-            let mut archiver = Archiver::new(be, index, &repo.config, parent, snap)?;
-            let p = progress_bytes("starting backup from stdin...");
-            archiver.backup_reader(
-                &PathBuf::new(),
-                std::io::stdin(),
-                Node::new(
-                    opts.stdin_filename,
-                    NodeType::File,
-                    Metadata::default(),
-                    None,
-                    None,
-                ),
-                ParentResult::NotFound,
-                p.clone(),
-            )?;
+        let archiver = Archiver::new(be, index, &repo.config, parent, snap)?;
+        let p = progress_bytes("determining size...");
 
-            let snap = archiver.finalize_snapshot()?;
-            p.finish_with_message("done");
-            snap
+        let snap = if backup_stdin {
+            let src = StdinSource::new()?;
+            archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?
         } else {
             let src = LocalSource::new(opts.ignore_opts.clone(), &backup_path)?;
-
-            let p = progress_bytes("determining size...");
-            if !p.is_hidden() {
-                if let Some(size) = src.size()? {
-                    p.set_length(size);
-                }
-            };
-            p.set_prefix("backing up...");
-            let archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;
-            let snap = archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?;
-            p.finish_with_message("done");
-            snap
+            archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?
         };
 
         if opts.json {

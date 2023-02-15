@@ -3,7 +3,7 @@ use std::fs::{read_link, File};
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bytesize::ByteSize;
 #[cfg(not(windows))]
 use chrono::TimeZone;
@@ -18,6 +18,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use users::{Groups, Users, UsersCache};
 
 use super::{node::Metadata, node::NodeType, Node, ReadSource};
+use super::{ReadSourceEntry, ReadSourceOpen};
 
 pub struct LocalSource {
     builder: WalkBuilder,
@@ -152,12 +153,22 @@ impl LocalSource {
     }
 }
 
-impl ReadSource for LocalSource {
+pub struct OpenFile(PathBuf);
+
+impl ReadSourceOpen for OpenFile {
     type Reader = File;
-    fn read(path: &Path) -> Result<Self::Reader> {
-        Ok(File::open(path)?)
+
+    fn open(self) -> Result<Self::Reader> {
+        let path = self.0;
+        File::open(&path).with_context(|| format!("Unable to open {}", path.display()))
     }
-    fn size(&self) -> Result<u64> {
+}
+
+impl ReadSource for LocalSource {
+    type Open = OpenFile;
+    type Iter = Self;
+
+    fn size(&self) -> Result<Option<u64>> {
         let mut size = 0;
         for entry in self.builder.build() {
             if let Err(e) = entry.and_then(|e| e.metadata()).map(|m| {
@@ -166,12 +177,16 @@ impl ReadSource for LocalSource {
                 warn!("ignoring error {}", e);
             }
         }
-        Ok(size)
+        Ok(Some(size))
+    }
+
+    fn entries(self) -> Self::Iter {
+        self
     }
 }
 
 impl Iterator for LocalSource {
-    type Item = Result<(PathBuf, Node)>;
+    type Item = Result<ReadSourceEntry<OpenFile>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.walker.next() {
@@ -194,7 +209,11 @@ impl Iterator for LocalSource {
 }
 
 #[cfg(windows)]
-fn map_entry(entry: DirEntry, with_atime: bool, _ignore_devid: bool) -> Result<(PathBuf, Node)> {
+fn map_entry(
+    entry: DirEntry,
+    with_atime: bool,
+    _ignore_devid: bool,
+) -> Result<ReadSourceEntry<OpenFile>> {
     let name = entry.file_name();
     let m = entry.metadata()?;
 
@@ -253,7 +272,10 @@ fn map_entry(entry: DirEntry, with_atime: bool, _ignore_devid: bool) -> Result<(
     } else {
         Node::new_node(name, NodeType::File, meta)
     };
-    Ok((entry.path().to_path_buf(), node))
+
+    let path = entry.into_path();
+    let open = Some(OpenFile(path.clone()));
+    Ok(ReadSourceEntry { path, node, open })
 }
 
 #[cfg(not(windows))]
@@ -263,7 +285,7 @@ fn map_entry(
     with_atime: bool,
     ignore_devid: bool,
     cache: &UsersCache,
-) -> Result<(PathBuf, Node)> {
+) -> Result<ReadSourceEntry<OpenFile>> {
     let name = entry.file_name();
     let m = entry.metadata()?;
 
@@ -337,7 +359,9 @@ fn map_entry(
     } else {
         Node::new_node(name, NodeType::File, meta)
     };
-    Ok((entry.path().to_path_buf(), node))
+    let path = entry.into_path();
+    let open = Some(OpenFile(path.clone()));
+    Ok(ReadSourceEntry { path, node, open })
 }
 
 #[cfg(not(windows))]

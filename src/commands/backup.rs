@@ -234,8 +234,9 @@ pub(super) fn execute(
 
             let p = progress_bytes("determining size...");
             if !p.is_hidden() {
-                let size = src.size()?;
-                p.set_length(size);
+                if let Some(size) = src.size()? {
+                    p.set_length(size);
+                }
             };
             p.set_prefix("backing up...");
             let archiver = Archiver::new(be, index.clone(), &repo.config, parent, snap)?;

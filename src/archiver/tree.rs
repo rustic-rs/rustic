@@ -30,11 +30,11 @@ pub enum TreeType<T, U> {
     Other(T),
 }
 
-impl<I> Iterator for TreeIterator<(PathBuf, PathBuf, Node), I>
+impl<I, O> Iterator for TreeIterator<(PathBuf, Node, O), I>
 where
-    I: Iterator<Item = (PathBuf, PathBuf, Node)>,
+    I: Iterator<Item = (PathBuf, Node, O)>,
 {
-    type Item = TreeType<(PathBuf, PathBuf, Node), (PathBuf, Node, OsString)>;
+    type Item = TreeType<(PathBuf, Node, O), (PathBuf, Node, OsString)>;
     fn next(&mut self) -> Option<Self::Item> {
         match &self.item {
             None => {
@@ -44,7 +44,7 @@ where
                     None
                 }
             }
-            Some((path, _, node)) => {
+            Some((path, node, _)) => {
                 match path.strip_prefix(&self.path) {
                     Err(_) => {
                         self.path.pop();
@@ -56,7 +56,7 @@ where
                             // process next normal path component - other components are simply ignored
                             if let Component::Normal(p) = comp {
                                 if node.is_dir() && path == &self.path {
-                                    let (path, _, node) = self.item.take().unwrap();
+                                    let (path, node, _) = self.item.take().unwrap();
                                     self.item = self.iter.next();
                                     let name = node.name();
                                     return Some(TreeType::NewTree((path, node, name)));

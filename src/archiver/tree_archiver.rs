@@ -46,6 +46,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
             summary,
         })
     }
+
     pub fn add(&mut self, item: TreeItem) -> Result<()> {
         match item {
             TreeType::NewTree((path, node, parent)) => {
@@ -95,10 +96,6 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
         self.summary.total_files_processed += 1;
         self.summary.total_bytes_processed += size;
         self.tree.add(node);
-    }
-
-    pub fn finish_tree(&mut self) -> Result<()> {
-        Ok(())
     }
 
     pub fn backup_tree(&mut self, path: &Path, parent: ParentResult<Id>) -> Result<Id> {

@@ -47,8 +47,8 @@ impl ParentResult<&Node> {
     }
 }
 
-pub type ItemWithParent =
-    TreeType<(PathBuf, PathBuf, Node, ParentResult<()>), (PathBuf, Node, ParentResult<Id>)>;
+pub type ItemWithParent<O> =
+    TreeType<(PathBuf, Node, O, ParentResult<()>), (PathBuf, Node, ParentResult<Id>)>;
 
 impl<BE: IndexedBackend> Parent<BE> {
     pub fn new(be: &BE, tree_id: Option<Id>, ignore_ctime: bool, ignore_inode: bool) -> Self {
@@ -155,10 +155,10 @@ impl<BE: IndexedBackend> Parent<BE> {
         Ok(())
     }
 
-    pub fn process(
+    pub fn process<O>(
         &mut self,
-        item: TreeType<(PathBuf, PathBuf, Node), (PathBuf, Node, OsString)>,
-    ) -> Result<ItemWithParent> {
+        item: TreeType<(PathBuf, Node, O), (PathBuf, Node, OsString)>,
+    ) -> Result<ItemWithParent<O>> {
         let result = match item {
             TreeType::NewTree((path, node, tree)) => {
                 let parent_result = self.is_parent(&node, &tree).into_tree_id();
@@ -169,7 +169,7 @@ impl<BE: IndexedBackend> Parent<BE> {
                 self.finish_dir()?;
                 TreeType::EndTree
             }
-            TreeType::Other((path, real_path, mut node)) => TreeType::Other({
+            TreeType::Other((path, mut node, open)) => TreeType::Other({
                 let be = self.be.clone();
                 let parent = self.is_parent(&node, &node.name());
                 let parent = match parent {
@@ -186,7 +186,7 @@ impl<BE: IndexedBackend> Parent<BE> {
                     }
                     parent_result => parent_result.into_type_only(),
                 };
-                (path, real_path, node, parent)
+                (path, node, open, parent)
             }),
         };
         Ok(result)

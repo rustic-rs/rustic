@@ -1,5 +1,5 @@
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
@@ -144,10 +144,24 @@ pub trait WriteBackend: ReadBackend {
     fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> Result<()>;
 }
 
-pub trait ReadSource: Iterator<Item = Result<(PathBuf, Node)>> {
-    type Reader: Read;
-    fn read(path: &Path) -> Result<Self::Reader>;
-    fn size(&self) -> Result<u64>;
+pub struct ReadSourceEntry<O> {
+    pub path: PathBuf,
+    pub node: Node,
+    pub open: Option<O>,
+}
+
+pub trait ReadSourceOpen {
+    type Reader: Read + Send + 'static;
+
+    fn open(self) -> Result<Self::Reader>;
+}
+
+pub trait ReadSource {
+    type Open: ReadSourceOpen;
+    type Iter: Iterator<Item = Result<ReadSourceEntry<Self::Open>>>;
+
+    fn size(&self) -> Result<Option<u64>>;
+    fn entries(self) -> Self::Iter;
 }
 
 pub trait WriteSource: Clone {

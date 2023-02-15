@@ -6,7 +6,7 @@ use chrono::Local;
 use indicatif::ProgressBar;
 use log::*;
 
-use crate::backend::DecryptWriteBackend;
+use crate::backend::{DecryptWriteBackend, ReadSource, ReadSourceEntry};
 use crate::blob::{BlobType, Node};
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
 use crate::repofile::{ConfigFile, SnapshotFile};
@@ -48,35 +48,35 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
     pub fn archive(
         mut self,
-        src: impl Iterator<Item = Result<(PathBuf, Node)>>,
+        src: impl ReadSource,
         backup_path: &Path,
         as_path: Option<&PathBuf>,
         p: &ProgressBar,
     ) -> Result<SnapshotFile> {
         // filter out errors and handle as_path
-        let iter = src.filter_map(|item| match item {
+        let iter = src.entries().filter_map(|item| match item {
             Err(e) => {
                 warn!("ignoring error {}\n", e);
                 None
             }
-            Ok((path, node)) => {
+            Ok(ReadSourceEntry { path, node, open }) => {
                 let snapshot_path = if let Some(as_path) = as_path {
                     as_path
                         .clone()
                         .join(path.strip_prefix(backup_path).unwrap())
                 } else {
-                    path.clone()
+                    path
                 };
                 Some(if node.is_dir() {
-                    (snapshot_path, path, node)
+                    (snapshot_path, node, open)
                 } else {
                     (
                         snapshot_path
                             .parent()
                             .expect("file path should have a parent!")
                             .to_path_buf(),
-                        path,
                         node,
+                        open,
                     )
                 })
             }

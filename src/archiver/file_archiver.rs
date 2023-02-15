@@ -1,11 +1,10 @@
-use std::fs::File;
 use std::io::Read;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use indicatif::ProgressBar;
 use rayon::prelude::*;
 
-use crate::backend::DecryptWriteBackend;
+use crate::backend::{DecryptWriteBackend, ReadSourceOpen};
 use crate::blob::{BlobType, Node, NodeType, Packer, PackerStats};
 use crate::chunker::ChunkIter;
 use crate::crypto::hash;
@@ -39,18 +38,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         })
     }
 
-    pub fn process(&self, item: ItemWithParent, p: ProgressBar) -> Result<TreeItem> {
+    pub fn process<O: ReadSourceOpen>(
+        &self,
+        item: ItemWithParent<Option<O>>,
+        p: ProgressBar,
+    ) -> Result<TreeItem> {
         Ok(match item {
             TreeType::NewTree(item) => TreeType::NewTree(item),
             TreeType::EndTree => TreeType::EndTree,
-            TreeType::Other((path, real_path, node, parent)) => {
+            TreeType::Other((path, node, open, parent)) => {
                 let (node, filesize) = if let ParentResult::Matched(()) = parent {
                     let size = node.meta.size;
                     p.inc(size);
                     (node, size)
                 } else if let NodeType::File = node.node_type() {
-                    let r = File::open(real_path)?;
-                    self.backup_reader(r, node, p.clone())?
+                    let r = open.ok_or(anyhow!("cannot open file"))?.open()?;
+                    self.backup_reader(r, node, p)?
                 } else {
                     (node, 0)
                 };

@@ -146,7 +146,39 @@ impl WriteBackend for LocalBackend {
     }
 }
 
-impl LocalBackend {
+#[derive(Clone)]
+pub struct LocalDestination {
+    path: PathBuf,
+    is_file: bool,
+}
+
+impl LocalDestination {
+    pub fn new(path: &str, create: bool, expect_file: bool) -> Result<Self> {
+        let is_dir = path.ends_with('/');
+        let path: PathBuf = path.into();
+        let is_file = path.is_file() || (!path.is_dir() && !is_dir && expect_file);
+
+        if create {
+            if is_file {
+                if let Some(path) = path.parent() {
+                    fs::create_dir_all(path)?;
+                }
+            } else {
+                fs::create_dir_all(&path)?;
+            }
+        }
+
+        Ok(Self { path, is_file })
+    }
+
+    fn path(&self, item: impl AsRef<Path>) -> PathBuf {
+        if self.is_file {
+            self.path.clone()
+        } else {
+            self.path.join(item)
+        }
+    }
+
     pub fn remove_dir(&self, dirname: impl AsRef<Path>) -> Result<()> {
         Ok(fs::remove_dir_all(dirname)?)
     }
@@ -162,7 +194,7 @@ impl LocalBackend {
     }
 
     pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
         if let Some(mtime) = meta.mtime.map(|t| FileTime::from_system_time(t.into())) {
             set_file_mtime(&filename, mtime)?;
         }
@@ -173,7 +205,7 @@ impl LocalBackend {
     }
 
     pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
 
         let user = meta
             .user
@@ -195,7 +227,7 @@ impl LocalBackend {
     }
 
     pub fn set_uid_gid(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
 
         let uid = meta.uid.map(Uid::from_raw);
         let gid = meta.gid.map(Gid::from_raw);
@@ -205,7 +237,7 @@ impl LocalBackend {
     }
 
     pub fn set_permission(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
 
         if let Some(mode) = meta.mode() {
             let mode = map_mode_from_go(*mode);
@@ -216,7 +248,7 @@ impl LocalBackend {
 
     // set_length sets the length of the given file. If it doesn't exist, create a new (empty) one with given length
     pub fn set_length(&self, item: impl AsRef<Path>, size: u64) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
         OpenOptions::new()
             .create(true)
             .write(true)
@@ -226,7 +258,7 @@ impl LocalBackend {
     }
 
     pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
 
         match node.node_type() {
             NodeType::Symlink { linktarget } => {
@@ -270,7 +302,7 @@ impl LocalBackend {
     }
 
     pub fn read_at(&self, item: impl AsRef<Path>, offset: u64, length: u64) -> Result<Bytes> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
         let mut file = File::open(filename)?;
         file.seek(SeekFrom::Start(offset))?;
         let mut vec = vec![0; length.try_into()?];
@@ -279,7 +311,7 @@ impl LocalBackend {
     }
 
     pub fn get_matching_file(&self, item: impl AsRef<Path>, size: u64) -> Option<File> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
         match fs::symlink_metadata(&filename) {
             Ok(meta) => {
                 if meta.is_file() && meta.len() == size {
@@ -293,7 +325,7 @@ impl LocalBackend {
     }
 
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) -> Result<()> {
-        let filename = self.path.join(item);
+        let filename = self.path(item);
         let file = fs::OpenOptions::new()
             .create(true)
             .write(true)

@@ -5,7 +5,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 
 use super::{progress_counter, RusticConfig};
-use crate::backend::{LocalBackend, LocalSource, LocalSourceOptions};
+use crate::backend::{LocalDestination, LocalSource, LocalSourceOptions};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
@@ -79,7 +79,7 @@ pub(super) fn execute(
 
             let index = IndexBackend::new(be, progress_counter(""))?;
             let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
-            let local = LocalBackend::new(path2)?;
+            let local = LocalDestination::new(path2, false, !node1.is_dir())?;
             let path2 = PathBuf::from(path2);
             let is_dir = path2
                 .metadata()
@@ -123,7 +123,7 @@ fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>
 }
 
 fn identical_content_local(
-    local: &LocalBackend,
+    local: &LocalDestination,
     index: &impl ReadIndex,
     path: &Path,
     node: &Node,

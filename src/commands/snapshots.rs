@@ -22,7 +22,7 @@ pub(super) struct Opts {
         long,
         short = 'g',
         value_name = "CRITERION",
-        default_value = "host,paths"
+        default_value = "host,label,paths"
     )]
     group_by: SnapshotGroupCriterion,
 

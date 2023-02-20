@@ -31,7 +31,7 @@ pub(super) struct Opts {
     #[merge(strategy = merge::bool::overwrite_false)]
     dry_run: bool,
 
-    /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,paths)
+    /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,label,paths)
     #[clap(long, short = 'g', value_name = "CRITERION")]
     group_by: Option<SnapshotGroupCriterion>,
 
@@ -218,7 +218,7 @@ pub(super) fn execute(
             &snap,
             &opts
                 .group_by
-                .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,paths").unwrap()),
+                .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,label,paths").unwrap()),
         );
 
         let parent = match (backup_stdin, opts.force, opts.parent.clone()) {

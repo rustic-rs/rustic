@@ -41,7 +41,7 @@ pub(super) struct Opts {
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 #[serde(default, rename_all = "kebab-case")]
 struct ConfigOpts {
-    /// Group snapshots by any combination of host,label,paths,tags (default: "host,paths")
+    /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     group_by: Option<SnapshotGroupCriterion>,
@@ -70,7 +70,7 @@ pub(super) fn execute(
     let group_by = opts
         .config
         .group_by
-        .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,paths").unwrap());
+        .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,label,paths").unwrap());
 
     let groups = match opts.ids.is_empty() {
         true => SnapshotFile::group_from_backend(be, &opts.config.filter, &group_by)?,

@@ -54,7 +54,7 @@ chrono = { version = "0.4", default_features = false, features = ["clock", "serd
 zstd = "0.12"
 enum-map = "2"
 enum-map-derive = "0.11"
-self_update = {version = "0.35", default-features = false, features = ["rustls", "archive-tar", "compression-flate2"] }
+self_update = {version = "0.36", default-features = false, features = ["rustls", "archive-tar", "compression-flate2"] }
 # local backend
 walkdir = "2"
 ignore = "0.4"

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -16,7 +16,7 @@ use nom::{
     sequence::delimited,
     IResult,
 };
-use rpassword::{prompt_password, read_password_from_bufread};
+use rpassword::prompt_password;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -109,6 +109,23 @@ pub(crate) fn parse_command<'a, E: ParseError<&'a str>>(
     )(input)
 }
 
+fn read_password_from_reader(file: &mut impl BufRead) -> std::io::Result<String> {
+    let mut password = String::new();
+    file.read_line(&mut password)?;
+
+    // Remove the \n from the line if present
+    if password.ends_with('\n') {
+        password.pop();
+    }
+
+    // Remove the \r from the line if present
+    if password.ends_with('\r') {
+        password.pop();
+    }
+
+    Ok(password)
+}
+
 pub struct Repository {
     pub(crate) name: String,
     pub(crate) be: HotColdBackend<ChooseBackend>,
@@ -157,7 +174,7 @@ impl Repository {
                         .with_context(|| format!("error opening password file {file:?}"))?,
                 );
                 Ok(Some(
-                    read_password_from_bufread(&mut file).context("error reading password file")?,
+                    read_password_from_reader(&mut file).context("error reading password file")?,
                 ))
             }
             (_, _, Some(command)) => {
@@ -170,7 +187,7 @@ impl Repository {
 
                 let mut pwd = BufReader::new(&*output.stdout);
                 Ok(Some(
-                    read_password_from_bufread(&mut pwd)
+                    read_password_from_reader(&mut pwd)
                         .context("error reading password from command")?,
                 ))
             }

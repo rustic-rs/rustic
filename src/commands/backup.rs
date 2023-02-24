@@ -26,7 +26,11 @@ use crate::repository::OpenRepository;
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 #[serde(default, rename_all = "kebab-case")]
 pub(super) struct Opts {
-    /// Do not upload or write any data, just show what would be done
+    /// Output generated snapshot in json format
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    json: bool,
+
     #[clap(long, short = 'n')]
     #[merge(strategy = merge::bool::overwrite_false)]
     dry_run: bool,
@@ -295,30 +299,34 @@ pub(super) fn execute(
             snap
         };
 
-        let summary = snap.summary.unwrap();
+        if opts.json {
+            let mut stdout = std::io::stdout();
+            serde_json::to_writer_pretty(&mut stdout, &snap)?;
+        } else {
+            let summary = snap.summary.unwrap();
+            println!(
+                "Files:       {} new, {} changed, {} unchanged",
+                summary.files_new, summary.files_changed, summary.files_unmodified
+            );
+            println!(
+                "Dirs:        {} new, {} changed, {} unchanged",
+                summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified
+            );
+            debug!("Data Blobs:  {} new", summary.data_blobs);
+            debug!("Tree Blobs:  {} new", summary.tree_blobs);
+            println!(
+                "Added to the repo: {} (raw: {})",
+                bytes(summary.data_added_packed),
+                bytes(summary.data_added)
+            );
 
-        println!(
-            "Files:       {} new, {} changed, {} unchanged",
-            summary.files_new, summary.files_changed, summary.files_unmodified
-        );
-        println!(
-            "Dirs:        {} new, {} changed, {} unchanged",
-            summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified
-        );
-        debug!("Data Blobs:  {} new", summary.data_blobs);
-        debug!("Tree Blobs:  {} new", summary.tree_blobs);
-        println!(
-            "Added to the repo: {} (raw: {})",
-            bytes(summary.data_added_packed),
-            bytes(summary.data_added)
-        );
-
-        println!(
-            "processed {} files, {}",
-            summary.total_files_processed,
-            bytes(summary.total_bytes_processed)
-        );
-        println!("snapshot {} successfully saved.", snap.id);
+            println!(
+                "processed {} files, {}",
+                summary.total_files_processed,
+                bytes(summary.total_bytes_processed)
+            );
+            println!("snapshot {} successfully saved.", snap.id);
+        }
 
         info!("backup of \"{source}\" done.");
     }

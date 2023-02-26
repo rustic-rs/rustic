@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -91,6 +92,14 @@ pub struct RepositoryOptions {
     #[clap(long, global = true, value_name = "DURATION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub(crate) warm_up_wait: Option<humantime::Duration>,
+
+    #[clap(skip)]
+    #[merge(strategy = overwrite)]
+    options: HashMap<String, String>,
+}
+
+fn overwrite<T>(left: &mut T, right: T) {
+    *left = right;
 }
 
 // parse a command
@@ -146,7 +155,10 @@ impl Repository {
             .map(|repo| ChooseBackend::from_url(repo))
             .transpose()?;
 
-        let be = HotColdBackend::new(be, be_hot.clone());
+        let mut be = HotColdBackend::new(be, be_hot.clone());
+        for (opt, value) in &opts.options {
+            be.set_option(opt, value)?;
+        }
         let mut name = opts.repository.as_ref().unwrap().clone();
         if let Some(repo_hot) = &opts.repo_hot {
             name.push('#');
@@ -178,10 +190,10 @@ impl Repository {
                 ))
             }
             (_, _, Some(command)) => {
-                let mut commands = parse_command::<()>(command)?.1;
+                let commands = parse_command::<()>(command)?.1;
                 debug!("commands: {commands:?}");
                 let output = Command::new(commands[0])
-                    .args(&mut commands[1..])
+                    .args(&commands[1..])
                     .output()
                     .with_context(|| format!("failed to call password command {commands:?}"))?;
 

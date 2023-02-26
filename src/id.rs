@@ -80,7 +80,7 @@ pub struct HexId([u8; HEX_LEN]);
 impl HexId {
     const EMPTY: Self = Self([b'0'; HEX_LEN]);
 
-    fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         // This is only ever filled with hex chars, which are ascii
         std::str::from_utf8(&self.0).unwrap()
     }

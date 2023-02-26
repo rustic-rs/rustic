@@ -2,8 +2,10 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
-use anyhow::Result;
+use aho_corasick::AhoCorasick;
+use anyhow::{bail, Result};
 use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
 use log::*;
@@ -12,19 +14,27 @@ use nix::unistd::chown;
 use nix::unistd::{Gid, Group, Uid, User};
 use walkdir::WalkDir;
 
+use crate::repository::parse_command;
+
 use super::node::{Metadata, Node, NodeType};
 use super::{map_mode_from_go, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
 pub struct LocalBackend {
     path: PathBuf,
+    post_create_command: Option<String>,
+    post_delete_command: Option<String>,
 }
 
 impl LocalBackend {
     pub fn new(path: &str) -> Result<Self> {
         let path = path.into();
         fs::create_dir_all(&path)?;
-        Ok(Self { path })
+        Ok(Self {
+            path,
+            post_create_command: None,
+            post_delete_command: None,
+        })
     }
 
     fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
@@ -35,6 +45,26 @@ impl LocalBackend {
             _ => self.path.join(tpe.name()).join(hex_id),
         }
     }
+
+    fn call_command(&self, tpe: FileType, id: &Id, filename: &Path, command: &str) -> Result<()> {
+        let id = id.to_hex();
+        let patterns = &["%file", "%type", "%id"];
+        let ac = AhoCorasick::new(patterns);
+        let replace_with = &[filename.to_str().unwrap(), tpe.name(), id.as_str()];
+        let actual_command = ac.replace_all(command, replace_with);
+        debug!("calling {actual_command}...");
+        let commands = parse_command::<()>(&actual_command)?.1;
+        let status = Command::new(commands[0]).args(&commands[1..]).status()?;
+        if !status.success() {
+            bail!(
+                "command was not successful for filename {}, type {}, id {}. {status}",
+                replace_with[0],
+                replace_with[1],
+                replace_with[2]
+            );
+        }
+        Ok(())
+    }
 }
 
 impl ReadBackend for LocalBackend {
@@ -42,7 +72,18 @@ impl ReadBackend for LocalBackend {
         self.path.to_str().unwrap()
     }
 
-    fn set_option(&mut self, _option: &str, _value: &str) -> Result<()> {
+    fn set_option(&mut self, option: &str, value: &str) -> Result<()> {
+        match option {
+            "post-create-command" => {
+                self.post_create_command = Some(value.to_string());
+            }
+            "post-delete-command" => {
+                self.post_delete_command = Some(value.to_string());
+            }
+            opt => {
+                warn!("Option {opt} is not supported! Ignoring it.");
+            }
+        }
         Ok(())
     }
 
@@ -131,17 +172,27 @@ impl WriteBackend for LocalBackend {
         let mut file = fs::OpenOptions::new()
             .create(true)
             .write(true)
-            .open(filename)?;
+            .open(&filename)?;
         file.set_len(buf.len().try_into()?)?;
         file.write_all(&buf)?;
         file.sync_all()?;
+        if let Some(command) = &self.post_create_command {
+            if let Err(err) = self.call_command(tpe, id, &filename, command) {
+                warn!("post-create: {err}");
+            }
+        }
         Ok(())
     }
 
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> Result<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
-        fs::remove_file(filename)?;
+        fs::remove_file(&filename)?;
+        if let Some(command) = &self.post_delete_command {
+            if let Err(err) = self.call_command(tpe, id, &filename, command) {
+                warn!("post-delete: {err}");
+            }
+        }
         Ok(())
     }
 }

@@ -101,10 +101,8 @@ pub fn warm_up_command(packs: impl ExactSizeIterator<Item = Id>, command: &str) 
     for pack in packs {
         let actual_command = command.replace("%id", &pack.to_hex());
         debug!("calling {actual_command}...");
-        let mut commands = parse_command::<()>(&actual_command)?.1;
-        let status = Command::new(commands[0])
-            .args(&mut commands[1..])
-            .status()?;
+        let commands = parse_command::<()>(&actual_command)?.1;
+        let status = Command::new(commands[0]).args(&commands[1..]).status()?;
         if !status.success() {
             warn!("warm-up command was not successful for pack {pack:?}. {status}");
         }

@@ -258,7 +258,7 @@ dependencies = [
  "atty",
  "bitflags",
  "clap_derive",
- "clap_lex",
+ "clap_lex 0.2.4",
  "indexmap",
  "once_cell",
  "strsim",
@@ -267,12 +267,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap_complete"
-version = "3.2.5"
+name = "clap"
+version = "4.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f7a2e0a962c45ce25afce14220bc24f9dade0a1787f185cecf96bfba7847cd8"
+checksum = "2f3061d6db6d8fcbbd4b05e057f2acace52e64e96b498c08c2d7a4e65addd340"
 dependencies = [
- "clap",
+ "bitflags",
+ "clap_lex 0.3.2",
+]
+
+[[package]]
+name = "clap_complete"
+version = "4.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "501ff0a401473ea1d4c3b125ff95506b62c5bc5768d818634195fbb7c4ad5ff4"
+dependencies = [
+ "clap 4.1.7",
 ]
 
 [[package]]
@@ -293,6 +303,15 @@ name = "clap_lex"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
+dependencies = [
+ "os_str_bytes",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "350b9cf31731f9957399229e9b2adc51eeabdfbe9d71d9a0552275fd12710d09"
 dependencies = [
  "os_str_bytes",
 ]
@@ -1725,7 +1744,7 @@ dependencies = [
  "bytesize",
  "cachedir",
  "chrono",
- "clap",
+ "clap 3.2.23",
  "clap_complete",
  "comfy-table",
  "crossbeam-channel",

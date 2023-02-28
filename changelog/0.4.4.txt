@@ -1,0 +1,17 @@
+Changes in version 0.4.3:
+
+Bugs fixed:
+- Integrated the cdc crate as it currently doesn't compile with current Rust. This allows to upload rustic to crates.io. 
+- restore: Don't abort on errors, but print a warning and continue
+- REST backend now ignores extra files in repository, as local backend does.
+- init did not work for hot/cold repos. This is fixed.
+- A password file without a newline didn't work. This is fixed.
+
+New features:
+- diff/restore: Allow to use a single file as target and treat it correctly
+- local backend: Added possibility to add hooks. This can be used e.g. to automatically generate .par2 files for your local repo.
+- backup: Added option --json
+- The chunker implementation has been optimized
+- Default grouping now includes grouping by labels
+- Added OpenBSD as platform
+- Many version updates of dependencies

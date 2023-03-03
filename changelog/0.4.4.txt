@@ -1,4 +1,4 @@
-Changes in version 0.4.3:
+Changes in version 0.4.4:
 
 Bugs fixed:
 - Integrated the cdc crate as it currently doesn't compile with current Rust. This allows to upload rustic to crates.io. 

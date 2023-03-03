@@ -1741,7 +1741,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.4.4"
+version = "0.4.4-dev"
 dependencies = [
  "aes256ctr_poly1305aes",
  "aho-corasick",

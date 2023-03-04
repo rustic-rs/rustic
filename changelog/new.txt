@@ -1,0 +1,5 @@
+Changes in version x.x.x:
+
+Bugs fixed:
+
+New features:

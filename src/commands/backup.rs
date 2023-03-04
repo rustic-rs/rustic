@@ -31,6 +31,7 @@ pub(super) struct Opts {
     #[merge(strategy = merge::bool::overwrite_false)]
     json: bool,
 
+    /// Do not upload or write any data, just show what would be done
     #[clap(long, short = 'n')]
     #[merge(strategy = merge::bool::overwrite_false)]
     dry_run: bool,

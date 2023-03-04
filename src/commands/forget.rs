@@ -39,7 +39,7 @@ pub(super) struct Opts {
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigOpts {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
@@ -163,7 +163,7 @@ pub(super) fn execute(
 #[serde_as]
 #[derive(Clone, PartialEq, Derivative, Parser, Deserialize, Merge)]
 #[derivative(Default)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub(super) struct KeepOptions {
     /// Keep snapshots with this taglist (can be specified multiple times)
     #[clap(long, value_name = "TAG[,TAG,..]")]

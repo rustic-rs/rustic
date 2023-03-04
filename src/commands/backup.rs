@@ -24,7 +24,7 @@ use crate::repository::OpenRepository;
 #[serde_as]
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub(super) struct Opts {
     /// Output generated snapshot in json format
     #[clap(long)]

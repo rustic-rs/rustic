@@ -30,7 +30,7 @@ use crate::repofile::{find_key_in_backend, ConfigFile};
 
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RepositoryOptions {
     /// Repository to use
     #[clap(short, long, global = true, env = "RUSTIC_REPOSITORY")]

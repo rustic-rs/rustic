@@ -309,7 +309,7 @@ impl Ord for SnapshotFile {
 
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
     #[clap(long, value_name = "HOSTNAME")]

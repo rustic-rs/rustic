@@ -30,7 +30,9 @@ impl RusticConfig {
             Value::Array(Vec::new())
         };
 
-        Ok(RusticConfig(config))
+        Ok(RusticConfig(
+            config.try_into().context("reading config file")?,
+        ))
     }
 
     fn get_value(&self, section: &str) -> Option<&Value> {
@@ -45,7 +47,10 @@ impl RusticConfig {
         Opts: Merge + Deserialize<'de>,
     {
         if let Some(value) = self.get_value(section) {
-            let config: Opts = value.clone().try_into()?;
+            let config: Opts = value
+                .clone()
+                .try_into()
+                .with_context(|| format!("reading section [{section}] in config file"))?;
             opts.merge(config);
         }
         Ok(())

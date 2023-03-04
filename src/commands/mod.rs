@@ -62,7 +62,7 @@ struct Opts {
 
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 struct GlobalOpts {
     /// Use this log level [default: info]
     #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
@@ -193,7 +193,6 @@ pub fn execute() -> Result<()> {
 
     let mut repo_opts = args.repository;
     config_file.merge_into("repository", &mut repo_opts)?;
-    config_file.merge_into("global", &mut repo_opts)?; // deprecated, but repo-options were originally under [global]
     let repo = Repository::new(repo_opts)?;
 
     if let Command::Init(opts) = args.command {

@@ -25,7 +25,7 @@ pub struct LocalSource {
 
 #[serde_as]
 #[derive(Default, Clone, Parser, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LocalSourceOptions {
     /// Save access time for files and directories
     #[clap(long)]

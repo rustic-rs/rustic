@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::{cmp::Ordering, fmt::Display};
 
@@ -10,6 +11,7 @@ use indicatif::ProgressBar;
 use itertools::Itertools;
 use log::*;
 use merge::Merge;
+use path_dedot::ParseDot;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -465,5 +467,74 @@ impl StringList {
 
     pub fn formatln(&self) -> String {
         self.0.join("\n")
+    }
+}
+
+#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct PathList(Vec<PathBuf>);
+
+impl Display for PathList {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if !self.0.is_empty() {
+            write!(f, "{:?}", self.0[0])?;
+        }
+        for p in &self.0[1..] {
+            write!(f, ",{:?}", p)?;
+        }
+        Ok(())
+    }
+}
+
+impl PathList {
+    pub fn from_strings<I>(source: I) -> Result<Self>
+    where
+        I: IntoIterator,
+        I::Item: AsRef<str>,
+    {
+        let mut paths = PathList(
+            source
+                .into_iter()
+                .map(|source| Ok(PathBuf::from(source.as_ref()).parse_dot()?.to_path_buf()))
+                .collect::<Result<_>>()?,
+        );
+        paths.merge_paths()?;
+        Ok(paths)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn from_string(sources: &str) -> Result<Self> {
+        Self::from_strings(sources.split_whitespace())
+    }
+
+    pub fn paths(&self) -> Vec<PathBuf> {
+        self.0.clone()
+    }
+
+    // sort paths and filters out subpaths of already existing paths
+    fn merge_paths(&mut self) -> Result<()> {
+        if self.0.iter().any(|p| p.is_absolute()) {
+            for path in &mut self.0 {
+                *path = path.canonicalize()?;
+            }
+        }
+
+        // sort paths
+        self.0.sort_unstable();
+
+        let mut root_path = None;
+
+        // filter out subpaths
+        self.0.retain(|path| match &root_path {
+            Some(root_path) if path.starts_with(root_path) => false,
+            _ => {
+                root_path = Some(path.to_path_buf());
+                true
+            }
+        });
+
+        Ok(())
     }
 }

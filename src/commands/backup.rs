@@ -10,6 +10,7 @@ use merge::Merge;
 use path_dedot::ParseDot;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
+use toml::Value;
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
 use crate::archiver::{Archiver, Parent};
@@ -109,7 +110,17 @@ pub(super) struct Opts {
     #[clap(value_name = "SOURCE")]
     #[merge(skip)]
     #[serde(skip)]
-    sources: Vec<String>,
+    cli_sources: Vec<String>,
+
+    // This is a hack to support serde(deny_unknown_fields) for deserializing the backup options from TOML
+    // while still being able to use [[backup.sources]] in the config file.
+    // A drawback is that a unkowen "sources = ..." won't be bailed...
+    // Note that unfortunately we cannot work with nested flattened structures, see
+    // https://github.com/serde-rs/serde/issues/1547
+    #[clap(skip)]
+    #[merge(skip)]
+    #[serde(rename = "sources")]
+    config_sources: Option<Value>,
 
     /// Backup source, used within config file
     #[clap(skip)]
@@ -127,8 +138,8 @@ pub(super) fn execute(
 
     let mut config_opts: Vec<Opts> = config_file.get("backup.sources")?;
 
-    let sources = match (opts.sources.is_empty(), config_opts.is_empty()) {
-        (false, _) => opts.sources.clone(),
+    let sources = match (opts.cli_sources.is_empty(), config_opts.is_empty()) {
+        (false, _) => opts.cli_sources.clone(),
         (true, false) => {
             info!("using all backup sources from config file.");
             config_opts.iter().map(|opt| opt.source.clone()).collect()

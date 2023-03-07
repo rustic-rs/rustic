@@ -20,6 +20,7 @@ mod completions;
 mod config;
 mod copy;
 mod diff;
+mod dump;
 mod forget;
 mod helpers;
 mod init;
@@ -99,6 +100,9 @@ enum Command {
     ///
     /// Note that the exclude options only apply for comparison with a local path
     Diff(diff::Opts),
+
+    /// dump the contents of a file in a snapshot to stdout
+    Dump(dump::Opts),
 
     /// Remove snapshots from the repository
     Forget(forget::Opts),
@@ -211,6 +215,7 @@ pub fn execute() -> Result<()> {
         Command::Completions(_) => {} // already handled above
         Command::Copy(opts) => copy::execute(repo, opts, config_file)?,
         Command::Diff(opts) => diff::execute(repo, opts, config_file)?,
+        Command::Dump(opts) => dump::execute(repo, opts, config_file)?,
         Command::Forget(opts) => forget::execute(repo, opts, config_file)?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(repo, opts)?,

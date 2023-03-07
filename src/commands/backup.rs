@@ -137,7 +137,7 @@ pub(super) fn execute(
 ) -> Result<()> {
     let time = Local::now();
 
-    let mut config_opts: Vec<Opts> = config_file.get("backup.sources")?;
+    let config_opts: Vec<Opts> = config_file.get("backup.sources")?;
 
     let config_sources: Vec<_> = config_opts
         .iter()
@@ -180,7 +180,7 @@ pub(super) fn execute(
         // merge Options from config file, if given
         if let Some(idx) = config_sources.iter().position(|s| s == &source) {
             info!("merging source={source} section from config file");
-            opts.merge(config_opts.remove(idx));
+            opts.merge(config_opts[idx].clone());
         }
         if let Some(path) = &opts.as_path {
             // as_path only works in combination with a single target
@@ -191,7 +191,7 @@ pub(super) fn execute(
             if let Some(path) = path.as_os_str().to_str() {
                 if let Some(idx) = config_opts.iter().position(|opt| opt.source == path) {
                     info!("merging source=\"{path}\" section from config file");
-                    opts.merge(config_opts.remove(idx));
+                    opts.merge(config_opts[idx].clone());
                 }
             }
         }

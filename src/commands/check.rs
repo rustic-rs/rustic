@@ -73,12 +73,24 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
         }
     }
 
+    let total_pack_size: u64 = index_collector
+        .data_packs()
+        .iter()
+        .map(|(_, size)| u64::from(*size))
+        .sum::<u64>()
+        + index_collector
+            .tree_packs()
+            .iter()
+            .map(|(_, size)| u64::from(*size))
+            .sum::<u64>();
+
     let index_be = IndexBackend::new_from_index(be, index_collector.into_index());
 
     check_snapshots(&index_be)?;
 
     if opts.read_data {
-        let p = progress_counter("reading pack data...");
+        let p = progress_bytes("reading pack data...");
+        p.set_length(total_pack_size);
 
         index_be
             .into_index()
@@ -87,11 +99,10 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
             .for_each_with((be.clone(), p.clone()), |(be, p), pack| {
                 let id = pack.id;
                 let data = be.read_full(FileType::Pack, &id).unwrap();
-                match check_pack(be, pack, data) {
+                match check_pack(be, pack, data, p) {
                     Ok(()) => {}
                     Err(err) => error!("Error reading pack {id} : {err}",),
                 }
-                p.inc(1);
             });
         p.finish();
     }
@@ -316,7 +327,12 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
     Ok(())
 }
 
-fn check_pack(be: &impl DecryptReadBackend, index_pack: IndexPack, mut data: Bytes) -> Result<()> {
+fn check_pack(
+    be: &impl DecryptReadBackend,
+    index_pack: IndexPack,
+    mut data: Bytes,
+    p: &mut ProgressBar,
+) -> Result<()> {
     let id = index_pack.id;
     let size = index_pack.pack_size();
     if data.len() != size as usize {
@@ -353,6 +369,7 @@ fn check_pack(be: &impl DecryptReadBackend, index_pack: IndexPack, mut data: Byt
         debug!("index: {:?}", blobs);
         return Ok(());
     }
+    p.inc(u64::from(header_len) + 4);
 
     // check blobs
     for blob in blobs {
@@ -373,6 +390,7 @@ fn check_pack(be: &impl DecryptReadBackend, index_pack: IndexPack, mut data: Byt
             error!("pack {id}, blob {blob_id}: Hash mismatch. Computed hash: {comp_id}");
             return Ok(());
         }
+        p.inc(blob.length.into());
     }
 
     Ok(())

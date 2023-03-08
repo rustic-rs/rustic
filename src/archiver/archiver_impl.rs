@@ -269,18 +269,10 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         self.snap.tree = id;
 
         let stats = self.data_packer.finalize()?;
-        self.summary.data_blobs += stats.blobs;
-        self.summary.data_added += stats.data;
-        self.summary.data_added_packed += stats.data_packed;
-        self.summary.data_added_files += stats.data;
-        self.summary.data_added_files_packed += stats.data_packed;
+        stats.apply(&mut self.summary, BlobType::Data);
 
         let stats = self.tree_packer.finalize()?;
-        self.summary.tree_blobs += stats.blobs;
-        self.summary.data_added += stats.data;
-        self.summary.data_added_packed += stats.data_packed;
-        self.summary.data_added_trees += stats.data;
-        self.summary.data_added_trees_packed += stats.data_packed;
+        stats.apply(&mut self.summary, BlobType::Tree);
 
         self.indexer.write().unwrap().finalize()?;
 

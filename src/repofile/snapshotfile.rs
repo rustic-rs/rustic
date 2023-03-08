@@ -592,7 +592,7 @@ impl Display for PathList {
 }
 
 impl PathList {
-    pub fn from_strings<I>(source: I) -> Result<Self>
+    pub fn from_strings<I>(source: I, sanitize: bool) -> Result<Self>
     where
         I: IntoIterator,
         I::Item: AsRef<str>,
@@ -600,10 +600,14 @@ impl PathList {
         let mut paths = PathList(
             source
                 .into_iter()
-                .map(|source| Ok(PathBuf::from(source.as_ref()).parse_dot()?.to_path_buf()))
-                .collect::<Result<_>>()?,
+                .map(|source| PathBuf::from(source.as_ref()))
+                .collect(),
         );
-        paths.merge_paths()?;
+
+        if sanitize {
+            paths.sanitize()?;
+        }
+        paths.merge_paths();
         Ok(paths)
     }
 
@@ -611,22 +615,29 @@ impl PathList {
         self.0.len()
     }
 
-    pub fn from_string(sources: &str) -> Result<Self> {
-        Self::from_strings(sources.split_whitespace())
+    pub fn from_string(sources: &str, sanitize: bool) -> Result<Self> {
+        Self::from_strings(sources.split_whitespace(), sanitize)
     }
 
     pub fn paths(&self) -> Vec<PathBuf> {
         self.0.clone()
     }
 
-    // sort paths and filters out subpaths of already existing paths
-    fn merge_paths(&mut self) -> Result<()> {
+    // sanitize paths: parse dots and absolutize if needed
+    fn sanitize(&mut self) -> Result<()> {
+        for path in &mut self.0 {
+            *path = path.parse_dot()?.to_path_buf();
+        }
         if self.0.iter().any(|p| p.is_absolute()) {
             for path in &mut self.0 {
                 *path = path.canonicalize()?;
             }
         }
+        Ok(())
+    }
 
+    // sort paths and filters out subpaths of already existing paths
+    fn merge_paths(&mut self) {
         // sort paths
         self.0.sort_unstable();
 
@@ -640,7 +651,5 @@ impl PathList {
                 true
             }
         });
-
-        Ok(())
     }
 }

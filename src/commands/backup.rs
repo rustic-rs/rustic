@@ -109,7 +109,7 @@ pub(super) fn execute(
 
     let config_sources: Vec<_> = config_opts
         .iter()
-        .filter_map(|opt| match PathList::from_string(&opt.source) {
+        .filter_map(|opt| match PathList::from_string(&opt.source, true) {
             Ok(paths) => Some(paths),
             Err(err) => {
                 warn!(
@@ -122,7 +122,7 @@ pub(super) fn execute(
         .collect();
 
     let sources = match (opts.cli_sources.is_empty(), config_opts.is_empty()) {
-        (false, _) => vec![PathList::from_strings(&opts.cli_sources)?],
+        (false, _) => vec![PathList::from_strings(&opts.cli_sources, true)?],
         (true, false) => {
             info!("using all backup sources from config file.");
             config_sources.clone()
@@ -138,7 +138,7 @@ pub(super) fn execute(
     for source in sources {
         let mut opts = opts.clone();
         let index = index.clone();
-        let backup_stdin = source == PathList::from_string("-")?;
+        let backup_stdin = source == PathList::from_string("-", false)?;
         let backup_path = if backup_stdin {
             vec![PathBuf::from(&opts.stdin_filename)]
         } else {

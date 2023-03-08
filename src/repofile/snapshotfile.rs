@@ -550,6 +550,18 @@ impl StringList {
         }
     }
 
+    pub fn set_paths(&mut self, paths: &[PathBuf]) -> Result<()> {
+        self.0 = paths
+            .iter()
+            .map(|p| {
+                Ok(p.to_str()
+                    .ok_or_else(|| anyhow!("non-unicode path {:?}", p))?
+                    .to_string())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(())
+    }
+
     pub fn remove_all(&mut self, string_lists: Vec<StringList>) {
         self.0
             .retain(|s| !string_lists.iter().any(|sl| sl.contains(s)));

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use chrono::Local;
 use clap::{AppSettings, Parser};
 use log::*;
@@ -172,23 +172,12 @@ pub(super) fn execute(
             None => None,
             Some(p) => Some(p.parse_dot()?.to_path_buf()),
         };
-        let backup_path_str = match &as_path {
-            Some(as_path) => vec![as_path],
-            None => backup_path.iter().collect(),
-        };
-        let backup_path_str = backup_path_str
-            .iter()
-            .map(|p| {
-                Ok(p.to_str()
-                    .ok_or_else(|| anyhow!("non-unicode path {:?}", backup_path_str))?
-                    .to_string())
-            })
-            .collect::<Result<Vec<_>>>()?
-            .join("\n");
 
         let mut snap = SnapshotFile::new_from_options(opts.snap_opts, time, command.clone())?;
-
-        snap.paths.add(backup_path_str.clone());
+        match &as_path {
+            Some(p) => snap.paths.set_paths(&[p.to_path_buf()])?,
+            None => snap.paths.set_paths(&backup_path)?,
+        };
 
         // get suitable snapshot group from snapshot and opts.group_by. This is used to filter snapshots for the parent detection
         let group = SnapshotGroup::from_sn(
@@ -226,7 +215,7 @@ pub(super) fn execute(
             archiver.backup_reader(
                 std::io::stdin(),
                 Node::new(
-                    backup_path_str,
+                    opts.stdin_filename,
                     NodeType::File,
                     Metadata::default(),
                     None,

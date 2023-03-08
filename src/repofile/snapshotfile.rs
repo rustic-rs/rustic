@@ -4,9 +4,10 @@ use std::str::FromStr;
 use std::{cmp::Ordering, fmt::Display};
 
 use anyhow::{anyhow, bail, Result};
-use chrono::{DateTime, Local};
-use clap::Parser;
+use chrono::{DateTime, Duration, Local};
+use clap::{AppSettings, Parser};
 use derivative::Derivative;
+use gethostname::gethostname;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use log::*;
@@ -17,6 +18,44 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use super::Id;
 use crate::backend::{DecryptReadBackend, FileType, RepoFile};
+
+#[serde_as]
+#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+pub struct SnapshotOptions {
+    /// Label snapshot with given label
+    #[clap(long, value_name = "LABEL")]
+    label: Option<String>,
+
+    /// Tags to add to backup (can be specified multiple times)
+    #[clap(long, value_name = "TAG[,TAG,..]")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[merge(strategy = merge::vec::overwrite_empty)]
+    tag: Vec<StringList>,
+
+    /// Add description to snapshot
+    #[clap(long, value_name = "DESCRIPTION")]
+    description: Option<String>,
+
+    /// Add description to snapshot from file
+    #[clap(long, value_name = "FILE", conflicts_with = "description")]
+    description_from: Option<PathBuf>,
+
+    /// Mark snapshot as uneraseable
+    #[clap(long, conflicts_with = "delete-after")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    delete_never: bool,
+
+    /// Mark snapshot to be deleted after given duration (e.g. 10d)
+    #[clap(long, value_name = "DURATION")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    delete_after: Option<humantime::Duration>,
+
+    /// Set the host name manually
+    #[clap(long, value_name = "NAME")]
+    host: Option<String>,
+}
 
 /// This is an extended version of the summaryOutput structure of restic in
 /// restic/internal/ui/backup$/json.go
@@ -49,6 +88,16 @@ pub struct SnapshotSummary {
     #[derivative(Default(value = "Local::now()"))]
     pub backup_end: DateTime<Local>,
     pub backup_duration: f64, // in seconds
+}
+
+impl SnapshotSummary {
+    pub fn finalize(&mut self, snap_time: DateTime<Local>) -> Result<()> {
+        let end_time = Local::now();
+        self.backup_duration = (end_time - self.backup_start).to_std()?.as_secs_f64();
+        self.total_duration = (end_time - snap_time).to_std()?.as_secs_f64();
+        self.backup_end = end_time;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Derivative)]
@@ -108,6 +157,51 @@ impl RepoFile for SnapshotFile {
 }
 
 impl SnapshotFile {
+    pub fn new_from_options(
+        opts: SnapshotOptions,
+        time: DateTime<Local>,
+        command: String,
+    ) -> Result<Self> {
+        let hostname = match opts.host {
+            Some(host) => host,
+            None => {
+                let hostname = gethostname();
+                hostname
+                    .to_str()
+                    .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
+                    .to_string()
+            }
+        };
+
+        let delete = match (opts.delete_never, opts.delete_after) {
+            (true, _) => DeleteOption::Never,
+            (_, Some(d)) => DeleteOption::After(time + Duration::from_std(*d)?),
+            (false, None) => DeleteOption::NotSet,
+        };
+
+        let mut snap = SnapshotFile {
+            time,
+            hostname,
+            label: opts.label.unwrap_or_default(),
+            delete,
+            summary: Some(SnapshotSummary {
+                command,
+                ..Default::default()
+            }),
+            description: opts.description,
+            ..Default::default()
+        };
+
+        // use description from description file if it is given
+        if let Some(file) = opts.description_from {
+            snap.description = Some(std::fs::read_to_string(file)?);
+        }
+
+        snap.set_tags(opts.tag.clone());
+
+        Ok(snap)
+    }
+
     fn set_id(tuple: (Id, Self)) -> Self {
         let (id, mut snap) = tuple;
         snap.id = id;

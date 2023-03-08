@@ -284,12 +284,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         self.indexer.write().unwrap().finalize()?;
 
-        let end_time = Local::now();
-        self.summary.backup_duration = (end_time - self.summary.backup_start)
-            .to_std()?
-            .as_secs_f64();
-        self.summary.total_duration = (end_time - self.snap.time).to_std()?.as_secs_f64();
-        self.summary.backup_end = end_time;
+        self.summary.finalize(self.snap.time)?;
         self.snap.summary = Some(self.summary);
         let id = self.be.save_file(&self.snap)?;
         self.snap.id = id;

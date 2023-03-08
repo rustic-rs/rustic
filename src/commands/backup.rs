@@ -2,14 +2,12 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Result};
-use chrono::{Duration, Local};
+use chrono::Local;
 use clap::{AppSettings, Parser};
-use gethostname::gethostname;
 use log::*;
 use merge::Merge;
 use path_dedot::ParseDot;
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr};
 use toml::Value;
 
 use super::{bytes, progress_bytes, progress_counter, RusticConfig};
@@ -18,12 +16,10 @@ use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, ReadSource}
 use crate::blob::{Metadata, Node, NodeType};
 use crate::index::IndexBackend;
 use crate::repofile::{
-    DeleteOption, PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotSummary,
-    StringList,
+    PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotOptions,
 };
 use crate::repository::OpenRepository;
 
-#[serde_as]
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
 #[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -61,34 +57,6 @@ pub(super) struct Opts {
     #[merge(strategy = merge::bool::overwrite_false)]
     ignore_inode: bool,
 
-    /// Label snapshot with given label
-    #[clap(long, value_name = "LABEL")]
-    label: Option<String>,
-
-    /// Tags to add to backup (can be specified multiple times)
-    #[clap(long, value_name = "TAG[,TAG,..]")]
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    #[merge(strategy = merge::vec::overwrite_empty)]
-    tag: Vec<StringList>,
-
-    /// Add description to snapshot
-    #[clap(long, value_name = "DESCRIPTION")]
-    description: Option<String>,
-
-    /// Add description to snapshot from file
-    #[clap(long, value_name = "FILE", conflicts_with = "description")]
-    description_from: Option<PathBuf>,
-
-    /// Mark snapshot as uneraseable
-    #[clap(long, conflicts_with = "delete-after")]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    delete_never: bool,
-
-    /// Mark snapshot to be deleted after given duration (e.g. 10d)
-    #[clap(long, value_name = "DURATION")]
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    delete_after: Option<humantime::Duration>,
-
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin")]
     #[merge(skip)]
@@ -98,9 +66,9 @@ pub(super) struct Opts {
     #[clap(long, value_name = "PATH")]
     as_path: Option<PathBuf>,
 
-    /// Set the host name manually
-    #[clap(long, value_name = "NAME")]
-    host: Option<String>,
+    #[clap(flatten)]
+    #[serde(flatten)]
+    snap_opts: SnapshotOptions,
 
     #[clap(flatten)]
     #[serde(flatten)]
@@ -218,43 +186,9 @@ pub(super) fn execute(
             .collect::<Result<Vec<_>>>()?
             .join("\n");
 
-        let hostname = match opts.host {
-            Some(host) => host,
-            None => {
-                let hostname = gethostname();
-                hostname
-                    .to_str()
-                    .ok_or_else(|| anyhow!("non-unicode hostname {:?}", hostname))?
-                    .to_string()
-            }
-        };
-
-        let delete = match (opts.delete_never, opts.delete_after) {
-            (true, _) => DeleteOption::Never,
-            (_, Some(d)) => DeleteOption::After(time + Duration::from_std(*d)?),
-            (false, None) => DeleteOption::NotSet,
-        };
-
-        let mut snap = SnapshotFile {
-            time,
-            hostname,
-            label: opts.label.unwrap_or_default(),
-            delete,
-            summary: Some(SnapshotSummary {
-                command: command.clone(),
-                ..Default::default()
-            }),
-            description: opts.description,
-            ..Default::default()
-        };
-
-        // use description from description file if it is given
-        if let Some(file) = opts.description_from {
-            snap.description = Some(std::fs::read_to_string(file)?);
-        }
+        let mut snap = SnapshotFile::new_from_options(opts.snap_opts, time, command.clone())?;
 
         snap.paths.add(backup_path_str.clone());
-        snap.set_tags(opts.tag.clone());
 
         // get suitable snapshot group from snapshot and opts.group_by. This is used to filter snapshots for the parent detection
         let group = SnapshotGroup::from_sn(

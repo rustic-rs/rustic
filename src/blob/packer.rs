@@ -14,7 +14,9 @@ use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
 use crate::crypto::{CryptoKey, Hasher};
 use crate::id::Id;
 use crate::index::SharedIndexer;
-use crate::repofile::{ConfigFile, IndexBlob, IndexPack, PackHeaderLength, PackHeaderRef};
+use crate::repofile::{
+    ConfigFile, IndexBlob, IndexPack, PackHeaderLength, PackHeaderRef, SnapshotSummary,
+};
 
 const KB: u32 = 1024;
 const MB: u32 = 1024 * KB;
@@ -179,6 +181,25 @@ pub struct PackerStats {
     pub blobs: u64,
     pub data: u64,
     pub data_packed: u64,
+}
+
+impl PackerStats {
+    pub fn apply(self, summary: &mut SnapshotSummary, tpe: BlobType) {
+        summary.data_added += self.data;
+        summary.data_added_packed += self.data_packed;
+        match tpe {
+            BlobType::Tree => {
+                summary.tree_blobs += self.blobs;
+                summary.data_added_trees += self.data;
+                summary.data_added_trees_packed += self.data_packed;
+            }
+            BlobType::Data => {
+                summary.data_blobs += self.blobs;
+                summary.data_added_files += self.data;
+                summary.data_added_files_packed += self.data_packed;
+            }
+        }
+    }
 }
 
 pub struct RawPacker<BE: DecryptWriteBackend> {

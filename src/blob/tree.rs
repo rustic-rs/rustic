@@ -1,4 +1,5 @@
-use std::collections::HashSet;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashSet};
 use std::ffi::OsStr;
 use std::mem;
 use std::path::{Component, Path, PathBuf};
@@ -12,6 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::crypto::hash;
 use crate::id::Id;
 use crate::index::IndexedBackend;
+use crate::repofile::SnapshotSummary;
 
 use super::{Metadata, Node, NodeType};
 
@@ -254,4 +256,124 @@ impl Iterator for TreeStreamerOnce {
         }
         Some(Ok((path, tree)))
     }
+}
+
+pub fn merge_trees(
+    be: &impl IndexedBackend,
+    trees: Vec<Id>,
+    cmp: &impl Fn(&Node, &Node) -> Ordering,
+    save: &impl Fn(Tree) -> Result<(Id, u64)>,
+    summary: &mut SnapshotSummary,
+) -> Result<Id> {
+    // We store nodes with the index of the tree in an Binary Heap where we sort only by node name
+    struct SortedNode(Node, usize);
+    impl PartialEq for SortedNode {
+        fn eq(&self, other: &Self) -> bool {
+            self.0.name == other.0.name
+        }
+    }
+    impl PartialOrd for SortedNode {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            self.0.name.partial_cmp(&other.0.name).map(|o| o.reverse())
+        }
+    }
+    impl Eq for SortedNode {}
+    impl Ord for SortedNode {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.0.name.cmp(&other.0.name).reverse()
+        }
+    }
+
+    let mut tree_iters: Vec<_> = trees
+        .iter()
+        .map(|id| Tree::from_backend(be, *id).map(|tree| tree.into_iter()))
+        .collect::<Result<_>>()?;
+
+    // fill Heap with first elements from all trees
+    let mut elems = BinaryHeap::new();
+    for (num, iter) in tree_iters.iter_mut().enumerate() {
+        if let Some(node) = iter.next() {
+            elems.push(SortedNode(node, num));
+        }
+    }
+
+    let mut tree = Tree::new();
+    let (mut node, mut num) = match elems.pop() {
+        None => {
+            let (id, size) = save(tree)?;
+            summary.dirs_unmodified += 1;
+            summary.total_dirs_processed += 1;
+            summary.total_dirsize_processed += size;
+            return Ok(id);
+        }
+        Some(SortedNode(node, num)) => (node, num),
+    };
+
+    let mut nodes = Vec::new();
+    loop {
+        // push next elemet from tree_iters[0] (if any is left) into BinaryHeap
+        if let Some(next_node) = tree_iters[num].next() {
+            elems.push(SortedNode(next_node, num));
+        }
+
+        match elems.pop() {
+            None => {
+                // Add node to nodes list
+                nodes.push(node);
+                // no node left to proceed, merge nodes and quit
+                tree.add(merge_nodes(be, nodes, cmp, save, summary)?);
+                break;
+            }
+            Some(SortedNode(new_node, new_num)) if node.name != new_node.name => {
+                // Add node to nodes list
+                nodes.push(node);
+                // next node has other name; merge present nodes
+                tree.add(merge_nodes(be, nodes, cmp, save, summary)?);
+                nodes = Vec::new();
+                // use this node as new node
+                (node, num) = (new_node, new_num);
+            }
+            Some(SortedNode(new_node, new_num)) => {
+                // Add node to nodes list
+                nodes.push(node);
+                // use this node as new node
+                (node, num) = (new_node, new_num);
+            }
+        };
+    }
+    let (id, size) = save(tree)?;
+    if trees.contains(&id) {
+        summary.dirs_unmodified += 1;
+    } else {
+        summary.dirs_changed += 1;
+    }
+    summary.total_dirs_processed += 1;
+    summary.total_dirsize_processed += size;
+    Ok(id)
+}
+
+fn merge_nodes(
+    be: &impl IndexedBackend,
+    nodes: Vec<Node>,
+    cmp: &impl Fn(&Node, &Node) -> Ordering,
+    save: &impl Fn(Tree) -> Result<(Id, u64)>,
+    summary: &mut SnapshotSummary,
+) -> Result<Node> {
+    let trees: Vec<_> = nodes
+        .iter()
+        .filter(|node| node.is_dir())
+        .map(|node| node.subtree().unwrap())
+        .collect();
+
+    let mut node = nodes.into_iter().max_by(|n1, n2| cmp(n1, n2)).unwrap();
+
+    // if this is a dir, merge with all other dirs
+    if node.is_dir() {
+        node.subtree = Some(merge_trees(be, trees, cmp, save, summary)?);
+    } else {
+        summary.files_unmodified += 1;
+        summary.total_files_processed += 1;
+        summary.total_bytes_processed += node.meta.size;
+    }
+    Ok(node)
 }

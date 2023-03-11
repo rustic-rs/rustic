@@ -146,7 +146,7 @@ enum Command {
 }
 
 pub fn execute() -> Result<()> {
-    let command: Vec<_> = std::env::args_os().into_iter().collect();
+    let command: Vec<_> = std::env::args_os().collect();
     let args = Opts::parse_from(&command);
 
     // get global options from command line / env and config file

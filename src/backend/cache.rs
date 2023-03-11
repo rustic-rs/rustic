@@ -164,8 +164,7 @@ impl Cache {
                         .to_str()
                         .unwrap()
                         .chars()
-                        .into_iter()
-                        .all(|c| ('0'..='9').contains(&c) || ('a'..='f').contains(&c))
+                        .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
             })
             .map(|e| {
                 (

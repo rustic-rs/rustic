@@ -27,7 +27,7 @@ pub struct KeyFile {
 impl KeyFile {
     /// Generate a Key using the key derivation function from [`KeyFile`] and a given password
     fn kdf_key(&self, passwd: &impl AsRef<[u8]>) -> Result<Key> {
-        let params = Params::new(log_2(self.n), self.r, self.p)
+        let params = Params::new(log_2(self.n), self.r, self.p, Params::RECOMMENDED_LEN)
             .map_err(|_| anyhow!("invalid scrypt paramters"))?;
         let salt = STANDARD.decode(&self.salt)?;
 

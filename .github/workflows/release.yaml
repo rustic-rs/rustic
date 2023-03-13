@@ -11,6 +11,12 @@ jobs:
       matrix:
         rust: [stable]
         job:
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-msvc
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
           - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin

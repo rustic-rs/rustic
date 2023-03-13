@@ -1,9 +1,14 @@
 use std::ffi::{OsStr, OsString};
-use std::fmt::{Debug, Write};
+use std::fmt::Debug;
+#[cfg(not(windows))]
+use std::fmt::Write;
+#[cfg(not(windows))]
 use std::os::unix::ffi::OsStrExt;
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::Result;
+#[cfg(not(windows))]
+use anyhow::{anyhow, bail};
 use chrono::{DateTime, Local};
 use derive_getters::Getters;
 use derive_more::{Constructor, IsVariant};
@@ -116,6 +121,18 @@ impl Node {
     }
 }
 
+// TODO(Windows): This is not able to handle non-unicode filenames and
+// doesn't treat filenames which need and escape (like `\`, `"`, ...) correctly
+#[cfg(windows)]
+pub fn escape_filename(name: &OsStr) -> String {
+    name.to_string_lossy().to_string()
+}
+#[cfg(windows)]
+pub fn unescape_filename(s: &str) -> Result<OsString> {
+    Ok(OsString::from_str(s)?)
+}
+
+#[cfg(not(windows))]
 // This escapes the filename in a way that *should* be compatible to golangs
 // stconv.Quote, see https://pkg.go.dev/strconv#Quote
 // However, so far there was no specification what Quote really does, so this
@@ -168,6 +185,7 @@ pub fn escape_filename(name: &OsStr) -> String {
     s
 }
 
+#[cfg(not(windows))]
 // inspired by the enquote crate
 pub fn unescape_filename(s: &str) -> Result<OsString> {
     let mut chars = s.chars();
@@ -228,6 +246,7 @@ pub fn unescape_filename(s: &str) -> Result<OsString> {
     Ok(OsStr::from_bytes(&u).to_os_string())
 }
 
+#[cfg(not(windows))]
 #[inline]
 // Iterator#take cannot be used because it consumes the iterator
 fn take<I: Iterator<Item = char>>(iterator: &mut I, n: usize) -> String {
@@ -238,6 +257,7 @@ fn take<I: Iterator<Item = char>>(iterator: &mut I, n: usize) -> String {
     s
 }
 
+#[cfg(not(windows))]
 #[cfg(test)]
 mod tests {
     use super::*;

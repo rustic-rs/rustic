@@ -83,11 +83,13 @@ indicatif = "0.17"
 path-dedot = "3"
 gethostname = "0.4"
 humantime = "2"
-users = "0.11"
 itertools = "0.10"
 simplelog = "0.12"
 comfy-table = "6.1.4"
 libc="0.2"
+
+[target.'cfg(not(windows))'.dependencies]
+users = "0.11"
 
 [dev-dependencies]
 rstest = "0.16"

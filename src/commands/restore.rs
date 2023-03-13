@@ -2,11 +2,10 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::Read;
 use std::num::NonZeroU32;
-use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
-use chrono::{Local, TimeZone, Utc};
+use chrono::{DateTime, Local, Utc};
 use clap::{AppSettings, Parser};
 use derive_getters::Dissolve;
 use ignore::{DirEntry, WalkBuilder};
@@ -524,10 +523,10 @@ impl FileInfos {
         if !ignore_mtime {
             if let Some(meta) = open_file.as_ref().map(|f| f.metadata()).transpose()? {
                 // TODO: This is the same logic as in backend/ignore.rs => consollidate!
-                let mtime = Utc
-                    .timestamp_opt(meta.mtime(), meta.mtime_nsec().try_into()?)
-                    .single()
-                    .map(|dt| dt.with_timezone(&Local));
+                let mtime = meta
+                    .modified()
+                    .ok()
+                    .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local));
                 if meta.len() == file_meta.size && mtime == file_meta.mtime {
                     // File exists with fitting mtime => we suspect this file is ok!
                     debug!("file {name:?} exists with suitable size and mtime, accepting it!");

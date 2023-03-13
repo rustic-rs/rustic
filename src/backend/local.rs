@@ -1,6 +1,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::os::unix::fs::{symlink, FileExt, PermissionsExt};
+#[cfg(not(windows))]
+use std::os::unix::fs::{symlink, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -9,15 +10,20 @@ use anyhow::{bail, Result};
 use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
 use log::*;
+#[cfg(not(windows))]
 use nix::sys::stat::{mknod, Mode, SFlag};
-use nix::unistd::chown;
-use nix::unistd::{Gid, Group, Uid, User};
+#[cfg(not(windows))]
+use nix::unistd::{chown, Gid, Group, Uid, User};
 use walkdir::WalkDir;
 
 use crate::repository::parse_command;
 
-use super::node::{Metadata, Node, NodeType};
-use super::{map_mode_from_go, FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
+#[cfg(not(windows))]
+use super::mapper::map_mode_from_go;
+#[cfg(not(windows))]
+use super::node::NodeType;
+use super::node::{Metadata, Node};
+use super::{FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
 pub struct LocalBackend {
@@ -255,6 +261,13 @@ impl LocalDestination {
         Ok(())
     }
 
+    #[cfg(windows)]
+    // TODO
+    pub fn set_user_group(&self, _item: impl AsRef<Path>, _meta: &Metadata) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
     pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path(item);
 
@@ -277,6 +290,13 @@ impl LocalDestination {
         Ok(())
     }
 
+    #[cfg(windows)]
+    // TODO
+    pub fn set_uid_gid(&self, _item: impl AsRef<Path>, _meta: &Metadata) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
     pub fn set_uid_gid(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path(item);
 
@@ -287,6 +307,13 @@ impl LocalDestination {
         Ok(())
     }
 
+    #[cfg(windows)]
+    // TODO
+    pub fn set_permission(&self, _item: impl AsRef<Path>, _meta: &Metadata) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
     pub fn set_permission(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path(item);
 
@@ -308,6 +335,13 @@ impl LocalDestination {
         Ok(())
     }
 
+    #[cfg(windows)]
+    // TODO
+    pub fn create_special(&self, _item: impl AsRef<Path>, _node: &Node) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
     pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> Result<()> {
         let filename = self.path(item);
 
@@ -377,11 +411,12 @@ impl LocalDestination {
 
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) -> Result<()> {
         let filename = self.path(item);
-        let file = fs::OpenOptions::new()
+        let mut file = fs::OpenOptions::new()
             .create(true)
             .write(true)
             .open(filename)?;
-        file.write_all_at(data, offset)?;
+        file.seek(SeekFrom::Start(offset))?;
+        file.write_all(data)?;
         Ok(())
     }
 }

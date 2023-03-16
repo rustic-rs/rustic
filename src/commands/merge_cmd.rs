@@ -101,9 +101,14 @@ pub(super) fn execute(
     info!("saved new snapshot as {new_id}.");
 
     if opts.delete {
+        let now = Local::now();
         let p = progress_counter("deleting old snapshots...");
-        let snap_ids = snapshots.iter().map(|sn| &sn.id);
-        be.delete_list(FileType::Snapshot, true, snap_ids, p)?;
+        let snap_ids: Vec<_> = snapshots
+            .iter()
+            .filter(|sn| !sn.must_keep(now))
+            .map(|sn| &sn.id)
+            .collect();
+        be.delete_list(FileType::Snapshot, true, snap_ids.into_iter(), p)?;
     }
 
     Ok(())

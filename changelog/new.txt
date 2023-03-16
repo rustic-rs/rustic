@@ -7,6 +7,7 @@ Breaking changes:
 Bugs fixed:
 
 New features:
+- Experimental windows support has been added.
 - New command dump has been added.
 - New command merge has been added.
 - Extra or wrong fields in the config file now lead to rustic complaining and aborting.

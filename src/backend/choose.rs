@@ -16,6 +16,8 @@ use ChooseBackend::{Local, Rclone, Rest};
 impl ChooseBackend {
     pub fn from_url(url: &str) -> Result<Self> {
         Ok(match url.split_once(':') {
+            #[cfg(windows)]
+            Some((drive, _)) if drive.len() == 1 => Local(LocalBackend::new(url)?),
             Some(("rclone", path)) => Rclone(RcloneBackend::new(path)?),
             Some(("rest", path)) => Rest(RestBackend::new(path)?),
             Some(("local", path)) => Local(LocalBackend::new(path)?),

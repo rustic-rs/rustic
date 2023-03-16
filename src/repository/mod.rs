@@ -33,11 +33,11 @@ use crate::repofile::{find_key_in_backend, ConfigFile};
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RepositoryOptions {
     /// Repository to use
-    #[clap(short, long, global = true, env = "RUSTIC_REPOSITORY")]
+    #[clap(short, long, global = true, alias = "repo", env = "RUSTIC_REPOSITORY")]
     repository: Option<String>,
 
     /// Repository to use as hot storage
-    #[clap(long, global = true, env = "RUSTIC_REPO_HOT")]
+    #[clap(long, global = true, alias = "repository_hot", env = "RUSTIC_REPO_HOT")]
     repo_hot: Option<String>,
 
     /// Password of the repository - WARNING: Using --password can reveal the password in the process list!

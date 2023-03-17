@@ -7,6 +7,7 @@ use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Duration, Local};
 use clap::{AppSettings, Parser};
 use derivative::Derivative;
+use dunce::canonicalize;
 use gethostname::gethostname;
 use indicatif::ProgressBar;
 use itertools::Itertools;
@@ -634,7 +635,7 @@ impl PathList {
         }
         if self.0.iter().any(|p| p.is_absolute()) {
             for path in &mut self.0 {
-                *path = path.canonicalize()?;
+                *path = canonicalize(&path)?;
             }
         }
         Ok(())

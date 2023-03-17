@@ -12,17 +12,21 @@ pub(super) struct Opts {
     config_opts: ConfigOpts,
 }
 
-pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
+pub(super) fn execute(mut repo: OpenRepository, opts: Opts) -> Result<()> {
     let mut new_config = repo.config.clone();
     opts.config_opts.apply(&mut new_config)?;
     if new_config != repo.config {
         new_config.is_hot = None;
+        // don't compress the config file
+        repo.dbe.set_zstd(None);
         // for hot/cold backend, this only saves the config to the cold repo.
         repo.dbe.save_file(&new_config)?;
 
         if let Some(hot_be) = repo.be_hot {
             // save config to hot repo
-            let dbe = DecryptBackend::new(&hot_be, repo.key);
+            let mut dbe = DecryptBackend::new(&hot_be, repo.key);
+            // don't compress the config file
+            dbe.set_zstd(None);
             new_config.is_hot = Some(true);
             dbe.save_file(&new_config)?;
         }

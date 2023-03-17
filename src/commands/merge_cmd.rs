@@ -40,7 +40,7 @@ pub(super) fn execute(
     config_file: RusticConfig,
     command: String,
 ) -> Result<()> {
-    let time = Local::now();
+    let now = Local::now();
 
     let be = &repo.dbe;
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
@@ -60,9 +60,17 @@ pub(super) fn execute(
         index.total_size(BlobType::Tree),
     )?;
 
-    let mut snap = SnapshotFile::new_from_options(opts.snap_opts, time, command)?;
+    let mut snap = SnapshotFile::new_from_options(opts.snap_opts, now, command)?;
+
     let paths = PathList::from_strings(snapshots.iter().flat_map(|snap| snap.paths.iter()), false)?;
     snap.paths.set_paths(&paths.paths())?;
+
+    // set snapshot time to time of latest snapshot to be merged
+    snap.time = snapshots
+        .iter()
+        .max_by_key(|sn| sn.time)
+        .map(|sn| sn.time)
+        .unwrap_or(now);
 
     let mut summary = snap.summary.take().unwrap();
     summary.backup_start = Local::now();
@@ -88,7 +96,7 @@ pub(super) fn execute(
     indexer.write().unwrap().finalize()?;
     p.finish();
 
-    summary.finalize(time)?;
+    summary.finalize(now)?;
     snap.summary = Some(summary);
 
     let new_id = be.save_file(&snap)?;

@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::ffi::{OsStr, OsString};
-use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use log::warn;
@@ -35,20 +34,9 @@ impl<T> ParentResult<T> {
             Self::NotMatched => ParentResult::NotMatched,
         }
     }
-
-    pub fn into_type_only(self) -> ParentResult<()> {
-        self.map(|_| ())
-    }
 }
 
-impl ParentResult<&Node> {
-    pub fn into_tree_id(self) -> ParentResult<Id> {
-        self.map(|node| node.subtree().unwrap())
-    }
-}
-
-pub type ItemWithParent<O> =
-    TreeType<(PathBuf, Node, O, ParentResult<()>), (PathBuf, Node, ParentResult<Id>)>;
+pub type ItemWithParent<O> = TreeType<(O, ParentResult<()>), ParentResult<Id>>;
 
 impl<BE: IndexedBackend> Parent<BE> {
     pub fn new(be: &BE, tree_id: Option<Id>, ignore_ctime: bool, ignore_inode: bool) -> Self {
@@ -155,13 +143,12 @@ impl<BE: IndexedBackend> Parent<BE> {
         Ok(())
     }
 
-    pub fn process<O>(
-        &mut self,
-        item: TreeType<(PathBuf, Node, O), (PathBuf, Node, OsString)>,
-    ) -> Result<ItemWithParent<O>> {
+    pub fn process<O>(&mut self, item: TreeType<O, OsString>) -> Result<ItemWithParent<O>> {
         let result = match item {
             TreeType::NewTree((path, node, tree)) => {
-                let parent_result = self.is_parent(&node, &tree).into_tree_id();
+                let parent_result = self
+                    .is_parent(&node, &tree)
+                    .map(|node| node.subtree().unwrap());
                 self.set_dir(&tree)?;
                 TreeType::NewTree((path, node, parent_result))
             }
@@ -169,7 +156,7 @@ impl<BE: IndexedBackend> Parent<BE> {
                 self.finish_dir()?;
                 TreeType::EndTree
             }
-            TreeType::Other((path, mut node, open)) => TreeType::Other({
+            TreeType::Other((path, mut node, open)) => {
                 let be = self.be.clone();
                 let parent = self.is_parent(&node, &node.name());
                 let parent = match parent {
@@ -184,10 +171,10 @@ impl<BE: IndexedBackend> Parent<BE> {
                             ParentResult::NotFound
                         }
                     }
-                    parent_result => parent_result.into_type_only(),
+                    parent_result => parent_result.map(|_| ()),
                 };
-                (path, node, open, parent)
-            }),
+                TreeType::Other((path, node, (open, parent)))
+            }
         };
         Ok(result)
     }

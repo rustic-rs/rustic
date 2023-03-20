@@ -20,8 +20,7 @@ pub struct TreeArchiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     summary: SnapshotSummary,
 }
 
-pub type TreeItem =
-    TreeType<(PathBuf, Node, ParentResult<()>, u64), (PathBuf, Node, ParentResult<Id>)>;
+pub type TreeItem = TreeType<(ParentResult<()>, u64), ParentResult<Id>>;
 
 impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
     pub fn new(
@@ -70,7 +69,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
                 self.tree = tree;
                 self.tree.add(node);
             }
-            TreeType::Other((path, node, parent, size)) => {
+            TreeType::Other((path, node, (parent, size))) => {
                 self.add_file(&path, node, parent, size);
             }
         }

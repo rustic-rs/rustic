@@ -46,7 +46,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         Ok(match item {
             TreeType::NewTree(item) => TreeType::NewTree(item),
             TreeType::EndTree => TreeType::EndTree,
-            TreeType::Other((path, node, open, parent)) => {
+            TreeType::Other((path, node, (open, parent))) => {
                 let (node, filesize) = if let ParentResult::Matched(()) = parent {
                     let size = node.meta.size;
                     p.inc(size);
@@ -57,7 +57,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
                 } else {
                     (node, 0)
                 };
-                TreeType::Other((path, node, parent, filesize))
+                TreeType::Other((path, node, (parent, filesize)))
             }
         })
     }

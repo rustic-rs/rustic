@@ -3,6 +3,10 @@ use std::path::{Component, PathBuf};
 
 use crate::blob::{Metadata, Node, NodeType};
 
+/// `TreeIterator` truns an Iterator yielding items with paths and Nodes into an
+/// Iterator which ensures that all subdirectories are visited and closed.
+/// The resulting Iterator yielss a `TreeType` which either contains the original
+/// item, a new tree to be inserted or a pseudo item which idicates that a tree is finished.
 pub struct TreeIterator<T, I> {
     iter: I,
     path: PathBuf,
@@ -25,16 +29,16 @@ where
 
 #[derive(Debug)]
 pub enum TreeType<T, U> {
-    NewTree(U),
+    NewTree((PathBuf, Node, U)),
     EndTree,
-    Other(T),
+    Other((PathBuf, Node, T)),
 }
 
 impl<I, O> Iterator for TreeIterator<(PathBuf, Node, O), I>
 where
     I: Iterator<Item = (PathBuf, Node, O)>,
 {
-    type Item = TreeType<(PathBuf, Node, O), (PathBuf, Node, OsString)>;
+    type Item = TreeType<O, OsString>;
     fn next(&mut self) -> Option<Self::Item> {
         match &self.item {
             None => {

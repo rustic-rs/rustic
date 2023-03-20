@@ -42,6 +42,10 @@ pub(super) struct Opts {
     #[clap(long)]
     numeric_id: bool,
 
+    /// Don't restore ownership (user/group)
+    #[clap(long, conflicts_with = "numeric_id")]
+    no_ownership: bool,
+
     /// Warm up needed data pack files by only requesting them without processing
     #[clap(long)]
     warm_up: bool,
@@ -438,12 +442,14 @@ fn set_metadata(dest: &LocalDestination, path: &PathBuf, node: &Node, opts: &Opt
     debug!("setting metadata for {:?}", path);
     dest.create_special(path, node)
         .unwrap_or_else(|_| warn!("restore {:?}: creating special file failed.", path));
-    if opts.numeric_id {
-        dest.set_uid_gid(path, node.meta())
-            .unwrap_or_else(|_| warn!("restore {:?}: setting UID/GID failed.", path));
-    } else {
-        dest.set_user_group(path, node.meta())
-            .unwrap_or_else(|_| warn!("restore {:?}: setting User/Group failed.", path));
+    match (opts.no_ownership, opts.numeric_id) {
+        (true, _) => {}
+        (false, true) => dest
+            .set_uid_gid(path, node.meta())
+            .unwrap_or_else(|_| warn!("restore {:?}: setting UID/GID failed.", path)),
+        (false, false) => dest
+            .set_user_group(path, node.meta())
+            .unwrap_or_else(|_| warn!("restore {:?}: setting User/Group failed.", path)),
     }
     dest.set_permission(path, node.meta())
         .unwrap_or_else(|_| warn!("restore {:?}: chmod failed.", path));

@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::mem;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path, PathBuf, Prefix};
+use std::str;
 
 use anyhow::{anyhow, bail, Result};
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
@@ -60,23 +61,37 @@ impl Tree {
     pub fn node_from_path(be: &impl IndexedBackend, id: Id, path: &Path) -> Result<Node> {
         let mut node = Node::new_node(OsStr::new(""), NodeType::Dir, Metadata::default());
         node.set_subtree(id);
+
         for p in path.components() {
-            match p {
-                Component::RootDir | Component::Prefix(_) => {}
-                Component::Normal(p) => {
-                    let id = node.subtree().ok_or_else(|| anyhow!("{p:?} is no dir"))?;
-                    let tree = Tree::from_backend(be, id)?;
-                    node = tree
-                        .nodes
-                        .into_iter()
-                        .find(|node| node.name() == p)
-                        .ok_or_else(|| anyhow!("{p:?} not found"))?;
-                }
-                _ => bail!("path should not contain current or parent dir, path: {path:?}"),
+            if let Some(p) = comp_to_osstr(p)? {
+                let id = node.subtree().ok_or_else(|| anyhow!("{p:?} is no dir"))?;
+                let tree = Tree::from_backend(be, id)?;
+                node = tree
+                    .nodes
+                    .into_iter()
+                    .find(|node| node.name() == p)
+                    .ok_or_else(|| anyhow!("{p:?} not found"))?;
             }
         }
+
         Ok(node)
     }
+}
+
+pub fn comp_to_osstr(p: Component) -> Result<Option<OsString>> {
+    let s = match p {
+        Component::RootDir => None,
+        Component::Prefix(p) => match p.kind() {
+            Prefix::Verbatim(p) | Prefix::DeviceNS(p) => Some(p.to_os_string()),
+            Prefix::VerbatimUNC(_, q) | Prefix::UNC(_, q) => Some(q.to_os_string()),
+            Prefix::VerbatimDisk(p) | Prefix::Disk(p) => {
+                Some(OsStr::new(str::from_utf8(&[p])?).to_os_string())
+            }
+        },
+        Component::Normal(p) => Some(p.to_os_string()),
+        _ => bail!("path should not contain current or parent dir"),
+    };
+    Ok(s)
 }
 
 impl IntoIterator for Tree {

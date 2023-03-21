@@ -114,7 +114,7 @@ impl RcloneBackend {
             bail!("url must start with http://! url: {url}");
         }
 
-        let url = "http://".to_string() + &user + ":" + &password + "@" + &url[7..];
+        let url = "http://".to_string() + user.as_str() + ":" + password.as_str() + "@" + &url[7..];
 
         debug!("using REST backend with url {url}.");
         let rest = RestBackend::new(&url)?;

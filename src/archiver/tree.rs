@@ -1,7 +1,7 @@
 use std::ffi::OsString;
-use std::path::{Component, PathBuf};
+use std::path::PathBuf;
 
-use crate::blob::{Metadata, Node, NodeType};
+use crate::blob::{comp_to_osstr, Metadata, Node, NodeType};
 
 /// `TreeIterator` truns an Iterator yielding items with paths and Nodes into an
 /// Iterator which ensures that all subdirectories are visited and closed.
@@ -58,7 +58,7 @@ where
                         for comp in missing_dirs.components() {
                             self.path.push(comp);
                             // process next normal path component - other components are simply ignored
-                            if let Component::Normal(p) = comp {
+                            if let Some(p) = comp_to_osstr(comp).ok().flatten() {
                                 if node.is_dir() && path == &self.path {
                                     let (path, node, _) = self.item.take().unwrap();
                                     self.item = self.iter.next();
@@ -66,12 +66,8 @@ where
                                     return Some(TreeType::NewTree((path, node, name)));
                                 } else {
                                     let node =
-                                        Node::new_node(p, NodeType::Dir, Metadata::default());
-                                    return Some(TreeType::NewTree((
-                                        self.path.clone(),
-                                        node,
-                                        p.to_os_string(),
-                                    )));
+                                        Node::new_node(&p, NodeType::Dir, Metadata::default());
+                                    return Some(TreeType::NewTree((self.path.clone(), node, p)));
                                 }
                             }
                         }

@@ -72,7 +72,7 @@ cachedir = "0.3"
 # commands
 clap = { version = "3", features = ["derive", "env"] }
 clap_complete = "3.2.4"
-directories = "4"
+directories = "5"
 nom = "7"
 toml = "0.7"
 merge = "0.1"

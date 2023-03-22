@@ -67,7 +67,7 @@ backoff = "0.4"
 # rclone backend
 semver = "1"
 # cache
-dirs = "4"
+dirs = "5"
 cachedir = "0.3"
 # commands
 clap = { version = "3", features = ["derive", "env"] }

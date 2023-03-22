@@ -93,6 +93,6 @@ libc="0.2"
 users = "0.11"
 
 [dev-dependencies]
-rstest = "0.16"
+rstest = "0.17"
 quickcheck = "1"
 quickcheck_macros = "1"

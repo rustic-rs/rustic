@@ -453,6 +453,8 @@ fn set_metadata(dest: &LocalDestination, path: &PathBuf, node: &Node, opts: &Opt
     }
     dest.set_permission(path, node.meta())
         .unwrap_or_else(|_| warn!("restore {:?}: chmod failed.", path));
+    dest.set_extended_attributes(path, &node.meta.extended_attributes)
+        .unwrap_or_else(|_| warn!("restore {:?}: setting extended attributes failed.", path));
     dest.set_times(path, node.meta())
         .unwrap_or_else(|_| warn!("restore {:?}: setting file times failed.", path));
 }

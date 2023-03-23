@@ -91,6 +91,7 @@ rhai = {version = "1.13", features = ["sync", "serde", "no_optimize", "no_module
 
 [target.'cfg(not(windows))'.dependencies]
 users = "0.11"
+xattr = "1"
 
 [dev-dependencies]
 rstest = "0.17"

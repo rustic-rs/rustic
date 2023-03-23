@@ -22,7 +22,7 @@ use crate::repository::parse_command;
 use super::mapper::map_mode_from_go;
 #[cfg(not(windows))]
 use super::node::NodeType;
-use super::node::{Metadata, Node};
+use super::node::{ExtendedAttribute, Metadata, Node};
 use super::{FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES};
 
 #[derive(Clone)]
@@ -320,6 +320,35 @@ impl LocalDestination {
         if let Some(mode) = meta.mode() {
             let mode = map_mode_from_go(*mode);
             std::fs::set_permissions(filename, fs::Permissions::from_mode(mode))?;
+        }
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    pub fn set_extended_attributes(
+        &self,
+        item: impl AsRef<Path>,
+        extended_attributes: &[ExtendedAttribute],
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    pub fn set_extended_attributes(
+        &self,
+        item: impl AsRef<Path>,
+        extended_attributes: &[ExtendedAttribute],
+    ) -> Result<()> {
+        let filename = self.path(item);
+
+        for name in xattr::list(&filename)? {
+            if let Err(err) = xattr::remove(&filename, &name) {
+                warn!("error removing xattr on {filename:?}: {err}");
+            }
+        }
+
+        for ExtendedAttribute { name, value } in extended_attributes {
+            xattr::set(&filename, name, value)?;
         }
         Ok(())
     }

@@ -14,6 +14,8 @@ use derive_getters::Getters;
 use derive_more::{Constructor, IsVariant};
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::*;
+use serde_with::base64::Base64;
+use serde_with::serde_as;
 
 use crate::id::Id;
 
@@ -68,6 +70,16 @@ pub struct Metadata {
     pub device_id: u64,
     pub size: u64,
     pub links: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extended_attributes: Vec<ExtendedAttribute>,
+}
+
+#[serde_as]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExtendedAttribute {
+    pub name: String,
+    #[serde_as(as = "Base64")]
+    pub value: Vec<u8>,
 }
 
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {

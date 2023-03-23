@@ -17,8 +17,8 @@ use serde_with::{serde_as, DisplayFromStr};
 #[cfg(not(windows))]
 use users::{Groups, Users, UsersCache};
 
-use super::{node::Metadata, node::NodeType, Node, ReadSource};
-use super::{ReadSourceEntry, ReadSourceOpen};
+use super::node::{ExtendedAttribute, Metadata, NodeType};
+use super::{Node, ReadSource, ReadSourceEntry, ReadSourceOpen};
 
 pub struct LocalSource {
     builder: WalkBuilder,
@@ -259,6 +259,7 @@ fn map_entry(
         inode,
         device_id,
         links,
+        extended_attributes: Vec::new(),
     };
 
     let node = if m.is_dir() {
@@ -322,6 +323,16 @@ fn map_entry(
     let device_id = if ignore_devid { 0 } else { m.dev() };
     let links = if m.is_dir() { 0 } else { m.nlink() };
 
+    let path = entry.path();
+    let extended_attributes = xattr::list(path)?
+        .map(|name| {
+            Ok(ExtendedAttribute {
+                name: name.to_string_lossy().to_string(),
+                value: xattr::get(path, name)?.unwrap(),
+            })
+        })
+        .collect::<Result<_>>()?;
+
     let meta = Metadata {
         size,
         mtime,
@@ -335,6 +346,7 @@ fn map_entry(
         inode,
         device_id,
         links,
+        extended_attributes,
     };
     let filetype = m.file_type();
 

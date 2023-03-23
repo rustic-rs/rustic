@@ -586,8 +586,8 @@ impl FileInfos {
 
         match (has_unmatched, open_file.is_some()) {
             (true, true) => Ok(AddFileResult::Modify(file_pos)),
-            (true, false) => Ok(AddFileResult::New(file_pos)),
-            (false, _) => Ok(AddFileResult::Verified),
+            (false, true) => Ok(AddFileResult::Verified),
+            (_, false) => Ok(AddFileResult::New(file_pos)),
         }
     }
 

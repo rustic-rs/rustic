@@ -5,6 +5,7 @@ Breaking changes:
 - Backing up multiple sources on the command line now results in one instead of several snapshots.
 
 Bugs fixed:
+- `restore` command  did not restore empty files. This is fixed.
 - `config` command did save the config file compressed which violates the repo design. This is fixed.
 
 New features:

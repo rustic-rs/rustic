@@ -1829,7 +1829,6 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "backoff",
- "base64 0.21.0",
  "binrw",
  "bytes",
  "bytesize",

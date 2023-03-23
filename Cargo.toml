@@ -87,7 +87,8 @@ humantime = "2"
 itertools = "0.10"
 simplelog = "0.12"
 comfy-table = "6.1.4"
-libc="0.2"
+libc = "0.2"
+rhai = {version = "1.13", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"]}
 
 [target.'cfg(not(windows))'.dependencies]
 users = "0.11"

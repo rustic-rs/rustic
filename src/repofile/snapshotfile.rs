@@ -14,6 +14,8 @@ use itertools::Itertools;
 use log::*;
 use merge::Merge;
 use path_dedot::ParseDot;
+use rhai::serde::to_dynamic;
+use rhai::{Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -339,6 +341,19 @@ impl SnapshotFile {
     }
 
     pub fn matches(&self, filter: &SnapshotFilter) -> bool {
+        if let Some(filter_fn) = &filter.filter_fn {
+            match filter_fn.call::<bool>(self) {
+                Ok(result) => {
+                    if !result {
+                        return false;
+                    }
+                }
+                Err(err) => {
+                    warn!("Error evaluating filter-fn for snapshot {}: {err}", self.id);
+                }
+            }
+        }
+
         self.paths.matches(&filter.filter_paths)
             && self.tags.matches(&filter.filter_tags)
             && (filter.filter_host.is_empty() || filter.filter_host.contains(&self.hostname))
@@ -404,6 +419,25 @@ impl Ord for SnapshotFile {
     }
 }
 
+struct SnapshotFn(FnPtr, AST);
+impl FromStr for SnapshotFn {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let engine = Engine::new();
+        let ast = engine.compile(s)?;
+        let func = engine.eval_ast::<FnPtr>(&ast)?;
+        Ok(Self(func, ast))
+    }
+}
+
+impl SnapshotFn {
+    fn call<T: Clone + Send + Sync + 'static>(&self, sn: &SnapshotFile) -> Result<T> {
+        let engine = Engine::new();
+        let sn: Dynamic = to_dynamic(sn)?;
+        Ok(self.0.call::<T>(&engine, &self.1, (sn,))?)
+    }
+}
+
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -429,6 +463,11 @@ pub struct SnapshotFilter {
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_tags: Vec<StringList>,
+
+    /// Function to filter snapshots
+    #[clap(long, value_name = "FUNC")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    filter_fn: Option<SnapshotFn>,
 }
 
 #[derive(Clone, Default, Deserialize)]

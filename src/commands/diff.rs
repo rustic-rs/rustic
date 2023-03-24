@@ -65,7 +65,7 @@ pub(super) fn execute(
                 NodeStreamer::new(index.clone(), &node1)?,
                 NodeStreamer::new(index, &node2)?,
                 opts.no_content,
-                |_path, node1, node2| Ok(node1.content() == node2.content()),
+                |_path, node1, node2| Ok(node1.content == node2.content),
                 opts.metadata,
             )
         }
@@ -133,7 +133,7 @@ fn identical_content_local(
         None => return Ok(false),
     };
 
-    for id in node.content() {
+    for id in node.content.iter().flatten() {
         let ie = index
             .get_data(id)
             .ok_or_else(|| anyhow!("did not find id {} in index", id))?;

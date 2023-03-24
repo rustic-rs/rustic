@@ -548,7 +548,7 @@ impl FileInfos {
         self.names.push(name);
         let mut file_pos = 0;
         let mut has_unmatched = false;
-        for id in file.content().iter() {
+        for id in file.content.iter().flatten() {
             let ie = index
                 .get_data(id)
                 .ok_or_else(|| anyhow!("did not find id {} in index", id))?;

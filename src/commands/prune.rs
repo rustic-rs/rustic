@@ -1109,7 +1109,9 @@ fn find_used_blobs(
         let (_, tree) = item;
         for node in tree.nodes() {
             match node.node_type() {
-                NodeType::File => ids.extend(node.content().iter().map(|id| (*id, 0))),
+                NodeType::File => {
+                    ids.extend(node.content.iter().flatten().map(|id| (*id, 0)));
+                }
                 NodeType::Dir => {
                     ids.insert(node.subtree().unwrap(), 0);
                 }

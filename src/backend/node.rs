@@ -124,10 +124,6 @@ impl Node {
         &self.meta
     }
 
-    pub fn content(&self) -> &Vec<Id> {
-        self.content.as_ref().unwrap()
-    }
-
     pub fn subtree(&self) -> &Option<Id> {
         &self.subtree
     }

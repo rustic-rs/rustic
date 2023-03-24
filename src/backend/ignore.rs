@@ -17,7 +17,9 @@ use serde_with::{serde_as, DisplayFromStr};
 #[cfg(not(windows))]
 use users::{Groups, Users, UsersCache};
 
-use super::node::{ExtendedAttribute, Metadata, NodeType};
+#[cfg(not(windows))]
+use super::node::ExtendedAttribute;
+use super::node::{Metadata, NodeType};
 use super::{Node, ReadSource, ReadSourceEntry, ReadSourceOpen};
 
 pub struct LocalSource {

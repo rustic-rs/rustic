@@ -1,13 +1,12 @@
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{bail, Result};
 use backoff::{backoff::Backoff, Error, ExponentialBackoff, ExponentialBackoffBuilder};
 use bytes::Bytes;
 use log::*;
-use reqwest::{
-    blocking::{Client, Response},
-    Url,
-};
+use reqwest::blocking::{Client, ClientBuilder, Response};
+use reqwest::Url;
 use serde::Deserialize;
 
 use super::{FileType, Id, ReadBackend, WriteBackend};
@@ -115,6 +114,9 @@ impl ReadBackend for RestBackend {
                 }
                 val => bail!("value {val} not supported for option retry!"),
             }
+        } else if option == "timeout" {
+            let timeout = humantime::Duration::from_str(value)?;
+            self.client = ClientBuilder::new().timeout(*timeout).build()?;
         }
         Ok(())
     }

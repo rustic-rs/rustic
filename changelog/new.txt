@@ -1,7 +1,7 @@
 Changes in version x.x.x:
 
 Breaking changes:
-- Repository options in the config file must now be given under the `[repository]` section.
+- Repository options in the config file can no longer be given under the `[global]` section. Use `[repository]` instead.
 - Backing up multiple sources on the command line now results in one instead of several snapshots.
 
 Bugs fixed:

@@ -327,8 +327,8 @@ impl LocalDestination {
     #[cfg(windows)]
     pub fn set_extended_attributes(
         &self,
-        item: impl AsRef<Path>,
-        extended_attributes: &[ExtendedAttribute],
+        _item: impl AsRef<Path>,
+        _extended_attributes: &[ExtendedAttribute],
     ) -> Result<()> {
         Ok(())
     }

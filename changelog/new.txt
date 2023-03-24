@@ -16,5 +16,7 @@ New features:
 - Support for extended file attributes has been added.
 - REST/Rclone backend: Allow to set the request timeout.
 - Extra or wrong fields in the config file now lead to rustic complaining and aborting.
+- New option --no-progress has been added.
+- Option --progress-interval can now also be given as command argument and in the config file.
 - backup: Paths are now sanitized from command arguments and config file before matching and applying the configuration.
 - check --read-data: progress bar now also shows total bytes to check and ETA.

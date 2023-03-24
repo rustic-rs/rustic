@@ -75,6 +75,22 @@ struct GlobalOpts {
     /// Note: warnings and errors are still additionally printed unless they are ignored by --log-level
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE")]
     log_file: Option<PathBuf>,
+
+    /// Don't show any progress bar
+    #[clap(long, global = true, env = "RUSTIC_NO_PROGRESS")]
+    #[merge(strategy=merge::bool::overwrite_false)]
+    no_progress: bool,
+
+    /// Interval to update progress bars
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_PROGRESS_INTERVAL",
+        value_name = "DURATION",
+        conflicts_with = "no-progress"
+    )]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    progress_interval: Option<humantime::Duration>,
 }
 
 #[derive(Subcommand)]
@@ -181,6 +197,16 @@ pub fn execute() -> Result<()> {
                 File::options().create(true).append(true).open(file)?,
             ),
         ])?,
+    }
+
+    if opts.no_progress {
+        let mut no_progress = NO_PROGRESS.lock().unwrap();
+        *no_progress = true;
+    }
+
+    if let Some(duration) = opts.progress_interval {
+        let mut interval = PROGRESS_INTERVAL.lock().unwrap();
+        *interval = *duration;
     }
 
     if let Command::SelfUpdate(opts) = args.command {

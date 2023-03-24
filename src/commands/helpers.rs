@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::process::Command;
-use std::str::FromStr;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -11,6 +11,7 @@ use comfy_table::{
 };
 use indicatif::HumanDuration;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use lazy_static::lazy_static;
 use log::*;
 use rayon::ThreadPoolBuilder;
 
@@ -22,18 +23,23 @@ pub fn bytes(b: u64) -> String {
     ByteSize(b).to_string_as(true)
 }
 
+lazy_static! {
+    pub static ref PROGRESS_INTERVAL: Mutex<Duration> = Mutex::new(Duration::from_millis(100));
+    pub static ref NO_PROGRESS: Mutex<bool> = Mutex::new(false);
+}
+
 fn progress_intervall() -> Duration {
-    let env_name = "RUSTIC_PROGRESS_INTERVAL";
-    std::env::var(env_name)
-        .map(|var| {
-            humantime::Duration::from_str(&var)
-                .expect("{env_name}: please provide a valid duration")
-                .into()
-        })
-        .unwrap_or(Duration::from_millis(100))
+    *PROGRESS_INTERVAL.lock().unwrap()
+}
+
+fn is_no_progress() -> bool {
+    *NO_PROGRESS.lock().unwrap()
 }
 
 pub fn progress_spinner(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    if is_no_progress() {
+        return no_progress();
+    }
     let p = ProgressBar::new(0).with_style(
         ProgressStyle::default_bar()
             .template("[{elapsed_precise}] {prefix:30} {spinner}")
@@ -45,6 +51,9 @@ pub fn progress_spinner(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
 }
 
 pub fn progress_counter(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    if is_no_progress() {
+        return no_progress();
+    }
     let p = ProgressBar::new(0).with_style(
         ProgressStyle::default_bar()
             .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}")
@@ -60,6 +69,9 @@ pub fn no_progress() -> ProgressBar {
 }
 
 pub fn progress_bytes(prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    if is_no_progress() {
+        return no_progress();
+    }
     let p = ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
             .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 

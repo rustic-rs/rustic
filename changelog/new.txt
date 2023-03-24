@@ -1,22 +1,7 @@
 Changes in version x.x.x:
 
 Breaking changes:
-- Repository options in the config file can no longer be given under the `[global]` section. Use `[repository]` instead.
-- Backing up multiple sources on the command line now results in one instead of several snapshots.
 
 Bugs fixed:
-- `restore` command  did not restore empty files. This is fixed.
-- `config` command did save the config file compressed which violates the repo design. This is fixed.
 
 New features:
-- Experimental windows support has been added.
-- New option --filter-fn allows to implement your own snapshot filter using the Rhai language.
-- New command dump has been added.
-- New command merge has been added.
-- Support for extended file attributes has been added.
-- REST/Rclone backend: Allow to set the request timeout.
-- Extra or wrong fields in the config file now lead to rustic complaining and aborting.
-- New option --no-progress has been added.
-- Option --progress-interval can now also be given as command argument and in the config file.
-- backup: Paths are now sanitized from command arguments and config file before matching and applying the configuration.
-- check --read-data: progress bar now also shows total bytes to check and ETA.

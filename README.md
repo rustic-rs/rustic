@@ -37,6 +37,7 @@ Improvements:
  * `backup` command can use `.gitignore` files
  * `restore` uses existing files; also option `--delete` available
  * Snapshots save much more information, available in `snapshots` command
+ * Integrates the [Rhai](https://rhai.rs/) script language for snapshot filtering
  * Allows to save repository options in the repository config file via the command `config`
  * New command `merge`
  * New command `repo-info`
@@ -45,7 +46,7 @@ Improvements:
  * Syntax `<SNAPSHOT>[:PATH]` is available for many commands
  
 Current limitations:
- * Runs so far only on Linux and MacOS, Windows support is WIP
+ * Supported platforms are Linux and MacOS and other Unixes, Windows support is experimental
  
 ## Open points:
  * [ ] Add tests and benchmarks

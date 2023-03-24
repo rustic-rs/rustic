@@ -127,14 +127,17 @@ fn copy(
             tree.nodes().par_iter().try_for_each(|node| {
                 match node.node_type() {
                     NodeType::File => {
-                        node.content().par_iter().try_for_each(|id| -> Result<_> {
-                            trace!("copy data blob {id}");
-                            if !index_dest.has_data(id) {
-                                let data = index.get_data(id).unwrap().read_data(index.be())?;
-                                data_packer.add(&data, id)?;
-                            }
-                            Ok(())
-                        })?;
+                        node.content
+                            .par_iter()
+                            .flatten()
+                            .try_for_each(|id| -> Result<_> {
+                                trace!("copy data blob {id}");
+                                if !index_dest.has_data(id) {
+                                    let data = index.get_data(id).unwrap().read_data(index.be())?;
+                                    data_packer.add(&data, id)?;
+                                }
+                                Ok(())
+                            })?;
                     }
 
                     NodeType::Dir => {

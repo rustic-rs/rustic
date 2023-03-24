@@ -291,21 +291,26 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
         let (path, tree) = item;
         for node in tree.nodes() {
             match node.node_type() {
-                NodeType::File => {
-                    for (i, id) in node.content().iter().enumerate() {
-                        if id.is_null() {
-                            error!("file {:?} blob {} has null ID", path.join(node.name()), i);
-                        }
+                NodeType::File => match &node.content {
+                    Some(content) => {
+                        for (i, id) in content.iter().enumerate() {
+                            if id.is_null() {
+                                error!("file {:?} blob {} has null ID", path.join(node.name()), i);
+                            }
 
-                        if !index.has_data(id) {
-                            error!(
-                                "file {:?} blob {} is missing in index",
-                                path.join(node.name()),
-                                id
-                            );
+                            if !index.has_data(id) {
+                                error!(
+                                    "file {:?} blob {} is missing in index",
+                                    path.join(node.name()),
+                                    id
+                                );
+                            }
                         }
                     }
-                }
+                    None => {
+                        error!("file {:?} doesn't have a content", path.join(node.name()));
+                    }
+                },
 
                 NodeType::Dir => {
                     match node.subtree() {

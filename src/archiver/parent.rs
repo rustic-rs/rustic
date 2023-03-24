@@ -161,8 +161,8 @@ impl<BE: IndexedBackend> Parent<BE> {
                 let parent = self.is_parent(&node, &node.name());
                 let parent = match parent {
                     ParentResult::Matched(p_node) => {
-                        if p_node.content().iter().all(|id| be.has_data(id)) {
-                            node.set_content(p_node.content().to_vec());
+                        if p_node.content.iter().flatten().all(|id| be.has_data(id)) {
+                            node.set_content(p_node.content.iter().flatten().copied().collect());
                             ParentResult::Matched(())
                         } else {
                             warn!(

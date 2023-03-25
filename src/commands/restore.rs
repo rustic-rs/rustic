@@ -43,7 +43,7 @@ pub(super) struct Opts {
     numeric_id: bool,
 
     /// Don't restore ownership (user/group)
-    #[clap(long, conflicts_with = "numeric_id")]
+    #[clap(long, conflicts_with = "numeric-id")]
     no_ownership: bool,
 
     /// Warm up needed data pack files by only requesting them without processing

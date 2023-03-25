@@ -324,7 +324,7 @@ impl LocalDestination {
         Ok(())
     }
 
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "openbsd"))]
     pub fn set_extended_attributes(
         &self,
         _item: impl AsRef<Path>,
@@ -333,7 +333,7 @@ impl LocalDestination {
         Ok(())
     }
 
-    #[cfg(not(windows))]
+    #[cfg(not(any(windows, target_os = "openbsd")))]
     pub fn set_extended_attributes(
         &self,
         item: impl AsRef<Path>,

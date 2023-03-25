@@ -3,6 +3,7 @@ Changes in version x.x.x:
 Breaking changes:
 
 Bugs fixed:
+- Fixed compiliation on OpenBSD.
 
 New features:
 - REST backend: Set User-Agent header

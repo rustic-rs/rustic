@@ -17,7 +17,7 @@ use serde_with::{serde_as, DisplayFromStr};
 #[cfg(not(windows))]
 use users::{Groups, Users, UsersCache};
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "openbsd")))]
 use super::node::ExtendedAttribute;
 use super::node::{Metadata, NodeType};
 use super::{Node, ReadSource, ReadSourceEntry, ReadSourceOpen};
@@ -325,15 +325,21 @@ fn map_entry(
     let device_id = if ignore_devid { 0 } else { m.dev() };
     let links = if m.is_dir() { 0 } else { m.nlink() };
 
-    let path = entry.path();
-    let extended_attributes = xattr::list(path)?
-        .map(|name| {
-            Ok(ExtendedAttribute {
-                name: name.to_string_lossy().to_string(),
-                value: xattr::get(path, name)?.unwrap(),
+    #[cfg(target_os = "openbsd")]
+    let extended_attributes = vec![];
+
+    #[cfg(not(target_os = "openbsd"))]
+    let extended_attributes = {
+        let path = entry.path();
+        xattr::list(path)?
+            .map(|name| {
+                Ok(ExtendedAttribute {
+                    name: name.to_string_lossy().to_string(),
+                    value: xattr::get(path, name)?.unwrap(),
+                })
             })
-        })
-        .collect::<Result<_>>()?;
+            .collect::<Result<_>>()?
+    };
 
     let meta = Metadata {
         size,

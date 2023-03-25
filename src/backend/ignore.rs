@@ -46,7 +46,7 @@ pub struct LocalSourceOptions {
     ignore_devid: bool,
 
     /// Glob pattern to exclude/include (can be specified multiple times)
-    #[clap(long, short = 'g', help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, help_heading = "EXCLUDE OPTIONS")]
     #[merge(strategy = merge::vec::overwrite_empty)]
     glob: Vec<String>,
 

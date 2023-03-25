@@ -56,7 +56,7 @@ struct SnapOpts {
     dry_run: bool,
 
     /// Also remove defect snapshots - WARNING: This can result in data loss!
-    #[clap(long, short = 'n')]
+    #[clap(long)]
     delete: bool,
 
     /// Append this suffix to repaired directory or file name

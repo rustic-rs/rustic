@@ -4,6 +4,7 @@ Breaking changes:
 
 Bugs fixed:
 - Fixed compiliation on OpenBSD.
+- Fixed shell completions.
 
 New features:
 - REST backend: Set User-Agent header

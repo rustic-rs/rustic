@@ -6,6 +6,7 @@ use backoff::{backoff::Backoff, Error, ExponentialBackoff, ExponentialBackoffBui
 use bytes::Bytes;
 use log::*;
 use reqwest::blocking::{Client, ClientBuilder, Response};
+use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Url;
 use serde::Deserialize;
 
@@ -68,9 +69,14 @@ impl RestBackend {
             Url::parse(&url)?
         };
 
+        let mut headers = HeaderMap::new();
+        headers.insert("User-Agent", HeaderValue::from_static("rustic"));
+
+        let client = ClientBuilder::new().default_headers(headers).build()?;
+
         Ok(Self {
             url,
-            client: Client::new(),
+            client,
             backoff: MaybeBackoff(Some(
                 ExponentialBackoffBuilder::new()
                     .with_max_elapsed_time(Some(Duration::from_secs(600)))

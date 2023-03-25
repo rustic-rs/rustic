@@ -15,7 +15,7 @@ log-file = "/log/rustic.log"
 repository = "/tmp/rustic"
 password = "mySecretPassword" 
 
-# snapshot-filter options: These options appy to the snapshots, tag and forget command.
+# snapshot-filter options: These options apply to the snapshots, tag and forget command.
 [snapshot-filter]
 filter-host = ["myhost"]
 

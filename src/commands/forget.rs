@@ -96,7 +96,7 @@ pub(super) fn execute(
         let mut last = None;
         let now = Local::now();
         // snapshots that have no reason to be kept are removed. The only exception
-        // is if no IDs are explicitely given and no keep option is set. In this
+        // is if no IDs are explicitly given and no keep option is set. In this
         // case, the default is to keep the snapshots.
         let default_keep = opts.ids.is_empty() && group_keep == KeepOptions::default();
 

@@ -169,7 +169,7 @@ fn relevant_snapshots(
     dest_repo: &OpenRepository,
     filter: &SnapshotFilter,
 ) -> Result<Vec<SnapshotFile>> {
-    // save snapshots in destination in BTreeSet, as we want to efficiently search within to filter out already exising snapshots before copying.
+    // save snapshots in destination in BTreeSet, as we want to efficiently search within to filter out already existing snapshots before copying.
     let snapshots_dest: BTreeSet<_> = SnapshotFile::all_from_backend(&dest_repo.dbe, filter)?
         .into_iter()
         .map(remove_ids)

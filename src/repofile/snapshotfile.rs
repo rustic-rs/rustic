@@ -360,7 +360,7 @@ impl SnapshotFile {
             && (filter.filter_label.is_empty() || filter.filter_label.contains(&self.label))
     }
 
-    /// Add tag lists to snapshot. return wheter snapshot was changed
+    /// Add tag lists to snapshot. return whether snapshot was changed
     pub fn add_tags(&mut self, tag_lists: Vec<StringList>) -> bool {
         let old_tags = self.tags.clone();
         self.tags.add_all(tag_lists);
@@ -369,7 +369,7 @@ impl SnapshotFile {
         old_tags != self.tags
     }
 
-    /// Set tag lists to snapshot. return wheter snapshot was changed
+    /// Set tag lists to snapshot. return whether snapshot was changed
     pub fn set_tags(&mut self, tag_lists: Vec<StringList>) -> bool {
         let old_tags = std::mem::take(&mut self.tags);
         self.tags.add_all(tag_lists);
@@ -378,7 +378,7 @@ impl SnapshotFile {
         old_tags != self.tags
     }
 
-    /// Remove tag lists from snapshot. return wheter snapshot was changed
+    /// Remove tag lists from snapshot. return whether snapshot was changed
     pub fn remove_tags(&mut self, tag_lists: Vec<StringList>) -> bool {
         let old_tags = self.tags.clone();
         self.tags.remove_all(tag_lists);

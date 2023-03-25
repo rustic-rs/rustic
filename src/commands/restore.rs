@@ -325,7 +325,7 @@ fn allocate_and_collect(
     }
 
     if additional_existing {
-        warn!("Note: additionals entries exist in destination");
+        warn!("Note: additional entries exist in destination");
     }
 
     Ok((file_infos, stats))

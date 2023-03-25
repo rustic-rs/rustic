@@ -39,7 +39,7 @@ finished in between. It can be set by the `--keep-delete` option and defaults to
 will be kept marked and only deleted by the next prune run.
 
 Note that there is the option `--instant-delete` which circumvents this two-phase deletion. Only use this
-option, if you **REALLY KNOW** that there is no parallel access to your repo, else you risk loosing data!
+option, if you **REALLY KNOW** that there is no parallel access to your repo, else you risk losing data!
 
 ## You said "rustic uses less resources than restic" but I'm observing the opposite...
 In general rustic uses less resources, but there may be some exceptions. For instance the crypto libraries

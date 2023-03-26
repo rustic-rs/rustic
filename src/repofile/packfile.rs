@@ -174,7 +174,7 @@ impl PackHeader {
 
         // now read the header
         let data = if size_real <= size_guess {
-            // header was alread read
+            // header was already read
             data.split_off((size_guess - size_real) as usize)
         } else {
             // size_guess was too small; we have to read again

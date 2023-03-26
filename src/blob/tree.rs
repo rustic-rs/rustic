@@ -326,7 +326,7 @@ pub fn merge_trees(
 
     let mut nodes = Vec::new();
     loop {
-        // push next elemet from tree_iters[0] (if any is left) into BinaryHeap
+        // push next element from tree_iters[0] (if any is left) into BinaryHeap
         if let Some(next_node) = tree_iters[num].next() {
             elems.push(SortedNode(next_node, num));
         }

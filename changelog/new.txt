@@ -3,7 +3,7 @@ Changes in version x.x.x:
 Breaking changes:
 
 Bugs fixed:
-- Fixed compiliation on OpenBSD.
+- Fixed compilation on OpenBSD.
 - Fixed shell completions.
 
 New features:

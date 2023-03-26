@@ -6,7 +6,7 @@
 [![Crates.io Downloads][downloads-image]][crate-link]
 
 Rustic is a backup tool that provides fast, encrypted, deduplicated backups.
-It reads and writes the [restic][1] repo format desribed in the [design document][2]
+It reads and writes the [restic][1] repo format described in the [design document][2]
 and can therefore be used as a complete replacement for restic.
 
 <img src="https://github.com/rustic-rs/rustic/blob/main/screenshots/rustic.png">
@@ -32,7 +32,7 @@ Improvements:
  * Supports configuration in a config file ([example config files](https://github.com/rustic-rs/rustic/tree/main/examples))
  * Huge decrease in memory requirement
  * Already faster than restic for most operations (but not yet fully speed optimized)
- * Cleaner concept of logging output; posibility to write logs to a log file
+ * Cleaner concept of logging output; possibility to write logs to a log file
  * `rustic repair` command allows to repair some kinds of broken repositories
  * `backup` command can use `.gitignore` files
  * `restore` uses existing files; also option `--delete` available

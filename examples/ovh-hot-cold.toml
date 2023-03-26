@@ -8,7 +8,7 @@
 repository = "rclone:ovh:backup-home"
 repo-hot = "rclone:ovh:backup-home-hot"
 password-file =  "/root/key-rustic-ovh"
-cache-dir = "/var/lib/cache/rustic" # explicitely specify cache dir for remote repository 
+cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository 
 warm-up = true # cold storage needs warm-up, just trying to access a file is sufficient to start the warm-up
 warm-up-wait = "10m" # in my examples, 10 minutes wait-time was sufficient, according to docu it can be up to 12h
 

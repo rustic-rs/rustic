@@ -66,7 +66,7 @@ pub(super) struct ConfigOpts {
     /// Set grow factor for tree packs. The default packsize grows by the square root of the total size of all
     /// tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total
     /// treesize in GiB.
-    /// Defaults to 32 (= 1MB per sqare root of total treesize in GiB) if not set.
+    /// Defaults to 32 (= 1MB per square root of total treesize in GiB) if not set.
     #[clap(long, value_name = "FACTOR")]
     pub set_treepack_growfactor: Option<u32>,
 
@@ -79,7 +79,7 @@ pub(super) struct ConfigOpts {
     /// Set grow factor for data packs. The default packsize grows by the square root of the total size of all
     /// data packs multiplied with this factor. This means 32 kiB times this factor per square root of total
     /// datasize in GiB.
-    /// Defaults to 32 (= 1MB per sqare root of total datasize in GiB) if not set.
+    /// Defaults to 32 (= 1MB per square root of total datasize in GiB) if not set.
     #[clap(long, value_name = "FACTOR")]
     pub set_datapack_growfactor: Option<u32>,
 

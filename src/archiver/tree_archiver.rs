@@ -115,7 +115,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
                 self.summary.dirs_new += 1;
             }
             _ => {
-                // "Matched" trees where the subree id does not match or unmached trees
+                // "Matched" trees where the subtree id does not match or unmatched trees
                 debug!("changed   tree: {:?} {}", path, dirsize_bytes);
                 self.summary.dirs_changed += 1;
             }

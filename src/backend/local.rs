@@ -74,8 +74,10 @@ impl LocalBackend {
 }
 
 impl ReadBackend for LocalBackend {
-    fn location(&self) -> &str {
-        self.path.to_str().unwrap()
+    fn location(&self) -> String {
+        let mut location = "local:".to_string();
+        location.push_str(&self.path.to_string_lossy());
+        location
     }
 
     fn set_option(&mut self, option: &str, value: &str) -> Result<()> {

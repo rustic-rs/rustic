@@ -28,7 +28,7 @@ impl ChooseBackend {
 }
 
 impl ReadBackend for ChooseBackend {
-    fn location(&self) -> &str {
+    fn location(&self) -> String {
         match self {
             Local(local) => local.location(),
             Rest(rest) => rest.location(),

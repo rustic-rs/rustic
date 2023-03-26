@@ -72,7 +72,7 @@ pub trait RepoFile: Serialize + DeserializeOwned + Sized + Send + Sync + 'static
 }
 
 pub trait ReadBackend: Clone + Send + Sync + 'static {
-    fn location(&self) -> &str;
+    fn location(&self) -> String;
 
     fn set_option(&mut self, option: &str, value: &str) -> Result<()>;
 

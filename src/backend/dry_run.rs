@@ -25,7 +25,7 @@ impl<BE: DecryptFullBackend> DecryptReadBackend for DryRunBackend<BE> {
 }
 
 impl<BE: DecryptFullBackend> ReadBackend for DryRunBackend<BE> {
-    fn location(&self) -> &str {
+    fn location(&self) -> String {
         self.be.location()
     }
 

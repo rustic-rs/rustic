@@ -22,6 +22,7 @@ impl Drop for ChildToKill {
 #[derive(Clone)]
 pub struct RcloneBackend {
     rest: RestBackend,
+    url: String,
     _child_data: Arc<ChildToKill>,
 }
 
@@ -80,7 +81,7 @@ impl RcloneBackend {
                 .take()
                 .ok_or_else(|| anyhow!("cannot get stdout of rclone"))?,
         );
-        let url = loop {
+        let rest_url = loop {
             if let Some(status) = child.try_wait()? {
                 bail!("rclone exited with {status}");
             }
@@ -110,24 +111,28 @@ impl RcloneBackend {
             }
         });
 
-        if !url.starts_with("http://") {
+        if !rest_url.starts_with("http://") {
             bail!("url must start with http://! url: {url}");
         }
 
-        let url = "http://".to_string() + user.as_str() + ":" + password.as_str() + "@" + &url[7..];
+        let rest_url =
+            "http://".to_string() + user.as_str() + ":" + password.as_str() + "@" + &rest_url[7..];
 
         debug!("using REST backend with url {url}.");
-        let rest = RestBackend::new(&url)?;
+        let rest = RestBackend::new(&rest_url)?;
         Ok(Self {
             _child_data: Arc::new(ChildToKill(child)),
+            url: url.to_string(),
             rest,
         })
     }
 }
 
 impl ReadBackend for RcloneBackend {
-    fn location(&self) -> &str {
-        self.rest.location()
+    fn location(&self) -> String {
+        let mut location = "rclone:".to_string();
+        location.push_str(&self.url);
+        location
     }
 
     fn set_option(&mut self, option: &str, value: &str) -> Result<()> {

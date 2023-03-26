@@ -159,10 +159,10 @@ impl Repository {
         for (opt, value) in &opts.options {
             be.set_option(opt, value)?;
         }
-        let mut name = opts.repository.as_ref().unwrap().clone();
-        if let Some(repo_hot) = &opts.repo_hot {
+        let mut name = be.location();
+        if let Some(be_hot) = &be_hot {
             name.push('#');
-            name.push_str(repo_hot);
+            name.push_str(&be_hot.location());
         }
 
         Ok(Self {

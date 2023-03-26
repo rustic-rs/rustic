@@ -16,7 +16,7 @@ impl<BE: WriteBackend> HotColdBackend<BE> {
 }
 
 impl<BE: WriteBackend> ReadBackend for HotColdBackend<BE> {
-    fn location(&self) -> &str {
+    fn location(&self) -> String {
         self.be.location()
     }
 

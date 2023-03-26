@@ -168,7 +168,7 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
 }
 
 impl<R: ReadBackend, C: CryptoKey> ReadBackend for DecryptBackend<R, C> {
-    fn location(&self) -> &str {
+    fn location(&self) -> String {
         self.backend.location()
     }
 

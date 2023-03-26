@@ -101,8 +101,14 @@ impl RestBackend {
 }
 
 impl ReadBackend for RestBackend {
-    fn location(&self) -> &str {
-        self.url.as_str()
+    fn location(&self) -> String {
+        let mut location = "rest:".to_string();
+        let mut url = self.url.clone();
+        if url.password().is_some() {
+            url.set_password(Some("***")).unwrap();
+        }
+        location.push_str(url.as_str());
+        location
     }
 
     fn set_option(&mut self, option: &str, value: &str) -> Result<()> {

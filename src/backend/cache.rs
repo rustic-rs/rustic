@@ -24,7 +24,7 @@ impl<BE: WriteBackend> CachedBackend<BE> {
 }
 
 impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
-    fn location(&self) -> &str {
+    fn location(&self) -> String {
         self.be.location()
     }
 

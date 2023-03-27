@@ -5,6 +5,7 @@ Breaking changes:
 Bugs fixed:
 - Fixed compilation on OpenBSD.
 - Fixed shell completions.
+- REST backend displayed the connection password in the log. This has been changed.
 
 New features:
 - REST backend: Set User-Agent header

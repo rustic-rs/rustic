@@ -45,7 +45,14 @@ where
                 if self.path.pop() {
                     Some(TreeType::EndTree)
                 } else {
-                    None
+                    // Check if we still have a path prefix open...
+                    match self.path.components().next() {
+                        Some(std::path::Component::Prefix(..)) => {
+                            self.path = PathBuf::new();
+                            Some(TreeType::EndTree)
+                        }
+                        _ => None,
+                    }
                 }
             }
             Some((path, node, _)) => {

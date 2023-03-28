@@ -18,7 +18,7 @@ keep-yearly = 10
 [backup]
 exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
 glob-file = ["/root/rustic-local.glob"]
-one-filesystem = true
+one-file-system = true
 
 [[backup.sources]]
 source = "/home"

@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use aho_corasick::AhoCorasick;
+#[cfg(not(windows))]
+use anyhow::Context;
 use anyhow::{bail, Result};
 use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
@@ -342,16 +344,37 @@ impl LocalDestination {
         extended_attributes: &[ExtendedAttribute],
     ) -> Result<()> {
         let filename = self.path(item);
+        let mut done = vec![false; extended_attributes.len()];
 
-        for name in xattr::list(&filename)? {
-            if let Err(err) = xattr::remove(&filename, &name) {
-                warn!("error removing xattr on {filename:?}: {err}");
+        for curr_name in
+            xattr::list(&filename).with_context(|| format!("listing xattrs on {filename:?}"))?
+        {
+            match extended_attributes.iter().enumerate().find(
+                |(_, ExtendedAttribute { name, .. })| name == curr_name.to_string_lossy().as_ref(),
+            ) {
+                Some((index, ExtendedAttribute { name, value })) => {
+                    let curr_value = xattr::get(&filename, name)?.unwrap();
+                    if value != &curr_value {
+                        xattr::set(&filename, name, value)
+                            .with_context(|| format!("setting xattr {name} on {filename:?}"))?;
+                    }
+                    done[index] = true;
+                }
+                None => {
+                    if let Err(err) = xattr::remove(&filename, &curr_name) {
+                        warn!("error removing xattr {curr_name:?} on {filename:?}: {err}");
+                    }
+                }
             }
         }
 
-        for ExtendedAttribute { name, value } in extended_attributes {
-            xattr::set(&filename, name, value)?;
+        for (index, ExtendedAttribute { name, value }) in extended_attributes.iter().enumerate() {
+            if !done[index] {
+                xattr::set(&filename, name, value)
+                    .with_context(|| format!("setting xattr {name} on {filename:?}"))?;
+            }
         }
+
         Ok(())
     }
 

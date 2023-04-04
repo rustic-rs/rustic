@@ -21,6 +21,7 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use super::Id;
 use crate::backend::{DecryptReadBackend, FileType, RepoFile};
+use crate::repository::parse_command;
 
 #[serde_as]
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
@@ -660,7 +661,8 @@ impl PathList {
     }
 
     pub fn from_string(sources: &str, sanitize: bool) -> Result<Self> {
-        Self::from_strings(sources.split_whitespace(), sanitize)
+        let sources = parse_command::<()>(sources)?.1;
+        Self::from_strings(sources, sanitize)
     }
 
     pub fn paths(&self) -> Vec<PathBuf> {

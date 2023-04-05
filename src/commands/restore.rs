@@ -302,8 +302,9 @@ fn allocate_and_collect(
                 }
                 Ordering::Equal => {
                     // process existing node
-                    if node.is_dir() != dst.file_type().unwrap().is_dir()
-                        || (node.is_symlink() != dst.file_type().unwrap().is_symlink())
+                    if (node.is_dir() && !dst.file_type().unwrap().is_dir())
+                        || (node.is_file() && !dst.metadata().unwrap().is_file())
+                        || node.is_special()
                     {
                         // if types do not match, first remove the existing file
                         process_existing(dst)?;

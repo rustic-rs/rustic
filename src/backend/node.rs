@@ -100,8 +100,19 @@ impl Node {
         self.node_type == NodeType::Dir
     }
 
-    pub fn is_symlink(&self) -> bool {
-        matches!(self.node_type, NodeType::Symlink { linktarget: _ })
+    pub fn is_file(&self) -> bool {
+        matches!(self.node_type, NodeType::File)
+    }
+
+    pub fn is_special(&self) -> bool {
+        matches!(
+            self.node_type,
+            NodeType::Symlink { linktarget: _ }
+                | NodeType::Dev { device: _ }
+                | NodeType::Chardev { device: _ }
+                | NodeType::Fifo
+                | NodeType::Socket
+        )
     }
 
     pub fn set_subtree(&mut self, id: Id) {

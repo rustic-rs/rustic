@@ -1,6 +1,7 @@
 Changes in version x.x.x:
 
 Breaking changes:
+- ls: Added option `--recursive`, note: default is now non-recursive if a path is given
 
 Bugs fixed:
 - Fixed compilation on OpenBSD.
@@ -9,3 +10,4 @@ Bugs fixed:
 
 New features:
 - REST backend: Set User-Agent header
+- ls: Added option `--recursive`

@@ -21,7 +21,7 @@ use super::{Metadata, Node, NodeType};
 #[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Tree {
     #[serde(deserialize_with = "deserialize_null_default")]
-    nodes: Vec<Node>,
+    pub nodes: Vec<Node>,
 }
 
 fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>

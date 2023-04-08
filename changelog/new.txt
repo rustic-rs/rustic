@@ -7,7 +7,10 @@ Bugs fixed:
 - Fixed compilation on OpenBSD.
 - Fixed shell completions.
 - REST backend displayed the connection password in the log. This has been changed.
+- restore: Existing symlinks displayed an error. This is now corrected if the `--delete` option is used.
+- Spaces in paths did not work when given in the config file. This has been fixed.
 
 New features:
 - REST backend: Set User-Agent header
 - ls: Added option `--recursive`
+- restore: xattrs treatment has been improved

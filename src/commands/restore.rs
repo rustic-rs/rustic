@@ -15,7 +15,7 @@ use rayon::ThreadPoolBuilder;
 use super::rustic_config::RusticConfig;
 use super::{bytes, progress_bytes, progress_counter, warm_up_wait};
 use crate::backend::{DecryptReadBackend, FileType, LocalDestination};
-use crate::blob::{Node, NodeStreamer, NodeType, Tree};
+use crate::blob::{Node, NodeStreamer, NodeType, Tree, TreeStreamerOptions};
 use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
 use crate::id::Id;
@@ -32,6 +32,9 @@ pub(super) struct Opts {
     /// Dry-run: don't restore, only show what would be done
     #[clap(long, short = 'n')]
     dry_run: bool,
+
+    #[clap(flatten)]
+    streamer_opts: TreeStreamerOptions,
 
     /// Remove all files/dirs in destination which are not contained in snapshot.
     /// WARNING: Use with care, maybe first try this first with --dry-run?
@@ -284,7 +287,8 @@ fn allocate_and_collect(
         .filter_map(Result::ok); // TODO: print out the ignored error
     let mut next_dst = dst_iter.next();
 
-    let mut node_streamer = NodeStreamer::new(index.clone(), node)?;
+    let mut node_streamer =
+        NodeStreamer::new_with_glob(index.clone(), node, opts.streamer_opts.clone())?;
     let mut next_node = node_streamer.next().transpose()?;
 
     loop {
@@ -410,7 +414,8 @@ fn restore_metadata(
     opts: &Opts,
 ) -> Result<()> {
     // walk over tree in repository and compare with tree in dest
-    let mut node_streamer = NodeStreamer::new(index, node)?;
+    let mut node_streamer =
+        NodeStreamer::new_with_glob(index.clone(), node, opts.streamer_opts.clone())?;
     let mut dir_stack = Vec::new();
     while let Some((path, node)) = node_streamer.next().transpose()? {
         match node.node_type() {

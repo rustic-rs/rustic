@@ -13,4 +13,6 @@ Bugs fixed:
 New features:
 - REST backend: Set User-Agent header
 - ls: Added option `--recursive`
+- ls: Added glob options to exclude/include
+- restore: Added glob options to exclude/include
 - restore: xattrs treatment has been improved

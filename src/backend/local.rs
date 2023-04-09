@@ -8,7 +8,7 @@ use std::process::Command;
 use aho_corasick::AhoCorasick;
 #[cfg(not(windows))]
 use anyhow::Context;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use bytes::Bytes;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
 use log::*;
@@ -381,6 +381,11 @@ impl LocalDestination {
     // set_length sets the length of the given file. If it doesn't exist, create a new (empty) one with given length
     pub fn set_length(&self, item: impl AsRef<Path>, size: u64) -> Result<()> {
         let filename = self.path(item);
+        let dir = filename
+            .parent()
+            .ok_or_else(|| anyhow!("file {filename:?} should have a parent"))?;
+        fs::create_dir_all(dir)?;
+
         OpenOptions::new()
             .create(true)
             .write(true)

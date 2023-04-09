@@ -4,7 +4,7 @@ use std::path::Path;
 
 use super::progress_counter;
 use super::rustic_config::RusticConfig;
-use crate::blob::{NodeStreamer, Tree};
+use crate::blob::{NodeStreamer, Tree, TreeStreamerOptions};
 use crate::index::IndexBackend;
 use crate::repofile::{SnapshotFile, SnapshotFilter};
 use crate::repository::OpenRepository;
@@ -17,6 +17,9 @@ pub(super) struct Opts {
     /// recursively list the dir (default when no PATH is given)
     #[clap(long)]
     recursive: bool,
+
+    #[clap(flatten)]
+    streamer_opts: TreeStreamerOptions,
 
     /// Snapshot/path to list
     #[clap(value_name = "SNAPSHOT[:PATH]")]
@@ -41,7 +44,7 @@ pub(super) fn execute(
     let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
 
     if recursive {
-        for item in NodeStreamer::new(index, &node)? {
+        for item in NodeStreamer::new_with_glob(index, &node, opts.streamer_opts)? {
             let (path, _) = item?;
             println!("{path:?} ");
         }

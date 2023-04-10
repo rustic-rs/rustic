@@ -6,8 +6,11 @@ use std::path::{Component, Path, PathBuf, Prefix};
 use std::str;
 
 use anyhow::{anyhow, bail, Result};
+use clap::Parser;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use derive_getters::Getters;
+use ignore::overrides::{Override, OverrideBuilder};
+use ignore::Match;
 use indicatif::ProgressBar;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -103,6 +106,25 @@ impl IntoIterator for Tree {
     }
 }
 
+#[derive(Default, Clone, Parser)]
+pub struct TreeStreamerOptions {
+    /// Glob pattern to exclude/include (can be specified multiple times)
+    #[clap(long, help_heading = "EXCLUDE OPTIONS")]
+    glob: Vec<String>,
+
+    /// Same as --glob pattern but ignores the casing of filenames
+    #[clap(long, value_name = "GLOB", help_heading = "EXCLUDE OPTIONS")]
+    iglob: Vec<String>,
+
+    /// Read glob patterns to exclude/include from this file (can be specified multiple times)
+    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    glob_file: Vec<String>,
+
+    /// Same as --glob-file ignores the casing of filenames in patterns
+    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    iglob_file: Vec<String>,
+}
+
 /// [`NodeStreamer`] recursively streams all nodes of a given tree including all subtrees in-order
 pub struct NodeStreamer<BE>
 where
@@ -112,6 +134,7 @@ where
     inner: std::vec::IntoIter<Node>,
     path: PathBuf,
     be: BE,
+    overrides: Option<Override>,
 }
 
 impl<BE> NodeStreamer<BE>
@@ -119,6 +142,10 @@ where
     BE: IndexedBackend,
 {
     pub fn new(be: BE, node: &Node) -> Result<Self> {
+        Self::new_streamer(be, node, None)
+    }
+
+    fn new_streamer(be: BE, node: &Node, overrides: Option<Override>) -> Result<Self> {
         let inner = if node.is_dir() {
             Tree::from_backend(&be, node.subtree.unwrap())?
                 .nodes
@@ -131,7 +158,36 @@ where
             open_iterators: Vec::new(),
             path: PathBuf::new(),
             be,
+            overrides,
         })
+    }
+
+    pub fn new_with_glob(be: BE, node: &Node, opts: TreeStreamerOptions) -> Result<Self> {
+        let mut override_builder = OverrideBuilder::new("/");
+
+        for g in opts.glob {
+            override_builder.add(&g)?;
+        }
+
+        for file in opts.glob_file {
+            for line in std::fs::read_to_string(file)?.lines() {
+                override_builder.add(line)?;
+            }
+        }
+
+        override_builder.case_insensitive(true)?;
+        for g in opts.iglob {
+            override_builder.add(&g)?;
+        }
+
+        for file in opts.iglob_file {
+            for line in std::fs::read_to_string(file)?.lines() {
+                override_builder.add(line)?;
+            }
+        }
+        let overrides = override_builder.build()?;
+
+        Self::new_streamer(be, node, Some(overrides))
     }
 }
 
@@ -158,6 +214,12 @@ where
                         };
                         let old_inner = mem::replace(&mut self.inner, tree.nodes.into_iter());
                         self.open_iterators.push(old_inner);
+                    }
+
+                    if let Some(overrides) = &self.overrides {
+                        if let Match::Ignore(_) = overrides.matched(&path, false) {
+                            continue;
+                        }
                     }
 
                     return Some(Ok((path, node)));

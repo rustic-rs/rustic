@@ -1,5 +1,5 @@
 use std::io::{stdin, Stdin};
-use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
@@ -8,11 +8,15 @@ use super::{ReadSourceEntry, ReadSourceOpen};
 
 pub struct StdinSource {
     finished: bool,
+    path: PathBuf,
 }
 
 impl StdinSource {
-    pub fn new() -> Result<Self> {
-        Ok(Self { finished: false })
+    pub fn new(path: PathBuf) -> Result<Self> {
+        Ok(Self {
+            finished: false,
+            path,
+        })
     }
 }
 
@@ -49,13 +53,11 @@ impl Iterator for StdinSource {
         self.finished = true;
 
         Some(Ok(ReadSourceEntry {
-            path: Path::new("stdin").to_path_buf(),
-            node: Node::new(
-                "stdin".to_string(),
+            path: self.path.clone(),
+            node: Node::new_node(
+                self.path.file_name().unwrap(),
                 NodeType::File,
                 Metadata::default(),
-                None,
-                None,
             ),
             open: Some(OpenStdin()),
         }))

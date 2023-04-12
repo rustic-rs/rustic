@@ -212,8 +212,9 @@ pub(super) fn execute(
         let p = progress_bytes("determining size...");
 
         let snap = if backup_stdin {
-            let src = StdinSource::new()?;
-            archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?
+            let path = &backup_path[0];
+            let src = StdinSource::new(path.clone())?;
+            archiver.archive(src, path, as_path.as_ref(), &p)?
         } else {
             let src = LocalSource::new(opts.ignore_opts.clone(), &backup_path)?;
             archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?

@@ -10,12 +10,12 @@ use aho_corasick::AhoCorasick;
 use anyhow::Context;
 use anyhow::{anyhow, bail, Result};
 use bytes::Bytes;
-use filetime::{set_file_atime, set_file_mtime, FileTime};
+use filetime::{set_symlink_file_times, FileTime};
 use log::*;
 #[cfg(not(windows))]
 use nix::sys::stat::{mknod, Mode, SFlag};
 #[cfg(not(windows))]
-use nix::unistd::{chown, Gid, Group, Uid, User};
+use nix::unistd::{fchownat, FchownatFlags, Gid, Group, Uid, User};
 use walkdir::WalkDir;
 
 use crate::repository::parse_command;
@@ -256,12 +256,15 @@ impl LocalDestination {
 
     pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
         let filename = self.path(item);
-        if let Some(mtime) = meta.mtime.map(|t| FileTime::from_system_time(t.into())) {
-            set_file_mtime(&filename, mtime)?;
+        if let Some(mtime) = meta.mtime {
+            let atime = meta.atime.unwrap_or(mtime);
+            set_symlink_file_times(
+                filename,
+                FileTime::from_system_time(atime.into()),
+                FileTime::from_system_time(mtime.into()),
+            )?;
         }
-        if let Some(atime) = meta.atime.map(|t| FileTime::from_system_time(t.into())) {
-            set_file_atime(filename, atime)?;
-        }
+
         Ok(())
     }
 
@@ -289,8 +292,7 @@ impl LocalDestination {
             .and_then(|name| Group::from_name(name).unwrap());
         // use gid from group if valid, else from saved gid (if saved)
         let gid = group.map(|g| g.gid).or_else(|| meta.gid.map(Gid::from_raw));
-
-        chown(&filename, uid, gid)?;
+        fchownat(None, &filename, uid, gid, FchownatFlags::NoFollowSymlink)?;
         Ok(())
     }
 
@@ -307,21 +309,25 @@ impl LocalDestination {
         let uid = meta.uid.map(Uid::from_raw);
         let gid = meta.gid.map(Gid::from_raw);
 
-        chown(&filename, uid, gid)?;
+        fchownat(None, &filename, uid, gid, FchownatFlags::NoFollowSymlink)?;
         Ok(())
     }
 
     #[cfg(windows)]
     // TODO
-    pub fn set_permission(&self, _item: impl AsRef<Path>, _meta: &Metadata) -> Result<()> {
+    pub fn set_permission(&self, _item: impl AsRef<Path>, _node: &Node) -> Result<()> {
         Ok(())
     }
 
     #[cfg(not(windows))]
-    pub fn set_permission(&self, item: impl AsRef<Path>, meta: &Metadata) -> Result<()> {
+    pub fn set_permission(&self, item: impl AsRef<Path>, node: &Node) -> Result<()> {
+        if node.node_type.is_symlink() {
+            return Ok(());
+        }
+
         let filename = self.path(item);
 
-        if let Some(mode) = meta.mode() {
+        if let Some(mode) = node.meta.mode() {
             let mode = map_mode_from_go(*mode);
             std::fs::set_permissions(filename, fs::Permissions::from_mode(mode))?;
         }

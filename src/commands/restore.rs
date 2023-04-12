@@ -456,7 +456,7 @@ fn set_metadata(dest: &LocalDestination, path: &PathBuf, node: &Node, opts: &Opt
             .set_user_group(path, node.meta())
             .unwrap_or_else(|_| warn!("restore {:?}: setting User/Group failed.", path)),
     }
-    dest.set_permission(path, node.meta())
+    dest.set_permission(path, node)
         .unwrap_or_else(|_| warn!("restore {:?}: chmod failed.", path));
     dest.set_extended_attributes(path, &node.meta.extended_attributes)
         .unwrap_or_else(|_| warn!("restore {:?}: setting extended attributes failed.", path));

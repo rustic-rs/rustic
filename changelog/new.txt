@@ -1,21 +1,7 @@
 Changes in version x.x.x:
 
 Breaking changes:
-- ls: Added option `--recursive`, note: default is now non-recursive if a path is given
 
 Bugs fixed:
-- Fixed compilation on OpenBSD.
-- Fixed shell completions.
-- REST backend displayed the connection password in the log. This has been changed.
-- restore: Existing symlinks displayed an error. This is now corrected if the `--delete` option is used.
-- restore: Setting ownership/permissons/times for symlinks failed. This has been fixed.
-- Spaces in paths did not work when given in the config file. This has been fixed.
-- backup --stdin-filename did not use the given filename. This has been fixed.
-- backup always displayed at least 1 dir as changed. This has been corrected.
 
 New features:
-- REST backend: Set User-Agent header
-- ls: Added option `--recursive`
-- ls: Added glob options to exclude/include
-- restore: Added glob options to exclude/include
-- restore: xattrs treatment has been improved

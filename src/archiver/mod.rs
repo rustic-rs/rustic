@@ -17,12 +17,14 @@ use log::*;
 
 use crate::backend::{DecryptWriteBackend, ReadSource, ReadSourceEntry};
 use crate::blob::BlobType;
+use crate::id::Id;
 use crate::index::{IndexedBackend, Indexer, SharedIndexer};
 use crate::repofile::{ConfigFile, SnapshotFile};
 
 pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     file_archiver: FileArchiver<BE, I>,
     tree_archiver: TreeArchiver<BE, I>,
+    parent_tree: Option<Id>,
     parent: Parent<I>,
     indexer: SharedIndexer<BE>,
     be: BE,
@@ -34,18 +36,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         be: BE,
         index: I,
         config: &ConfigFile,
-        parent: Parent<I>,
+        parent_tree: Option<Id>,
+        ignore_ctime: bool,
+        ignore_inode: bool,
         mut snap: SnapshotFile,
     ) -> Result<Self> {
         let indexer = Indexer::new(be.clone()).into_shared();
         let mut summary = snap.summary.take().unwrap();
         summary.backup_start = Local::now();
 
+        let parent = Parent::new(&index, parent_tree, ignore_ctime, ignore_inode);
         let file_archiver = FileArchiver::new(be.clone(), index.clone(), indexer.clone(), config)?;
         let tree_archiver = TreeArchiver::new(be.clone(), index, indexer.clone(), config, summary)?;
         Ok(Self {
             file_archiver,
             tree_archiver,
+            parent_tree,
             parent,
             be,
             indexer,
@@ -121,14 +127,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
             self.tree_archiver.add(item)?;
         }
 
-        let snap = self.finalize_snapshot()?;
-        p.finish_with_message("done");
-        Ok(snap)
-    }
-
-    pub fn finalize_snapshot(mut self) -> Result<SnapshotFile> {
         let stats = self.file_archiver.finalize()?;
-        let (id, mut summary) = self.tree_archiver.finalize()?;
+        let (id, mut summary) = self.tree_archiver.finalize(self.parent_tree)?;
         stats.apply(&mut summary, BlobType::Data);
         self.snap.tree = id;
 
@@ -140,6 +140,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let id = self.be.save_file(&self.snap)?;
         self.snap.id = id;
 
+        p.finish_with_message("done");
         Ok(self.snap)
     }
 }

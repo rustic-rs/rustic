@@ -11,6 +11,7 @@ Bugs fixed:
 - restore: Setting ownership/permissons/times for symlinks failed. This has been fixed.
 - Spaces in paths did not work when given in the config file. This has been fixed.
 - backup --stdin-filename did not use the given filename. This has been fixed.
+- backup always displayed at least 1 dir as changed. This has been corrected.
 
 New features:
 - REST backend: Set User-Agent header

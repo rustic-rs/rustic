@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use anyhow::{bail, Result};
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use log::*;
 use rayon::prelude::*;
 
@@ -13,22 +13,20 @@ use crate::repofile::{Id, SnapshotFile, SnapshotFilter};
 use crate::repository::{OpenRepository, Repository, RepositoryOptions};
 
 #[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
+    /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
+    #[clap(value_name = "ID")]
+    ids: Vec<String>,
+
     /// Don't copy any snapshot, only show what would be done
     #[clap(long, short = 'n')]
     dry_run: bool,
 
     #[clap(
         flatten,
-        help_heading = "SNAPSHOT FILTER OPTIONS (if no snapshot is given)"
+        next_help_heading = "Snapshot filter options (if no snapshot is given)"
     )]
     filter: SnapshotFilter,
-
-    /// Snapshots to copy. If none is given, use filter to filter from all
-    /// snapshots.
-    #[clap(value_name = "ID")]
-    ids: Vec<String>,
 }
 
 pub(super) fn execute(

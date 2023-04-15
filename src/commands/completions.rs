@@ -5,6 +5,7 @@ use clap_complete::{generate, shells, Generator};
 
 #[derive(Parser)]
 pub(super) struct Opts {
+    /// Shell to generate completions for
     #[clap(value_enum)]
     sh: Variant,
 }

@@ -40,23 +40,24 @@ mod tag;
 use rustic_config::RusticConfig;
 
 #[derive(Parser)]
-#[clap(about, name="rustic", version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
+#[clap(about, version, name="rustic", version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
 struct Opts {
-    #[clap(flatten, help_heading = "GLOBAL OPTIONS")]
-    global: GlobalOpts,
-
-    #[clap(flatten, help_heading = "REPOSITORY OPTIONS")]
-    repository: RepositoryOptions,
-
     /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
     #[clap(
         short = 'P',
         long,
         value_name = "PROFILE",
         global = true,
-        default_value = "rustic"
+        default_value = "rustic",
+        help_heading = "Global options"
     )]
     config_profile: String,
+
+    #[clap(flatten, next_help_heading = "Global options")]
+    global: GlobalOpts,
+
+    #[clap(flatten, next_help_heading = "Repository options")]
+    repository: RepositoryOptions,
 
     #[clap(subcommand)]
     command: Command,
@@ -87,7 +88,7 @@ struct GlobalOpts {
         global = true,
         env = "RUSTIC_PROGRESS_INTERVAL",
         value_name = "DURATION",
-        conflicts_with = "no-progress"
+        conflicts_with = "no_progress"
     )]
     #[serde_as(as = "Option<DisplayFromStr>")]
     progress_interval: Option<humantime::Duration>,
@@ -110,11 +111,10 @@ enum Command {
     /// Check the repository
     Check(check::Opts),
 
-    /// Copy snapshots to another repository
+    /// Copy snapshots to other repositories. Note: The target repositories must be given in the config file!
     Copy(copy::Opts),
 
     /// Compare two snapshots/paths
-    ///
     /// Note that the exclude options only apply for comparison with a local path
     Diff(diff::Opts),
 
@@ -167,12 +167,12 @@ pub fn execute() -> Result<()> {
 
     // get global options from command line / env and config file
     let config_file = RusticConfig::new(&args.config_profile)?;
-    let mut opts = args.global;
-    config_file.merge_into("global", &mut opts)?;
+    let mut gopts = args.global;
+    config_file.merge_into("global", &mut gopts)?;
 
     // start logger
-    let level_filter = opts.log_level.unwrap_or(LevelFilter::Info);
-    match opts.log_file {
+    let level_filter = gopts.log_level.unwrap_or(LevelFilter::Info);
+    match gopts.log_file {
         None => TermLogger::init(
             level_filter,
             ConfigBuilder::new()
@@ -199,12 +199,12 @@ pub fn execute() -> Result<()> {
         ])?,
     }
 
-    if opts.no_progress {
+    if gopts.no_progress {
         let mut no_progress = NO_PROGRESS.lock().unwrap();
         *no_progress = true;
     }
 
-    if let Some(duration) = opts.progress_interval {
+    if let Some(duration) = gopts.progress_interval {
         let mut interval = PROGRESS_INTERVAL.lock().unwrap();
         *interval = *duration;
     }
@@ -262,4 +262,10 @@ pub fn execute() -> Result<()> {
     };
 
     Ok(())
+}
+
+#[test]
+fn verify_cli() {
+    use clap::CommandFactory;
+    Opts::command().debug_assert()
 }

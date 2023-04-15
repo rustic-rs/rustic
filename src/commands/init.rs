@@ -13,10 +13,10 @@ use crate::repofile::{ConfigFile, KeyFile};
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    #[clap(flatten, help_heading = "KEY OPTIONS")]
+    #[clap(flatten, next_help_heading = "Key options")]
     key_opts: KeyOpts,
 
-    #[clap(flatten, help_heading = "CONFIG OPTIONS")]
+    #[clap(flatten, next_help_heading = "Config options")]
     config_opts: ConfigOpts,
 }
 

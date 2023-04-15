@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Local;
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use log::*;
 
 use crate::backend::{DecryptWriteBackend, FileType};
@@ -13,8 +13,11 @@ use super::helpers::{progress_counter, progress_spinner};
 use super::rustic_config::RusticConfig;
 
 #[derive(Default, Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
+    /// Snapshots to merge. If none is given, use filter options to filter from all snapshots.
+    #[clap(value_name = "ID")]
+    ids: Vec<String>,
+
     /// Output generated snapshot in json format
     #[clap(long)]
     json: bool,
@@ -23,15 +26,11 @@ pub(super) struct Opts {
     #[clap(long)]
     delete: bool,
 
-    #[clap(flatten)]
+    #[clap(flatten, next_help_heading = "Snapshot options")]
     snap_opts: SnapshotOptions,
 
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
+    #[clap(flatten, next_help_heading = "Snapshot filter options")]
     filter: SnapshotFilter,
-
-    /// Snapshots to merge. If none is given, use filter to filter from all snapshots.
-    #[clap(value_name = "ID")]
-    ids: Vec<String>,
 }
 
 pub(super) fn execute(

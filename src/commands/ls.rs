@@ -11,19 +11,22 @@ use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
-    filter: SnapshotFilter,
+    /// Snapshot/path to list
+    #[clap(value_name = "SNAPSHOT[:PATH]")]
+    snap: String,
 
     /// recursively list the dir (default when no PATH is given)
     #[clap(long)]
     recursive: bool,
 
+    #[clap(
+        flatten,
+        next_help_heading = "Snapshot filter options (when using latest)"
+    )]
+    filter: SnapshotFilter,
+
     #[clap(flatten)]
     streamer_opts: TreeStreamerOptions,
-
-    /// Snapshot/path to list
-    #[clap(value_name = "SNAPSHOT[:PATH]")]
-    snap: String,
 }
 
 pub(super) fn execute(

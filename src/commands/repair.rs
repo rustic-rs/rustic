@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
-use clap::{AppSettings, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use log::*;
 
 use crate::backend::{
@@ -46,9 +46,8 @@ struct IndexOpts {
 }
 
 #[derive(Default, Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 struct SnapOpts {
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
+    #[clap(flatten, next_help_heading = "Snapshot filter options")]
     filter: SnapshotFilter,
 
     /// Only show what would be repaired

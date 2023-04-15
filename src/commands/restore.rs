@@ -4,9 +4,9 @@ use std::io::Read;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Local, Utc};
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use derive_getters::Dissolve;
 use ignore::{DirEntry, WalkBuilder};
 use log::*;
@@ -24,20 +24,21 @@ use crate::repofile::{SnapshotFile, SnapshotFilter};
 use crate::repository::OpenRepository;
 
 #[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
-    filter: SnapshotFilter,
+    /// Snapshot/path to restore
+    #[clap(value_name = "SNAPSHOT[:PATH]")]
+    snap: String,
+
+    /// Restore destination
+    #[clap(value_name = "DESTINATION")]
+    dest: String,
 
     /// Dry-run: don't restore, only show what would be done
     #[clap(long, short = 'n')]
     dry_run: bool,
 
-    #[clap(flatten)]
-    streamer_opts: TreeStreamerOptions,
-
     /// Remove all files/dirs in destination which are not contained in snapshot.
-    /// WARNING: Use with care, maybe first try this first with --dry-run?
+    /// WARNING: Use with care, maybe first try this with --dry-run?
     #[clap(long)]
     delete: bool,
 
@@ -46,32 +47,21 @@ pub(super) struct Opts {
     numeric_id: bool,
 
     /// Don't restore ownership (user/group)
-    #[clap(long, conflicts_with = "numeric-id")]
+    #[clap(long, conflicts_with = "numeric_id")]
     no_ownership: bool,
-
-    /// Warm up needed data pack files by only requesting them without processing
-    #[clap(long)]
-    warm_up: bool,
 
     /// Always read and verify existing files (don't trust correct modification time and file size)
     #[clap(long)]
     verify_existing: bool,
 
-    /// Warm up needed data pack files by running the command with %id replaced by pack id
-    #[clap(long, conflicts_with = "warm-up")]
-    warm_up_command: Option<String>,
+    #[clap(flatten)]
+    streamer_opts: TreeStreamerOptions,
 
-    /// Duration (e.g. 10m) to wait after warm up before doing the actual restore
-    #[clap(long, value_name = "DURATION", conflicts_with = "dry-run")]
-    warm_up_wait: Option<humantime::Duration>,
-
-    /// Snapshot/path to restore
-    #[clap(value_name = "SNAPSHOT[:PATH]")]
-    snap: String,
-
-    /// Restore destination
-    #[clap(value_name = "DESTINATION")]
-    dest: String,
+    #[clap(
+        flatten,
+        next_help_heading = "Snapshot filter options (when using latest)"
+    )]
+    filter: SnapshotFilter,
 }
 
 pub(super) fn execute(
@@ -81,13 +71,6 @@ pub(super) fn execute(
 ) -> Result<()> {
     let be = &repo.dbe;
     config_file.merge_into("snapshot-filter", &mut opts.filter)?;
-
-    if let Some(command) = &opts.warm_up_command {
-        if !command.contains("%id") {
-            bail!("warm-up command must contain %id!");
-        }
-        info!("using warm-up command {command}");
-    }
 
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;

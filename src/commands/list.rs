@@ -9,7 +9,7 @@ use crate::repository::OpenRepository;
 #[derive(Parser)]
 pub(super) struct Opts {
     /// File type to list
-    #[clap(possible_values=["blobs", "index", "packs", "snapshots", "keys"])]
+    #[clap(value_parser=["blobs", "index", "packs", "snapshots", "keys"])]
     tpe: String,
 }
 

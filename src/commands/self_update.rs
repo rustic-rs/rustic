@@ -5,7 +5,7 @@ use self_update::cargo_crate_version;
 #[derive(Parser)]
 pub(super) struct Opts {
     /// Do not ask before processing the self-update
-    #[clap(long)]
+    #[clap(long, conflicts_with = "dry_run")]
     force: bool,
 }
 

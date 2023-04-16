@@ -12,7 +12,7 @@ use itertools::Itertools;
 use log::*;
 use rayon::prelude::*;
 
-use super::{bytes, no_progress, progress_bytes, progress_counter, warm_up_wait};
+use super::{bytes, no_progress, progress_bytes, progress_counter, warm_up_wait, GlobalOpts};
 use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType, ReadBackend};
 use crate::blob::{
     BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
@@ -26,10 +26,6 @@ use crate::repository::OpenRepository;
 #[derive(Parser)]
 #[group(id = "prune_opts")]
 pub(super) struct Opts {
-    /// Don't remove anything, only show what would be done
-    #[clap(long, short = 'n')]
-    pub(crate) dry_run: bool,
-
     /// Define maximum data to repack in % of reposize or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
     #[clap(long, value_name = "LIMIT", default_value = "unlimited")]
     max_repack: LimitOption,
@@ -71,7 +67,12 @@ pub(super) struct Opts {
     no_resize: bool,
 }
 
-pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -> Result<()> {
+pub(super) fn execute(
+    repo: OpenRepository,
+    gopts: GlobalOpts,
+    opts: Opts,
+    ignore_snaps: Vec<Id>,
+) -> Result<()> {
     let be = &repo.dbe;
     if repo.config.version < 2 && opts.repack_uncompressed {
         bail!("--repack-uncompressed makes no sense for v1 repo!");
@@ -131,9 +132,9 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
     pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
 
-    warm_up_wait(&repo, pruner.repack_packs().into_iter(), !opts.dry_run)?;
+    warm_up_wait(&repo, pruner.repack_packs().into_iter(), !gopts.dry_run)?;
 
-    if !opts.dry_run {
+    if !gopts.dry_run {
         pruner.do_prune(repo, opts)?;
     }
     Ok(())

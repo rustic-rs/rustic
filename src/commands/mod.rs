@@ -67,6 +67,11 @@ struct Opts {
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 struct GlobalOpts {
+    /// Only show what would be done without modifying anything. Does not affect read-only commands
+    #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    dry_run: bool,
+
     /// Use this log level [default: info]
     #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
     #[serde_as(as = "Option<DisplayFromStr>")]
@@ -172,7 +177,7 @@ pub fn execute() -> Result<()> {
 
     // start logger
     let level_filter = gopts.log_level.unwrap_or(LevelFilter::Info);
-    match gopts.log_file {
+    match &gopts.log_file {
         None => TermLogger::init(
             level_filter,
             ConfigBuilder::new()
@@ -238,15 +243,15 @@ pub fn execute() -> Result<()> {
 
     #[allow(clippy::match_same_arms)]
     match args.command {
-        Command::Backup(opts) => backup::execute(repo, opts, config_file, command)?,
+        Command::Backup(opts) => backup::execute(repo, gopts, opts, config_file, command)?,
         Command::Config(opts) => config::execute(repo, opts)?,
         Command::Cat(opts) => cat::execute(repo, opts, config_file)?,
         Command::Check(opts) => check::execute(repo, opts)?,
         Command::Completions(_) => {} // already handled above
-        Command::Copy(opts) => copy::execute(repo, opts, config_file)?,
+        Command::Copy(opts) => copy::execute(repo, gopts, opts, config_file)?,
         Command::Diff(opts) => diff::execute(repo, opts, config_file)?,
         Command::Dump(opts) => dump::execute(repo, opts, config_file)?,
-        Command::Forget(opts) => forget::execute(repo, opts, config_file)?,
+        Command::Forget(opts) => forget::execute(repo, gopts, opts, config_file)?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(repo, opts)?,
         Command::List(opts) => list::execute(repo, opts)?,
@@ -254,11 +259,11 @@ pub fn execute() -> Result<()> {
         Command::Merge(opts) => merge_cmd::execute(repo, opts, config_file, command)?,
         Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(repo, opts, config_file)?,
-        Command::Prune(opts) => prune::execute(repo, opts, vec![])?,
-        Command::Restore(opts) => restore::execute(repo, opts, config_file)?,
-        Command::Repair(opts) => repair::execute(repo, opts, config_file)?,
+        Command::Prune(opts) => prune::execute(repo, gopts, opts, vec![])?,
+        Command::Restore(opts) => restore::execute(repo, gopts, opts, config_file)?,
+        Command::Repair(opts) => repair::execute(repo, gopts, opts, config_file)?,
         Command::Repoinfo(opts) => repoinfo::execute(repo, opts)?,
-        Command::Tag(opts) => tag::execute(repo, opts, config_file)?,
+        Command::Tag(opts) => tag::execute(repo, gopts, opts, config_file)?,
     };
 
     Ok(())

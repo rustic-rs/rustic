@@ -18,7 +18,7 @@ use crate::repofile::{
 use crate::repository::OpenRepository;
 
 use super::rustic_config::RusticConfig;
-use super::{progress_counter, progress_spinner, warm_up_wait};
+use super::{progress_counter, progress_spinner, warm_up_wait, GlobalOpts};
 
 #[derive(Parser)]
 pub(super) struct Opts {
@@ -36,10 +36,6 @@ enum Command {
 
 #[derive(Default, Parser)]
 struct IndexOpts {
-    // Only show what would be repaired
-    #[clap(long, short = 'n')]
-    dry_run: bool,
-
     // Read all data packs, i.e. completely re-create the index
     #[clap(long)]
     read_all: bool,
@@ -49,10 +45,6 @@ struct IndexOpts {
 struct SnapOpts {
     #[clap(flatten, next_help_heading = "Snapshot filter options")]
     filter: SnapshotFilter,
-
-    /// Only show what would be repaired
-    #[clap(long, short = 'n')]
-    dry_run: bool,
 
     /// Also remove defect snapshots - WARNING: This can result in data loss!
     #[clap(long)]
@@ -71,14 +63,19 @@ struct SnapOpts {
     ids: Vec<String>,
 }
 
-pub(super) fn execute(repo: OpenRepository, opts: Opts, config_file: RusticConfig) -> Result<()> {
+pub(super) fn execute(
+    repo: OpenRepository,
+    gopts: GlobalOpts,
+    opts: Opts,
+    config_file: RusticConfig,
+) -> Result<()> {
     match opts.command {
-        Command::Index(opt) => repair_index(&repo, opt),
-        Command::Snapshots(opt) => repair_snaps(&repo.dbe, opt, config_file, &repo.config),
+        Command::Index(opt) => repair_index(&repo, gopts, opt),
+        Command::Snapshots(opt) => repair_snaps(&repo.dbe, gopts, opt, config_file, &repo.config),
     }
 }
 
-fn repair_index(repo: &OpenRepository, opts: IndexOpts) -> Result<()> {
+fn repair_index(repo: &OpenRepository, gopts: GlobalOpts, opts: IndexOpts) -> Result<()> {
     let be = &repo.dbe;
     let p = progress_spinner("listing packs...");
     let mut packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
@@ -137,7 +134,7 @@ fn repair_index(repo: &OpenRepository, opts: IndexOpts) -> Result<()> {
         for p in index.packs_to_delete {
             process_pack(p, true, &mut new_index, &mut changed);
         }
-        match (changed, opts.dry_run) {
+        match (changed, gopts.dry_run) {
             (true, true) => info!("would have modified index file {index_id}"),
             (true, false) => {
                 if !new_index.packs.is_empty() || !new_index.packs_to_delete.is_empty() {
@@ -172,7 +169,7 @@ fn repair_index(repo: &OpenRepository, opts: IndexOpts) -> Result<()> {
                 pack.blobs = header.into_blobs();
             }
         }
-        if !opts.dry_run {
+        if !gopts.dry_run {
             indexer.write().unwrap().add_with(pack, to_delete)?;
         }
         p.inc(1);
@@ -185,6 +182,7 @@ fn repair_index(repo: &OpenRepository, opts: IndexOpts) -> Result<()> {
 
 fn repair_snaps(
     be: &impl DecryptFullBackend,
+    gopts: GlobalOpts,
     mut opts: SnapOpts,
     config_file: RusticConfig,
     config: &ConfigFile,
@@ -219,6 +217,7 @@ fn repair_snaps(
             Some(snap.tree),
             &mut replaced,
             &mut seen,
+            &gopts,
             &opts,
         )? {
             (Changed::None, _) => {
@@ -235,7 +234,7 @@ fn repair_snaps(
                 }
                 snap.set_tags(opts.tag.clone());
                 snap.tree = id;
-                if opts.dry_run {
+                if gopts.dry_run {
                     info!("would have modified snapshot {snap_id}.");
                 } else {
                     let new_id = be.save_file(&snap)?;
@@ -246,13 +245,13 @@ fn repair_snaps(
         }
     }
 
-    if !opts.dry_run {
+    if !gopts.dry_run {
         packer.finalize()?;
         indexer.write().unwrap().finalize()?;
     }
 
     if opts.delete {
-        if opts.dry_run {
+        if gopts.dry_run {
             info!("would have removed {} snapshots.", delete.len());
         } else {
             be.delete_list(
@@ -280,6 +279,7 @@ fn repair_tree<BE: DecryptWriteBackend>(
     id: Option<Id>,
     replaced: &mut HashMap<Id, (Changed, Id)>,
     seen: &mut HashSet<Id>,
+    gopts: &GlobalOpts,
     opts: &SnapOpts,
 ) -> Result<(Changed, Id)> {
     let (tree, changed) = match id {
@@ -331,7 +331,7 @@ fn repair_tree<BE: DecryptWriteBackend>(
                     }
                     NodeType::Dir {} => {
                         let (c, tree_id) =
-                            repair_tree(be, packer, node.subtree, replaced, seen, opts)?;
+                            repair_tree(be, packer, node.subtree, replaced, seen, gopts, opts)?;
                         match c {
                             Changed::None => {}
                             Changed::This => {
@@ -363,7 +363,7 @@ fn repair_tree<BE: DecryptWriteBackend>(
         (_, c) => {
             // the tree has been changed => save it
             let (chunk, new_id) = tree.serialize()?;
-            if !be.has_tree(&new_id) && !opts.dry_run {
+            if !be.has_tree(&new_id) && !gopts.dry_run {
                 packer.add(&chunk, &new_id)?;
             }
             if let Some(id) = id {

@@ -13,7 +13,7 @@ use log::*;
 use rayon::ThreadPoolBuilder;
 
 use super::rustic_config::RusticConfig;
-use super::{bytes, progress_bytes, progress_counter, warm_up_wait};
+use super::{bytes, progress_bytes, progress_counter, warm_up_wait, GlobalOpts};
 use crate::backend::{DecryptReadBackend, FileType, LocalDestination};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree, TreeStreamerOptions};
 use crate::commands::helpers::progress_spinner;
@@ -32,10 +32,6 @@ pub(super) struct Opts {
     /// Restore destination
     #[clap(value_name = "DESTINATION")]
     dest: String,
-
-    /// Dry-run: don't restore, only show what would be done
-    #[clap(long, short = 'n')]
-    dry_run: bool,
 
     /// Remove all files/dirs in destination which are not contained in snapshot.
     /// WARNING: Use with care, maybe first try this with --dry-run?
@@ -66,6 +62,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(
     repo: OpenRepository,
+    gopts: GlobalOpts,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
@@ -81,7 +78,7 @@ pub(super) fn execute(
     let dest = LocalDestination::new(&opts.dest, true, !node.is_dir())?;
 
     let p = progress_spinner("collecting file information...");
-    let (file_infos, stats) = allocate_and_collect(&dest, index.clone(), &node, &opts)?;
+    let (file_infos, stats) = allocate_and_collect(&dest, index.clone(), &node, &gopts, &opts)?;
     p.finish();
 
     let fs = stats.file;
@@ -106,13 +103,13 @@ pub(super) fn execute(
     if file_infos.restore_size == 0 {
         info!("all file contents are fine.");
     } else {
-        warm_up_wait(&repo, file_infos.to_packs().into_iter(), !opts.dry_run)?;
-        if !opts.dry_run {
+        warm_up_wait(&repo, file_infos.to_packs().into_iter(), !gopts.dry_run)?;
+        if !gopts.dry_run {
             restore_contents(be, &dest, file_infos)?;
         }
     }
 
-    if !opts.dry_run {
+    if !gopts.dry_run {
         let p = progress_spinner("setting metadata...");
         restore_metadata(&dest, index, &node, &opts)?;
         p.finish();
@@ -142,6 +139,7 @@ fn allocate_and_collect(
     dest: &LocalDestination,
     index: impl IndexedBackend + Unpin,
     node: &Node,
+    gopts: &GlobalOpts,
     opts: &Opts,
 ) -> Result<(FileInfos, RestoreStats)> {
     let dest_path = Path::new(&opts.dest);
@@ -165,7 +163,7 @@ fn allocate_and_collect(
         }
         match (
             opts.delete,
-            opts.dry_run,
+            gopts.dry_run,
             entry.file_type().unwrap().is_dir(),
         ) {
             (true, true, true) => {
@@ -210,7 +208,7 @@ fn allocate_and_collect(
                 } else {
                     stats.dir.restore += 1;
                     debug!("to restore: {path:?}");
-                    if !opts.dry_run {
+                    if !gopts.dry_run {
                         dest.create_dir(path)
                             .with_context(|| format!("error creating {path:?}"))?;
                     }
@@ -239,7 +237,7 @@ fn allocate_and_collect(
                     (true, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
                         stats.file.modify += 1;
                         debug!("to modify: {path:?}");
-                        if !opts.dry_run {
+                        if !gopts.dry_run {
                             // set the right file size
                             dest.set_length(path, size)
                                 .with_context(|| format!("error setting length for {path:?}"))?;
@@ -248,7 +246,7 @@ fn allocate_and_collect(
                     (false, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
                         stats.file.restore += 1;
                         debug!("to restore: {path:?}");
-                        if !opts.dry_run {
+                        if !gopts.dry_run {
                             // create the file as it doesn't exist
                             dest.set_length(path, size)
                                 .with_context(|| format!("error creating {path:?}"))?;

@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::{Duration, Local};
 use clap::Parser;
 
-use super::{progress_counter, RusticConfig};
+use super::{progress_counter, GlobalOpts, RusticConfig};
 use crate::backend::{DecryptWriteBackend, FileType};
 use crate::id::Id;
 use crate::repofile::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
@@ -14,10 +14,6 @@ pub(super) struct Opts {
     /// snapshots.
     #[clap(value_name = "ID")]
     ids: Vec<String>,
-
-    /// Don't change any snapshot, only show which would be modified
-    #[clap(long, short = 'n')]
-    dry_run: bool,
 
     #[clap(
         flatten,
@@ -70,6 +66,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(
     repo: OpenRepository,
+    gopts: GlobalOpts,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
@@ -102,7 +99,7 @@ pub(super) fn execute(
         snap.id = Id::default();
     }
 
-    match (old_snap_ids.is_empty(), opts.dry_run) {
+    match (old_snap_ids.is_empty(), gopts.dry_run) {
         (true, _) => println!("no snapshot changed."),
         (false, true) => {
             println!("would have modified the following snapshots:\n {old_snap_ids:?}");

@@ -5,7 +5,7 @@ use clap::Parser;
 use log::*;
 use rayon::prelude::*;
 
-use super::{progress_counter, table_with_titles, RusticConfig};
+use super::{progress_counter, table_with_titles, GlobalOpts, RusticConfig};
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
@@ -18,10 +18,6 @@ pub(super) struct Opts {
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
-    /// Don't copy any snapshot, only show what would be done
-    #[clap(long, short = 'n')]
-    dry_run: bool,
-
     #[clap(
         flatten,
         next_help_heading = "Snapshot filter options (if no snapshot is given)"
@@ -31,6 +27,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(
     repo: OpenRepository,
+    gopts: GlobalOpts,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
@@ -60,7 +57,7 @@ pub(super) fn execute(
         if poly != repo_dest.config.poly()? {
             bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
         }
-        copy(&snapshots, index.clone(), repo_dest, &opts)?;
+        copy(&snapshots, index.clone(), repo_dest, &gopts, &opts)?;
     }
     Ok(())
 }
@@ -69,12 +66,13 @@ fn copy(
     snapshots: &[SnapshotFile],
     index: impl IndexedBackend,
     repo_dest: OpenRepository,
+    gopts: &GlobalOpts,
     opts: &Opts,
 ) -> Result<()> {
     let be_dest = &repo_dest.dbe;
 
     let snapshots = relevant_snapshots(snapshots, &repo_dest, &opts.filter)?;
-    match (snapshots.len(), opts.dry_run) {
+    match (snapshots.len(), gopts.dry_run) {
         (count, true) => {
             info!("would have copied {count} snapshots");
             return Ok(());

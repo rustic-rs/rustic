@@ -49,7 +49,6 @@ pub struct RepositoryOptions {
         short,
         long,
         global = true,
-        parse(from_os_str),
         env = "RUSTIC_PASSWORD_FILE",
         conflicts_with = "password"
     )]
@@ -60,7 +59,7 @@ pub struct RepositoryOptions {
         long,
         global = true,
         env = "RUSTIC_PASSWORD_COMMAND",
-        conflicts_with_all = &["password", "password-file"],
+        conflicts_with_all = &["password", "password_file"],
     )]
     password_command: Option<String>,
 
@@ -73,8 +72,7 @@ pub struct RepositoryOptions {
     #[clap(
         long,
         global = true,
-        parse(from_os_str),
-        conflicts_with = "no-cache",
+        conflicts_with = "no_cache",
         env = "RUSTIC_CACHE_DIR"
     )]
     cache_dir: Option<PathBuf>,
@@ -85,7 +83,7 @@ pub struct RepositoryOptions {
     pub(crate) warm_up: bool,
 
     /// Warm up needed data pack files by running the command with %id replaced by pack id
-    #[clap(long, global = true, conflicts_with = "warm-up")]
+    #[clap(long, global = true, conflicts_with = "warm_up")]
     pub(crate) warm_up_command: Option<String>,
 
     /// Duration (e.g. 10m) to wait after warm up
@@ -148,6 +146,13 @@ impl Repository {
             Some(repo) => ChooseBackend::from_url(repo)?,
             None => bail!("No repository given. Please use the --repository option."),
         };
+
+        if let Some(command) = &opts.warm_up_command {
+            if !command.contains("%id") {
+                bail!("warm-up command must contain %id!");
+            }
+            info!("using warm-up command {command}");
+        }
 
         let be_hot = opts
             .repo_hot

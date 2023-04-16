@@ -5,7 +5,7 @@ use std::{cmp::Ordering, fmt::Display};
 
 use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Duration, Local};
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use derivative::Derivative;
 use dunce::canonicalize;
 use gethostname::gethostname;
@@ -25,7 +25,6 @@ use crate::repository::parse_command;
 
 #[serde_as]
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotOptions {
     /// Label snapshot with given label
@@ -47,7 +46,7 @@ pub struct SnapshotOptions {
     description_from: Option<PathBuf>,
 
     /// Mark snapshot as uneraseable
-    #[clap(long, conflicts_with = "delete-after")]
+    #[clap(long, conflicts_with = "delete_after")]
     #[merge(strategy = merge::bool::overwrite_false)]
     delete_never: bool,
 
@@ -420,6 +419,7 @@ impl Ord for SnapshotFile {
     }
 }
 
+#[derive(Clone)]
 struct SnapshotFn(FnPtr, AST);
 impl FromStr for SnapshotFn {
     type Err = anyhow::Error;

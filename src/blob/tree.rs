@@ -109,19 +109,19 @@ impl IntoIterator for Tree {
 #[derive(Default, Clone, Parser)]
 pub struct TreeStreamerOptions {
     /// Glob pattern to exclude/include (can be specified multiple times)
-    #[clap(long, help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, help_heading = "Exclude options")]
     glob: Vec<String>,
 
     /// Same as --glob pattern but ignores the casing of filenames
-    #[clap(long, value_name = "GLOB", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "GLOB", help_heading = "Exclude options")]
     iglob: Vec<String>,
 
     /// Read glob patterns to exclude/include from this file (can be specified multiple times)
-    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
     glob_file: Vec<String>,
 
     /// Same as --glob-file ignores the casing of filenames in patterns
-    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
     iglob_file: Vec<String>,
 }
 

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use derivative::Derivative;
 use merge::Merge;
 use serde::Deserialize;
@@ -16,41 +16,44 @@ use crate::repofile::{
 use crate::repository::OpenRepository;
 
 #[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(super) struct Opts {
+    /// Snapshots to forget. If none is given, use filter options to filter from all snapshots
+    #[clap(value_name = "ID")]
+    ids: Vec<String>,
+
     #[clap(flatten)]
     config: ConfigOpts,
 
-    /// Also prune the repository
-    #[clap(long)]
-    prune: bool,
-
-    #[clap(flatten, help_heading = "PRUNE OPTIONS (only when used with --prune)")]
+    #[clap(
+        flatten,
+        next_help_heading = "PRUNE OPTIONS (only when used with --prune)"
+    )]
     prune_opts: prune::Opts,
 
     /// Don't remove anything, only show what would be done
     #[clap(skip)]
     dry_run: bool,
-
-    /// Snapshots to forget
-    ids: Vec<String>,
 }
 
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[serde(default, rename_all = "kebab-case")]
 struct ConfigOpts {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     group_by: Option<SnapshotGroupCriterion>,
 
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
+    /// Also prune the repository
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    prune: bool,
+
+    #[clap(flatten, next_help_heading = "Snapshot filter options")]
     #[serde(flatten)]
     filter: SnapshotFilter,
 
-    #[clap(flatten, help_heading = "RETENTION OPTIONS")]
+    #[clap(flatten, next_help_heading = "Retention options")]
     #[serde(flatten)]
     keep: KeepOptions,
 }
@@ -153,7 +156,7 @@ pub(super) fn execute(
         }
     }
 
-    if opts.prune {
+    if opts.config.prune {
         prune::execute(repo, opts.prune_opts, forget_snaps)?;
     }
 

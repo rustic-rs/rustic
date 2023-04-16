@@ -46,42 +46,42 @@ pub struct LocalSourceOptions {
     ignore_devid: bool,
 
     /// Glob pattern to exclude/include (can be specified multiple times)
-    #[clap(long, help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, help_heading = "Exclude options")]
     #[merge(strategy = merge::vec::overwrite_empty)]
     glob: Vec<String>,
 
     /// Same as --glob pattern but ignores the casing of filenames
-    #[clap(long, value_name = "GLOB", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "GLOB", help_heading = "Exclude options")]
     #[merge(strategy = merge::vec::overwrite_empty)]
     iglob: Vec<String>,
 
     /// Read glob patterns to exclude/include from this file (can be specified multiple times)
-    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
     #[merge(strategy = merge::vec::overwrite_empty)]
     glob_file: Vec<String>,
 
     /// Same as --glob-file ignores the casing of filenames in patterns
-    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
     #[merge(strategy = merge::vec::overwrite_empty)]
     iglob_file: Vec<String>,
 
     /// Ignore files based on .gitignore files
-    #[clap(long, help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, help_heading = "Exclude options")]
     #[merge(strategy = merge::bool::overwrite_false)]
     git_ignore: bool,
 
     /// Exclude contents of directories containing this filename (can be specified multiple times)
-    #[clap(long, value_name = "FILE", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
     #[merge(strategy = merge::vec::overwrite_empty)]
     exclude_if_present: Vec<String>,
 
     /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
-    #[clap(long, short = 'x', help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, short = 'x', help_heading = "Exclude options")]
     #[merge(strategy = merge::bool::overwrite_false)]
     one_file_system: bool,
 
     /// Maximum size of files to be backuped. Larger files will be excluded.
-    #[clap(long, value_name = "SIZE", help_heading = "EXCLUDE OPTIONS")]
+    #[clap(long, value_name = "SIZE", help_heading = "Exclude options")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     exclude_larger_than: Option<ByteSize>,
 }

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 use anyhow::Result;
-use clap::{AppSettings, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use rpassword::{prompt_password, read_password_from_bufread};
 
 use crate::backend::{FileType, WriteBackend};
@@ -18,11 +18,11 @@ pub(super) struct Opts {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Add a new key to the repository
     Add(AddOpts),
 }
 
 #[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(crate) struct AddOpts {
     /// File from which to read the new password
     #[clap(long)]
@@ -33,7 +33,6 @@ pub(crate) struct AddOpts {
 }
 
 #[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 pub(crate) struct KeyOpts {
     /// Set 'hostname' in public key information
     #[clap(long)]

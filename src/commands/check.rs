@@ -24,7 +24,7 @@ use crate::repository::OpenRepository;
 #[derive(Parser)]
 pub(super) struct Opts {
     /// Don't verify the data saved in the cache
-    #[clap(long, conflicts_with = "no-cache")]
+    #[clap(long, conflicts_with = "no_cache")]
     trust_cache: bool,
 
     /// Read all data blobs

@@ -12,12 +12,15 @@ use super::{progress_counter, RusticConfig};
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
-    filter: SnapshotFilter,
-
     /// file from snapshot to dump
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
+
+    #[clap(
+        flatten,
+        next_help_heading = "Snapshot filter options (when using latest)"
+    )]
+    filter: SnapshotFilter,
 }
 
 pub(super) fn execute(

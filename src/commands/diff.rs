@@ -15,12 +15,6 @@ use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    #[clap(flatten)]
-    ignore_opts: LocalSourceOptions,
-
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
-    filter: SnapshotFilter,
-
     /// Reference snapshot/path
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
     snap1: String,
@@ -36,6 +30,15 @@ pub(super) struct Opts {
     /// don't check for different file contents
     #[clap(long)]
     no_content: bool,
+
+    #[clap(flatten)]
+    ignore_opts: LocalSourceOptions,
+
+    #[clap(
+        flatten,
+        next_help_heading = "Snapshot filter options (when using latest)"
+    )]
+    filter: SnapshotFilter,
 }
 
 pub(super) fn execute(

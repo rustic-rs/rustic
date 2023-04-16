@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use chrono::Local;
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use log::*;
 use merge::Merge;
 use path_dedot::ParseDot;
@@ -20,13 +20,14 @@ use crate::repofile::{
 use crate::repository::OpenRepository;
 
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[serde(default, rename_all = "kebab-case")]
 pub(super) struct Opts {
-    /// Output generated snapshot in json format
-    #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    json: bool,
+    /// Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all
+    /// sources defined in the config file
+    #[clap(value_name = "SOURCE")]
+    #[merge(skip)]
+    #[serde(skip)]
+    cli_sources: Vec<String>,
 
     /// Do not upload or write any data, just show what would be done
     #[clap(long, short = 'n')]
@@ -34,25 +35,48 @@ pub(super) struct Opts {
     dry_run: bool,
 
     /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,label,paths)
-    #[clap(long, short = 'g', value_name = "CRITERION")]
+    #[clap(
+        long,
+        short = 'g',
+        value_name = "CRITERION",
+        help_heading = "Options for parent processing"
+    )]
     group_by: Option<SnapshotGroupCriterion>,
 
     /// Snapshot to use as parent
-    #[clap(long, value_name = "SNAPSHOT", conflicts_with = "force")]
+    #[clap(
+        long,
+        value_name = "SNAPSHOT",
+        conflicts_with = "force",
+        help_heading = "Options for parent processing"
+    )]
     parent: Option<String>,
 
     /// Use no parent, read all files
-    #[clap(long, short, conflicts_with = "parent")]
+    #[clap(
+        long,
+        short,
+        conflicts_with = "parent",
+        help_heading = "Options for parent processing"
+    )]
     #[merge(strategy = merge::bool::overwrite_false)]
     force: bool,
 
     /// Ignore ctime changes when checking for modified files
-    #[clap(long, conflicts_with = "force")]
+    #[clap(
+        long,
+        conflicts_with = "force",
+        help_heading = "Options for parent processing"
+    )]
     #[merge(strategy = merge::bool::overwrite_false)]
     ignore_ctime: bool,
 
     /// Ignore inode number changes when checking for modified files
-    #[clap(long, conflicts_with = "force")]
+    #[clap(
+        long,
+        conflicts_with = "force",
+        help_heading = "Options for parent processing"
+    )]
     #[merge(strategy = merge::bool::overwrite_false)]
     ignore_inode: bool,
 
@@ -67,18 +91,16 @@ pub(super) struct Opts {
 
     #[clap(flatten)]
     #[serde(flatten)]
-    snap_opts: SnapshotOptions,
-
-    #[clap(flatten)]
-    #[serde(flatten)]
     ignore_opts: LocalSourceOptions,
 
-    /// Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all
-    /// sources defined in the config file
-    #[clap(value_name = "SOURCE")]
-    #[merge(skip)]
-    #[serde(skip)]
-    cli_sources: Vec<String>,
+    #[clap(flatten, next_help_heading = "Snapshot options")]
+    #[serde(flatten)]
+    snap_opts: SnapshotOptions,
+
+    /// Output generated snapshot in json format
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    json: bool,
 
     // This is a hack to support serde(deny_unknown_fields) for deserializing the backup options from TOML
     // while still being able to use [[backup.sources]] in the config file.

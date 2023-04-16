@@ -14,8 +14,9 @@ use crate::repository::OpenRepository;
 
 #[derive(Parser)]
 pub(super) struct Opts {
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS")]
-    filter: SnapshotFilter,
+    /// Snapshots to show. If none is given, use filter options to filter from all snapshots
+    #[clap(value_name = "ID")]
+    ids: Vec<String>,
 
     /// Group snapshots by any combination of host,label,paths,tags
     #[clap(
@@ -38,9 +39,8 @@ pub(super) struct Opts {
     #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
 
-    /// Snapshots to show
-    #[clap(value_name = "ID")]
-    ids: Vec<String>,
+    #[clap(flatten, next_help_heading = "Snapshot filter options")]
+    filter: SnapshotFilter,
 }
 
 pub(super) fn execute(

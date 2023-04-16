@@ -92,8 +92,8 @@ pub fn warm_up_wait(
     packs: impl ExactSizeIterator<Item = Id>,
     wait: bool,
 ) -> Result<()> {
-    if repo.opts.warm_up_command.is_some() {
-        warm_up_command(packs, repo.opts.warm_up_command.as_ref().unwrap())?;
+    if let Some(command) = &repo.opts.warm_up_command {
+        warm_up_command(packs, command)?;
     } else if repo.opts.warm_up {
         warm_up(&repo.be, packs)?;
     }

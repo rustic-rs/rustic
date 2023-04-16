@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use derive_more::Add;
 use itertools::Itertools;
 use log::*;
@@ -24,7 +24,7 @@ use crate::repofile::{HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile
 use crate::repository::OpenRepository;
 
 #[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+#[group(id = "prune_opts")]
 pub(super) struct Opts {
     /// Don't remove anything, only show what would be done
     #[clap(long, short = 'n')]
@@ -59,7 +59,7 @@ pub(super) struct Opts {
 
     /// Repack packs containing uncompressed blobs. This cannot be used with --fast-repack.
     /// Implies --max-unused=0.
-    #[clap(long, conflicts_with = "fast-repack")]
+    #[clap(long, conflicts_with = "fast_repack")]
     repack_uncompressed: bool,
 
     /// Only repack packs which are cacheable [default: true for a hot/cold repository, else false]
@@ -139,6 +139,7 @@ pub(super) fn execute(repo: OpenRepository, opts: Opts, ignore_snaps: Vec<Id>) -
     Ok(())
 }
 
+#[derive(Clone)]
 enum LimitOption {
     Size(ByteSize),
     Percentage(u64),

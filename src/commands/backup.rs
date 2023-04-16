@@ -10,7 +10,7 @@ use path_dedot::ParseDot;
 use serde::Deserialize;
 use toml::Value;
 
-use super::{bytes, progress_bytes, progress_counter, RusticConfig};
+use super::{bytes, progress_bytes, progress_counter, GlobalOpts, RusticConfig};
 use crate::archiver::Archiver;
 use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, StdinSource};
 use crate::index::IndexBackend;
@@ -28,11 +28,6 @@ pub(super) struct Opts {
     #[merge(skip)]
     #[serde(skip)]
     cli_sources: Vec<String>,
-
-    /// Do not upload or write any data, just show what would be done
-    #[clap(long, short = 'n')]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    dry_run: bool,
 
     /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,label,paths)
     #[clap(
@@ -120,6 +115,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(
     repo: OpenRepository,
+    gopts: GlobalOpts,
     opts: Opts,
     config_file: RusticConfig,
     command: String,
@@ -187,7 +183,7 @@ pub(super) fn execute(
         // merge "backup" section from config file, if given
         config_file.merge_into("backup", &mut opts)?;
 
-        let be = DryRunBackend::new(repo.dbe.clone(), opts.dry_run);
+        let be = DryRunBackend::new(repo.dbe.clone(), gopts.dry_run);
         info!("starting to backup {source}...");
         let as_path = match opts.as_path {
             None => None,

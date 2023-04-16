@@ -8,7 +8,7 @@ use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
-use super::{progress_counter, prune, table_with_titles, RusticConfig};
+use super::{progress_counter, prune, table_with_titles, GlobalOpts, RusticConfig};
 use crate::backend::{DecryptWriteBackend, FileType};
 use crate::repofile::{
     SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
@@ -29,10 +29,6 @@ pub(super) struct Opts {
         next_help_heading = "PRUNE OPTIONS (only when used with --prune)"
     )]
     prune_opts: prune::Opts,
-
-    /// Don't remove anything, only show what would be done
-    #[clap(skip)]
-    dry_run: bool,
 }
 
 #[serde_as]
@@ -60,6 +56,7 @@ struct ConfigOpts {
 
 pub(super) fn execute(
     repo: OpenRepository,
+    gopts: GlobalOpts,
     mut opts: Opts,
     config_file: RusticConfig,
 ) -> Result<()> {
@@ -69,7 +66,6 @@ pub(super) fn execute(
     // merge "snapshot-filter" section from config file, if given
     config_file.merge_into("snapshot-filter", &mut opts.config.filter)?;
 
-    opts.dry_run = opts.prune_opts.dry_run;
     let group_by = opts
         .config
         .group_by
@@ -147,7 +143,7 @@ pub(super) fn execute(
         println!();
     }
 
-    match (forget_snaps.is_empty(), opts.dry_run) {
+    match (forget_snaps.is_empty(), gopts.dry_run) {
         (true, _) => println!("nothing to remove"),
         (false, true) => println!("would have removed the following snapshots:\n {forget_snaps:?}"),
         (false, false) => {
@@ -157,7 +153,7 @@ pub(super) fn execute(
     }
 
     if opts.config.prune {
-        prune::execute(repo, opts.prune_opts, forget_snaps)?;
+        prune::execute(repo, gopts, opts.prune_opts, forget_snaps)?;
     }
 
     Ok(())

@@ -1,0 +1,154 @@
+# Full rustic config file containing all options which are available through the config file. 
+#
+# This file should be placed in the user's local config dir (~/.config/rustic/)
+# If you save it under NAME.toml, use "rustic -P NAME" to access this profile. 
+#
+# Note that most options can be overwritten by the corresponding command line option.
+
+# Global options: These options are used for all commands. 
+[global]
+log-level = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
+log-file = "/path/to/rustic.log" # Default: not set
+no-progress = false
+progress-interval = "100ms"
+dry-run = false
+
+# Repository options: These options define which backend to use and which password to use. 
+[repository]
+repository = "/repo/rustic" # Must be set
+repo-hot = "/my/hot/repo" # Default: not set
+# one of the three password options must be set
+password = "mySecretPassword"
+password-file = "/my/password.txt"
+password-command = "my_command.sh"
+no-cache = false
+cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g. ~/.cache/rustic
+# use either warm-up (warm-up by file access) or warm-up-command to specify warming up
+warm-up = false
+warm-up-command = "warmup.sh %id" # Default: not set
+warm-up-wait = "10min" # Default: not set
+
+# Additional repository options - depending on backend. These can be only set in the config file.
+[repository.options]
+post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
+post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set 
+retry = true # Only rest/rclone backend
+timeout = "2min" # Ony rest/rclone backend
+
+# Snapshot-filter options: These options apply to all commands that use snapshot filters
+[snapshot-filter]
+filter-host = ["host2", "host2"] # Default: no host filter
+filter-label = ["label1", "label2"] # Default: no label filter
+filter-tags = ["tag1,tag2", "tag3"] # Default: no tags filger
+filter-paths = ["path1", "path2,path3"] # Default: no paths filter
+filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
+
+# Backup options: These options are used for all sources when calling the backup command. 
+# They can be overwritten by source-specific options (see below) or command line options.
+[backup]
+label = "label" # Default: not set
+tag = ["tag1", "tag2"]
+description = "my description" # Default: not set
+description-from = "/path/to/description.txt" # Default: not set
+delete-never = false
+delete-after = "5d" # Default: not set
+host = "manually_set_host" # Default: host name
+group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
+parent = "123abc" # Default: not set
+force = false
+ignore-ctime = false
+ignore-inode = false
+stdin-filename = "stdin" # Only for stdin source
+as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
+with-atime = false
+ignore-devid = false
+glob = []
+iglob = []
+glob-file = []
+iglob-file = []
+git-ignore = false
+exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
+one-file-system = false
+exclude-larger-than = "100MB" # Default: not set
+json = false
+
+# Backup options for specific sources - all above options are also available here and replace them for the given source
+[[backup.sources]]
+source = "/path/to/source1"
+label = "label" # Default: not set
+tag = ["tag1", "tag2"]
+description = "my description" # Default: not set
+description-from = "/path/to/description.txt" # Default: not set
+delete-never = false
+delete-after = "5d" # Default: not set
+host = "manually_set_host" # Default: host name
+group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
+parent = "123abc" # Default: not set
+force = false
+ignore-ctime = false
+ignore-inode = false
+stdin-filename = "stdin" # Only for stdin source
+as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
+with-atime = false
+ignore-devid = false
+glob = []
+iglob = []
+glob-file = []
+iglob-file = []
+git-ignore = false
+exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
+one-file-system = false
+exclude-larger-than = "100MB" # Default: not set
+json = false
+
+[[backup.sources]]
+source = "/path/to/source2 /second/path" # multiple local paths are allowd within one source
+# ...
+
+# forget options
+[forget]
+prune = false
+group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
+# The following filter options can be also defined here and then overwrite the options for the forget command
+filter-host = ["host2", "host2"] # Default: no host filter
+filter-label = ["label1", "label2"] # Default: no label filter
+filter-tags = ["tag1,tag2", "tag3"] # Default: no tags filger
+filter-paths = ["path1", "path2,path3"] # Default: no paths filter
+filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}'' # Default: no filter function
+# The retention options follow. All of these are not set by default.
+keep-tags = ["tag1", "tag2,tag3"]
+keep-ids = ["123abc", "11122233"] # Keep all snapshots whose ID starts with any of these strings
+keep-last = 0
+keep-daily = 3
+keep-weekly = 0
+keep-monthly = 0
+keep-quarter-yearly = 0
+keep-half-yearly = 0
+keep-yearly = 10
+keep-within = "0s"
+keep-within-daily = "0 seconds"
+keep-within-weekly = "2 months"
+keep-withing-monthly = "1 year"
+keep-withing-quarter-yearly = "0 year"
+keep-withing-half-yearly = "1 year"
+keep-within-yearly = "10 years"
+
+# Multiple targets are available for the copy command. Each specify a repository with exactly identical options as in
+# the [repository] section.
+[[copy.targets]]
+repository = "/repo/rustic" # Must be set
+repo-hot = "/my/hot/repo" # Default: not set
+# one of the three password options must be set
+password = "mySecretPassword"
+password-file = "/my/password.txt"
+password-command = "my_command.sh"
+no-cache = false
+cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g. ~/.cache/rustic
+# use either warm-up (warm-up by file access) or warm-up-command to specify warming up
+warm-up = false
+warm-up-command = "warmup.sh %id" # Default: not set
+warm-up-wait = "10min" # Default: not set
+
+[[copy.targets]]
+repository = "/repo/rustic2" # Must be set
+# ...

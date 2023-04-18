@@ -12,6 +12,7 @@ pub trait RollingHash64 {
     fn get_hash(&self) -> &Polynom64;
 }
 
+#[derive(Clone)]
 pub struct Rabin64 {
     // Configuration
     window_size: usize, // The size of the data window used in the hash calculation.

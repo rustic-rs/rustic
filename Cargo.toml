@@ -35,7 +35,6 @@ crossbeam-channel = "0.5"
 rayon = "1"
 #crypto
 aes256ctr_poly1305aes = "0.1"
-sha2 = "0.10"
 rand = "0.8"
 scrypt = { version = "0.11", default-features = false }
 # chunker / packer
@@ -90,7 +89,12 @@ libc = "0.2"
 rhai = {version = "1.13", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"]}
 
 [target.'cfg(not(windows))'.dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
 users = "0.11"
+
+[target.'cfg(windows)'.dependencies]
+# unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17
+sha2 = "0.10"
 
 [target.'cfg(not(any(windows, target_os="openbsd")))'.dependencies]
 xattr = "1"

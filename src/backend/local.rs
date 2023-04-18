@@ -57,7 +57,7 @@ impl LocalBackend {
     fn call_command(&self, tpe: FileType, id: &Id, filename: &Path, command: &str) -> Result<()> {
         let id = id.to_hex();
         let patterns = &["%file", "%type", "%id"];
-        let ac = AhoCorasick::new(patterns);
+        let ac = AhoCorasick::new(patterns)?;
         let replace_with = &[filename.to_str().unwrap(), tpe.name(), id.as_str()];
         let actual_command = ac.replace_all(command, replace_with);
         debug!("calling {actual_command}...");

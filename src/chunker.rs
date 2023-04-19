@@ -3,7 +3,8 @@ use std::io::{self, Read};
 use anyhow::{anyhow, Result};
 use rand::{thread_rng, Rng};
 
-use crate::cdc::{Polynom, Polynom64, Rabin64, RollingHash64};
+pub use crate::cdc::Rabin64;
+use crate::cdc::{Polynom, Polynom64, RollingHash64};
 
 const SPLITMASK: u64 = (1u64 << 20) - 1;
 const KB: usize = 1024;
@@ -30,13 +31,13 @@ pub struct ChunkIter<R: Read + Send> {
 }
 
 impl<R: Read + Send> ChunkIter<R> {
-    pub fn new(reader: R, size_hint: usize, poly: Polynom64) -> Self {
+    pub fn new(reader: R, size_hint: usize, rabin: Rabin64) -> Self {
         Self {
             buf: Vec::with_capacity(4 * KB),
             pos: 0,
             reader,
             predicate: default_predicate,
-            rabin: Rabin64::new_with_polynom(6, poly),
+            rabin,
             size_hint, // size hint is used to optimize memory allocation; this should be an upper bound on the size
             min_size: MIN_SIZE,
             max_size: MAX_SIZE,
@@ -244,7 +245,8 @@ mod tests {
         let mut reader = Cursor::new(empty);
 
         let poly = random_poly().unwrap();
-        let chunker = ChunkIter::new(&mut reader, 0, poly);
+        let rabin = Rabin64::new_with_polynom(6, poly);
+        let chunker = ChunkIter::new(&mut reader, 0, rabin);
 
         let chunks: Vec<_> = chunker.into_iter().collect();
         assert_eq!(0, chunks.len());
@@ -256,7 +258,8 @@ mod tests {
         let mut reader = Cursor::new(empty);
 
         let poly = random_poly().unwrap();
-        let chunker = ChunkIter::new(&mut reader, 100, poly);
+        let rabin = Rabin64::new_with_polynom(6, poly);
+        let chunker = ChunkIter::new(&mut reader, 100, rabin);
 
         let chunks: Vec<_> = chunker.into_iter().collect();
         assert_eq!(0, chunks.len());
@@ -267,7 +270,8 @@ mod tests {
         let mut reader = repeat(0u8);
 
         let poly = random_poly().unwrap();
-        let mut chunker = ChunkIter::new(&mut reader, usize::MAX, poly);
+        let rabin = Rabin64::new_with_polynom(6, poly);
+        let mut chunker = ChunkIter::new(&mut reader, usize::MAX, rabin);
 
         let chunk = chunker.next().unwrap().unwrap();
         assert_eq!(MIN_SIZE, chunk.len());

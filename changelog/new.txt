@@ -6,5 +6,6 @@ Bugs fixed:
 - restore: Warm-up options given by the command line didn't work. This has been fixed.
 
 New features:
+- prune: Added option --repack-all
 - Option --dry-run is now a global option and can also be defined in the config file or via env variable 
 - Updated to clap v4

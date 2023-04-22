@@ -122,7 +122,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
         }
 
         if !self.index.has_tree(&id) {
-            self.tree_packer.add(&chunk, &id)?;
+            self.tree_packer.add(chunk.into(), id)?;
         }
         Ok(id)
     }

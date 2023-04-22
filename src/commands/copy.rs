@@ -110,7 +110,7 @@ fn copy(
         trace!("copy tree blob {id}");
         if !index_dest.has_tree(id) {
             let data = index.get_tree(id).unwrap().read_data(index.be())?;
-            tree_packer.add(&data, id)?;
+            tree_packer.add(data, *id)?;
         }
         Ok(())
     })?;
@@ -130,7 +130,7 @@ fn copy(
                                 trace!("copy data blob {id}");
                                 if !index_dest.has_data(id) {
                                     let data = index.get_data(id).unwrap().read_data(index.be())?;
-                                    data_packer.add(&data, id)?;
+                                    data_packer.add(data, *id)?;
                                 }
                                 Ok(())
                             })?;
@@ -141,7 +141,7 @@ fn copy(
                         trace!("copy tree blob {id}");
                         if !index_dest.has_tree(&id) {
                             let data = index.get_tree(&id).unwrap().read_data(index.be())?;
-                            tree_packer.add(&data, &id)?;
+                            tree_packer.add(data, id)?;
                         }
                     }
 

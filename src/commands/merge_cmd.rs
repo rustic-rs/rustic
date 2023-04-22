@@ -82,7 +82,7 @@ pub(super) fn execute(
         let (chunk, new_id) = tree.serialize()?;
         let size = u64::try_from(chunk.len())?;
         if !index.has_tree(&new_id) {
-            packer.add(&chunk, &new_id)?;
+            packer.add(chunk.into(), new_id)?;
         }
         Ok((new_id, size))
     };

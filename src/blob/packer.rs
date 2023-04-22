@@ -7,11 +7,12 @@ use anyhow::{anyhow, Result};
 use bytes::{Bytes, BytesMut};
 use chrono::Local;
 use crossbeam_channel::{bounded, Receiver, Sender};
+use pariter::{scope, IteratorExt};
 use zstd::encode_all;
 
 use super::BlobType;
 use crate::backend::{DecryptFullBackend, DecryptWriteBackend, FileType};
-use crate::crypto::{CryptoKey, Hasher};
+use crate::crypto::{hash, CryptoKey};
 use crate::id::Id;
 use crate::index::SharedIndexer;
 use crate::repofile::{
@@ -72,10 +73,12 @@ impl PackSizer {
 
 #[derive(Clone)]
 pub struct Packer<BE: DecryptWriteBackend> {
+    // This is a hack: raw_packer and indexer are only used in the add_raw() method.
+    // TODO: Refactor as actor, like the other add() methods
     raw_packer: Arc<RwLock<RawPacker<BE>>>,
-    key: BE::Key,
-    zstd: Option<i32>,
     indexer: SharedIndexer<BE>,
+    sender: Sender<(Bytes, Id, Option<u32>)>,
+    finish: Receiver<Result<PackerStats>>,
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
@@ -96,56 +99,76 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         )?));
         let zstd = config.zstd()?;
 
-        Ok(Self {
-            raw_packer,
-            key,
-            zstd,
-            indexer,
-        })
+        let (tx, rx) = bounded(0);
+        let (finish_tx, finish_rx) = bounded::<Result<PackerStats>>(0);
+        let packer = Self {
+            raw_packer: raw_packer.clone(),
+            indexer: indexer.clone(),
+            sender: tx,
+            finish: finish_rx,
+        };
+
+        std::thread::spawn(move || {
+            scope(|scope| {
+                let status = rx
+                    .into_iter()
+                    .readahead_scoped(scope)
+                    .filter(|(_, id, _)| !indexer.read().unwrap().has(id))
+                    .filter(|(_, id, _)| !raw_packer.read().unwrap().has(id))
+                    .readahead_scoped(scope)
+                    .parallel_map_scoped(
+                        scope,
+                        |(data, id, size_limit): (Bytes, Id, Option<u32>)| {
+                            let data_len: u32 = data.len().try_into()?;
+                            let (data, uncompressed_length) = match zstd {
+                                None => (
+                                    key.encrypt_data(&data)
+                                        .map_err(|_| anyhow!("crypto error"))?,
+                                    None,
+                                ),
+                                // compress if requested
+                                Some(level) => (
+                                    key.encrypt_data(&encode_all(&*data, level)?)
+                                        .map_err(|_| anyhow!("crypto error"))?,
+                                    NonZeroU32::new(data_len),
+                                ),
+                            };
+                            Ok((
+                                data,
+                                id,
+                                u64::from(data_len),
+                                uncompressed_length,
+                                size_limit,
+                            ))
+                        },
+                    )
+                    .readahead_scoped(scope)
+                    .try_for_each(|item: Result<_>| {
+                        let (data, id, data_len, ul, size_limit) = item?;
+                        raw_packer
+                            .write()
+                            .unwrap()
+                            .add_raw(&data, &id, data_len, ul, size_limit)
+                    })
+                    .and_then(|_| raw_packer.write().unwrap().finalize());
+                let _ = finish_tx.send(status);
+            })
+            .unwrap();
+        });
+
+        Ok(packer)
     }
 
     /// adds the blob to the packfile
-    pub fn add(&self, data: &[u8], id: &Id) -> Result<()> {
+    pub fn add(&self, data: Bytes, id: Id) -> Result<()> {
         // compute size limit based on total size and size bounds
         self.add_with_sizelimit(data, id, None)
     }
 
     /// adds the blob to the packfile, allows specifying a size limit for the pack file
-    pub fn add_with_sizelimit(&self, data: &[u8], id: &Id, size_limit: Option<u32>) -> Result<()> {
-        // only add if this blob is not present
-        if self.indexer.read().unwrap().has(id) {
-            // Note: This is within two if clauses , because here the indexer lock is already released.
-            // using "if self.indexer.read().unwrap().has(id) || self.raw_packer.read().unwrap().has(id)"
-            // can lead to a deadlock as the indexer lock is hold too long (and also needed within raw_packer!)
-            if self.raw_packer.read().unwrap().has(id) {
-                return Ok(());
-            }
-        }
-
-        let key = self.key.clone();
-        let zstd = self.zstd;
-
-        let data_len: u32 = data.len().try_into()?;
-        let (data, uncompressed_length) = match zstd {
-            None => (
-                key.encrypt_data(data)
-                    .map_err(|_| anyhow!("crypto error"))?,
-                None,
-            ),
-            // compress if requested
-            Some(level) => (
-                key.encrypt_data(&encode_all(data, level)?)
-                    .map_err(|_| anyhow!("crypto error"))?,
-                NonZeroU32::new(data_len),
-            ),
-        };
-        self.add_raw(
-            &data,
-            id,
-            u64::from(data_len),
-            uncompressed_length,
-            size_limit,
-        )
+    pub fn add_with_sizelimit(&self, data: Bytes, id: Id, size_limit: Option<u32>) -> Result<()> {
+        self.sender.send((data, id, size_limit))?;
+        Ok(())
     }
 
     /// adds the already encrypted (and maybe compressed) blob to the packfile
@@ -172,7 +195,10 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 
     pub fn finalize(self) -> Result<PackerStats> {
-        self.raw_packer.write().unwrap().finalize()
+        // cancel channel
+        drop(self.sender);
+        // wait for items in channel to be processed
+        self.finish.recv().unwrap()
     }
 }
 
@@ -210,8 +236,7 @@ pub struct RawPacker<BE: DecryptWriteBackend> {
     count: u32,
     created: SystemTime,
     index: IndexPack,
-    hasher: Hasher,
-    file_writer: Option<Actor<(Bytes, Id, IndexPack)>>,
+    file_writer: Option<Actor>,
     pack_sizer: PackSizer,
     stats: PackerStats,
 }
@@ -242,7 +267,6 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
             count: 0,
             created: SystemTime::now(),
             index: IndexPack::default(),
-            hasher: Hasher::new(),
             file_writer,
             pack_sizer,
             stats: PackerStats::default(),
@@ -256,7 +280,6 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
     }
 
     pub fn write_data(&mut self, data: &[u8]) -> Result<u32> {
-        self.hasher.update(data);
         let len = data.len().try_into()?;
         self.file.extend_from_slice(data);
         self.size += len;
@@ -272,10 +295,6 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
         uncompressed_length: Option<NonZeroU32>,
         size_limit: Option<u32>,
     ) -> Result<()> {
-        if self.has(id) {
-            return Ok(());
-        }
-
         self.stats.blobs += 1;
         self.stats.data += data_len;
         let data_len_packed: u64 = data.len().try_into()?;
@@ -296,7 +315,6 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
             self.size = 0;
             self.count = 0;
             self.created = SystemTime::now();
-            self.hasher.reset();
         }
         Ok(())
     }
@@ -329,17 +347,13 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
 
         self.write_header()?;
 
-        // compute id of packfile
-        let id = self.hasher.finalize();
-        self.index.set_id(id);
-
         // write file to backend
         let index = std::mem::take(&mut self.index);
         let file = std::mem::replace(&mut self.file, BytesMut::new());
         self.file_writer
             .as_ref()
             .unwrap()
-            .send((file.into(), id, index))?;
+            .send((file.into(), index))?;
 
         Ok(())
     }
@@ -356,44 +370,52 @@ struct FileWriterHandle<BE: DecryptWriteBackend> {
     cacheable: bool,
 }
 
-impl<BE: DecryptWriteBackend> ActorHandle<(Bytes, Id, IndexPack)> for FileWriterHandle<BE> {
-    fn process(&self, load: (Bytes, Id, IndexPack)) -> Result<()> {
+impl<BE: DecryptWriteBackend> FileWriterHandle<BE> {
+    fn process(&self, load: (Bytes, Id, IndexPack)) -> Result<IndexPack> {
         let (file, id, mut index) = load;
+        index.set_id(id);
         self.be
             .write_bytes(FileType::Pack, &id, self.cacheable, file)?;
         index.time = Some(Local::now());
+        Ok(index)
+    }
+
+    fn index(&self, index: IndexPack) -> Result<()> {
         self.indexer.write().unwrap().add(index)?;
         Ok(())
     }
 }
 
-pub trait ActorHandle<T>: Clone + Send + 'static {
-    fn process(&self, load: T) -> Result<()>;
-}
-
-pub struct Actor<T> {
-    sender: Sender<T>,
+pub struct Actor {
+    sender: Sender<(Bytes, IndexPack)>,
     finish: Receiver<Result<()>>,
 }
 
-impl<T: Send + Sync + 'static> Actor<T> {
-    pub fn new(fwh: impl ActorHandle<T>, queue_len: usize, par: usize) -> Self {
+impl Actor {
+    fn new<BE: DecryptWriteBackend>(
+        fwh: FileWriterHandle<BE>,
+        queue_len: usize,
+        _par: usize,
+    ) -> Self {
         let (tx, rx) = bounded(queue_len);
         let (finish_tx, finish_rx) = bounded::<Result<()>>(0);
-        (0..par).for_each(|_| {
-            let rx = rx.clone();
-            let finish_tx = finish_tx.clone();
-            let fwh = fwh.clone();
-            std::thread::spawn(move || {
-                let mut status = Ok(());
-                for load in rx {
-                    // only keep processing if there was no error
-                    if status.is_ok() {
-                        status = fwh.process(load);
-                    }
-                }
+
+        std::thread::spawn(move || {
+            scope(|scope| {
+                let status = rx
+                    .into_iter()
+                    .readahead_scoped(scope)
+                    .map(|(file, index): (Bytes, IndexPack)| {
+                        let id = hash(&file);
+                        (file, id, index)
+                    })
+                    .readahead_scoped(scope)
+                    .map(|load| fwh.process(load))
+                    .readahead_scoped(scope)
+                    .try_for_each(|index| fwh.index(index?));
                 let _ = finish_tx.send(status);
-            });
+            })
+            .unwrap();
         });
 
         Self {
@@ -402,7 +424,7 @@ impl<T: Send + Sync + 'static> Actor<T> {
         }
     }
 
-    pub fn send(&self, load: T) -> Result<()> {
+    pub fn send(&self, load: (Bytes, IndexPack)) -> Result<()> {
         self.sender.send(load)?;
         Ok(())
     }
@@ -466,7 +488,7 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
             blob.uncompressed_length,
         )?;
         self.packer
-            .add_with_sizelimit(&data, &blob.id, Some(self.size_limit))?;
+            .add_with_sizelimit(data, blob.id, Some(self.size_limit))?;
         Ok(())
     }
 

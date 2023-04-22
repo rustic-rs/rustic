@@ -2,7 +2,6 @@ use std::io::Read;
 
 use anyhow::{anyhow, Result};
 use indicatif::ProgressBar;
-use rayon::prelude::*;
 
 use crate::backend::{DecryptWriteBackend, ReadSourceOpen};
 use crate::blob::{BlobType, Node, NodeType, Packer, PackerStats};
@@ -69,28 +68,22 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         node: Node,
         p: ProgressBar,
     ) -> Result<(Node, u64)> {
-        let mut chunks: Vec<_> =
-            ChunkIter::new(r, *node.meta().size() as usize, self.rabin.clone())
-                .enumerate() // see below
-                .par_bridge()
-                .map(|(num, chunk)| {
-                    let chunk = chunk?;
-                    let id = hash(&chunk);
-                    let size = chunk.len() as u64;
+        let chunks: Vec<_> = ChunkIter::new(r, *node.meta().size() as usize, self.rabin.clone())
+            .map(|chunk| {
+                let chunk = chunk?;
+                let id = hash(&chunk);
+                let size = chunk.len() as u64;
 
-                    if !self.index.has_data(&id) {
-                        self.data_packer.add(&chunk, &id)?;
-                    }
-                    p.inc(size);
-                    Ok((num, id, size))
-                })
-                .collect::<Result<_>>()?;
+                if !self.index.has_data(&id) {
+                    self.data_packer.add(chunk.into(), id)?;
+                }
+                p.inc(size);
+                Ok((id, size))
+            })
+            .collect::<Result<_>>()?;
 
-        // As par_bridge doesn't guarantee to keep the order, we sort by the enumeration
-        chunks.sort_unstable_by_key(|x| x.0);
-
-        let filesize = chunks.iter().map(|x| x.2).sum();
-        let content = chunks.into_iter().map(|x| x.1).collect();
+        let filesize = chunks.iter().map(|x| x.1).sum();
+        let content = chunks.into_iter().map(|x| x.0).collect();
 
         let mut node = node;
         node.set_content(content);

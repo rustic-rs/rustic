@@ -157,8 +157,10 @@ impl Iterator for PackIndexes {
             }
         };
 
-        let mut pack = IndexPack::default();
-        pack.set_id(self.c.0[self.tpe].packs[*pack_idx]);
+        let mut pack = IndexPack {
+            id: self.c.0[self.tpe].packs[*pack_idx],
+            ..Default::default()
+        };
 
         if let EntriesVariants::FullEntries(entries) = &self.c.0[self.tpe].entries {
             while *idx < entries.len() && entries[*idx].pack_idx == *pack_idx {

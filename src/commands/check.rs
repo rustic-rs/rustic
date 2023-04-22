@@ -289,8 +289,8 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
     let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
     while let Some(item) = tree_streamer.next().transpose()? {
         let (path, tree) = item;
-        for node in tree.nodes() {
-            match node.node_type() {
+        for node in tree.nodes {
+            match node.node_type {
                 NodeType::File => match &node.content {
                     Some(content) => {
                         for (i, id) in content.iter().enumerate() {
@@ -313,7 +313,7 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
                 },
 
                 NodeType::Dir => {
-                    match node.subtree() {
+                    match node.subtree {
                         None => {
                             error!("dir {:?} subtree does not exist", path.join(node.name()));
                         }

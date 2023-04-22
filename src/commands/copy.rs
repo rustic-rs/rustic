@@ -120,8 +120,8 @@ fn copy(
         .par_bridge()
         .try_for_each(|item| -> Result<_> {
             let (_, tree) = item?;
-            tree.nodes().par_iter().try_for_each(|node| {
-                match node.node_type() {
+            tree.nodes.par_iter().try_for_each(|node| {
+                match node.node_type {
                     NodeType::File => {
                         node.content
                             .par_iter()
@@ -137,7 +137,7 @@ fn copy(
                     }
 
                     NodeType::Dir => {
-                        let id = node.subtree().unwrap();
+                        let id = node.subtree.unwrap();
                         trace!("copy tree blob {id}");
                         if !index_dest.has_tree(&id) {
                             let data = index.get_tree(&id).unwrap().read_data(index.be())?;

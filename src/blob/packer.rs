@@ -373,7 +373,7 @@ struct FileWriterHandle<BE: DecryptWriteBackend> {
 impl<BE: DecryptWriteBackend> FileWriterHandle<BE> {
     fn process(&self, load: (Bytes, Id, IndexPack)) -> Result<IndexPack> {
         let (file, id, mut index) = load;
-        index.set_id(id);
+        index.id = id;
         self.be
             .write_bytes(FileType::Pack, &id, self.cacheable, file)?;
         index.time = Some(Local::now());

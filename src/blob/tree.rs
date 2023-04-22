@@ -8,7 +8,6 @@ use std::str;
 use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
-use derive_getters::Getters;
 use ignore::overrides::{Override, OverrideBuilder};
 use ignore::Match;
 use indicatif::ProgressBar;
@@ -21,7 +20,7 @@ use crate::repofile::SnapshotSummary;
 
 use super::{Metadata, Node, NodeType};
 
-#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tree {
     #[serde(deserialize_with = "deserialize_null_default")]
     pub nodes: Vec<Node>,
@@ -63,11 +62,11 @@ impl Tree {
 
     pub fn node_from_path(be: &impl IndexedBackend, id: Id, path: &Path) -> Result<Node> {
         let mut node = Node::new_node(OsStr::new(""), NodeType::Dir, Metadata::default());
-        node.set_subtree(id);
+        node.subtree = Some(id);
 
         for p in path.components() {
             if let Some(p) = comp_to_osstr(p)? {
-                let id = node.subtree().ok_or_else(|| anyhow!("{p:?} is no dir"))?;
+                let id = node.subtree.ok_or_else(|| anyhow!("{p:?} is no dir"))?;
                 let tree = Tree::from_backend(be, id)?;
                 node = tree
                     .nodes
@@ -205,10 +204,10 @@ where
             match self.inner.next() {
                 Some(node) => {
                     let path = self.path.join(node.name());
-                    if let Some(id) = node.subtree() {
+                    if let Some(id) = node.subtree {
                         self.path.push(node.name());
                         let be = self.be.clone();
-                        let tree = match Tree::from_backend(&be, *id) {
+                        let tree = match Tree::from_backend(&be, id) {
                             Ok(tree) => tree,
                             Err(err) => return Some(Err(err)),
                         };
@@ -316,11 +315,11 @@ impl Iterator for TreeStreamerOnce {
             Ok(Err(err)) => return Some(Err(err)),
         };
 
-        for node in tree.nodes() {
-            if let Some(id) = node.subtree() {
+        for node in &tree.nodes {
+            if let Some(id) = node.subtree {
                 let mut path = path.clone();
                 path.push(node.name());
-                match self.add_pending(path, *id, count) {
+                match self.add_pending(path, id, count) {
                     Ok(_) => {}
                     Err(err) => return Some(Err(err)),
                 }
@@ -439,7 +438,7 @@ fn merge_nodes(
     let trees: Vec<_> = nodes
         .iter()
         .filter(|node| node.is_dir())
-        .map(|node| node.subtree().unwrap())
+        .map(|node| node.subtree.unwrap())
         .collect();
 
     let mut node = nodes.into_iter().max_by(|n1, n2| cmp(n1, n2)).unwrap();

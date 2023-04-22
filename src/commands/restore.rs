@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Local, Utc};
 use clap::Parser;
-use derive_getters::Dissolve;
 use ignore::{DirEntry, WalkBuilder};
 use log::*;
 use rayon::ThreadPoolBuilder;
@@ -200,7 +199,7 @@ fn allocate_and_collect(
     };
 
     let mut process_node = |path: &PathBuf, node: &Node, exists: bool| -> Result<_> {
-        match node.node_type() {
+        match node.node_type {
             NodeType::Dir => {
                 if exists {
                     stats.dir.modify += 1;
@@ -324,7 +323,12 @@ fn restore_contents(
     dest: &LocalDestination,
     file_infos: FileInfos,
 ) -> Result<()> {
-    let (filenames, restore_info, total_size, _) = file_infos.dissolve();
+    let FileInfos {
+        names: filenames,
+        r: restore_info,
+        restore_size: total_size,
+        ..
+    } = file_infos;
 
     let p = progress_bytes("restoring file contents...");
     p.set_length(total_size);
@@ -398,7 +402,7 @@ fn restore_metadata(
     let mut node_streamer = NodeStreamer::new_with_glob(index, node, opts.streamer_opts.clone())?;
     let mut dir_stack = Vec::new();
     while let Some((path, node)) = node_streamer.next().transpose()? {
-        match node.node_type() {
+        match node.node_type {
             NodeType::Dir => {
                 // set metadata for all non-parent paths in stack
                 while let Some((stackpath, _)) = dir_stack.last() {
@@ -431,17 +435,17 @@ fn set_metadata(dest: &LocalDestination, path: &PathBuf, node: &Node, opts: &Opt
     match (opts.no_ownership, opts.numeric_id) {
         (true, _) => {}
         (false, true) => dest
-            .set_uid_gid(path, node.meta())
+            .set_uid_gid(path, &node.meta)
             .unwrap_or_else(|_| warn!("restore {:?}: setting UID/GID failed.", path)),
         (false, false) => dest
-            .set_user_group(path, node.meta())
+            .set_user_group(path, &node.meta)
             .unwrap_or_else(|_| warn!("restore {:?}: setting User/Group failed.", path)),
     }
     dest.set_permission(path, node)
         .unwrap_or_else(|_| warn!("restore {:?}: chmod failed.", path));
     dest.set_extended_attributes(path, &node.meta.extended_attributes)
         .unwrap_or_else(|_| warn!("restore {:?}: setting extended attributes failed.", path));
-    dest.set_times(path, node.meta())
+    dest.set_times(path, &node.meta)
         .unwrap_or_else(|_| warn!("restore {:?}: setting file times failed.", path));
 }
 
@@ -449,7 +453,7 @@ fn set_metadata(dest: &LocalDestination, path: &PathBuf, node: &Node, opts: &Opt
 /// 1) pack ID,
 /// 2) blob within this pack
 /// 3) the actual files and position of this blob within those
-#[derive(Debug, Dissolve)]
+#[derive(Debug)]
 struct FileInfos {
     names: Filenames,
     r: RestoreInfo,
@@ -511,8 +515,7 @@ impl FileInfos {
         index: &impl IndexedBackend,
         ignore_mtime: bool,
     ) -> Result<AddFileResult> {
-        let mut open_file = dest.get_matching_file(&name, *file.meta().size());
-        let file_meta = file.meta();
+        let mut open_file = dest.get_matching_file(&name, file.meta.size);
 
         if !ignore_mtime {
             if let Some(meta) = open_file.as_ref().map(|f| f.metadata()).transpose()? {
@@ -521,10 +524,10 @@ impl FileInfos {
                     .modified()
                     .ok()
                     .map(|t| DateTime::<Utc>::from(t).with_timezone(&Local));
-                if meta.len() == file_meta.size && mtime == file_meta.mtime {
+                if meta.len() == file.meta.size && mtime == file.meta.mtime {
                     // File exists with fitting mtime => we suspect this file is ok!
                     debug!("file {name:?} exists with suitable size and mtime, accepting it!");
-                    self.matched_size += file_meta.size;
+                    self.matched_size += file.meta.size;
                     return Ok(AddFileResult::Existing);
                 }
             }
@@ -539,9 +542,9 @@ impl FileInfos {
                 .get_data(id)
                 .ok_or_else(|| anyhow!("did not find id {} in index", id))?;
             let bl = BlobLocation {
-                offset: *ie.offset(),
-                length: *ie.length(),
-                uncompressed_length: *ie.uncompressed_length(),
+                offset: ie.offset,
+                length: ie.length,
+                uncompressed_length: ie.uncompressed_length,
             };
             let length = bl.data_length();
 
@@ -554,7 +557,7 @@ impl FileInfos {
                 None => false,
             };
 
-            let pack = self.r.entry(*ie.pack()).or_insert_with(HashMap::new);
+            let pack = self.r.entry(ie.pack).or_insert_with(HashMap::new);
             let blob_location = pack.entry(bl).or_insert_with(Vec::new);
             blob_location.push(FileLocation {
                 file_idx,

@@ -27,7 +27,6 @@ anyhow = "1"
 thiserror = "1"
 derive_more = "0.99"
 derivative = "2"
-derive-getters = "0.2"
 lazy_static = "1"
 log = "0.4"
 # parallelize

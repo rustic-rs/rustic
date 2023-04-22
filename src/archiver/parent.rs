@@ -65,7 +65,7 @@ impl<BE: IndexedBackend> Parent<BE> {
         match &self.tree {
             None => None,
             Some(tree) => {
-                let p_nodes = tree.nodes();
+                let p_nodes = &tree.nodes;
                 loop {
                     match p_nodes.get(self.node_idx) {
                         None => break None,
@@ -148,7 +148,7 @@ impl<BE: IndexedBackend> Parent<BE> {
             TreeType::NewTree((path, node, tree)) => {
                 let parent_result = self
                     .is_parent(&node, &tree)
-                    .map(|node| node.subtree().unwrap());
+                    .map(|node| node.subtree.unwrap());
                 self.set_dir(&tree)?;
                 TreeType::NewTree((path, node, parent_result))
             }
@@ -162,7 +162,7 @@ impl<BE: IndexedBackend> Parent<BE> {
                 let parent = match parent {
                     ParentResult::Matched(p_node) => {
                         if p_node.content.iter().flatten().all(|id| be.has_data(id)) {
-                            node.set_content(p_node.content.iter().flatten().copied().collect());
+                            node.content = Some(p_node.content.iter().flatten().copied().collect());
                             ParentResult::Matched(())
                         } else {
                             warn!(

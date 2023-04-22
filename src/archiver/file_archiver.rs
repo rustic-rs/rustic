@@ -51,7 +51,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
                     let size = node.meta.size;
                     p.inc(size);
                     (node, size)
-                } else if let NodeType::File = node.node_type() {
+                } else if let NodeType::File = node.node_type {
                     let r = open.ok_or(anyhow!("cannot open file"))?.open()?;
                     self.backup_reader(r, node, p)?
                 } else {
@@ -68,7 +68,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         node: Node,
         p: ProgressBar,
     ) -> Result<(Node, u64)> {
-        let chunks: Vec<_> = ChunkIter::new(r, *node.meta().size() as usize, self.rabin.clone())
+        let chunks: Vec<_> = ChunkIter::new(r, node.meta.size as usize, self.rabin.clone())
             .map(|chunk| {
                 let chunk = chunk?;
                 let id = hash(&chunk);
@@ -86,7 +86,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         let content = chunks.into_iter().map(|x| x.0).collect();
 
         let mut node = node;
-        node.set_content(content);
+        node.content = Some(content);
         Ok((node, filesize))
     }
 

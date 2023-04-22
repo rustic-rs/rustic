@@ -131,7 +131,7 @@ fn identical_content_local(
     path: &Path,
     node: &Node,
 ) -> Result<bool> {
-    let mut open_file = match local.get_matching_file(path, *node.meta().size()) {
+    let mut open_file = match local.get_matching_file(path, node.meta.size) {
         Some(file) => file,
         None => return Ok(false),
     };
@@ -185,18 +185,18 @@ fn diff(
                 let path = &i1.0;
                 let node1 = &i1.1;
                 let node2 = &i2.1;
-                match node1.node_type() {
-                    tpe if tpe != node2.node_type() => println!("T    {path:?}"), // type was changed
+                match &node1.node_type {
+                    tpe if tpe != &node2.node_type => println!("T    {path:?}"), // type was changed
                     NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
                         println!("M    {path:?}");
                     }
-                    NodeType::File if metadata && node1.meta() != node2.meta() => {
+                    NodeType::File if metadata && node1.meta != node2.meta => {
                         println!("U    {path:?}");
                     }
                     NodeType::Symlink { linktarget } => {
                         if let NodeType::Symlink {
                             linktarget: linktarget2,
-                        } = node2.node_type()
+                        } = &node2.node_type
                         {
                             if *linktarget != *linktarget2 {
                                 println!("U    {path:?}");

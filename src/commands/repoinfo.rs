@@ -33,7 +33,7 @@ pub(super) fn execute(repo: OpenRepository, _opts: Opts) -> Result<()> {
     impl Info {
         fn add(&mut self, ie: IndexEntry) {
             self.count += 1;
-            self.size += u64::from(*ie.length());
+            self.size += u64::from(ie.length);
             self.data_size += u64::from(ie.data_length());
         }
 

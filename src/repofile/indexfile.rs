@@ -44,10 +44,6 @@ pub struct IndexPack {
 }
 
 impl IndexPack {
-    pub fn set_id(&mut self, id: Id) {
-        self.id = id;
-    }
-
     pub fn add(
         &mut self,
         id: Id,

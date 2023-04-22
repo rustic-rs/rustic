@@ -10,7 +10,6 @@ use anyhow::Result;
 #[cfg(not(windows))]
 use anyhow::{anyhow, bail};
 use chrono::{DateTime, Local};
-use derive_getters::Getters;
 use derive_more::{Constructor, IsVariant};
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::*;
@@ -56,7 +55,7 @@ pub enum NodeType {
     Option => #[serde(default, skip_serializing_if = "Option::is_none")],
     u64 => #[serde(default, skip_serializing_if = "is_default")],
 )]
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Getters)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     pub mode: Option<u32>,
     pub mtime: Option<DateTime<Local>>,
@@ -115,28 +114,8 @@ impl Node {
         )
     }
 
-    pub fn set_subtree(&mut self, id: Id) {
-        self.subtree = Some(id);
-    }
-
-    pub fn set_content(&mut self, content: Vec<Id>) {
-        self.content = Some(content);
-    }
-
     pub fn name(&self) -> OsString {
         unescape_filename(&self.name).unwrap_or_else(|_| OsString::from_str(&self.name).unwrap())
-    }
-
-    pub fn node_type(&self) -> &NodeType {
-        &self.node_type
-    }
-
-    pub fn meta(&self) -> &Metadata {
-        &self.meta
-    }
-
-    pub fn subtree(&self) -> &Option<Id> {
-        &self.subtree
     }
 }
 

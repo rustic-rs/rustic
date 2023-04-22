@@ -63,7 +63,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
                 // save tree
                 trace!("finishing {path:?}");
                 let id = self.backup_tree(&path, parent)?;
-                node.set_subtree(id);
+                node.subtree = Some(id);
 
                 // go back to parent dir
                 self.tree = tree;

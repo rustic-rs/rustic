@@ -327,8 +327,8 @@ impl LocalDestination {
 
         let filename = self.path(item);
 
-        if let Some(mode) = node.meta.mode() {
-            let mode = map_mode_from_go(*mode);
+        if let Some(mode) = node.meta.mode {
+            let mode = map_mode_from_go(mode);
             std::fs::set_permissions(filename, fs::Permissions::from_mode(mode))?;
         }
         Ok(())
@@ -410,7 +410,7 @@ impl LocalDestination {
     pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> Result<()> {
         let filename = self.path(item);
 
-        match node.node_type() {
+        match &node.node_type {
             NodeType::Symlink { linktarget } => {
                 symlink(linktarget, filename)?;
             }

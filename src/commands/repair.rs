@@ -157,18 +157,18 @@ fn repair_index(repo: &OpenRepository, gopts: GlobalOpts, opts: IndexOpts) -> Re
     p.set_length(pack_read_header.len().try_into()?);
     for (id, to_delete, size_hint, packsize) in pack_read_header {
         debug!("reading pack {id}...");
-        let mut pack = IndexPack::default();
-        pack.set_id(id);
+        let pack = IndexPack {
+            id,
+            blobs: match PackHeader::from_file(be, id, size_hint, packsize) {
+                Err(err) => {
+                    warn!("error reading pack {id} (not processed): {err}");
+                    Vec::new()
+                }
+                Ok(header) => header.into_blobs(),
+            },
+            ..Default::default()
+        };
 
-        match PackHeader::from_file(be, id, size_hint, packsize) {
-            Err(err) => {
-                warn!("error reading pack {id} (not processed): {err}");
-                continue;
-            }
-            Ok(header) => {
-                pack.blobs = header.into_blobs();
-            }
-        }
         if !gopts.dry_run {
             indexer.write().unwrap().add_with(pack, to_delete)?;
         }

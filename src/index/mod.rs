@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use derive_getters::Getters;
 use derive_more::Constructor;
 use indicatif::ProgressBar;
 
@@ -18,13 +17,13 @@ mod indexer;
 pub use binarysorted::*;
 pub use indexer::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Constructor, Getters)]
+#[derive(Debug, Clone, PartialEq, Eq, Constructor)]
 pub struct IndexEntry {
-    blob_type: BlobType,
-    pack: Id,
-    offset: u32,
-    length: u32,
-    uncompressed_length: Option<NonZeroU32>,
+    pub blob_type: BlobType,
+    pub pack: Id,
+    pub offset: u32,
+    pub length: u32,
+    pub uncompressed_length: Option<NonZeroU32>,
 }
 
 impl IndexEntry {

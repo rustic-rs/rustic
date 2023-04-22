@@ -1115,13 +1115,13 @@ fn find_used_blobs(
     let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
     while let Some(item) = tree_streamer.next().transpose()? {
         let (_, tree) = item;
-        for node in tree.nodes() {
-            match node.node_type() {
+        for node in tree.nodes {
+            match node.node_type {
                 NodeType::File => {
                     ids.extend(node.content.iter().flatten().map(|id| (*id, 0)));
                 }
                 NodeType::Dir => {
-                    ids.insert(node.subtree().unwrap(), 0);
+                    ids.insert(node.subtree.unwrap(), 0);
                 }
                 _ => {} // nothing to do
             }

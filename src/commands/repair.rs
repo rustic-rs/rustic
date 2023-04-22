@@ -364,7 +364,7 @@ fn repair_tree<BE: DecryptWriteBackend>(
             // the tree has been changed => save it
             let (chunk, new_id) = tree.serialize()?;
             if !be.has_tree(&new_id) && !gopts.dry_run {
-                packer.add(&chunk, &new_id)?;
+                packer.add(chunk.into(), new_id)?;
             }
             if let Some(id) = id {
                 replaced.insert(id, (c, new_id));

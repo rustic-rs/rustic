@@ -129,7 +129,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
 
     pub fn finalize(mut self, parent_tree: Option<Id>) -> Result<(Id, SnapshotSummary)> {
         let parent = match parent_tree {
-            None => ParentResult::NotMatched,
+            None => ParentResult::NotFound,
             Some(id) => ParentResult::Matched(id),
         };
         let id = self.backup_tree(&PathBuf::new(), parent)?;

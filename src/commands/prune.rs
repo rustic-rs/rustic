@@ -58,6 +58,10 @@ pub(super) struct Opts {
     #[clap(long, conflicts_with = "fast_repack")]
     repack_uncompressed: bool,
 
+    /// Repack all packs. Implies --max-unused=0.
+    #[clap(long)]
+    repack_all: bool,
+
     /// Only repack packs which are cacheable [default: true for a hot/cold repository, else false]
     #[clap(long, value_name = "TRUE/FALSE")]
     repack_cacheable_only: Option<bool>,
@@ -119,12 +123,13 @@ pub(super) fn execute(
         Duration::from_std(*opts.keep_delete)?,
         repack_cacheable_only,
         opts.repack_uncompressed,
+        opts.repack_all,
         &pack_sizer,
     )?;
     pruner.decide_repack(
         &opts.max_repack,
         &opts.max_unused,
-        opts.repack_uncompressed,
+        opts.repack_uncompressed || opts.repack_all,
         opts.no_resize,
         &pack_sizer,
     );
@@ -458,6 +463,7 @@ impl Pruner {
         keep_delete: Duration,
         repack_cacheable_only: bool,
         repack_uncompressed: bool,
+        repack_all: bool,
         pack_sizer: &BlobTypeMap<PackSizer>,
     ) -> Result<()> {
         // first process all marked packs then the unmarked ones:
@@ -497,7 +503,7 @@ impl Pruner {
                             self.stats.packs.used += 1;
                             if too_young || keep_uncacheable {
                                 pack.set_todo(PackToDo::Keep, &pi, &mut self.stats);
-                            } else if to_compress {
+                            } else if to_compress || repack_all {
                                 self.repack_candidates
                                     .push((pi, ToCompress, index_num, pack_num));
                             } else if size_mismatch {

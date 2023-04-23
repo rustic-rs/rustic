@@ -9,6 +9,7 @@ Bugs fixed:
 
 New features:
 - backup: Backing up (small) files is now much more parallelized.
+- forget: Using "-1" as value for --keep-* options will keep all snapshots of that interval
 - prune: Added option --repack-all
 - Option --dry-run is now a global option and can also be defined in the config file or via env variable 
 - Updated to clap v4

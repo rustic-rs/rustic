@@ -12,7 +12,9 @@ use toml::Value;
 
 use super::{bytes, progress_bytes, progress_counter, GlobalOpts, RusticConfig};
 use crate::archiver::Archiver;
-use crate::backend::{DryRunBackend, LocalSource, LocalSourceOptions, StdinSource};
+use crate::backend::{
+    DryRunBackend, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, StdinSource,
+};
 use crate::index::IndexBackend;
 use crate::repofile::{
     PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, SnapshotOptions,
@@ -86,7 +88,11 @@ pub(super) struct Opts {
 
     #[clap(flatten)]
     #[serde(flatten)]
-    ignore_opts: LocalSourceOptions,
+    ignore_save_opts: LocalSourceSaveOptions,
+
+    #[clap(flatten)]
+    #[serde(flatten)]
+    ignore_filter_opts: LocalSourceFilterOptions,
 
     #[clap(flatten, next_help_heading = "Snapshot options")]
     #[serde(flatten)]
@@ -240,7 +246,11 @@ pub(super) fn execute(
             let src = StdinSource::new(path.clone())?;
             archiver.archive(src, path, as_path.as_ref(), &p)?
         } else {
-            let src = LocalSource::new(opts.ignore_opts.clone(), &backup_path)?;
+            let src = LocalSource::new(
+                opts.ignore_save_opts.clone(),
+                opts.ignore_filter_opts.clone(),
+                &backup_path,
+            )?;
             archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?
         };
 

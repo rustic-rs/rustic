@@ -25,8 +25,7 @@ use super::{Node, ReadSource, ReadSourceEntry, ReadSourceOpen};
 pub struct LocalSource {
     builder: WalkBuilder,
     walker: Walk,
-    with_atime: bool,
-    ignore_devid: bool,
+    save_opts: LocalSourceSaveOptions,
     #[cfg(not(windows))]
     cache: UsersCache,
 }
@@ -34,7 +33,7 @@ pub struct LocalSource {
 #[serde_as]
 #[derive(Default, Clone, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
-pub struct LocalSourceOptions {
+pub struct LocalSourceSaveOptions {
     /// Save access time for files and directories
     #[clap(long)]
     #[merge(strategy = merge::bool::overwrite_false)]
@@ -44,7 +43,12 @@ pub struct LocalSourceOptions {
     #[clap(long)]
     #[merge(strategy = merge::bool::overwrite_false)]
     ignore_devid: bool,
+}
 
+#[serde_as]
+#[derive(Default, Clone, Parser, Deserialize, Merge)]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+pub struct LocalSourceFilterOptions {
     /// Glob pattern to exclude/include (can be specified multiple times)
     #[clap(long, help_heading = "Exclude options")]
     #[merge(strategy = merge::vec::overwrite_empty)]
@@ -87,7 +91,11 @@ pub struct LocalSourceOptions {
 }
 
 impl LocalSource {
-    pub fn new(opts: LocalSourceOptions, backup_paths: &[impl AsRef<Path>]) -> Result<Self> {
+    pub fn new(
+        save_opts: LocalSourceSaveOptions,
+        filter_opts: LocalSourceFilterOptions,
+        backup_paths: &[impl AsRef<Path>],
+    ) -> Result<Self> {
         let mut walk_builder = WalkBuilder::new(&backup_paths[0]);
 
         for path in &backup_paths[1..] {
@@ -96,22 +104,22 @@ impl LocalSource {
 
         let mut override_builder = OverrideBuilder::new("/");
 
-        for g in opts.glob {
+        for g in filter_opts.glob {
             override_builder.add(&g)?;
         }
 
-        for file in opts.glob_file {
+        for file in filter_opts.glob_file {
             for line in std::fs::read_to_string(file)?.lines() {
                 override_builder.add(line)?;
             }
         }
 
         override_builder.case_insensitive(true)?;
-        for g in opts.iglob {
+        for g in filter_opts.iglob {
             override_builder.add(&g)?;
         }
 
-        for file in opts.iglob_file {
+        for file in filter_opts.iglob_file {
             for line in std::fs::read_to_string(file)?.lines() {
                 override_builder.add(line)?;
             }
@@ -121,16 +129,16 @@ impl LocalSource {
             .follow_links(false)
             .hidden(false)
             .ignore(false)
-            .git_ignore(opts.git_ignore)
+            .git_ignore(filter_opts.git_ignore)
             .sort_by_file_path(Path::cmp)
-            .same_file_system(opts.one_file_system)
-            .max_filesize(opts.exclude_larger_than.map(|s| s.as_u64()))
+            .same_file_system(filter_opts.one_file_system)
+            .max_filesize(filter_opts.exclude_larger_than.map(|s| s.as_u64()))
             .overrides(override_builder.build()?);
 
-        if !opts.exclude_if_present.is_empty() {
+        if !filter_opts.exclude_if_present.is_empty() {
             walk_builder.filter_entry(move |entry| match entry.file_type() {
                 Some(tpe) if tpe.is_dir() => {
-                    for file in &opts.exclude_if_present {
+                    for file in &filter_opts.exclude_if_present {
                         if entry.path().join(file).exists() {
                             return false;
                         }
@@ -147,8 +155,7 @@ impl LocalSource {
         Ok(Self {
             builder,
             walker,
-            with_atime: opts.with_atime,
-            ignore_devid: opts.ignore_devid,
+            save_opts,
             #[cfg(not(windows))]
             cache: UsersCache::new(),
         })
@@ -201,8 +208,8 @@ impl Iterator for LocalSource {
         .map(|e| {
             map_entry(
                 e?,
-                self.with_atime,
-                self.ignore_devid,
+                self.save_opts.with_atime,
+                self.save_opts.ignore_devid,
                 #[cfg(not(windows))]
                 &self.cache,
             )

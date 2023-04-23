@@ -5,7 +5,10 @@ use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 
 use super::{progress_counter, RusticConfig};
-use crate::backend::{LocalDestination, LocalSource, LocalSourceOptions, ReadSourceEntry};
+use crate::backend::{
+    LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
+    ReadSourceEntry,
+};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
@@ -32,7 +35,7 @@ pub(super) struct Opts {
     no_content: bool,
 
     #[clap(flatten)]
-    ignore_opts: LocalSourceOptions,
+    ignore_opts: LocalSourceFilterOptions,
 
     #[clap(
         flatten,
@@ -88,7 +91,12 @@ pub(super) fn execute(
                 .metadata()
                 .with_context(|| format!("Error accessing {path2:?}"))?
                 .is_dir();
-            let src = LocalSource::new(opts.ignore_opts, &[&path2])?.map(|item| {
+            let src = LocalSource::new(
+                LocalSourceSaveOptions::default(),
+                opts.ignore_opts,
+                &[&path2],
+            )?
+            .map(|item| {
                 let ReadSourceEntry { path, node, .. } = item?;
                 let path = if is_dir {
                     // remove given path prefix for dirs as local path

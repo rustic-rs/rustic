@@ -8,7 +8,7 @@ use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
-use super::{progress_counter, prune, table_with_titles, GlobalOpts, RusticConfig};
+use super::{progress_counter, prune, table_with_titles, Config};
 use crate::backend::{DecryptWriteBackend, FileType};
 use crate::repofile::{
     SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
@@ -32,9 +32,9 @@ pub(super) struct Opts {
 }
 
 #[serde_as]
-#[derive(Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
-struct ConfigOpts {
+pub struct ConfigOpts {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
@@ -54,17 +54,12 @@ struct ConfigOpts {
     keep: KeepOptions,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    gopts: GlobalOpts,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, config: Config, mut opts: Opts) -> Result<()> {
     let be = &repo.dbe;
     // merge "forget" section from config file, if given
-    config_file.merge_into("forget", &mut opts.config)?;
+    opts.config.merge(config.forget.clone());
     // merge "snapshot-filter" section from config file, if given
-    config_file.merge_into("snapshot-filter", &mut opts.config.filter)?;
+    opts.config.filter.merge(config.snapshot_filter.clone());
 
     let group_by = opts
         .config
@@ -143,7 +138,7 @@ pub(super) fn execute(
         println!();
     }
 
-    match (forget_snaps.is_empty(), gopts.dry_run) {
+    match (forget_snaps.is_empty(), config.global.dry_run) {
         (true, _) => println!("nothing to remove"),
         (false, true) => println!("would have removed the following snapshots:\n {forget_snaps:?}"),
         (false, false) => {
@@ -153,7 +148,7 @@ pub(super) fn execute(
     }
 
     if opts.config.prune {
-        prune::execute(repo, gopts, opts.prune_opts, forget_snaps)?;
+        prune::execute(repo, config, opts.prune_opts, forget_snaps)?;
     }
 
     Ok(())

@@ -6,10 +6,10 @@ use clap::{Parser, Subcommand};
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
-use simplelog::*;
+use simplelog::{ColorChoice, CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 use crate::backend::{FileType, ReadBackend};
-use crate::repository::{Repository, RepositoryOptions};
+use crate::repository::Repository;
 
 use helpers::*;
 
@@ -18,6 +18,7 @@ mod cat;
 mod check;
 mod completions;
 mod config;
+mod configfile;
 mod copy;
 mod diff;
 mod dump;
@@ -32,32 +33,17 @@ mod prune;
 mod repair;
 mod repoinfo;
 mod restore;
-mod rustic_config;
 mod self_update;
 mod snapshots;
 mod tag;
 
-use rustic_config::RusticConfig;
+use configfile::Config;
 
 #[derive(Parser)]
 #[clap(about, version, name="rustic", version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
-struct Opts {
-    /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
-    #[clap(
-        short = 'P',
-        long,
-        value_name = "PROFILE",
-        global = true,
-        default_value = "rustic",
-        help_heading = "Global options"
-    )]
-    config_profile: String,
-
-    #[clap(flatten, next_help_heading = "Global options")]
-    global: GlobalOpts,
-
-    #[clap(flatten, next_help_heading = "Repository options")]
-    repository: RepositoryOptions,
+struct Args {
+    #[clap(flatten)]
+    config: Config,
 
     #[clap(subcommand)]
     command: Command,
@@ -66,7 +52,19 @@ struct Opts {
 #[serde_as]
 #[derive(Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
-struct GlobalOpts {
+pub struct GlobalOpts {
+    /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
+    #[clap(
+        short = 'P',
+        long,
+        global = true,
+        value_name = "PROFILE",
+        default_value = "rustic",
+        env = "RUSTIC_USE_PROFILE"
+    )]
+    #[merge(skip)]
+    use_profile: String,
+
     /// Only show what would be done without modifying anything. Does not affect read-only commands
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
     #[merge(strategy = merge::bool::overwrite_false)]
@@ -168,19 +166,19 @@ enum Command {
 
 pub fn execute() -> Result<()> {
     let command: Vec<_> = std::env::args_os().collect();
-    let args = Opts::parse_from(&command);
+    let args = Args::parse_from(&command);
+    let mut config = args.config;
 
     // get global options from command line / env and config file
-    let config_file = RusticConfig::new(&args.config_profile)?;
-    let mut gopts = args.global;
-    config_file.merge_into("global", &mut gopts)?;
+    let profile = config.global.use_profile.clone();
+    config.merge_profile(&profile)?;
 
     // start logger
-    let level_filter = gopts.log_level.unwrap_or(LevelFilter::Info);
-    match &gopts.log_file {
+    let level_filter = config.global.log_level.unwrap_or(LevelFilter::Info);
+    match &config.global.log_file {
         None => TermLogger::init(
             level_filter,
-            ConfigBuilder::new()
+            simplelog::ConfigBuilder::new()
                 .set_time_level(LevelFilter::Off)
                 .build(),
             TerminalMode::Stderr,
@@ -190,7 +188,7 @@ pub fn execute() -> Result<()> {
         Some(file) => CombinedLogger::init(vec![
             TermLogger::new(
                 level_filter.max(LevelFilter::Warn),
-                ConfigBuilder::new()
+                simplelog::ConfigBuilder::new()
                     .set_time_level(LevelFilter::Off)
                     .build(),
                 TerminalMode::Stderr,
@@ -198,18 +196,18 @@ pub fn execute() -> Result<()> {
             ),
             WriteLogger::new(
                 level_filter,
-                Config::default(),
+                simplelog::Config::default(),
                 File::options().create(true).append(true).open(file)?,
             ),
         ])?,
     }
 
-    if gopts.no_progress {
+    if config.global.no_progress {
         let mut no_progress = NO_PROGRESS.lock().unwrap();
         *no_progress = true;
     }
 
-    if let Some(duration) = gopts.progress_interval {
+    if let Some(duration) = config.global.progress_interval {
         let mut interval = PROGRESS_INTERVAL.lock().unwrap();
         *interval = *duration;
     }
@@ -230,9 +228,7 @@ pub fn execute() -> Result<()> {
         .collect::<Vec<_>>()
         .join(" ");
 
-    let mut repo_opts = args.repository;
-    config_file.merge_into("repository", &mut repo_opts)?;
-    let repo = Repository::new(repo_opts)?;
+    let repo = Repository::new(config.repository.clone())?;
 
     if let Command::Init(opts) = args.command {
         let config_ids = repo.be.list(FileType::Config)?;
@@ -243,27 +239,27 @@ pub fn execute() -> Result<()> {
 
     #[allow(clippy::match_same_arms)]
     match args.command {
-        Command::Backup(opts) => backup::execute(repo, gopts, opts, config_file, command)?,
+        Command::Backup(opts) => backup::execute(repo, config, opts, command)?,
         Command::Config(opts) => config::execute(repo, opts)?,
-        Command::Cat(opts) => cat::execute(repo, opts, config_file)?,
+        Command::Cat(opts) => cat::execute(repo, config, opts)?,
         Command::Check(opts) => check::execute(repo, opts)?,
         Command::Completions(_) => {} // already handled above
-        Command::Copy(opts) => copy::execute(repo, gopts, opts, config_file)?,
-        Command::Diff(opts) => diff::execute(repo, opts, config_file)?,
-        Command::Dump(opts) => dump::execute(repo, opts, config_file)?,
-        Command::Forget(opts) => forget::execute(repo, gopts, opts, config_file)?,
+        Command::Copy(opts) => copy::execute(repo, config, opts)?,
+        Command::Diff(opts) => diff::execute(repo, config, opts)?,
+        Command::Dump(opts) => dump::execute(repo, config, opts)?,
+        Command::Forget(opts) => forget::execute(repo, config, opts)?,
         Command::Init(_) => {} // already handled above
         Command::Key(opts) => key::execute(repo, opts)?,
         Command::List(opts) => list::execute(repo, opts)?,
-        Command::Ls(opts) => ls::execute(repo, opts, config_file)?,
-        Command::Merge(opts) => merge_cmd::execute(repo, opts, config_file, command)?,
+        Command::Ls(opts) => ls::execute(repo, config, opts)?,
+        Command::Merge(opts) => merge_cmd::execute(repo, config, opts, command)?,
         Command::SelfUpdate(_) => {} // already handled above
-        Command::Snapshots(opts) => snapshots::execute(repo, opts, config_file)?,
-        Command::Prune(opts) => prune::execute(repo, gopts, opts, vec![])?,
-        Command::Restore(opts) => restore::execute(repo, gopts, opts, config_file)?,
-        Command::Repair(opts) => repair::execute(repo, gopts, opts, config_file)?,
+        Command::Snapshots(opts) => snapshots::execute(repo, config, opts)?,
+        Command::Prune(opts) => prune::execute(repo, config, opts, vec![])?,
+        Command::Restore(opts) => restore::execute(repo, config, opts)?,
+        Command::Repair(opts) => repair::execute(repo, config, opts)?,
         Command::Repoinfo(opts) => repoinfo::execute(repo, opts)?,
-        Command::Tag(opts) => tag::execute(repo, gopts, opts, config_file)?,
+        Command::Tag(opts) => tag::execute(repo, config, opts)?,
     };
 
     Ok(())
@@ -272,5 +268,5 @@ pub fn execute() -> Result<()> {
 #[test]
 fn verify_cli() {
     use clap::CommandFactory;
-    Opts::command().debug_assert()
+    Args::command().debug_assert()
 }

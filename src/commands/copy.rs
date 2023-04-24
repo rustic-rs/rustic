@@ -3,9 +3,11 @@ use std::collections::BTreeSet;
 use anyhow::{bail, Result};
 use clap::Parser;
 use log::*;
+use merge::Merge;
 use rayon::prelude::*;
+use serde::Deserialize;
 
-use super::{progress_counter, table_with_titles, GlobalOpts, RusticConfig};
+use super::{progress_counter, table_with_titles, Config};
 use crate::backend::DecryptWriteBackend;
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
 use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
@@ -17,30 +19,22 @@ pub(super) struct Opts {
     /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
     #[clap(value_name = "ID")]
     ids: Vec<String>,
-
-    #[clap(
-        flatten,
-        next_help_heading = "Snapshot filter options (if no snapshot is given)"
-    )]
-    filter: SnapshotFilter,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    gopts: GlobalOpts,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
-    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+#[derive(Default, Deserialize, Merge)]
+pub struct Targets {
+    #[merge(strategy = merge::vec::overwrite_empty)]
+    targets: Vec<RepositoryOptions>,
+}
 
-    let target_opts: Vec<RepositoryOptions> = config_file.get("copy.targets")?;
-    if target_opts.is_empty() {
+pub(super) fn execute(repo: OpenRepository, config: Config, opts: Opts) -> Result<()> {
+    if config.copy.targets.is_empty() {
         bail!("no [[copy.targets]] section in config file found!");
     }
 
     let be = &repo.dbe;
     let mut snapshots = match opts.ids.is_empty() {
-        true => SnapshotFile::all_from_backend(be, &opts.filter)?,
+        true => SnapshotFile::all_from_backend(be, &config.snapshot_filter)?,
         false => SnapshotFile::from_ids(be, &opts.ids)?,
     };
     // sort for nicer output
@@ -51,13 +45,13 @@ pub(super) fn execute(
 
     let poly = repo.config.poly()?;
 
-    for target_opt in target_opts {
-        let repo_dest = Repository::new(target_opt)?.open()?;
+    for target_opt in &config.copy.targets {
+        let repo_dest = Repository::new(target_opt.clone())?.open()?;
         info!("copying to target {}...", repo_dest.name);
         if poly != repo_dest.config.poly()? {
             bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
         }
-        copy(&snapshots, index.clone(), repo_dest, &gopts, &opts)?;
+        copy(&snapshots, index.clone(), repo_dest, &config)?;
     }
     Ok(())
 }
@@ -66,13 +60,12 @@ fn copy(
     snapshots: &[SnapshotFile],
     index: impl IndexedBackend,
     repo_dest: OpenRepository,
-    gopts: &GlobalOpts,
-    opts: &Opts,
+    config: &Config,
 ) -> Result<()> {
     let be_dest = &repo_dest.dbe;
 
-    let snapshots = relevant_snapshots(snapshots, &repo_dest, &opts.filter)?;
-    match (snapshots.len(), gopts.dry_run) {
+    let snapshots = relevant_snapshots(snapshots, &repo_dest, &config.snapshot_filter)?;
+    match (snapshots.len(), config.global.dry_run) {
         (count, true) => {
             info!("would have copied {count} snapshots");
             return Ok(());

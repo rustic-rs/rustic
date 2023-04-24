@@ -8,9 +8,8 @@ use log::*;
 use merge::Merge;
 use path_dedot::ParseDot;
 use serde::Deserialize;
-use toml::Value;
 
-use super::{bytes, progress_bytes, progress_counter, GlobalOpts, RusticConfig};
+use super::{bytes, progress_bytes, progress_counter, Config};
 use crate::archiver::Archiver;
 use crate::backend::{
     DryRunBackend, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, StdinSource,
@@ -22,8 +21,13 @@ use crate::repofile::{
 use crate::repository::OpenRepository;
 
 #[derive(Clone, Default, Parser, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
-pub(super) struct Opts {
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+// Note: using cli_sources, sources and source within this strict is a hack to support serde(deny_unknown_fields)
+// for deserializing the backup options from TOML
+// Unfortunately we cannot work with nested flattened structures, see
+// https://github.com/serde-rs/serde/issues/1547
+// A drawback is that a wrongly set "source(s) = ..." won't get correct error handling and need to be manually checked, see below.
+pub struct Opts {
     /// Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all
     /// sources defined in the config file
     #[clap(value_name = "SOURCE")]
@@ -103,15 +107,9 @@ pub(super) struct Opts {
     #[merge(strategy = merge::bool::overwrite_false)]
     json: bool,
 
-    // This is a hack to support serde(deny_unknown_fields) for deserializing the backup options from TOML
-    // while still being able to use [[backup.sources]] in the config file.
-    // A drawback is that a unkowen "sources = ..." won't be bailed...
-    // Note that unfortunately we cannot work with nested flattened structures, see
-    // https://github.com/serde-rs/serde/issues/1547
     #[clap(skip)]
     #[merge(skip)]
-    #[serde(rename = "sources")]
-    config_sources: Option<Value>,
+    sources: Vec<Opts>,
 
     /// Backup source, used within config file
     #[clap(skip)]
@@ -121,14 +119,24 @@ pub(super) struct Opts {
 
 pub(super) fn execute(
     repo: OpenRepository,
-    gopts: GlobalOpts,
+    mut config: Config,
     opts: Opts,
-    config_file: RusticConfig,
     command: String,
 ) -> Result<()> {
     let time = Local::now();
 
-    let config_opts: Vec<Opts> = config_file.get("backup.sources")?;
+    // manually check for a "source" field, check is not done by serde, see above.
+    if !config.backup.source.is_empty() {
+        bail!("key \"source\" is not valid in the [backup] section!");
+    }
+
+    let config_opts = config.backup.sources;
+    config.backup.sources = Vec::new();
+
+    // manually check for a "sources" field, check is not done by serde, see above.
+    if config_opts.iter().any(|opt| !opt.sources.is_empty()) {
+        bail!("key \"sources\" is not valid in a [[backup.sources]] section!");
+    }
 
     let config_sources: Vec<_> = config_opts
         .iter()
@@ -186,10 +194,11 @@ pub(super) fn execute(
                 }
             }
         }
-        // merge "backup" section from config file, if given
-        config_file.merge_into("backup", &mut opts)?;
 
-        let be = DryRunBackend::new(repo.dbe.clone(), gopts.dry_run);
+        // merge "backup" section from config file, if given
+        opts.merge(config.backup.clone());
+
+        let be = DryRunBackend::new(repo.dbe.clone(), config.global.dry_run);
         info!("starting to backup {source}...");
         let as_path = match opts.as_path {
             None => None,

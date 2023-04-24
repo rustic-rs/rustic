@@ -12,7 +12,7 @@ use itertools::Itertools;
 use log::*;
 use rayon::prelude::*;
 
-use super::{bytes, no_progress, progress_bytes, progress_counter, warm_up_wait, GlobalOpts};
+use super::{bytes, no_progress, progress_bytes, progress_counter, warm_up_wait, Config};
 use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType, ReadBackend};
 use crate::blob::{
     BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
@@ -73,7 +73,7 @@ pub(super) struct Opts {
 
 pub(super) fn execute(
     repo: OpenRepository,
-    gopts: GlobalOpts,
+    config: Config,
     opts: Opts,
     ignore_snaps: Vec<Id>,
 ) -> Result<()> {
@@ -137,9 +137,10 @@ pub(super) fn execute(
     pruner.filter_index_files(opts.instant_delete);
     pruner.print_stats();
 
-    warm_up_wait(&repo, pruner.repack_packs().into_iter(), !gopts.dry_run)?;
+    let dry_run = config.global.dry_run;
+    warm_up_wait(&repo, pruner.repack_packs().into_iter(), !dry_run)?;
 
-    if !gopts.dry_run {
+    if !dry_run {
         pruner.do_prune(repo, opts)?;
     }
     Ok(())

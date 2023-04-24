@@ -6,11 +6,11 @@ use log::*;
 use crate::backend::{DecryptWriteBackend, FileType};
 use crate::blob::{merge_trees, BlobType, Node, Packer, Tree};
 use crate::index::{IndexBackend, Indexer, ReadIndex};
-use crate::repofile::{PathList, SnapshotFile, SnapshotFilter, SnapshotOptions};
+use crate::repofile::{PathList, SnapshotFile, SnapshotOptions};
 use crate::repository::OpenRepository;
 
 use super::helpers::{progress_counter, progress_spinner};
-use super::rustic_config::RusticConfig;
+use super::Config;
 
 #[derive(Default, Parser)]
 pub(super) struct Opts {
@@ -28,24 +28,19 @@ pub(super) struct Opts {
 
     #[clap(flatten, next_help_heading = "Snapshot options")]
     snap_opts: SnapshotOptions,
-
-    #[clap(flatten, next_help_heading = "Snapshot filter options")]
-    filter: SnapshotFilter,
 }
 
 pub(super) fn execute(
     repo: OpenRepository,
-    mut opts: Opts,
-    config_file: RusticConfig,
+    config: Config,
+    opts: Opts,
     command: String,
 ) -> Result<()> {
     let now = Local::now();
-
     let be = &repo.dbe;
-    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     let snapshots = match opts.ids.is_empty() {
-        true => SnapshotFile::all_from_backend(be, &opts.filter)?,
+        true => SnapshotFile::all_from_backend(be, &config.snapshot_filter)?,
         false => SnapshotFile::from_ids(be, &opts.ids)?,
     };
     let index = IndexBackend::only_full_trees(&be.clone(), progress_counter(""))?;

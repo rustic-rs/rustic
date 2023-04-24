@@ -1,18 +1,7 @@
 Changes in version x.x.x:
 
 Breaking changes:
-- The option `--config-profile` was renamed into `--use-profile`
 
 Bugs fixed:
-- restore: Warm-up options given by the command line didn't work. This has been fixed.
-- backup showed 1 dir as changed when backing up without parent. This has been fixed.
-- diff: The options --no-atime and --ignore-devid had no effect and are now removed.
-- Rustic's check of additional fields in the config file didn't work in edge cases. This has been fixed.
 
 New features:
-- config file: New field use-profile allows to merge options from other config profiles
-- backup: Backing up (small) files is now much more parallelized.
-- forget: Using "-1" as value for --keep-* options will keep all snapshots of that interval
-- prune: Added option --repack-all
-- Option --dry-run is now a global option and can also be defined in the config file or via env variable 
-- Updated to clap v4

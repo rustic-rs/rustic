@@ -11,8 +11,7 @@ use ignore::{DirEntry, WalkBuilder};
 use log::*;
 use rayon::ThreadPoolBuilder;
 
-use super::rustic_config::RusticConfig;
-use super::{bytes, progress_bytes, progress_counter, warm_up_wait, GlobalOpts};
+use super::{bytes, progress_bytes, progress_counter, warm_up_wait, Config};
 use crate::backend::{DecryptReadBackend, FileType, LocalDestination};
 use crate::blob::{Node, NodeStreamer, NodeType, Tree, TreeStreamerOptions};
 use crate::commands::helpers::progress_spinner;
@@ -59,17 +58,16 @@ pub(super) struct Opts {
     filter: SnapshotFilter,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    gopts: GlobalOpts,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, config: Config, opts: Opts) -> Result<()> {
     let be = &repo.dbe;
-    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
 
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
-    let snap = SnapshotFile::from_str(be, id, |sn| sn.matches(&opts.filter), progress_counter(""))?;
+    let snap = SnapshotFile::from_str(
+        be,
+        id,
+        |sn| sn.matches(&config.snapshot_filter),
+        progress_counter(""),
+    )?;
 
     let index = IndexBackend::new(be, progress_counter(""))?;
     let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
@@ -77,7 +75,7 @@ pub(super) fn execute(
     let dest = LocalDestination::new(&opts.dest, true, !node.is_dir())?;
 
     let p = progress_spinner("collecting file information...");
-    let (file_infos, stats) = allocate_and_collect(&dest, index.clone(), &node, &gopts, &opts)?;
+    let (file_infos, stats) = allocate_and_collect(&dest, index.clone(), &node, &config, &opts)?;
     p.finish();
 
     let fs = stats.file;
@@ -102,13 +100,17 @@ pub(super) fn execute(
     if file_infos.restore_size == 0 {
         info!("all file contents are fine.");
     } else {
-        warm_up_wait(&repo, file_infos.to_packs().into_iter(), !gopts.dry_run)?;
-        if !gopts.dry_run {
+        warm_up_wait(
+            &repo,
+            file_infos.to_packs().into_iter(),
+            !config.global.dry_run,
+        )?;
+        if !config.global.dry_run {
             restore_contents(be, &dest, file_infos)?;
         }
     }
 
-    if !gopts.dry_run {
+    if !config.global.dry_run {
         let p = progress_spinner("setting metadata...");
         restore_metadata(&dest, index, &node, &opts)?;
         p.finish();
@@ -138,7 +140,7 @@ fn allocate_and_collect(
     dest: &LocalDestination,
     index: impl IndexedBackend + Unpin,
     node: &Node,
-    gopts: &GlobalOpts,
+    config: &Config,
     opts: &Opts,
 ) -> Result<(FileInfos, RestoreStats)> {
     let dest_path = Path::new(&opts.dest);
@@ -162,7 +164,7 @@ fn allocate_and_collect(
         }
         match (
             opts.delete,
-            gopts.dry_run,
+            config.global.dry_run,
             entry.file_type().unwrap().is_dir(),
         ) {
             (true, true, true) => {
@@ -207,7 +209,7 @@ fn allocate_and_collect(
                 } else {
                     stats.dir.restore += 1;
                     debug!("to restore: {path:?}");
-                    if !gopts.dry_run {
+                    if !config.global.dry_run {
                         dest.create_dir(path)
                             .with_context(|| format!("error creating {path:?}"))?;
                     }
@@ -236,7 +238,7 @@ fn allocate_and_collect(
                     (true, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
                         stats.file.modify += 1;
                         debug!("to modify: {path:?}");
-                        if !gopts.dry_run {
+                        if !config.global.dry_run {
                             // set the right file size
                             dest.set_length(path, size)
                                 .with_context(|| format!("error setting length for {path:?}"))?;
@@ -245,7 +247,7 @@ fn allocate_and_collect(
                     (false, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
                         stats.file.restore += 1;
                         debug!("to restore: {path:?}");
-                        if !gopts.dry_run {
+                        if !config.global.dry_run {
                             // create the file as it doesn't exist
                             dest.set_length(path, size)
                                 .with_context(|| format!("error creating {path:?}"))?;

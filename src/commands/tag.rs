@@ -2,10 +2,10 @@ use anyhow::Result;
 use chrono::{Duration, Local};
 use clap::Parser;
 
-use super::{progress_counter, GlobalOpts, RusticConfig};
+use super::{progress_counter, Config};
 use crate::backend::{DecryptWriteBackend, FileType};
 use crate::id::Id;
-use crate::repofile::{DeleteOption, SnapshotFile, SnapshotFilter, StringList};
+use crate::repofile::{DeleteOption, SnapshotFile, StringList};
 use crate::repository::OpenRepository;
 
 #[derive(Parser)]
@@ -14,12 +14,6 @@ pub(super) struct Opts {
     /// snapshots.
     #[clap(value_name = "ID")]
     ids: Vec<String>,
-
-    #[clap(
-        flatten,
-        next_help_heading = "Snapshot filter options (if no snapshot is given)"
-    )]
-    filter: SnapshotFilter,
 
     /// Tags to add (can be specified multiple times)
     #[clap(
@@ -64,17 +58,11 @@ pub(super) struct Opts {
     set_delete_after: Option<humantime::Duration>,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    gopts: GlobalOpts,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
-    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+pub(super) fn execute(repo: OpenRepository, config: Config, opts: Opts) -> Result<()> {
     let be = &repo.dbe;
 
     let snapshots = match opts.ids.is_empty() {
-        true => SnapshotFile::all_from_backend(be, &opts.filter)?,
+        true => SnapshotFile::all_from_backend(be, &config.snapshot_filter)?,
         false => SnapshotFile::from_ids(be, &opts.ids)?,
     };
 
@@ -99,7 +87,7 @@ pub(super) fn execute(
         snap.id = Id::default();
     }
 
-    match (old_snap_ids.is_empty(), gopts.dry_run) {
+    match (old_snap_ids.is_empty(), config.global.dry_run) {
         (true, _) => println!("no snapshot changed."),
         (false, true) => {
             println!("would have modified the following snapshots:\n {old_snap_ids:?}");

@@ -17,7 +17,7 @@ use path_dedot::ParseDot;
 use rhai::serde::to_dynamic;
 use rhai::{Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr};
 
 use super::Id;
 use crate::backend::{DecryptReadBackend, FileType, RepoFile};
@@ -440,7 +440,7 @@ impl SnapshotFn {
 }
 
 #[serde_as]
-#[derive(Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
@@ -471,7 +471,7 @@ pub struct SnapshotFilter {
     filter_fn: Option<SnapshotFn>,
 }
 
-#[derive(Clone, Default, Deserialize)]
+#[derive(Clone, Default, DeserializeFromStr)]
 pub struct SnapshotGroupCriterion {
     hostname: bool,
     label: bool,

@@ -26,7 +26,7 @@ pub(super) fn execute(opts: Opts) {
 }
 
 fn generate_completion<G: Generator>(shell: G, buf: &mut dyn Write) {
-    let mut command = super::Opts::command();
+    let mut command = super::Args::command();
     generate(shell, &mut command, env!("CARGO_BIN_NAME"), buf);
 }
 

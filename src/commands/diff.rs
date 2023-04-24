@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 
-use super::{progress_counter, RusticConfig};
+use super::{progress_counter, Config};
 use crate::backend::{
     LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
     ReadSourceEntry,
@@ -13,7 +13,7 @@ use crate::blob::{Node, NodeStreamer, NodeType, Tree};
 use crate::commands::helpers::progress_spinner;
 use crate::crypto::hash;
 use crate::index::{IndexBackend, ReadIndex};
-use crate::repofile::{SnapshotFile, SnapshotFilter};
+use crate::repofile::SnapshotFile;
 use crate::repository::OpenRepository;
 
 #[derive(Parser)]
@@ -36,19 +36,9 @@ pub(super) struct Opts {
 
     #[clap(flatten)]
     ignore_opts: LocalSourceFilterOptions,
-
-    #[clap(
-        flatten,
-        next_help_heading = "Snapshot filter options (when using latest)"
-    )]
-    filter: SnapshotFilter,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
+pub(super) fn execute(repo: OpenRepository, config: Config, opts: Opts) -> Result<()> {
     let be = &repo.dbe;
     let (id1, path1) = arg_to_snap_path(&opts.snap1, "");
     let (id2, path2) = arg_to_snap_path(&opts.snap2, path1);
@@ -77,10 +67,13 @@ pub(super) fn execute(
         }
         (Some(id1), None) => {
             // diff between snapshot and local path
-            config_file.merge_into("snapshot-filter", &mut opts.filter)?;
-
             let p = progress_spinner("getting snapshot...");
-            let snap1 = SnapshotFile::from_str(be, id1, |sn| sn.matches(&opts.filter), p.clone())?;
+            let snap1 = SnapshotFile::from_str(
+                be,
+                id1,
+                |sn| sn.matches(&config.snapshot_filter),
+                p.clone(),
+            )?;
             p.finish();
 
             let index = IndexBackend::new(be, progress_counter(""))?;

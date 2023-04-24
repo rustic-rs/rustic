@@ -175,45 +175,45 @@ pub(super) struct KeepOptions {
     #[merge(strategy=merge::vec::overwrite_empty)]
     keep_ids: Vec<String>,
 
-    /// Keep the last N snapshots
-    #[clap(long, short = 'l', value_name = "N", default_value = "0")]
+    /// Keep the last N snapshots (N == -1: keep all snapshots)
+    #[clap(long, short = 'l', value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_last: u32,
+    keep_last: i32,
 
-    /// Keep the last N hourly snapshots
-    #[clap(long, short = 'H', value_name = "N", default_value = "0")]
+    /// Keep the last N hourly snapshots (N == -1: keep all hourly snapshots)
+    #[clap(long, short = 'H', value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_hourly: u32,
+    keep_hourly: i32,
 
-    /// Keep the last N daily snapshots
-    #[clap(long, short = 'd', value_name = "N", default_value = "0")]
+    /// Keep the last N daily snapshots (N == -1: keep all daily snapshots)
+    #[clap(long, short = 'd', value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_daily: u32,
+    keep_daily: i32,
 
-    /// Keep the last N weekly snapshots
-    #[clap(long, short = 'w', value_name = "N", default_value = "0")]
+    /// Keep the last N weekly snapshots (N == -1: keep all weekly snapshots)
+    #[clap(long, short = 'w', value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_weekly: u32,
+    keep_weekly: i32,
 
-    /// Keep the last N monthly snapshots
-    #[clap(long, short = 'm', value_name = "N", default_value = "0")]
+    /// Keep the last N monthly snapshots (N == -1: keep all monthly snapshots)
+    #[clap(long, short = 'm', value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_monthly: u32,
+    keep_monthly: i32,
 
-    /// Keep the last N quarter-yearly snapshots
-    #[clap(long, value_name = "N", default_value = "0")]
+    /// Keep the last N quarter-yearly snapshots (N == -1: keep all quarter-yearly snapshots)
+    #[clap(long, value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_quarter_yearly: u32,
+    keep_quarter_yearly: i32,
 
-    /// Keep the last N half-yearly snapshots
-    #[clap(long, value_name = "N", default_value = "0")]
+    /// Keep the last N half-yearly snapshots (N == -1: keep all half-yearly snapshots)
+    #[clap(long, value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_half_yearly: u32,
+    keep_half_yearly: i32,
 
-    /// Keep the last N yearly snapshots
-    #[clap(long, short = 'y', value_name = "N", default_value = "0")]
+    /// Keep the last N yearly snapshots (N == -1: keep all yearly snapshots)
+    #[clap(long, short = 'y', value_name = "N", default_value = "0", allow_hyphen_values = true, value_parser = clap::value_parser!(i32).range(-1..))]
     #[merge(strategy=merge::num::overwrite_zero)]
-    keep_yearly: u32,
+    keep_yearly: i32,
 
     /// Keep snapshots newer than DURATION relative to latest snapshot
     #[clap(long, value_name = "DURATION", default_value = "0h")]
@@ -404,10 +404,12 @@ impl KeepOptions {
 
         for (check_fun, counter, reason1, within, reason2) in keep_checks {
             if !has_next || last.is_none() || !check_fun(sn, last.unwrap()) {
-                if *counter > 0 {
-                    *counter -= 1;
+                if *counter != 0 {
                     keep = true;
                     reason.push(reason1);
+                    if *counter > 0 {
+                        *counter -= 1;
+                    }
                 }
                 if sn.time + Duration::from_std(*within).unwrap() > latest_time {
                     keep = true;

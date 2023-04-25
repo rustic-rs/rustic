@@ -50,7 +50,7 @@ struct Args {
 }
 
 #[serde_as]
-#[derive(Default, Parser, Deserialize, Merge)]
+#[derive(Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOpts {
     /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
@@ -145,6 +145,9 @@ enum Command {
     /// Show a detailed overview of the snapshots within the repository
     Snapshots(snapshots::Opts),
 
+    /// Show the configuration which has been read from the config file(s)
+    ShowConfig,
+
     /// Update to the latest rustic release
     SelfUpdate(self_update::Opts),
 
@@ -177,6 +180,10 @@ pub fn execute() -> Result<()> {
         config.merge_profile(profile)?;
     }
 
+    if let Command::ShowConfig = args.command {
+        println!("{config:#?}");
+        return Ok(());
+    }
 
     // start logger
     let level_filter = config.global.log_level.unwrap_or(LevelFilter::Info);
@@ -260,6 +267,7 @@ pub fn execute() -> Result<()> {
         Command::Merge(opts) => merge_cmd::execute(repo, config, opts, command)?,
         Command::SelfUpdate(_) => {} // already handled above
         Command::Snapshots(opts) => snapshots::execute(repo, config, opts)?,
+        Command::ShowConfig => {} // already handled above
         Command::Prune(opts) => prune::execute(repo, config, opts, vec![])?,
         Command::Restore(opts) => restore::execute(repo, config, opts)?,
         Command::Repair(opts) => repair::execute(repo, config, opts)?,

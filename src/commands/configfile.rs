@@ -10,7 +10,7 @@ use crate::{repofile::SnapshotFilter, repository::RepositoryOptions};
 
 use super::{backup, copy, forget, GlobalOpts};
 
-#[derive(Default, Parser, Deserialize, Merge)]
+#[derive(Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Config {
     #[clap(flatten, next_help_heading = "Global options")]

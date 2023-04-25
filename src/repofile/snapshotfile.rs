@@ -24,7 +24,7 @@ use crate::backend::{DecryptReadBackend, FileType, RepoFile};
 use crate::repository::parse_command;
 
 #[serde_as]
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotOptions {
     /// Label snapshot with given label
@@ -419,7 +419,7 @@ impl Ord for SnapshotFile {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct SnapshotFn(FnPtr, AST);
 impl FromStr for SnapshotFn {
     type Err = anyhow::Error;
@@ -440,7 +440,7 @@ impl SnapshotFn {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
@@ -471,7 +471,7 @@ pub struct SnapshotFilter {
     filter_fn: Option<SnapshotFn>,
 }
 
-#[derive(Clone, Default, DeserializeFromStr)]
+#[derive(Clone, Default, Debug, DeserializeFromStr)]
 pub struct SnapshotGroupCriterion {
     hostname: bool,
     label: bool,

@@ -31,7 +31,7 @@ pub struct LocalSource {
 }
 
 #[serde_as]
-#[derive(Default, Clone, Parser, Deserialize, Merge)]
+#[derive(Default, Clone, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LocalSourceSaveOptions {
     /// Save access time for files and directories
@@ -46,7 +46,7 @@ pub struct LocalSourceSaveOptions {
 }
 
 #[serde_as]
-#[derive(Default, Clone, Parser, Deserialize, Merge)]
+#[derive(Default, Clone, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LocalSourceFilterOptions {
     /// Glob pattern to exclude/include (can be specified multiple times)

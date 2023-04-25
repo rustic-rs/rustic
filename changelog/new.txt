@@ -7,3 +7,4 @@ Bugs fixed:
 - The [[backup.sources]] section in the config file was ignored 0.5.2. This has been fixed.
 
 New features:
+- The show-config command has been added.

@@ -7,7 +7,7 @@
 
 # Global options: These options are used for all commands. 
 [global]
-use-profile = "" 
+use-profile = [] 
 log-level = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
 log-file = "/path/to/rustic.log" # Default: not set
 no-progress = false

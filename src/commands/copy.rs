@@ -21,7 +21,7 @@ pub(super) struct Opts {
     ids: Vec<String>,
 }
 
-#[derive(Default, Deserialize, Merge)]
+#[derive(Default, Debug, Deserialize, Merge)]
 pub struct Targets {
     #[merge(strategy = merge::vec::overwrite_empty)]
     targets: Vec<RepositoryOptions>,

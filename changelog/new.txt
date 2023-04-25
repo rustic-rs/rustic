@@ -1,8 +1,10 @@
 Changes in version x.x.x:
 
 Breaking changes:
+- config file: use-config now expects an array of config profiles to read.
 
 Bugs fixed:
 - The [[backup.sources]] section in the config file was ignored 0.5.2. This has been fixed.
 
 New features:
+- The show-config command has been added.

@@ -24,7 +24,7 @@ use crate::backend::{DecryptReadBackend, FileType, RepoFile};
 use crate::repository::parse_command;
 
 #[serde_as]
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotOptions {
     /// Label snapshot with given label
@@ -419,7 +419,7 @@ impl Ord for SnapshotFile {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct SnapshotFn(FnPtr, AST);
 impl FromStr for SnapshotFn {
     type Err = anyhow::Error;
@@ -440,38 +440,38 @@ impl SnapshotFn {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
-    #[clap(long, value_name = "HOSTNAME")]
+    #[clap(long, global = true, value_name = "HOSTNAME")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_host: Vec<String>,
 
     /// Label to filter (can be specified multiple times)
-    #[clap(long, value_name = "LABEL")]
+    #[clap(long, global = true, value_name = "LABEL")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_label: Vec<String>,
 
     /// Path list to filter (can be specified multiple times)
-    #[clap(long, value_name = "PATH[,PATH,..]")]
+    #[clap(long, global = true, value_name = "PATH[,PATH,..]")]
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_paths: Vec<StringList>,
 
     /// Tag list to filter (can be specified multiple times)
-    #[clap(long, value_name = "TAG[,TAG,..]")]
+    #[clap(long, global = true, value_name = "TAG[,TAG,..]")]
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_tags: Vec<StringList>,
 
     /// Function to filter snapshots
-    #[clap(long, value_name = "FUNC")]
+    #[clap(long, global = true, value_name = "FUNC")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     filter_fn: Option<SnapshotFn>,
 }
 
-#[derive(Clone, Default, DeserializeFromStr)]
+#[derive(Clone, Default, Debug, DeserializeFromStr)]
 pub struct SnapshotGroupCriterion {
     hostname: bool,
     label: bool,

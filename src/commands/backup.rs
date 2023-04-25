@@ -20,7 +20,7 @@ use crate::repofile::{
 };
 use crate::repository::OpenRepository;
 
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 // Note: using cli_sources, sources and source within this strict is a hack to support serde(deny_unknown_fields)
 // for deserializing the backup options from TOML

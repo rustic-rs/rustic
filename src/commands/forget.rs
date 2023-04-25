@@ -32,7 +32,7 @@ pub(super) struct Opts {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ConfigOpts {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
@@ -155,7 +155,7 @@ pub(super) fn execute(repo: OpenRepository, config: Config, mut opts: Opts) -> R
 }
 
 #[serde_as]
-#[derive(Clone, PartialEq, Derivative, Parser, Deserialize, Merge)]
+#[derive(Clone, Debug, PartialEq, Derivative, Parser, Deserialize, Merge)]
 #[derivative(Default)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub(super) struct KeepOptions {

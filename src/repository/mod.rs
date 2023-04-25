@@ -29,7 +29,7 @@ use crate::crypto::Key;
 use crate::repofile::{find_key_in_backend, ConfigFile};
 
 #[serde_as]
-#[derive(Clone, Default, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RepositoryOptions {
     /// Repository to use

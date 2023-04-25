@@ -10,7 +10,7 @@ use crate::{repofile::SnapshotFilter, repository::RepositoryOptions};
 
 use super::{backup, copy, forget, GlobalOpts};
 
-#[derive(Default, Parser, Deserialize, Merge)]
+#[derive(Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Config {
     #[clap(flatten, next_help_heading = "Global options")]
@@ -51,9 +51,8 @@ impl Config {
             let mut config: Self =
                 toml::from_str(&data).context("error reading TOML from config file")?;
             // if "use_profile" is defined in config file, merge this referenced profile first
-            if !config.global.use_profile.is_empty() {
-                let profile = config.global.use_profile.clone();
-                config.merge_profile(&profile)?;
+            for profile in &config.global.use_profile.clone() {
+                config.merge_profile(profile)?;
             }
             self.merge(config);
         } else {

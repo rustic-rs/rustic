@@ -54,16 +54,16 @@ struct Args {
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOpts {
     /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
+    /// [default: "rustic"]
     #[clap(
         short = 'P',
         long,
         global = true,
         value_name = "PROFILE",
-        default_value = "rustic",
         env = "RUSTIC_USE_PROFILE"
     )]
-    #[merge(skip)]
-    use_profile: String,
+    #[merge(strategy = merge::vec::append)]
+    use_profile: Vec<String>,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
@@ -168,10 +168,15 @@ pub fn execute() -> Result<()> {
     let command: Vec<_> = std::env::args_os().collect();
     let args = Args::parse_from(&command);
     let mut config = args.config;
+    if config.global.use_profile.is_empty() {
+        config.global.use_profile.push("rustic".to_string());
+    }
 
     // get global options from command line / env and config file
-    let profile = config.global.use_profile.clone();
-    config.merge_profile(&profile)?;
+    for profile in &config.global.use_profile.clone() {
+        config.merge_profile(profile)?;
+    }
+
 
     // start logger
     let level_filter = config.global.log_level.unwrap_or(LevelFilter::Info);

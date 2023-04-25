@@ -108,13 +108,20 @@ pub struct Opts {
     json: bool,
 
     #[clap(skip)]
-    #[merge(skip)]
+    #[merge(strategy = merge_sources)]
     sources: Vec<Opts>,
 
     /// Backup source, used within config file
     #[clap(skip)]
     #[merge(skip)]
     source: String,
+}
+
+// Merge backup sources: If a source is already defined on left, use that. Else add it.
+pub fn merge_sources(left: &mut Vec<Opts>, mut right: Vec<Opts>) {
+    left.append(&mut right);
+    left.sort_by(|opt1, opt2| opt1.source.cmp(&opt2.source));
+    left.dedup_by(|opt1, opt2| opt1.source == opt2.source);
 }
 
 pub(super) fn execute(

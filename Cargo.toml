@@ -1,8 +1,8 @@
 [package]
 name = "rustic-rs"
-version = "0.5.2-dev"
+version = "0.5.3"
 description = """
-fast, encrypted, deduplicated backups powered by pure Rust
+fast, encrypted, deduplicated backups powered by Rust
 """
 authors = ["Alexander Weiss"]
 edition = "2021"

@@ -2,7 +2,7 @@
 
 Improvements implemented in rustic:
  * Allows using cold storage (e.g. AWS Glacier) repos which are only read in the `restore` command + supports warm-up
- * All operations are completely lock-free as rustic supoorts two-phase-pruning (prune option `instant-delete` is available)
+ * All operations are completely lock-free as rustic supports two-phase-pruning (prune option `instant-delete` is available)
  * Supports configuration in a config file 
 ([example config files](https://github.com/rustic-rs/rustic/tree/main/examples))
  * Huge decrease in memory requirement

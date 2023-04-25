@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use aho_corasick::AhoCorasick;
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "openbsd")))]
 use anyhow::Context;
 use anyhow::{anyhow, bail, Result};
 use bytes::Bytes;

@@ -24,6 +24,22 @@ pub trait DecryptReadBackend: ReadBackend {
 
     fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes>;
 
+    fn read_encrypted_from_partial(
+        &self,
+        data: &[u8],
+        uncompressed_length: Option<NonZeroU32>,
+    ) -> RusticResult<Bytes> {
+        let mut data = self.decrypt(data)?;
+        if let Some(length) = uncompressed_length {
+            data = decode_all(&*data)
+                .map_err(CryptBackendErrorKind::DecodingZstdCompressedDataFailed)?;
+            if data.len() != length.get() as usize {
+                return Err(CryptBackendErrorKind::LengthOfUncompressedDataDoesNotMatch.into());
+            }
+        }
+        Ok(data.into())
+    }
+
     fn read_encrypted_partial(
         &self,
         tpe: FileType,
@@ -33,15 +49,10 @@ pub trait DecryptReadBackend: ReadBackend {
         length: u32,
         uncompressed_length: Option<NonZeroU32>,
     ) -> RusticResult<Bytes> {
-        let mut data = self.decrypt(&self.read_partial(tpe, id, cacheable, offset, length)?)?;
-        if let Some(length) = uncompressed_length {
-            data = decode_all(&*data)
-                .map_err(CryptBackendErrorKind::DecodingZstdCompressedDataFailed)?;
-            if data.len() != length.get() as usize {
-                return Err(CryptBackendErrorKind::LengthOfUncompressedDataDoesNotMatch.into());
-            }
-        }
-        Ok(data.into())
+        self.read_encrypted_from_partial(
+            &self.read_partial(tpe, id, cacheable, offset, length)?,
+            uncompressed_length,
+        )
     }
 
     fn get_file<F: RepoFile>(&self, id: &Id) -> RusticResult<F> {

@@ -157,7 +157,7 @@ enum Command {
     /// Restore a snapshot/path
     Restore(restore::Opts),
 
-    /// Restore a snapshot/path
+    /// Repair a snapshot/path
     Repair(repair::Opts),
 
     /// Show general information about the repository

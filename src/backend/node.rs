@@ -11,10 +11,11 @@ use anyhow::Result;
 use anyhow::{anyhow, bail};
 use chrono::{DateTime, Local};
 use derive_more::{Constructor, IsVariant};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_aux::prelude::*;
-use serde_with::base64::Base64;
-use serde_with::serde_as;
+use serde_with::base64::{Base64, Standard};
+use serde_with::formats::Padded;
+use serde_with::{DeserializeAs, SerializeAs};
 
 use crate::id::Id;
 
@@ -73,11 +74,23 @@ pub struct Metadata {
     pub extended_attributes: Vec<ExtendedAttribute>,
 }
 
-#[serde_as]
+// Deserialize a Base64-encoded value into Vec<u8>.
+// Handles '"value" = null' by first deserializing into a Option.
+fn deserialize_value<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Option<Vec<u8>> = Base64::<Standard, Padded>::deserialize_as(deserializer)?;
+    Ok(value.unwrap_or_default())
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExtendedAttribute {
     pub name: String,
-    #[serde_as(as = "Base64")]
+    #[serde(
+        serialize_with = "Base64::<Standard,Padded>::serialize_as",
+        deserialize_with = "deserialize_value"
+    )]
     pub value: Vec<u8>,
 }
 

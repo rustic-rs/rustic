@@ -5,3 +5,4 @@ Breaking changes:
 Bugs fixed:
 
 New features:
+- copy: Added --init option to initialize uninitialized target repos

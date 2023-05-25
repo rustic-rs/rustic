@@ -3,7 +3,7 @@ use std::fs::{read_link, File};
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use bytesize::ByteSize;
 #[cfg(not(windows))]
 use chrono::TimeZone;
@@ -370,7 +370,15 @@ fn map_entry(
     } else if m.is_symlink() {
         let target = read_link(entry.path())?;
         let node_type = NodeType::Symlink {
-            linktarget: target.to_str().expect("no unicode").to_string(),
+            linktarget: target
+                .to_str()
+                .ok_or_else(|| {
+                    anyhow!(
+                        "no unicode link target. File: {:?}, target: {target:?}",
+                        entry.path()
+                    )
+                })?
+                .to_string(),
         };
         Node::new_node(name, node_type, meta)
     } else if filetype.is_block_device() {

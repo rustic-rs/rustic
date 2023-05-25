@@ -6,3 +6,4 @@ Bugs fixed:
 - backup crashed when there was a non-unicode link target. The crash has been fixed. However, non-unicode link targets are still unsupported.
 
 New features:
+- copy: Added --init option to initialize uninitialized target repos

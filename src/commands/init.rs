@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use bytes::Bytes;
 use clap::Parser;
+use log::*;
 use rpassword::prompt_password;
 
 use super::config::ConfigOpts;
@@ -41,6 +42,18 @@ pub(super) fn execute(
     let mut config = ConfigFile::new(version, repo_id, chunker_poly);
     opts.config_opts.apply(&mut config)?;
 
+    save_config(config, be, hot_be, opts.key_opts, password)?;
+
+    Ok(())
+}
+
+pub(crate) fn save_config(
+    mut config: ConfigFile,
+    be: &impl WriteBackend,
+    hot_be: &Option<impl WriteBackend>,
+    key_opts: KeyOpts,
+    password: Option<String>,
+) -> Result<()> {
     // generate key
     let key = Key::new();
 
@@ -49,7 +62,6 @@ pub(super) fn execute(
         None => prompt_password("enter password for new key: ")?,
     };
 
-    let key_opts = opts.key_opts;
     let keyfile = KeyFile::generate(
         key.clone(),
         &pass,
@@ -61,10 +73,11 @@ pub(super) fn execute(
     let id = hash(&data);
     be.create()?;
     be.write_bytes(FileType::Key, &id, false, data)?;
-    println!("key {id} successfully added.");
+    info!("key {id} successfully added.");
 
     // save config
     let dbe = DecryptBackend::new(be, key.clone());
+    config.is_hot = None;
     dbe.save_file(&config)?;
 
     if let Some(hot_be) = hot_be {
@@ -72,7 +85,7 @@ pub(super) fn execute(
         config.is_hot = Some(true);
         dbe.save_file(&config)?;
     }
-    println!("repository {repo_id} successfully created.");
+    info!("repository {} successfully created.", config.id);
 
     Ok(())
 }

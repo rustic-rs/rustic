@@ -7,9 +7,11 @@ use merge::Merge;
 use rayon::prelude::*;
 use serde::Deserialize;
 
+use super::key::KeyOpts;
 use super::{progress_counter, table_with_titles, Config};
-use crate::backend::DecryptWriteBackend;
+use crate::backend::{DecryptWriteBackend, FileType, ReadBackend};
 use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
+use crate::commands::init::save_config;
 use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
 use crate::repofile::{Id, SnapshotFile, SnapshotFilter};
 use crate::repository::{OpenRepository, Repository, RepositoryOptions};
@@ -19,6 +21,13 @@ pub(super) struct Opts {
     /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
     #[clap(value_name = "ID")]
     ids: Vec<String>,
+
+    /// Initialize non-existing target repositories
+    #[clap(long)]
+    init: bool,
+
+    #[clap(flatten, next_help_heading = "Key options (when using --init)")]
+    key_opts: KeyOpts,
 }
 
 #[derive(Default, Debug, Deserialize, Merge)]
@@ -46,7 +55,21 @@ pub(super) fn execute(repo: OpenRepository, config: Config, opts: Opts) -> Resul
     let poly = repo.config.poly()?;
 
     for target_opt in &config.copy.targets {
-        let repo_dest = Repository::new(target_opt.clone())?.open()?;
+        let repo_dest = Repository::new(target_opt.clone())?;
+
+        if opts.init && repo_dest.be.list(FileType::Config)?.is_empty() {
+            let mut config_dest = repo.config.clone();
+            config_dest.id = Id::random();
+            save_config(
+                config_dest,
+                &repo_dest.be,
+                &repo_dest.be_hot,
+                opts.key_opts.clone(),
+                repo_dest.password()?,
+            )?;
+        }
+
+        let repo_dest = repo_dest.open()?;
         info!("copying to target {}...", repo_dest.name);
         if poly != repo_dest.config.poly()? {
             bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");

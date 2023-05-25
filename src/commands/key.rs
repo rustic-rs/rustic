@@ -32,7 +32,7 @@ pub(crate) struct AddOpts {
     pub key_opts: KeyOpts,
 }
 
-#[derive(Parser)]
+#[derive(Clone, Parser)]
 pub(crate) struct KeyOpts {
     /// Set 'hostname' in public key information
     #[clap(long)]

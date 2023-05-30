@@ -28,13 +28,4 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-      - name: Cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          toolchain: stable
-          args: --release
-      - name: Running bats tests
-        shell: bash
-        run: |
-          ./test-bats/run-tests.sh
+          args: -r --all-targets --all-features --workspace

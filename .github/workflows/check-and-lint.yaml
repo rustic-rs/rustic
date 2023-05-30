@@ -4,8 +4,9 @@ on:
     branches:
       - main
 
-
 name: Check and Lint
+# env:
+#   RUSTFLAGS: "-Dwarnings"
 
 jobs:
   check:
@@ -22,7 +23,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --all-features
+          args: --all-features --workspace
 
   fmt:
     name: Rustfmt
@@ -43,6 +44,7 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -54,5 +56,5 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features -- -D warnings
+          args: --all-targets --all-features -- -D warnings
           name: Clippy Output

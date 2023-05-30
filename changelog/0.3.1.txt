@@ -11,7 +11,7 @@ Bugs fixed:
 
 New features:
 - Changed name of binary from rustic-rs to rustic
-- Added config file support (see examples in examples/ dir)
+- Added config file support (see examples in `config/` dir)
 - Added options --password and --password-command (and equivalents as env variables and config file options)
 - snapshots: Summarize fully identical snapshots in snapshots command; added option --all.
 - snapshots: Grouping by hosts and paths is now the default.

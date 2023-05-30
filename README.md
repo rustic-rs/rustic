@@ -13,9 +13,10 @@ Rustic supports the major operating systems (Linux, MacOs, *BSD), Windows suppor
 
 Note that rustic currently is in a beta release and misses regression tests.
 
-You can ask questions in the [Discussions][3] or have a look at the [FAQ](FAQ.md)
+You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/FAQ.md)
 
-## Features:
+## Features
+
 - Backup data is deduplicated and encrypted.
 - Backup storage can be local or cloud storages, including cold storages.
 - Allows multiple clients to concurrently access a backup repository using lock-free operations.
@@ -25,34 +26,39 @@ You can ask questions in the [Discussions][3] or have a look at the [FAQ](FAQ.md
 - Retention policies and cleaning of old backups can be highly customized.
 - Follow-up backups only process changed files, but still create a complete backup snapshot.
 - In-place restore only modifies files which are changed.
-- Can use config files for easy configuration of all every-day commands, see [example config files](examples/).
+- Can use config files for easy configuration of all every-day commands, see [example config files](config/).
 
-## Quick start:
-<img src="https://github.com/rustic-rs/rustic/blob/main/screenshots/rustic.png">
-<img src="https://github.com/rustic-rs/rustic/blob/main/screenshots/rustic-restore.png">
+## Quick start
+
+![rustic init](https://github.com/rustic-rs/rustic/blob/main/docs/screenshots/rustic.png?raw=true)
+
+![rustic restore](https://github.com/rustic-rs/rustic/blob/main/docs/screenshots/rustic-restore.png?raw=true)
 
 ## Are binaries available?
+
 Sure. Check out the [releases](https://github.com/rustic-rs/rustic/releases).
 Binaries for the latest development version are available [here](https://github.com/rustic-rs/rustic-beta).
 
 ## What is the difference between rustic and restic?
-See the [Comparison between rustic and restic](doc/comparison-restic.md).
+
+See the [Comparison between rustic and restic](docs/comparison-restic.md).
 
 ## License
+
 Licensed under either of:
 
- * [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
- * [MIT license](http://opensource.org/licenses/MIT)
+- [Apache License, Version 2.0](./LICENSE-APACHE)
+- [MIT license](./LICENSE-MIT)
 
 at your option.
 
 ### Contribution
+
 Contributions in form of [issues][4] or PRs are very welcome.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
-
 
 [//]: # (badges)
 

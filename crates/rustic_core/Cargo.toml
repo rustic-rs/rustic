@@ -1,0 +1,160 @@
+[package]
+publish = false                                                           # Don't publish until we fix/stabilize public api!!!
+name = "rustic_core"
+version = "0.6.0"
+edition = { workspace = true }
+resolver = "2"
+description = { workspace = true }
+authors = ["Alexander Weiss"]
+license = { workspace = true }
+homepage = { workspace = true }
+readme = "README.md"
+keywords = ["backup", "restic", "deduplication", "encryption", "library"]
+include = ["src/**/*", "LICENSE-*", "README.md"]
+# categories = []
+
+[lib]
+path = "src/lib.rs"
+name = "rustic_core"
+test = true
+doctest = true
+bench = true
+doc = true
+harness = true
+edition = "2021"
+
+[features]
+default = []
+cli = ["merge", "clap", "dep:comfy-table"]
+merge = ["dep:merge"]
+clap = ["dep:clap", "dep:clap_complete"]
+
+[dependencies]
+# errors
+displaydoc = { workspace = true }
+thiserror = { workspace = true }
+
+# macros
+derive_more = { workspace = true }
+derivative = { workspace = true }
+
+#logging
+log = { workspace = true }
+
+# parallelize
+crossbeam-channel = { workspace = true }
+rayon = { workspace = true }
+pariter = { workspace = true }
+
+#crypto
+aes256ctr_poly1305aes = { workspace = true }
+rand = { workspace = true }
+scrypt = { workspace = true }
+
+# chunker / packer
+integer-sqrt = { workspace = true }
+
+# serialization
+binrw = { workspace = true }
+hex = { workspace = true }
+serde = { workspace = true }
+serde_with = { workspace = true }
+serde_json = { workspace = true }
+serde-aux = { workspace = true }
+
+# other dependencies
+bytes = { workspace = true }
+chrono = { workspace = true }
+zstd = { workspace = true }
+enum-map = { workspace = true }
+enum-map-derive = { workspace = true }
+comfy-table = { workspace = true, optional = true }
+
+# local backend
+walkdir = { workspace = true }
+ignore = { workspace = true }
+nix = { workspace = true }
+filetime = { workspace = true }
+aho-corasick = { workspace = true }
+
+# rest backend
+reqwest = { workspace = true }
+backoff = { workspace = true }
+url = { workspace = true }
+
+# rclone backend
+semver = { workspace = true }
+
+# cache
+dirs = { workspace = true }
+cachedir = { workspace = true }
+
+# cli
+clap = { workspace = true, optional = true }
+clap_complete = { workspace = true, optional = true }
+
+merge = { workspace = true, optional = true }
+rpassword = { workspace = true }
+directories = { workspace = true }
+nom = { workspace = true }
+indicatif = { workspace = true }
+path-dedot = { workspace = true }
+dunce = { workspace = true }
+gethostname = { workspace = true }
+bytesize = { workspace = true }
+itertools = { workspace = true }
+humantime = { workspace = true }
+
+[target.'cfg(not(windows))'.dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
+users = "0.11"
+
+[target.'cfg(windows)'.dependencies]
+# unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17
+sha2 = "0.10"
+
+[target.'cfg(not(any(windows, target_os="openbsd")))'.dependencies]
+xattr = "1"
+
+[dev-dependencies]
+rustup-toolchain = "0.1.4"
+rustdoc-json = "0.8.5"
+public-api = "0.29.1"
+rstest = { workspace = true }
+expect-test = "1.4.1"
+quickcheck = { workspace = true }
+quickcheck_macros = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[profile.dev]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 4
+
+[profile.release]
+opt-level = 3
+debug = false            # true for profiling
+rpath = false
+lto = "fat"
+debug-assertions = false
+codegen-units = 1
+strip = true
+
+[profile.test]
+opt-level = 1
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 4
+
+[profile.bench]
+opt-level = 3
+debug = true             # true for profiling
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1

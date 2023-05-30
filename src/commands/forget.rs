@@ -1,40 +1,70 @@
+//! `forget` subcommand
+
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{
+    commands::{get_repository, open_repository},
+    status_err, Application, RusticConfig, RUSTIC_APP,
+};
+
+use abscissa_core::{config::Override, Shutdown};
+use abscissa_core::{Command, FrameworkError, Runnable};
+use anyhow::Result;
+
 use std::str::FromStr;
 
-use anyhow::Result;
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
-use clap::Parser;
+
 use derivative::Derivative;
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
-use super::{progress_counter, prune, table_with_titles, Config};
-use crate::backend::{DecryptWriteBackend, FileType};
-use crate::repofile::{
-    SnapshotFile, SnapshotFilter, SnapshotGroup, SnapshotGroupCriterion, StringList,
-};
-use crate::repository::OpenRepository;
+use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
 
-#[derive(Parser)]
-pub(super) struct Opts {
+use rustic_core::helpers::table_output::table_with_titles;
+use rustic_core::{
+    DecryptWriteBackend, FileType, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, StringList,
+};
+
+type CheckFunction = fn(&SnapshotFile, &SnapshotFile) -> bool;
+
+/// `forget` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(super) struct ForgetCmd {
     /// Snapshots to forget. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
     #[clap(flatten)]
-    config: ConfigOpts,
+    config: ForgetOptions,
 
     #[clap(
         flatten,
         next_help_heading = "PRUNE OPTIONS (only when used with --prune)"
     )]
-    prune_opts: prune::Opts,
+    prune_opts: PruneCmd,
+}
+
+impl Override<RusticConfig> for ForgetCmd {
+    // Process the given command line options, overriding settings from
+    // a configuration file using explicit flags taken from command-line
+    // arguments.
+    fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
+        let mut self_config = self.config.clone();
+        // merge "forget" section from config file, if given
+        self_config.merge(config.forget);
+        // merge "snapshot-filter" section from config file, if given
+        self_config.filter.merge(config.snapshot_filter.clone());
+        config.forget = self_config;
+        Ok(config)
+    }
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, clap::Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct ConfigOpts {
+pub struct ForgetOptions {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
@@ -54,108 +84,126 @@ pub struct ConfigOpts {
     keep: KeepOptions,
 }
 
-pub(super) fn execute(repo: OpenRepository, config: Config, mut opts: Opts) -> Result<()> {
-    let be = &repo.dbe;
-    // merge "forget" section from config file, if given
-    opts.config.merge(config.forget.clone());
-    // merge "snapshot-filter" section from config file, if given
-    opts.config.filter.merge(config.snapshot_filter.clone());
+impl Runnable for ForgetCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
+    }
+}
 
-    let group_by = opts
-        .config
-        .group_by
-        .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,label,paths").unwrap());
+impl ForgetCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+        let progress_options = &config.global.progress_options;
 
-    let groups = match opts.ids.is_empty() {
-        true => SnapshotFile::group_from_backend(be, &opts.config.filter, &group_by)?,
-        false => vec![(
-            SnapshotGroup::default(),
-            SnapshotFile::from_ids(be, &opts.ids)?,
-        )],
-    };
-    let mut forget_snaps = Vec::new();
+        let repo = open_repository(get_repository(&config));
 
-    for (group, mut snapshots) in groups {
-        if !group.is_empty() {
-            println!("snapshots for {group}");
-        }
-        snapshots.sort_unstable_by(|sn1, sn2| sn1.cmp(sn2).reverse());
-        let latest_time = snapshots[0].time;
-        let mut group_keep = opts.config.keep.clone();
-        let mut table = table_with_titles([
-            "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
-        ]);
+        let be = &repo.dbe;
 
-        let mut iter = snapshots.iter().peekable();
-        let mut last = None;
-        let now = Local::now();
-        // snapshots that have no reason to be kept are removed. The only exception
-        // is if no IDs are explicitly given and no keep option is set. In this
-        // case, the default is to keep the snapshots.
-        let default_keep = opts.ids.is_empty() && group_keep == KeepOptions::default();
+        let group_by = config
+            .forget
+            .group_by
+            .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,label,paths").unwrap());
 
-        while let Some(sn) = iter.next() {
-            let (action, reason) = {
-                if sn.must_keep(now) {
-                    ("keep", "snapshot".to_string())
-                } else if sn.must_delete(now) {
-                    forget_snaps.push(sn.id);
-                    ("remove", "snapshot".to_string())
-                } else if !opts.ids.is_empty() {
-                    forget_snaps.push(sn.id);
-                    ("remove", "id argument".to_string())
-                } else {
-                    match group_keep.matches(sn, last, iter.peek().is_some(), latest_time) {
-                        None if default_keep => ("keep", String::new()),
-                        None => {
-                            forget_snaps.push(sn.id);
-                            ("remove", String::new())
-                        }
-                        Some(reason) => ("keep", reason),
-                    }
-                }
-            };
+        let groups = if self.ids.is_empty() {
+            SnapshotFile::group_from_backend(be, |sn| config.forget.filter.matches(sn), &group_by)?
+        } else {
+            let item = (
+                SnapshotGroup::default(),
+                SnapshotFile::from_ids(be, &self.ids)?,
+            );
+            vec![item]
+        };
+        let mut forget_snaps = Vec::new();
 
-            let tags = sn.tags.formatln();
-            let paths = sn.paths.formatln();
-            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
-            table.add_row([
-                &sn.id.to_string(),
-                &time,
-                &sn.hostname,
-                &sn.label,
-                &tags,
-                &paths,
-                action,
-                &reason,
+        for (group, mut snapshots) in groups {
+            if !group.is_empty() {
+                println!("snapshots for {group}");
+            }
+            snapshots.sort_unstable_by(|sn1, sn2| sn1.cmp(sn2).reverse());
+            let latest_time = snapshots[0].time;
+            let mut group_keep = config.forget.keep.clone();
+            let mut table = table_with_titles([
+                "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
             ]);
 
-            last = Some(sn);
+            let mut iter = snapshots.iter().peekable();
+            let mut last = None;
+            let now = Local::now();
+            // snapshots that have no reason to be kept are removed. The only exception
+            // is if no IDs are explicitly given and no keep option is set. In this
+            // case, the default is to keep the snapshots.
+            let default_keep = self.ids.is_empty() && group_keep == KeepOptions::default();
+
+            while let Some(sn) = iter.next() {
+                let (action, reason) = {
+                    if sn.must_keep(now) {
+                        ("keep", "snapshot".to_string())
+                    } else if sn.must_delete(now) {
+                        forget_snaps.push(sn.id);
+                        ("remove", "snapshot".to_string())
+                    } else if !self.ids.is_empty() {
+                        forget_snaps.push(sn.id);
+                        ("remove", "id argument".to_string())
+                    } else {
+                        match group_keep.matches(sn, last, iter.peek().is_some(), latest_time) {
+                            None if default_keep => ("keep", String::new()),
+                            None => {
+                                forget_snaps.push(sn.id);
+                                ("remove", String::new())
+                            }
+                            Some(reason) => ("keep", reason),
+                        }
+                    }
+                };
+
+                let tags = sn.tags.formatln();
+                let paths = sn.paths.formatln();
+                let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+                _ = table.add_row([
+                    &sn.id.to_string(),
+                    &time,
+                    &sn.hostname,
+                    &sn.label,
+                    &tags,
+                    &paths,
+                    action,
+                    &reason,
+                ]);
+
+                last = Some(sn);
+            }
+
+            println!();
+            println!("{table}");
+            println!();
         }
 
-        println!();
-        println!("{table}");
-        println!();
-    }
-
-    match (forget_snaps.is_empty(), config.global.dry_run) {
-        (true, _) => println!("nothing to remove"),
-        (false, true) => println!("would have removed the following snapshots:\n {forget_snaps:?}"),
-        (false, false) => {
-            let p = progress_counter("removing snapshots...");
-            be.delete_list(FileType::Snapshot, true, forget_snaps.iter(), p)?;
+        match (forget_snaps.is_empty(), config.global.dry_run) {
+            (true, _) => println!("nothing to remove"),
+            (false, true) => {
+                println!("would have removed the following snapshots:\n {forget_snaps:?}");
+            }
+            (false, false) => {
+                let p = progress_options.progress_counter("removing snapshots...");
+                be.delete_list(FileType::Snapshot, true, forget_snaps.iter(), p)?;
+            }
         }
-    }
 
-    if opts.config.prune {
-        prune::execute(repo, config, opts.prune_opts, forget_snaps)?;
-    }
+        if self.config.prune {
+            let mut prune_opts = self.prune_opts.clone();
+            prune_opts.ignore_snaps = forget_snaps;
+            prune_opts.run();
+        }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 #[serde_as]
-#[derive(Clone, Debug, PartialEq, Derivative, Parser, Deserialize, Merge)]
+#[derive(Clone, Debug, PartialEq, Derivative, clap::Parser, Deserialize, Merge)]
 #[derivative(Default)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub(super) struct KeepOptions {
@@ -273,7 +321,7 @@ fn overwrite_zero_duration(left: &mut humantime::Duration, right: humantime::Dur
     }
 }
 
-fn always_false(_sn1: &SnapshotFile, _sn2: &SnapshotFile) -> bool {
+const fn always_false(_sn1: &SnapshotFile, _sn2: &SnapshotFile) -> bool {
     false
 }
 
@@ -338,9 +386,9 @@ impl KeepOptions {
             reason.push("tags");
         }
 
-        let keep_checks = [
+        let keep_checks: [(CheckFunction, &mut i32, &str, humantime::Duration, &str); 8] = [
             (
-                always_false as fn(&SnapshotFile, &SnapshotFile) -> bool,
+                always_false,
                 &mut self.keep_last,
                 "last",
                 self.keep_within,

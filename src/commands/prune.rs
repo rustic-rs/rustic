@@ -1,31 +1,48 @@
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+//! `prune` subcommand
+
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{
+    commands::{get_repository, open_repository},
+    config::progress_options::ProgressOptions,
+    status_err, Application, RUSTIC_APP,
+};
+use abscissa_core::{Command, Runnable, Shutdown};
+use log::{debug, error, info};
+
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::{anyhow, bail, Result};
 use bytesize::ByteSize;
 use chrono::{DateTime, Duration, Local};
-use clap::Parser;
+
 use derive_more::Add;
 use itertools::Itertools;
-use log::*;
-use rayon::prelude::*;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-use super::{bytes, no_progress, progress_bytes, progress_counter, warm_up_wait, Config};
-use crate::backend::{DecryptReadBackend, DecryptWriteBackend, FileType, ReadBackend};
-use crate::blob::{
-    BlobType, BlobTypeMap, Initialize, NodeType, PackSizer, Repacker, Sum, TreeStreamerOnce,
+use crate::helpers::warm_up_wait;
+
+use rustic_core::{
+    bytes_size_to_string, BlobType, BlobTypeMap, DecryptReadBackend, DecryptWriteBackend, FileType,
+    HeaderEntry, Id, IndexBackend, IndexBlob, IndexCollector, IndexFile, IndexPack, IndexType,
+    IndexedBackend, Indexer, Initialize, NodeType, OpenRepository, PackSizer, ReadBackend,
+    ReadIndex, Repacker, SnapshotFile, Sum, TreeStreamerOnce,
 };
-use crate::commands::helpers::progress_spinner;
-use crate::id::Id;
-use crate::index::{IndexBackend, IndexCollector, IndexType, IndexedBackend, Indexer, ReadIndex};
-use crate::repofile::{HeaderEntry, IndexBlob, IndexFile, IndexPack, SnapshotFile};
-use crate::repository::OpenRepository;
 
-#[derive(Parser)]
+pub(super) mod constants {
+    pub(super) const MIN_INDEX_LEN: usize = 10_000;
+}
+
+/// `prune` subcommand
+#[allow(clippy::struct_excessive_bools)]
+#[derive(clap::Parser, Command, Debug, Clone)]
 #[group(id = "prune_opts")]
-pub(super) struct Opts {
+pub(crate) struct PruneCmd {
     /// Define maximum data to repack in % of reposize or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
     #[clap(long, value_name = "LIMIT", default_value = "unlimited")]
     max_repack: LimitOption,
@@ -69,84 +86,114 @@ pub(super) struct Opts {
     /// Do not repack packs which only needs to be resized
     #[clap(long)]
     no_resize: bool,
+
+    #[clap(skip)]
+    pub(crate) ignore_snaps: Vec<Id>,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    config: Config,
-    opts: Opts,
-    ignore_snaps: Vec<Id>,
-) -> Result<()> {
-    let be = &repo.dbe;
-    if repo.config.version < 2 && opts.repack_uncompressed {
-        bail!("--repack-uncompressed makes no sense for v1 repo!");
+impl Runnable for PruneCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
     }
-
-    let mut index_files = Vec::new();
-
-    let p = progress_counter("reading index...");
-    let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
-
-    for index in be.stream_all::<IndexFile>(p.clone())? {
-        let (id, index) = index?;
-        index_collector.extend(index.packs.clone());
-        // we add the trees from packs_to_delete to the index such that searching for
-        // used blobs doesn't abort if they are already marked for deletion
-        index_collector.extend(index.packs_to_delete.clone());
-
-        index_files.push((id, index));
-    }
-    p.finish();
-
-    let (used_ids, total_size) = {
-        let index = index_collector.into_index();
-        let total_size = BlobTypeMap::init(|blob_type| index.total_size(blob_type));
-        let indexed_be = IndexBackend::new_from_index(&be.clone(), index);
-        let used_ids = find_used_blobs(&indexed_be, ignore_snaps)?;
-        (used_ids, total_size)
-    };
-
-    // list existing pack files
-    let p = progress_spinner("getting packs from repository...");
-    let existing_packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
-    p.finish();
-
-    let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
-    pruner.count_used_blobs();
-    pruner.check()?;
-    let repack_cacheable_only = opts
-        .repack_cacheable_only
-        .unwrap_or_else(|| repo.config.is_hot == Some(true));
-    let pack_sizer = total_size.map(|tpe, size| PackSizer::from_config(&repo.config, tpe, size));
-    pruner.decide_packs(
-        Duration::from_std(*opts.keep_pack)?,
-        Duration::from_std(*opts.keep_delete)?,
-        repack_cacheable_only,
-        opts.repack_uncompressed,
-        opts.repack_all,
-        &pack_sizer,
-    )?;
-    pruner.decide_repack(
-        &opts.max_repack,
-        &opts.max_unused,
-        opts.repack_uncompressed || opts.repack_all,
-        opts.no_resize,
-        &pack_sizer,
-    );
-    pruner.check_existing_packs()?;
-    pruner.filter_index_files(opts.instant_delete);
-    pruner.print_stats();
-
-    let dry_run = config.global.dry_run;
-    warm_up_wait(&repo, pruner.repack_packs().into_iter(), !dry_run)?;
-
-    if !dry_run {
-        pruner.do_prune(repo, opts)?;
-    }
-    Ok(())
 }
 
-#[derive(Clone)]
+impl PruneCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+        let progress_options = &config.global.progress_options;
+
+        let repo = open_repository(get_repository(&config));
+
+        let be = &repo.dbe;
+        if repo.config.version < 2 && self.repack_uncompressed {
+            bail!("--repack-uncompressed makes no sense for v1 repo!");
+        }
+
+        let mut index_files = Vec::new();
+
+        let p = progress_options.progress_counter("reading index...");
+        let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
+
+        be.stream_all::<IndexFile>(p.clone())?
+            .into_iter()
+            .for_each(|index| {
+                let (id, index) = match index {
+                    Ok(it) => it,
+                    Err(err) => {
+                        status_err!("{}", err);
+                        RUSTIC_APP.shutdown(Shutdown::Crash);
+                    }
+                };
+                index_collector.extend(index.packs.clone());
+                // we add the trees from packs_to_delete to the index such that searching for
+                // used blobs doesn't abort if they are already marked for deletion
+                index_collector.extend(index.packs_to_delete.clone());
+
+                index_files.push((id, index));
+            });
+        p.finish();
+
+        let (used_ids, total_size) = {
+            let index = index_collector.into_index();
+            let total_size = BlobTypeMap::init(|blob_type| index.total_size(blob_type));
+            let indexed_be = IndexBackend::new_from_index(&be.clone(), index);
+            let used_ids = find_used_blobs(&indexed_be, &self.ignore_snaps, progress_options)?;
+            (used_ids, total_size)
+        };
+
+        // list existing pack files
+        let p = progress_options.progress_spinner("getting packs from repository...");
+        let existing_packs: HashMap<_, _> =
+            be.list_with_size(FileType::Pack)?.into_iter().collect();
+        p.finish();
+
+        let mut pruner = Pruner::new(used_ids, existing_packs, index_files);
+        pruner.count_used_blobs();
+        pruner.check()?;
+        let repack_cacheable_only = self
+            .repack_cacheable_only
+            .unwrap_or_else(|| repo.config.is_hot == Some(true));
+        let pack_sizer =
+            total_size.map(|tpe, size| PackSizer::from_config(&repo.config, tpe, size));
+        pruner.decide_packs(
+            Duration::from_std(*self.keep_pack)?,
+            Duration::from_std(*self.keep_delete)?,
+            repack_cacheable_only,
+            self.repack_uncompressed,
+            self.repack_all,
+            &pack_sizer,
+        );
+        pruner.decide_repack(
+            &self.max_repack,
+            &self.max_unused,
+            self.repack_uncompressed || self.repack_all,
+            self.no_resize,
+            &pack_sizer,
+        );
+        pruner.check_existing_packs()?;
+        pruner.filter_index_files(self.instant_delete);
+        pruner.print_stats();
+
+        let dry_run = config.global.dry_run;
+        warm_up_wait(
+            &repo,
+            pruner.repack_packs().into_iter(),
+            !dry_run,
+            progress_options,
+        )?;
+
+        if !dry_run {
+            pruner.do_prune(repo, self, progress_options)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
 enum LimitOption {
     Size(ByteSize),
     Percentage(u64),
@@ -159,7 +206,7 @@ impl FromStr for LimitOption {
         Ok(match s.chars().last().unwrap_or('0') {
             '%' => Self::Percentage({
                 let mut copy = s.to_string();
-                copy.pop();
+                _ = copy.pop();
                 copy.parse()?
             }),
             'd' if s == "unlimited" => Self::Unlimited,
@@ -176,7 +223,7 @@ struct DeleteStats {
 }
 
 impl DeleteStats {
-    fn total(&self) -> u64 {
+    const fn total(&self) -> u64 {
         self.remove + self.recover + self.keep
     }
 }
@@ -198,13 +245,13 @@ struct SizeStats {
 }
 
 impl SizeStats {
-    fn total(&self) -> u64 {
+    const fn total(&self) -> u64 {
         self.used + self.unused
     }
-    fn total_after_prune(&self) -> u64 {
+    const fn total_after_prune(&self) -> u64 {
         self.used + self.unused_after_prune()
     }
-    fn unused_after_prune(&self) -> u64 {
+    const fn unused_after_prune(&self) -> u64 {
         self.unused - self.remove - self.repackrm
     }
 }
@@ -352,7 +399,7 @@ enum RepackReason {
     ToCompress,
     SizeMismatch,
 }
-use RepackReason::*;
+use RepackReason::{PartlyUsed, SizeMismatch, ToCompress};
 
 struct Pruner {
     time: DateTime<Local>,
@@ -408,7 +455,7 @@ impl Pruner {
             .collect();
 
         // filter out "normally" indexed packs from packs_to_delete
-        for index in index_files.iter_mut() {
+        for index in &mut index_files {
             let mut modified = false;
             index.packs.retain(|p| {
                 !p.delete_mark || {
@@ -466,7 +513,7 @@ impl Pruner {
         repack_uncompressed: bool,
         repack_all: bool,
         pack_sizer: &BlobTypeMap<PackSizer>,
-    ) -> Result<()> {
+    ) {
         // first process all marked packs then the unmarked ones:
         // - first processed packs are more likely to have all blobs seen as unused
         // - if marked packs have used blob but these blobs are all present in
@@ -533,9 +580,14 @@ impl Pruner {
                             }
                         }
                         (true, 0, _) => {
-                            if self.time - pack.time.expect("packs_to_delete has no time")
-                                >= keep_delete
-                            {
+                            let local_date_time = pack.time.map_or_else(
+                                || {
+                                    status_err!("Packs_to_delete doesn't contain `time`.");
+                                    RUSTIC_APP.shutdown(Shutdown::Crash);
+                                },
+                                |it| it,
+                            );
+                            if self.time - local_date_time >= keep_delete {
                                 pack.set_todo(PackToDo::Delete, &pi, &mut self.stats);
                             } else {
                                 pack.set_todo(PackToDo::KeepMarked, &pi, &mut self.stats);
@@ -549,8 +601,6 @@ impl Pruner {
                 }
             }
         }
-
-        Ok(())
     }
 
     fn decide_repack(
@@ -645,7 +695,7 @@ impl Pruner {
                 }
                 PackToDo::Keep | PackToDo::Recover => {
                     for blob in &pack.blobs {
-                        self.used_ids.remove(&blob.id);
+                        _ = self.used_ids.remove(&blob.id);
                     }
                     check_size()?;
                 }
@@ -668,8 +718,6 @@ impl Pruner {
     }
 
     fn filter_index_files(&mut self, instant_delete: bool) {
-        const MIN_INDEX_LEN: usize = 10_000;
-
         let mut any_must_modify = false;
         self.stats.index_files = self.index_files.len() as u64;
         // filter out only the index files which need processing
@@ -684,7 +732,7 @@ impl Pruner {
             any_must_modify |= must_modify;
 
             // also process index files which are too small (i.e. rebuild them)
-            must_modify || index.len() < MIN_INDEX_LEN
+            must_modify || index.len() < constants::MIN_INDEX_LEN
         });
 
         if !any_must_modify && self.index_files.len() == 1 {
@@ -696,6 +744,7 @@ impl Pruner {
         // repacks come at end
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn print_stats(&self) {
         let pack_stat = &self.stats.packs;
         let blob_stat = self.stats.blobs.sum();
@@ -704,58 +753,58 @@ impl Pruner {
         debug!(
             "used:   {:>10} blobs, {:>10}",
             blob_stat.used,
-            bytes(size_stat.used)
+            bytes_size_to_string(size_stat.used)
         );
 
         debug!(
             "unused: {:>10} blobs, {:>10}",
             blob_stat.unused,
-            bytes(size_stat.unused)
+            bytes_size_to_string(size_stat.unused)
         );
         debug!(
             "total:  {:>10} blobs, {:>10}",
             blob_stat.total(),
-            bytes(size_stat.total())
+            bytes_size_to_string(size_stat.total())
         );
 
         println!(
             "to repack: {:>10} packs, {:>10} blobs, {:>10}",
             pack_stat.repack,
             blob_stat.repack,
-            bytes(size_stat.repack)
+            bytes_size_to_string(size_stat.repack)
         );
         println!(
             "this removes:                {:>10} blobs, {:>10}",
             blob_stat.repackrm,
-            bytes(size_stat.repackrm)
+            bytes_size_to_string(size_stat.repackrm)
         );
         println!(
             "to delete: {:>10} packs, {:>10} blobs, {:>10}",
             pack_stat.unused,
             blob_stat.remove,
-            bytes(size_stat.remove)
+            bytes_size_to_string(size_stat.remove)
         );
         if !self.existing_packs.is_empty() {
             println!(
                 "unindexed: {:>10} packs,         ?? blobs, {:>10}",
                 self.existing_packs.len(),
-                bytes(self.stats.size_unref)
+                bytes_size_to_string(self.stats.size_unref)
             );
         }
 
         println!(
             "total prune:                 {:>10} blobs, {:>10}",
             blob_stat.repackrm + blob_stat.remove,
-            bytes(size_stat.repackrm + size_stat.remove + self.stats.size_unref)
+            bytes_size_to_string(size_stat.repackrm + size_stat.remove + self.stats.size_unref)
         );
         println!(
             "remaining:                   {:>10} blobs, {:>10}",
             blob_stat.total_after_prune(),
-            bytes(size_stat.total_after_prune())
+            bytes_size_to_string(size_stat.total_after_prune())
         );
         println!(
             "unused size after prune: {:>10} ({:.2}% of remaining size)",
-            bytes(size_stat.unused_after_prune()),
+            bytes_size_to_string(size_stat.unused_after_prune()),
             size_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64 * 100.0
         );
 
@@ -764,22 +813,22 @@ impl Pruner {
         println!(
             "packs marked for deletion: {:>10}, {:>10}",
             self.stats.packs_to_delete.total(),
-            bytes(self.stats.size_to_delete.total()),
+            bytes_size_to_string(self.stats.size_to_delete.total()),
         );
         println!(
             " - complete deletion:      {:>10}, {:>10}",
             self.stats.packs_to_delete.remove,
-            bytes(self.stats.size_to_delete.remove),
+            bytes_size_to_string(self.stats.size_to_delete.remove),
         );
         println!(
             " - keep marked:            {:>10}, {:>10}",
             self.stats.packs_to_delete.keep,
-            bytes(self.stats.size_to_delete.keep),
+            bytes_size_to_string(self.stats.size_to_delete.keep),
         );
         println!(
             " - recover:                {:>10}, {:>10}",
             self.stats.packs_to_delete.recover,
-            bytes(self.stats.size_to_delete.recover),
+            bytes_size_to_string(self.stats.size_to_delete.recover),
         );
 
         debug!(
@@ -798,7 +847,13 @@ impl Pruner {
             .collect()
     }
 
-    fn do_prune(self, repo: OpenRepository, opts: Opts) -> Result<()> {
+    #[allow(clippy::significant_drop_tightening)]
+    fn do_prune(
+        self,
+        repo: OpenRepository,
+        opts: &PruneCmd,
+        progress_options: &ProgressOptions,
+    ) -> Result<()> {
         let be = repo.dbe;
 
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
@@ -838,7 +893,7 @@ impl Pruner {
         // mark unreferenced packs for deletion
         if !self.existing_packs.is_empty() {
             if opts.instant_delete {
-                let p = progress_counter("removing unindexed packs...");
+                let p = progress_options.progress_counter("removing unindexed packs...");
                 let existing_packs: Vec<_> = self.existing_packs.into_keys().collect();
                 be.delete_list(FileType::Pack, true, existing_packs.iter(), p)?;
             } else {
@@ -859,11 +914,11 @@ impl Pruner {
         let p = match (self.index_files.is_empty(), self.stats.packs.repack > 0) {
             (true, _) => {
                 info!("nothing to do!");
-                no_progress()
+                ProgressOptions::no_progress()
             }
             // TODO: Use a MultiProgressBar here
-            (false, true) => progress_bytes("repacking // rebuilding index..."),
-            (false, false) => progress_spinner("rebuilding index..."),
+            (false, true) => progress_options.progress_bytes("repacking // rebuilding index..."),
+            (false, false) => progress_options.progress_spinner("rebuilding index..."),
         };
 
         p.set_length(self.stats.size.sum().repack - self.stats.size.sum().repackrm);
@@ -954,28 +1009,28 @@ impl Pruner {
             }
             Ok(())
         })?;
-        tree_repacker.finalize()?;
-        data_repacker.finalize()?;
+        _ = tree_repacker.finalize()?;
+        _ = data_repacker.finalize()?;
         indexer.write().unwrap().finalize()?;
         p.finish();
 
         // remove old index files first as they may reference pack files which are removed soon.
         if !indexes_remove.is_empty() {
-            let p = progress_counter("removing old index files...");
+            let p = progress_options.progress_counter("removing old index files...");
             be.delete_list(FileType::Index, true, indexes_remove.iter(), p)?;
         }
 
-        // get variables out of Arc<Mutex<_>>
+        // get variable out of Arc<Mutex<_>>
         let data_packs_remove = data_packs_remove.lock().unwrap();
-        let tree_packs_remove = tree_packs_remove.lock().unwrap();
-
         if !data_packs_remove.is_empty() {
-            let p = progress_counter("removing old data packs...");
+            let p = progress_options.progress_counter("removing old data packs...");
             be.delete_list(FileType::Pack, false, data_packs_remove.iter(), p)?;
         }
 
+        // get variable out of Arc<Mutex<_>>
+        let tree_packs_remove = tree_packs_remove.lock().unwrap();
         if !tree_packs_remove.is_empty() {
-            let p = progress_counter("removing old tree packs...");
+            let p = progress_options.progress_counter("removing old tree packs...");
             be.delete_list(FileType::Pack, true, tree_packs_remove.iter(), p)?;
         }
 
@@ -992,8 +1047,8 @@ struct PackInfo {
     unused_size: u32,
 }
 
-impl PartialOrd<PackInfo> for PackInfo {
-    fn partial_cmp(&self, other: &PackInfo) -> Option<Ordering> {
+impl PartialOrd<Self> for PackInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -1041,11 +1096,10 @@ impl PackInfo {
                         pi.used_size += blob.length;
                         pi.used_blobs += 1;
                         return true; // break the search
-                    } else {
-                        // blob is not needed
-                        pi.unused_size += blob.length;
-                        pi.unused_blobs += 1;
                     }
+                    // blob is not needed
+                    pi.unused_size += blob.length;
+                    pi.unused_blobs += 1;
                 }
             }
             false // continue with next blob
@@ -1091,11 +1145,12 @@ impl PackInfo {
 // find used blobs in repo
 fn find_used_blobs(
     index: &(impl IndexedBackend + Unpin),
-    ignore_snaps: Vec<Id>,
+    ignore_snaps: &[Id],
+    progress_options: &ProgressOptions,
 ) -> Result<HashMap<Id, u8>> {
-    let ignore_snaps: HashSet<_> = ignore_snaps.into_iter().collect();
+    let ignore_snaps: HashSet<_> = ignore_snaps.iter().collect();
 
-    let p = progress_counter("reading snapshots...");
+    let p = progress_options.progress_counter("reading snapshots...");
     let list = index
         .be()
         .list(FileType::Snapshot)?
@@ -1111,7 +1166,7 @@ fn find_used_blobs(
     p.finish();
 
     let mut ids: HashMap<_, _> = snap_trees.iter().map(|id| (*id, 0)).collect();
-    let p = progress_counter("finding used blobs...");
+    let p = progress_options.progress_counter("finding used blobs...");
 
     let mut tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
     while let Some(item) = tree_streamer.next().transpose()? {
@@ -1122,7 +1177,7 @@ fn find_used_blobs(
                     ids.extend(node.content.iter().flatten().map(|id| (*id, 0)));
                 }
                 NodeType::Dir => {
-                    ids.insert(node.subtree.unwrap(), 0);
+                    _ = ids.insert(node.subtree.unwrap(), 0);
                 }
                 _ => {} // nothing to do
             }

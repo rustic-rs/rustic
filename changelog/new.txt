@@ -5,6 +5,7 @@ Breaking changes:
 Bugs fixed:
 - backup crashed when there was a non-unicode link target. The crash has been fixed. However, non-unicode link targets are still unsupported.
 - Extended attributes which were saved with value null couldn't be handled. This has been fixed.
+- prune: --max-repack didn't work with a given percentage of repo size. This has been fixed.
 
 New features:
 - copy: Added --init option to initialize uninitialized target repos

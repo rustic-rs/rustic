@@ -1,25 +1,33 @@
+//! `cat` subcommand
+
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{
+    commands::{get_repository, open_repository},
+    status_err, Application, RUSTIC_APP,
+};
+
+use abscissa_core::{Command, Runnable, Shutdown};
+
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use clap::{Parser, Subcommand};
+
 use indicatif::ProgressBar;
 
-use super::{progress_counter, Config};
-use crate::backend::{DecryptReadBackend, FileType};
-use crate::blob::{BlobType, Tree};
-use crate::id::Id;
-use crate::index::{IndexBackend, IndexedBackend};
-use crate::repofile::SnapshotFile;
-use crate::repository::OpenRepository;
+use rustic_core::{
+    BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexedBackend, SnapshotFile, Tree,
+};
 
-#[derive(Parser)]
-pub(super) struct Opts {
+/// `cat` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(crate) struct CatCmd {
     #[clap(subcommand)]
-    command: Command,
+    cmd: CatSubCmd,
 }
 
-#[derive(Subcommand)]
-enum Command {
+#[derive(clap::Subcommand, Debug)]
+enum CatSubCmd {
     /// Display a tree blob
     TreeBlob(IdOpt),
     /// Display a data blob
@@ -34,34 +42,52 @@ enum Command {
     Tree(TreeOpts),
 }
 
-#[derive(Default, Parser)]
+#[derive(Default, clap::Parser, Debug)]
 struct IdOpt {
     /// Id to display
     id: String,
 }
 
-#[derive(Parser)]
+#[derive(clap::Parser, Debug)]
 struct TreeOpts {
     /// Snapshot/path of the tree to display
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 }
 
-pub(super) fn execute(repo: OpenRepository, config: Config, opts: Opts) -> Result<()> {
-    let be = &repo.dbe;
-    match opts.command {
-        Command::Config => cat_file(be, FileType::Config, IdOpt::default()),
-        Command::Index(opt) => cat_file(be, FileType::Index, opt),
-        Command::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt),
-        // special treatment for catingg blobs: read the index and use it to locate the blob
-        Command::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt),
-        Command::DataBlob(opt) => cat_blob(be, BlobType::Data, opt),
-        // special treatment for cating a tree within a snapshot
-        Command::Tree(opts) => cat_tree(be, config, opts),
+impl Runnable for CatCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
     }
 }
 
-fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<()> {
+impl CatCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+
+        let repo = open_repository(get_repository(&config));
+
+        let be = &repo.dbe;
+
+        match &self.cmd {
+            CatSubCmd::Config => cat_file(be, FileType::Config, &IdOpt::default()),
+            CatSubCmd::Index(opt) => cat_file(be, FileType::Index, opt),
+            CatSubCmd::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt),
+            // special treatment for catingg blobs: read the index and use it to locate the blob
+            CatSubCmd::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt),
+            CatSubCmd::DataBlob(opt) => cat_blob(be, BlobType::Data, opt),
+            // special treatment for cating a tree within a snapshot
+            CatSubCmd::Tree(opts) => cat_tree(be, opts),
+        }?;
+
+        Ok(())
+    }
+}
+
+fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: &IdOpt) -> Result<()> {
     let id = be.find_id(tpe, &opt.id)?;
     let data = be.read_encrypted_full(tpe, &id)?;
     println!("{}", String::from_utf8(data.to_vec())?);
@@ -69,7 +95,7 @@ fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: IdOpt) -> Result<(
     Ok(())
 }
 
-fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<()> {
+fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: &IdOpt) -> Result<()> {
     let id = Id::from_hex(&opt.id)?;
     let data = IndexBackend::new(be, ProgressBar::hidden())?.blob_from_backend(tpe, &id)?;
     print!("{}", String::from_utf8(data.to_vec())?);
@@ -77,15 +103,17 @@ fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: IdOpt) -> Result<(
     Ok(())
 }
 
-fn cat_tree(be: &impl DecryptReadBackend, config: Config, opts: TreeOpts) -> Result<()> {
+fn cat_tree(be: &impl DecryptReadBackend, opts: &TreeOpts) -> Result<()> {
+    let config = RUSTIC_APP.config();
+
     let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
     let snap = SnapshotFile::from_str(
         be,
         id,
-        |sn| sn.matches(&config.snapshot_filter),
-        progress_counter(""),
+        |sn| config.snapshot_filter.matches(sn),
+        &config.global.progress_options.progress_counter(""),
     )?;
-    let index = IndexBackend::new(be, progress_counter(""))?;
+    let index = IndexBackend::new(be, config.global.progress_options.progress_counter(""))?;
     let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
     let id = node.subtree.ok_or_else(|| anyhow!("{path} is no dir"))?;
     let data = index.blob_from_backend(BlobType::Tree, &id)?;

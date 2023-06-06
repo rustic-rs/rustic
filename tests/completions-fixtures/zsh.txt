@@ -1,0 +1,2002 @@
+#compdef rustic
+
+autoload -U is-at-least
+
+_rustic() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_rustic_commands" \
+"*::: :->rustic" \
+&& ret=0
+    case $state in
+    (rustic)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-command-$line[1]:"
+        case $line[1] in
+            (backup)
+_arguments "${_arguments_options[@]}" \
+'-g+[Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default\: host,label,paths)]:CRITERION: ' \
+'--group-by=[Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default\: host,label,paths)]:CRITERION: ' \
+'(-f --force)--parent=[Snapshot to use as parent]:SNAPSHOT: ' \
+'--stdin-filename=[Set filename to be used when backing up from stdin]:FILENAME: ' \
+'--as-path=[Manually set backup path in snapshot]:PATH:_files' \
+'*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
+'*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
+'*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
+'*--iglob-file=[Same as --glob-file ignores the casing of filenames in patterns]:FILE: ' \
+'*--exclude-if-present=[Exclude contents of directories containing this filename (can be specified multiple times)]:FILE: ' \
+'--exclude-larger-than=[Maximum size of files to be backuped. Larger files will be excluded]:SIZE: ' \
+'--label=[Label snapshot with given label]:LABEL: ' \
+'*--tag=[Tags to add to snapshot (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--description=[Add description to snapshot]:DESCRIPTION: ' \
+'(--description)--description-from=[Add description to snapshot from file]:FILE:_files' \
+'--delete-after=[Mark snapshot to be deleted after given duration (e.g. 10d)]:DURATION: ' \
+'--host=[Set the host name manually]:NAME: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'(--parent)-f[Use no parent, read all files]' \
+'(--parent)--force[Use no parent, read all files]' \
+'(-f --force)--ignore-ctime[Ignore ctime changes when checking for modified files]' \
+'(-f --force)--ignore-inode[Ignore inode number changes when checking for modified files]' \
+'--with-atime[Save access time for files and directories]' \
+'--ignore-devid[Don'\''t save device ID for files and directories]' \
+'--git-ignore[Ignore files based on .gitignore files]' \
+'-x[Exclude other file systems, don'\''t cross filesystem boundaries and subvolumes]' \
+'--one-file-system[Exclude other file systems, don'\''t cross filesystem boundaries and subvolumes]' \
+'(--delete-after)--delete-never[Mark snapshot as uneraseable]' \
+'--json[Output generated snapshot in json format]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::cli_sources -- Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all sources defined in the config file:' \
+&& ret=0
+;;
+(cat)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_rustic__cat_commands" \
+"*::: :->cat" \
+&& ret=0
+
+    case $state in
+    (cat)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-cat-command-$line[1]:"
+        case $line[1] in
+            (tree-blob)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Id to display:' \
+&& ret=0
+;;
+(data-blob)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Id to display:' \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(index)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Id to display:' \
+&& ret=0
+;;
+(snapshot)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Id to display:' \
+&& ret=0
+;;
+(tree)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':snap -- Snapshot/path of the tree to display:' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__cat__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-cat-help-command-$line[1]:"
+        case $line[1] in
+            (tree-blob)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(data-blob)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(index)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(snapshot)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(tree)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(config)
+_arguments "${_arguments_options[@]}" \
+'--set-compression=[Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https\://facebook.github.io/zstd/>. Note that 0 equals to no compression]:LEVEL: ' \
+'--set-version=[Set repository version. Allowed versions\: 1,2]:VERSION: ' \
+'--set-treepack-size=[Set default packsize for tree packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to 4 MiB if not set]:SIZE: ' \
+'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately 4 GiB]:SIZE: ' \
+'--set-treepack-growfactor=[Set grow factor for tree packs. The default packsize grows by the square root of the total size of all tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total treesize in GiB. Defaults to 32 (= 1MB per square root of total treesize in GiB) if not set]:FACTOR: ' \
+'--set-datapack-size=[Set default packsize for data packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to 32 MiB if not set]:SIZE: ' \
+'--set-datapack-growfactor=[Set grow factor for data packs. The default packsize grows by the square root of the total size of all data packs multiplied with this factor. This means 32 kiB times this factor per square root of total datasize in GiB. Defaults to 32 (= 1MB per square root of total datasize in GiB) if not set]:FACTOR: ' \
+'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately 4 GiB]:SIZE: ' \
+'--set-min-packsize-tolerate-percent=[Set minimum tolerated packsize in percent of the targeted packsize. Defaults to 30 if not set]:PERCENT: ' \
+'--set-max-packsize-tolerate-percent=[Set maximum tolerated packsize in percent of the targeted packsize A value of 0 means packs larger than the targeted packsize are always tolerated. Default if not set\: larger packfiles are always tolerated]:PERCENT: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':sh -- Shell to generate completions for:(bash fish zsh powershell)' \
+&& ret=0
+;;
+(check)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'(--no-cache)--trust-cache[Don'\''t verify the data saved in the cache]' \
+'--read-data[Read all data blobs]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(copy)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::ids -- Snapshots to copy. If none is given, use filter options to filter from all snapshots:' \
+&& ret=0
+;;
+(diff)
+_arguments "${_arguments_options[@]}" \
+'*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
+'*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
+'*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
+'*--iglob-file=[Same as --glob-file ignores the casing of filenames in patterns]:FILE: ' \
+'*--exclude-if-present=[Exclude contents of directories containing this filename (can be specified multiple times)]:FILE: ' \
+'--exclude-larger-than=[Maximum size of files to be backuped. Larger files will be excluded]:SIZE: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--metadata[show differences in metadata]' \
+'--no-content[don'\''t check for different file contents]' \
+'--git-ignore[Ignore files based on .gitignore files]' \
+'-x[Exclude other file systems, don'\''t cross filesystem boundaries and subvolumes]' \
+'--one-file-system[Exclude other file systems, don'\''t cross filesystem boundaries and subvolumes]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':snap1 -- Reference snapshot/path:' \
+':snap2 -- New snapshot/path or local path \[default for PATH2\: PATH1\]:' \
+&& ret=0
+;;
+(dump)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':snap -- file from snapshot to dump:' \
+&& ret=0
+;;
+(forget)
+_arguments "${_arguments_options[@]}" \
+'-g+[Group snapshots by any combination of host,label,paths,tags (default\: "host,label,paths")]:CRITERION: ' \
+'--group-by=[Group snapshots by any combination of host,label,paths,tags (default\: "host,label,paths")]:CRITERION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'*--keep-tags=[Keep snapshots with this taglist (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'*--keep-id=[Keep snapshots ids that start with ID (can be specified multiple times)]:ID: ' \
+'-l+[Keep the last N snapshots (N == -1\: keep all snapshots)]:N: ' \
+'--keep-last=[Keep the last N snapshots (N == -1\: keep all snapshots)]:N: ' \
+'-H+[Keep the last N hourly snapshots (N == -1\: keep all hourly snapshots)]:N: ' \
+'--keep-hourly=[Keep the last N hourly snapshots (N == -1\: keep all hourly snapshots)]:N: ' \
+'-d+[Keep the last N daily snapshots (N == -1\: keep all daily snapshots)]:N: ' \
+'--keep-daily=[Keep the last N daily snapshots (N == -1\: keep all daily snapshots)]:N: ' \
+'-w+[Keep the last N weekly snapshots (N == -1\: keep all weekly snapshots)]:N: ' \
+'--keep-weekly=[Keep the last N weekly snapshots (N == -1\: keep all weekly snapshots)]:N: ' \
+'-m+[Keep the last N monthly snapshots (N == -1\: keep all monthly snapshots)]:N: ' \
+'--keep-monthly=[Keep the last N monthly snapshots (N == -1\: keep all monthly snapshots)]:N: ' \
+'--keep-quarter-yearly=[Keep the last N quarter-yearly snapshots (N == -1\: keep all quarter-yearly snapshots)]:N: ' \
+'--keep-half-yearly=[Keep the last N half-yearly snapshots (N == -1\: keep all half-yearly snapshots)]:N: ' \
+'-y+[Keep the last N yearly snapshots (N == -1\: keep all yearly snapshots)]:N: ' \
+'--keep-yearly=[Keep the last N yearly snapshots (N == -1\: keep all yearly snapshots)]:N: ' \
+'--keep-within=[Keep snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-hourly=[Keep hourly snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-daily=[Keep daily snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-weekly=[Keep weekly snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-monthly=[Keep monthly snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-quarter-yearly=[Keep quarter-yearly snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-half-yearly=[Keep half-yearly snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--keep-within-yearly=[Keep yearly snapshots newer than DURATION relative to latest snapshot]:DURATION: ' \
+'--max-repack=[Define maximum data to repack in % of reposize or as size (e.g. '\''5b'\'', '\''2 kB'\'', '\''3M'\'', '\''4TiB'\'') or '\''unlimited'\'']:LIMIT: ' \
+'--max-unused=[Tolerate limit of unused data in % of reposize after pruning or as size (e.g. '\''5b'\'', '\''2 kB'\'', '\''3M'\'', '\''4TiB'\'') or '\''unlimited'\'']:LIMIT: ' \
+'--keep-pack=[Minimum duration (e.g. 90d) to keep packs before repacking or removing. More recently created packs won'\''t be repacked or marked for deletion within this prune run]:DURATION: ' \
+'--keep-delete=[Minimum duration (e.g. 10m) to keep packs marked for deletion. More recently marked packs won'\''t be deleted within this prune run]:DURATION: ' \
+'--repack-cacheable-only=[Only repack packs which are cacheable \[default\: true for a hot/cold repository, else false\]]:TRUE/FALSE:(true false)' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'--prune[Also prune the repository]' \
+'--instant-delete[Delete files immediately instead of marking them. This also removes all files already marked for deletion. WARNING\: Only use if you are sure the repository is not accessed by parallel processes!]' \
+'--fast-repack[Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting]' \
+'(--fast-repack)--repack-uncompressed[Repack packs containing uncompressed blobs. This cannot be used with --fast-repack. Implies --max-unused=0]' \
+'--repack-all[Repack all packs. Implies --max-unused=0]' \
+'--no-resize[Do not repack packs which only needs to be resized]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::ids -- Snapshots to forget. If none is given, use filter options to filter from all snapshots:' \
+&& ret=0
+;;
+(init)
+_arguments "${_arguments_options[@]}" \
+'--hostname=[Set '\''hostname'\'' in public key information]:HOSTNAME: ' \
+'--username=[Set '\''username'\'' in public key information]:USERNAME: ' \
+'--set-compression=[Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https\://facebook.github.io/zstd/>. Note that 0 equals to no compression]:LEVEL: ' \
+'--set-version=[Set repository version. Allowed versions\: 1,2]:VERSION: ' \
+'--set-treepack-size=[Set default packsize for tree packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to 4 MiB if not set]:SIZE: ' \
+'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately 4 GiB]:SIZE: ' \
+'--set-treepack-growfactor=[Set grow factor for tree packs. The default packsize grows by the square root of the total size of all tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total treesize in GiB. Defaults to 32 (= 1MB per square root of total treesize in GiB) if not set]:FACTOR: ' \
+'--set-datapack-size=[Set default packsize for data packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to 32 MiB if not set]:SIZE: ' \
+'--set-datapack-growfactor=[Set grow factor for data packs. The default packsize grows by the square root of the total size of all data packs multiplied with this factor. This means 32 kiB times this factor per square root of total datasize in GiB. Defaults to 32 (= 1MB per square root of total datasize in GiB) if not set]:FACTOR: ' \
+'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately 4 GiB]:SIZE: ' \
+'--set-min-packsize-tolerate-percent=[Set minimum tolerated packsize in percent of the targeted packsize. Defaults to 30 if not set]:PERCENT: ' \
+'--set-max-packsize-tolerate-percent=[Set maximum tolerated packsize in percent of the targeted packsize A value of 0 means packs larger than the targeted packsize are always tolerated. Default if not set\: larger packfiles are always tolerated]:PERCENT: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--with-created[Add '\''created'\'' date in public key information]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(key)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_rustic__key_commands" \
+"*::: :->key" \
+&& ret=0
+
+    case $state in
+    (key)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-key-command-$line[1]:"
+        case $line[1] in
+            (add)
+_arguments "${_arguments_options[@]}" \
+'--new-password-file=[File from which to read the new password]:NEW_PASSWORD_FILE: ' \
+'--hostname=[Set '\''hostname'\'' in public key information]:HOSTNAME: ' \
+'--username=[Set '\''username'\'' in public key information]:USERNAME: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--with-created[Add '\''created'\'' date in public key information]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__key__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-key-help-command-$line[1]:"
+        case $line[1] in
+            (add)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(list)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':tpe -- File type to list:(blobs index packs snapshots keys)' \
+&& ret=0
+;;
+(ls)
+_arguments "${_arguments_options[@]}" \
+'*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
+'*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
+'*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
+'*--iglob-file=[Same as --glob-file ignores the casing of filenames in patterns]:FILE: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--recursive[recursively list the dir (default when no PATH is given)]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':snap -- Snapshot/path to list:' \
+&& ret=0
+;;
+(merge)
+_arguments "${_arguments_options[@]}" \
+'--label=[Label snapshot with given label]:LABEL: ' \
+'*--tag=[Tags to add to snapshot (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--description=[Add description to snapshot]:DESCRIPTION: ' \
+'(--description)--description-from=[Add description to snapshot from file]:FILE:_files' \
+'--delete-after=[Mark snapshot to be deleted after given duration (e.g. 10d)]:DURATION: ' \
+'--host=[Set the host name manually]:NAME: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--json[Output generated snapshot in json format]' \
+'--delete[Remove input snapshots after merging]' \
+'(--delete-after)--delete-never[Mark snapshot as uneraseable]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::ids -- Snapshots to merge. If none is given, use filter options to filter from all snapshots:' \
+&& ret=0
+;;
+(snapshots)
+_arguments "${_arguments_options[@]}" \
+'-g+[Group snapshots by any combination of host,label,paths,tags]:CRITERION: ' \
+'--group-by=[Group snapshots by any combination of host,label,paths,tags]:CRITERION: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--long[Show detailed information about snapshots]' \
+'(--long)--json[Show snapshots in json format]' \
+'(--long --json)--all[Show all snapshots instead of summarizing identical follow-up snapshots]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::ids -- Snapshots to show. If none is given, use filter options to filter from all snapshots:' \
+&& ret=0
+;;
+(show-config)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(self-update)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'(-n --dry-run)--force[Do not ask before processing the self-update]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(prune)
+_arguments "${_arguments_options[@]}" \
+'--max-repack=[Define maximum data to repack in % of reposize or as size (e.g. '\''5b'\'', '\''2 kB'\'', '\''3M'\'', '\''4TiB'\'') or '\''unlimited'\'']:LIMIT: ' \
+'--max-unused=[Tolerate limit of unused data in % of reposize after pruning or as size (e.g. '\''5b'\'', '\''2 kB'\'', '\''3M'\'', '\''4TiB'\'') or '\''unlimited'\'']:LIMIT: ' \
+'--keep-pack=[Minimum duration (e.g. 90d) to keep packs before repacking or removing. More recently created packs won'\''t be repacked or marked for deletion within this prune run]:DURATION: ' \
+'--keep-delete=[Minimum duration (e.g. 10m) to keep packs marked for deletion. More recently marked packs won'\''t be deleted within this prune run]:DURATION: ' \
+'--repack-cacheable-only=[Only repack packs which are cacheable \[default\: true for a hot/cold repository, else false\]]:TRUE/FALSE:(true false)' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--instant-delete[Delete files immediately instead of marking them. This also removes all files already marked for deletion. WARNING\: Only use if you are sure the repository is not accessed by parallel processes!]' \
+'--fast-repack[Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting]' \
+'(--fast-repack)--repack-uncompressed[Repack packs containing uncompressed blobs. This cannot be used with --fast-repack. Implies --max-unused=0]' \
+'--repack-all[Repack all packs. Implies --max-unused=0]' \
+'--no-resize[Do not repack packs which only needs to be resized]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(restore)
+_arguments "${_arguments_options[@]}" \
+'*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
+'*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
+'*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
+'*--iglob-file=[Same as --glob-file ignores the casing of filenames in patterns]:FILE: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'--delete[Remove all files/dirs in destination which are not contained in snapshot. WARNING\: Use with care, maybe first try this with --dry-run?]' \
+'--numeric-id[Use numeric ids instead of user/group when restoring uid/gui]' \
+'(--numeric-id)--no-ownership[Don'\''t restore ownership (user/group)]' \
+'--verify-existing[Always read and verify existing files (don'\''t trust correct modification time and file size)]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':snap -- Snapshot/path to restore:' \
+':dest -- Restore destination:' \
+&& ret=0
+;;
+(repair)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_rustic__repair_commands" \
+"*::: :->repair" \
+&& ret=0
+
+    case $state in
+    (repair)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-repair-command-$line[1]:"
+        case $line[1] in
+            (index)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--read-all[]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(snapshots)
+_arguments "${_arguments_options[@]}" \
+'--suffix=[Append this suffix to repaired directory or file name]:SUFFIX: ' \
+'*--tag=[Tag list to set on repaired snapshots (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--delete[Also remove defect snapshots - WARNING\: This can result in data loss!]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::ids -- Snapshots to repair. If none is given, use filter to filter from all snapshots:' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__repair__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-repair-help-command-$line[1]:"
+        case $line[1] in
+            (index)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(snapshots)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(repoinfo)
+_arguments "${_arguments_options[@]}" \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(tag)
+_arguments "${_arguments_options[@]}" \
+'(--remove)*--add=[Tags to add (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'*--remove=[Tags to remove (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'(--remove)*--set=[Tag list to set (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--set-delete-after=[Mark snapshot to be deleted after given duration (e.g. 10d)]:DURATION: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them. Note\: warnings and errors are still additionally printed unless they are ignored by --log-level]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository - WARNING\: Using --password can reveal the password in the process list!]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'(--set-delete-never --set-delete-after)--remove-delete[Remove any delete mark]' \
+'(--set-delete-after)--set-delete-never[Mark snapshot as uneraseable]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::ids -- Snapshots to change tags. If none is given, use filter to filter from all snapshots:' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-help-command-$line[1]:"
+        case $line[1] in
+            (backup)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(cat)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__help__cat_commands" \
+"*::: :->cat" \
+&& ret=0
+
+    case $state in
+    (cat)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-help-cat-command-$line[1]:"
+        case $line[1] in
+            (tree-blob)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(data-blob)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(index)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(snapshot)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(tree)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(config)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(check)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(copy)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(diff)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(dump)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(forget)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(init)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(key)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__help__key_commands" \
+"*::: :->key" \
+&& ret=0
+
+    case $state in
+    (key)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-help-key-command-$line[1]:"
+        case $line[1] in
+            (add)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(list)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(ls)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(merge)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(snapshots)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(show-config)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(self-update)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(prune)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(restore)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(repair)
+_arguments "${_arguments_options[@]}" \
+":: :_rustic__help__repair_commands" \
+"*::: :->repair" \
+&& ret=0
+
+    case $state in
+    (repair)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:rustic-help-repair-command-$line[1]:"
+        case $line[1] in
+            (index)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(snapshots)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(repoinfo)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(tag)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_rustic_commands] )) ||
+_rustic_commands() {
+    local commands; commands=(
+'backup:Backup to the repository' \
+'cat:Show raw data of repository files and blobs' \
+'config:Change the repository configuration' \
+'completions:Generate shell completions' \
+'check:Check the repository' \
+'copy:Copy snapshots to other repositories. Note\: The target repositories must be given in the config file!' \
+'diff:Compare two snapshots/paths Note that the exclude options only apply for comparison with a local path' \
+'dump:dump the contents of a file in a snapshot to stdout' \
+'forget:Remove snapshots from the repository' \
+'init:Initialize a new repository' \
+'key:Manage keys' \
+'list:List repository files' \
+'ls:List file contents of a snapshot' \
+'merge:Merge snapshots' \
+'snapshots:Show a detailed overview of the snapshots within the repository' \
+'show-config:Show the configuration which has been read from the config file(s)' \
+'self-update:Update to the latest rustic release' \
+'prune:Remove unused data or repack repository pack files' \
+'restore:Restore a snapshot/path' \
+'repair:Repair a snapshot/path' \
+'repoinfo:Show general information about the repository' \
+'tag:Change tags of snapshots' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic commands' commands "$@"
+}
+(( $+functions[_rustic__help__key__add_commands] )) ||
+_rustic__help__key__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help key add commands' commands "$@"
+}
+(( $+functions[_rustic__key__add_commands] )) ||
+_rustic__key__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic key add commands' commands "$@"
+}
+(( $+functions[_rustic__key__help__add_commands] )) ||
+_rustic__key__help__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic key help add commands' commands "$@"
+}
+(( $+functions[_rustic__backup_commands] )) ||
+_rustic__backup_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic backup commands' commands "$@"
+}
+(( $+functions[_rustic__help__backup_commands] )) ||
+_rustic__help__backup_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help backup commands' commands "$@"
+}
+(( $+functions[_rustic__cat_commands] )) ||
+_rustic__cat_commands() {
+    local commands; commands=(
+'tree-blob:Display a tree blob' \
+'data-blob:Display a data blob' \
+'config:Display the config file' \
+'index:Display an index file' \
+'snapshot:Display a snapshot file' \
+'tree:Display a tree within a snapshot' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic cat commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat_commands] )) ||
+_rustic__help__cat_commands() {
+    local commands; commands=(
+'tree-blob:Display a tree blob' \
+'data-blob:Display a data blob' \
+'config:Display the config file' \
+'index:Display an index file' \
+'snapshot:Display a snapshot file' \
+'tree:Display a tree within a snapshot' \
+    )
+    _describe -t commands 'rustic help cat commands' commands "$@"
+}
+(( $+functions[_rustic__check_commands] )) ||
+_rustic__check_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic check commands' commands "$@"
+}
+(( $+functions[_rustic__help__check_commands] )) ||
+_rustic__help__check_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help check commands' commands "$@"
+}
+(( $+functions[_rustic__completions_commands] )) ||
+_rustic__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic completions commands' commands "$@"
+}
+(( $+functions[_rustic__help__completions_commands] )) ||
+_rustic__help__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help completions commands' commands "$@"
+}
+(( $+functions[_rustic__cat__config_commands] )) ||
+_rustic__cat__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat config commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__config_commands] )) ||
+_rustic__cat__help__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help config commands' commands "$@"
+}
+(( $+functions[_rustic__config_commands] )) ||
+_rustic__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic config commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__config_commands] )) ||
+_rustic__help__cat__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat config commands' commands "$@"
+}
+(( $+functions[_rustic__help__config_commands] )) ||
+_rustic__help__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help config commands' commands "$@"
+}
+(( $+functions[_rustic__copy_commands] )) ||
+_rustic__copy_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic copy commands' commands "$@"
+}
+(( $+functions[_rustic__help__copy_commands] )) ||
+_rustic__help__copy_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help copy commands' commands "$@"
+}
+(( $+functions[_rustic__cat__data-blob_commands] )) ||
+_rustic__cat__data-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat data-blob commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__data-blob_commands] )) ||
+_rustic__cat__help__data-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help data-blob commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__data-blob_commands] )) ||
+_rustic__help__cat__data-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat data-blob commands' commands "$@"
+}
+(( $+functions[_rustic__diff_commands] )) ||
+_rustic__diff_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic diff commands' commands "$@"
+}
+(( $+functions[_rustic__help__diff_commands] )) ||
+_rustic__help__diff_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help diff commands' commands "$@"
+}
+(( $+functions[_rustic__dump_commands] )) ||
+_rustic__dump_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic dump commands' commands "$@"
+}
+(( $+functions[_rustic__help__dump_commands] )) ||
+_rustic__help__dump_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help dump commands' commands "$@"
+}
+(( $+functions[_rustic__forget_commands] )) ||
+_rustic__forget_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic forget commands' commands "$@"
+}
+(( $+functions[_rustic__help__forget_commands] )) ||
+_rustic__help__forget_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help forget commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help_commands] )) ||
+_rustic__cat__help_commands() {
+    local commands; commands=(
+'tree-blob:Display a tree blob' \
+'data-blob:Display a data blob' \
+'config:Display the config file' \
+'index:Display an index file' \
+'snapshot:Display a snapshot file' \
+'tree:Display a tree within a snapshot' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic cat help commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__help_commands] )) ||
+_rustic__cat__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help help commands' commands "$@"
+}
+(( $+functions[_rustic__help_commands] )) ||
+_rustic__help_commands() {
+    local commands; commands=(
+'backup:Backup to the repository' \
+'cat:Show raw data of repository files and blobs' \
+'config:Change the repository configuration' \
+'completions:Generate shell completions' \
+'check:Check the repository' \
+'copy:Copy snapshots to other repositories. Note\: The target repositories must be given in the config file!' \
+'diff:Compare two snapshots/paths Note that the exclude options only apply for comparison with a local path' \
+'dump:dump the contents of a file in a snapshot to stdout' \
+'forget:Remove snapshots from the repository' \
+'init:Initialize a new repository' \
+'key:Manage keys' \
+'list:List repository files' \
+'ls:List file contents of a snapshot' \
+'merge:Merge snapshots' \
+'snapshots:Show a detailed overview of the snapshots within the repository' \
+'show-config:Show the configuration which has been read from the config file(s)' \
+'self-update:Update to the latest rustic release' \
+'prune:Remove unused data or repack repository pack files' \
+'restore:Restore a snapshot/path' \
+'repair:Repair a snapshot/path' \
+'repoinfo:Show general information about the repository' \
+'tag:Change tags of snapshots' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic help commands' commands "$@"
+}
+(( $+functions[_rustic__help__help_commands] )) ||
+_rustic__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help help commands' commands "$@"
+}
+(( $+functions[_rustic__key__help_commands] )) ||
+_rustic__key__help_commands() {
+    local commands; commands=(
+'add:Add a new key to the repository' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic key help commands' commands "$@"
+}
+(( $+functions[_rustic__key__help__help_commands] )) ||
+_rustic__key__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic key help help commands' commands "$@"
+}
+(( $+functions[_rustic__repair__help_commands] )) ||
+_rustic__repair__help_commands() {
+    local commands; commands=(
+'index:Repair the repository index' \
+'snapshots:Repair snapshots' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic repair help commands' commands "$@"
+}
+(( $+functions[_rustic__repair__help__help_commands] )) ||
+_rustic__repair__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repair help help commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__index_commands] )) ||
+_rustic__cat__help__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help index commands' commands "$@"
+}
+(( $+functions[_rustic__cat__index_commands] )) ||
+_rustic__cat__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat index commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__index_commands] )) ||
+_rustic__help__cat__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat index commands' commands "$@"
+}
+(( $+functions[_rustic__help__repair__index_commands] )) ||
+_rustic__help__repair__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help repair index commands' commands "$@"
+}
+(( $+functions[_rustic__repair__help__index_commands] )) ||
+_rustic__repair__help__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repair help index commands' commands "$@"
+}
+(( $+functions[_rustic__repair__index_commands] )) ||
+_rustic__repair__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repair index commands' commands "$@"
+}
+(( $+functions[_rustic__help__init_commands] )) ||
+_rustic__help__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help init commands' commands "$@"
+}
+(( $+functions[_rustic__init_commands] )) ||
+_rustic__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic init commands' commands "$@"
+}
+(( $+functions[_rustic__help__key_commands] )) ||
+_rustic__help__key_commands() {
+    local commands; commands=(
+'add:Add a new key to the repository' \
+    )
+    _describe -t commands 'rustic help key commands' commands "$@"
+}
+(( $+functions[_rustic__key_commands] )) ||
+_rustic__key_commands() {
+    local commands; commands=(
+'add:Add a new key to the repository' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic key commands' commands "$@"
+}
+(( $+functions[_rustic__help__list_commands] )) ||
+_rustic__help__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help list commands' commands "$@"
+}
+(( $+functions[_rustic__list_commands] )) ||
+_rustic__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic list commands' commands "$@"
+}
+(( $+functions[_rustic__help__ls_commands] )) ||
+_rustic__help__ls_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help ls commands' commands "$@"
+}
+(( $+functions[_rustic__ls_commands] )) ||
+_rustic__ls_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic ls commands' commands "$@"
+}
+(( $+functions[_rustic__help__merge_commands] )) ||
+_rustic__help__merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help merge commands' commands "$@"
+}
+(( $+functions[_rustic__merge_commands] )) ||
+_rustic__merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic merge commands' commands "$@"
+}
+(( $+functions[_rustic__help__prune_commands] )) ||
+_rustic__help__prune_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help prune commands' commands "$@"
+}
+(( $+functions[_rustic__prune_commands] )) ||
+_rustic__prune_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic prune commands' commands "$@"
+}
+(( $+functions[_rustic__help__repair_commands] )) ||
+_rustic__help__repair_commands() {
+    local commands; commands=(
+'index:Repair the repository index' \
+'snapshots:Repair snapshots' \
+    )
+    _describe -t commands 'rustic help repair commands' commands "$@"
+}
+(( $+functions[_rustic__repair_commands] )) ||
+_rustic__repair_commands() {
+    local commands; commands=(
+'index:Repair the repository index' \
+'snapshots:Repair snapshots' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic repair commands' commands "$@"
+}
+(( $+functions[_rustic__help__repoinfo_commands] )) ||
+_rustic__help__repoinfo_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help repoinfo commands' commands "$@"
+}
+(( $+functions[_rustic__repoinfo_commands] )) ||
+_rustic__repoinfo_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repoinfo commands' commands "$@"
+}
+(( $+functions[_rustic__help__restore_commands] )) ||
+_rustic__help__restore_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help restore commands' commands "$@"
+}
+(( $+functions[_rustic__restore_commands] )) ||
+_rustic__restore_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic restore commands' commands "$@"
+}
+(( $+functions[_rustic__help__self-update_commands] )) ||
+_rustic__help__self-update_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help self-update commands' commands "$@"
+}
+(( $+functions[_rustic__self-update_commands] )) ||
+_rustic__self-update_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic self-update commands' commands "$@"
+}
+(( $+functions[_rustic__help__show-config_commands] )) ||
+_rustic__help__show-config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help show-config commands' commands "$@"
+}
+(( $+functions[_rustic__show-config_commands] )) ||
+_rustic__show-config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic show-config commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__snapshot_commands] )) ||
+_rustic__cat__help__snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help snapshot commands' commands "$@"
+}
+(( $+functions[_rustic__cat__snapshot_commands] )) ||
+_rustic__cat__snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat snapshot commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__snapshot_commands] )) ||
+_rustic__help__cat__snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat snapshot commands' commands "$@"
+}
+(( $+functions[_rustic__help__repair__snapshots_commands] )) ||
+_rustic__help__repair__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help repair snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__help__snapshots_commands] )) ||
+_rustic__help__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__repair__help__snapshots_commands] )) ||
+_rustic__repair__help__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repair help snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__repair__snapshots_commands] )) ||
+_rustic__repair__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repair snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__snapshots_commands] )) ||
+_rustic__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__help__tag_commands] )) ||
+_rustic__help__tag_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help tag commands' commands "$@"
+}
+(( $+functions[_rustic__tag_commands] )) ||
+_rustic__tag_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic tag commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__tree_commands] )) ||
+_rustic__cat__help__tree_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help tree commands' commands "$@"
+}
+(( $+functions[_rustic__cat__tree_commands] )) ||
+_rustic__cat__tree_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat tree commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__tree_commands] )) ||
+_rustic__help__cat__tree_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat tree commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__tree-blob_commands] )) ||
+_rustic__cat__help__tree-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help tree-blob commands' commands "$@"
+}
+(( $+functions[_rustic__cat__tree-blob_commands] )) ||
+_rustic__cat__tree-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat tree-blob commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__tree-blob_commands] )) ||
+_rustic__help__cat__tree-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat tree-blob commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_rustic" ]; then
+    _rustic "$@"
+else
+    compdef _rustic rustic
+fi

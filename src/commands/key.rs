@@ -1,38 +1,45 @@
-use std::fs::File;
-use std::io::BufReader;
+//! `key` subcommand
 
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{
+    commands::{get_repository, open_repository},
+    status_err, Application, RUSTIC_APP,
+};
+
+use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+
+use std::{fs::File, io::BufReader};
+
 use rpassword::{prompt_password, read_password_from_bufread};
 
-use crate::backend::{FileType, WriteBackend};
-use crate::crypto::{hash, Key};
-use crate::repofile::KeyFile;
-use crate::repository::OpenRepository;
+use rustic_core::{hash, FileType, KeyFile, WriteBackend};
 
-#[derive(Parser)]
-pub(super) struct Opts {
+/// `key` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(super) struct KeyCmd {
     #[clap(subcommand)]
-    command: Command,
+    cmd: KeySubCmd,
 }
 
-#[derive(Subcommand)]
-enum Command {
+#[derive(clap::Subcommand, Debug, Runnable)]
+enum KeySubCmd {
     /// Add a new key to the repository
-    Add(AddOpts),
+    Add(AddCmd),
 }
 
-#[derive(Parser)]
-pub(crate) struct AddOpts {
+#[derive(clap::Parser, Debug)]
+pub(crate) struct AddCmd {
     /// File from which to read the new password
     #[clap(long)]
     pub(crate) new_password_file: Option<String>,
 
     #[clap(flatten)]
-    pub key_opts: KeyOpts,
+    pub(crate) key_opts: KeyOpts,
 }
 
-#[derive(Clone, Parser)]
+#[derive(clap::Parser, Debug, Clone)]
 pub(crate) struct KeyOpts {
     /// Set 'hostname' in public key information
     #[clap(long)]
@@ -47,26 +54,63 @@ pub(crate) struct KeyOpts {
     pub(crate) with_created: bool,
 }
 
-pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
-    match opts.command {
-        Command::Add(opt) => add_key(&repo.dbe, repo.key, opt),
+impl Runnable for KeyCmd {
+    fn run(&self) {
+        self.cmd.run();
     }
 }
 
-fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> {
-    let pass = match opts.new_password_file {
-        Some(file) => {
-            let mut file = BufReader::new(File::open(file)?);
-            read_password_from_bufread(&mut file)?
-        }
-        None => prompt_password("enter password for new key: ")?,
-    };
-    let ko = opts.key_opts;
-    let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
-    let data = serde_json::to_vec(&keyfile)?;
-    let id = hash(&data);
-    be.write_bytes(FileType::Key, &id, false, data.into())?;
+impl Runnable for AddCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
+    }
+}
 
-    println!("key {id} successfully added.");
-    Ok(())
+impl AddCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+
+        let repo = open_repository(get_repository(&config));
+
+        let be = &repo.dbe;
+        let key = repo.key;
+
+        let pass = self.new_password_file.as_ref().map_or_else(
+            || match prompt_password("enter password for new key: ") {
+                Ok(it) => it,
+                Err(err) => {
+                    status_err!("{}", err);
+                    RUSTIC_APP.shutdown(Shutdown::Crash);
+                }
+            },
+            |file| {
+                let mut file = BufReader::new(match File::open(file) {
+                    Ok(it) => it,
+                    Err(err) => {
+                        status_err!("{}", err);
+                        RUSTIC_APP.shutdown(Shutdown::Crash);
+                    }
+                });
+                match read_password_from_bufread(&mut file) {
+                    Ok(it) => it,
+                    Err(err) => {
+                        status_err!("{}", err);
+                        RUSTIC_APP.shutdown(Shutdown::Crash);
+                    }
+                }
+            },
+        );
+        let ko = self.key_opts.clone();
+        let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
+        let data = serde_json::to_vec(&keyfile)?;
+        let id = hash(&data);
+        be.write_bytes(FileType::Key, &id, false, data.into())?;
+
+        println!("key {id} successfully added.");
+
+        Ok(())
+    }
 }

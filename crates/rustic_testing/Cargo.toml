@@ -1,0 +1,10 @@
+[package]
+publish = false
+name = "rustic_testing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+once_cell = { workspace = true }
+tempfile = { workspace = true }
+aho-corasick = { workspace = true }

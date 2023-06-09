@@ -133,7 +133,7 @@ toml = { workspace = true }
 [target.'cfg(not(windows))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }
 users = "0.11"
-libc = "0.2.144"
+libc = "0.2.146"
 
 [target.'cfg(windows)'.dependencies]
 # unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17

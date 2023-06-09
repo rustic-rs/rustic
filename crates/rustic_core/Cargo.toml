@@ -119,7 +119,7 @@ xattr = "1"
 [dev-dependencies]
 rustup-toolchain = "0.1.4"
 rustdoc-json = "0.8.5"
-public-api = "0.29.1"
+public-api = "0.31.1"
 rstest = { workspace = true }
 expect-test = "1.4.1"
 quickcheck = { workspace = true }

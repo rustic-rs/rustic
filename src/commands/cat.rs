@@ -14,7 +14,8 @@ use std::path::Path;
 use anyhow::{anyhow, Result};
 
 use rustic_core::{
-    BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexedBackend, SnapshotFile, Tree,
+    BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexedBackend, ProgressBars,
+    SnapshotFile, Tree,
 };
 
 /// `cat` subcommand

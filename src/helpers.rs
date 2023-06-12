@@ -15,8 +15,8 @@ use rayon::{
 
 use rustic_core::{
     parse_command, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, IndexedBackend,
-    Indexer, NodeType, OpenRepository, Packer, Progress, ReadBackend, ReadIndex, RusticResult,
-    SnapshotFile, TreeStreamerOnce, ALL_FILE_TYPES,
+    Indexer, NodeType, OpenRepository, Packer, Progress, ProgressBars, ReadBackend, ReadIndex,
+    RusticResult, SnapshotFile, TreeStreamerOnce, ALL_FILE_TYPES,
 };
 
 use crate::{application::RUSTIC_APP, config::progress_options::ProgressOptions};

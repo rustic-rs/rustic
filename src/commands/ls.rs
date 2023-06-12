@@ -12,7 +12,9 @@ use anyhow::Result;
 
 use std::path::Path;
 
-use rustic_core::{IndexBackend, NodeStreamer, SnapshotFile, Tree, TreeStreamerOptions};
+use rustic_core::{
+    IndexBackend, NodeStreamer, ProgressBars, SnapshotFile, Tree, TreeStreamerOptions,
+};
 
 /// `ls` subcommand
 #[derive(clap::Parser, Command, Debug)]

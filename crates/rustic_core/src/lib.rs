@@ -90,6 +90,7 @@ pub(crate) mod backend;
 pub(crate) mod blob;
 pub(crate) mod cdc;
 pub(crate) mod chunker;
+pub(crate) mod commands;
 pub(crate) mod crypto;
 pub(crate) mod error;
 pub(crate) mod file;
@@ -119,6 +120,7 @@ pub use crate::{
         BlobLocation, BlobType, BlobTypeMap, Initialize, Sum,
     },
     chunker::random_poly,
+    commands::check::CheckOpts,
     crypto::{aespoly1305::Key, hasher::hash},
     error::{RusticError, RusticResult},
     file::{AddFileResult, FileInfos, RestoreStats},
@@ -128,7 +130,7 @@ pub use crate::{
         indexer::Indexer,
         IndexBackend, IndexEntry, IndexedBackend, ReadIndex,
     },
-    progress::Progress,
+    progress::{Progress, ProgressBars},
     repofile::{
         configfile::ConfigFile,
         indexfile::{IndexBlob, IndexFile, IndexPack},

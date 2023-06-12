@@ -31,8 +31,8 @@ use crate::helpers::warm_up_wait;
 use rustic_core::{
     BlobType, BlobTypeMap, DecryptReadBackend, DecryptWriteBackend, FileType, HeaderEntry, Id,
     IndexBackend, IndexBlob, IndexCollector, IndexFile, IndexPack, IndexType, IndexedBackend,
-    Indexer, Initialize, NodeType, OpenRepository, PackSizer, Progress, ReadBackend, ReadIndex,
-    Repacker, SnapshotFile, Sum, TreeStreamerOnce,
+    Indexer, Initialize, NodeType, OpenRepository, PackSizer, Progress, ProgressBars, ReadBackend,
+    ReadIndex, Repacker, SnapshotFile, Sum, TreeStreamerOnce,
 };
 
 pub(super) mod constants {

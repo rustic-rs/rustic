@@ -12,7 +12,9 @@ use anyhow::{bail, Result};
 
 use std::{io::Write, path::Path};
 
-use rustic_core::{BlobType, IndexBackend, IndexedBackend, NodeType, SnapshotFile, Tree};
+use rustic_core::{
+    BlobType, IndexBackend, IndexedBackend, NodeType, ProgressBars, SnapshotFile, Tree,
+};
 
 /// `dump` subcommand
 #[derive(clap::Parser, Command, Debug)]

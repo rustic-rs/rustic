@@ -16,7 +16,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use itertools::Itertools;
 
 use rustic_core::DeleteOption;
-use rustic_core::{SnapshotFile, SnapshotGroup, SnapshotGroupCriterion};
+use rustic_core::{ProgressBars, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion};
 
 /// `snapshot` subcommand
 #[derive(clap::Parser, Command, Debug)]

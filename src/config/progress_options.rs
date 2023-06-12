@@ -10,7 +10,7 @@ use merge::Merge;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
-use rustic_core::Progress;
+use rustic_core::{Progress, ProgressBars};
 
 #[serde_as]
 #[derive(Default, Debug, Parser, Clone, Copy, Deserialize, Serialize, Merge)]
@@ -38,7 +38,14 @@ impl ProgressOptions {
         self.progress_interval.map_or(Duration::ZERO, |i| *i)
     }
 
-    pub fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
+    pub fn no_progress() -> RusticProgress {
+        RusticProgress(ProgressBar::hidden())
+    }
+}
+impl ProgressBars for ProgressOptions {
+    type P = RusticProgress;
+
+    fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         if self.no_progress {
             return Self::no_progress();
         }
@@ -52,7 +59,7 @@ impl ProgressOptions {
         RusticProgress(p)
     }
 
-    pub fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
+    fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         if self.no_progress {
             return Self::no_progress();
         }
@@ -66,15 +73,11 @@ impl ProgressOptions {
         RusticProgress(p)
     }
 
-    pub fn progress_hidden(&self) -> RusticProgress {
+    fn progress_hidden(&self) -> RusticProgress {
         Self::no_progress()
     }
 
-    pub fn no_progress() -> RusticProgress {
-        RusticProgress(ProgressBar::hidden())
-    }
-
-    pub fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
+    fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         if self.no_progress {
             return Self::no_progress();
         }

@@ -16,8 +16,8 @@ use anyhow::{anyhow, bail, Context, Result};
 
 use rustic_core::{
     hash, IndexBackend, LocalDestination, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, Node, NodeStreamer, NodeType, Progress, ReadIndex, ReadSourceEntry,
-    RusticResult, SnapshotFile, Tree,
+    LocalSourceSaveOptions, Node, NodeStreamer, NodeType, Progress, ProgressBars, ReadIndex,
+    ReadSourceEntry, RusticResult, SnapshotFile, Tree,
 };
 
 /// `diff` subcommand

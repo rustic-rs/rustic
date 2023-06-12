@@ -42,6 +42,10 @@ impl RusticError {
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum RusticErrorKind {
+    /// [`CommandErrorKind`] describes the errors that can happen while executing a high-level command
+    #[error(transparent)]
+    Command(#[from] CommandErrorKind),
+
     /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions
     #[error(transparent)]
     Crypto(#[from] CryptoErrorKind),
@@ -133,6 +137,13 @@ pub enum RusticErrorKind {
     /// [`std::io::Error`]
     #[error(transparent)]
     StdIo(#[from] std::io::Error),
+}
+
+/// [`CommandErrorKind`] describes the errors that can happen while executing a high-level command
+#[derive(Error, Debug, Display)]
+pub enum CommandErrorKind {
+    /// path is no dir: `{0:?}`
+    PathIsNoDir(String),
 }
 
 /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions
@@ -741,6 +752,7 @@ impl RusticErrorMarker for ProviderErrorKind {}
 impl RusticErrorMarker for RestErrorKind {}
 impl RusticErrorMarker for StdInErrorKind {}
 impl RusticErrorMarker for ArchiverErrorKind {}
+impl RusticErrorMarker for CommandErrorKind {}
 impl RusticErrorMarker for std::io::Error {}
 
 impl<E> From<E> for RusticError

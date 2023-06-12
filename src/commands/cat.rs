@@ -9,14 +9,9 @@ use crate::{
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
-use std::path::Path;
+use anyhow::Result;
 
-use anyhow::{anyhow, Result};
-
-use rustic_core::{
-    BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexedBackend, ProgressBars,
-    SnapshotFile, Tree,
-};
+use rustic_core::{cat_blob, cat_file, cat_tree, BlobType, FileType};
 
 /// `cat` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -66,59 +61,27 @@ impl Runnable for CatCmd {
 impl CatCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+        let po = config.global.progress_options;
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
-
-        match &self.cmd {
-            CatSubCmd::Config => cat_file(be, FileType::Config, &IdOpt::default()),
-            CatSubCmd::Index(opt) => cat_file(be, FileType::Index, opt),
-            CatSubCmd::Snapshot(opt) => cat_file(be, FileType::Snapshot, opt),
-            // special treatment for catingg blobs: read the index and use it to locate the blob
-            CatSubCmd::TreeBlob(opt) => cat_blob(be, BlobType::Tree, opt),
-            CatSubCmd::DataBlob(opt) => cat_blob(be, BlobType::Data, opt),
+        let data = match &self.cmd {
+            CatSubCmd::Config => cat_file(&repo, FileType::Config, "")?,
+            CatSubCmd::Index(opt) => cat_file(&repo, FileType::Index, &opt.id)?,
+            CatSubCmd::Snapshot(opt) => cat_file(&repo, FileType::Snapshot, &opt.id)?,
+            // special treatment for cating blobs: read the index and use it to locate the blob
+            CatSubCmd::TreeBlob(opt) => cat_blob(&repo, BlobType::Tree, &opt.id, &po)?,
+            CatSubCmd::DataBlob(opt) => cat_blob(&repo, BlobType::Data, &opt.id, &po)?,
             // special treatment for cating a tree within a snapshot
-            CatSubCmd::Tree(opts) => cat_tree(be, opts),
-        }?;
+            CatSubCmd::Tree(opt) => cat_tree(
+                &repo,
+                &opt.snap,
+                |sn| config.snapshot_filter.matches(sn),
+                &po,
+            )?,
+        };
+        println!("{}", String::from_utf8(data.to_vec())?);
 
         Ok(())
     }
-}
-
-fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: &IdOpt) -> Result<()> {
-    let id = be.find_id(tpe, &opt.id)?;
-    let data = be.read_encrypted_full(tpe, &id)?;
-    println!("{}", String::from_utf8(data.to_vec())?);
-
-    Ok(())
-}
-
-fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: &IdOpt) -> Result<()> {
-    let config = RUSTIC_APP.config();
-    let id = Id::from_hex(&opt.id)?;
-    let data = IndexBackend::new(be, &config.global.progress_options.progress_hidden())?
-        .blob_from_backend(tpe, &id)?;
-    print!("{}", String::from_utf8(data.to_vec())?);
-
-    Ok(())
-}
-
-fn cat_tree(be: &impl DecryptReadBackend, opts: &TreeOpts) -> Result<()> {
-    let config = RUSTIC_APP.config();
-
-    let (id, path) = opts.snap.split_once(':').unwrap_or((&opts.snap, ""));
-    let snap = SnapshotFile::from_str(
-        be,
-        id,
-        |sn| config.snapshot_filter.matches(sn),
-        &config.global.progress_options.progress_counter(""),
-    )?;
-    let index = IndexBackend::new(be, &config.global.progress_options.progress_counter(""))?;
-    let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
-    let id = node.subtree.ok_or_else(|| anyhow!("{path} is no dir"))?;
-    let data = index.blob_from_backend(BlobType::Tree, &id)?;
-    println!("{}", String::from_utf8(data.to_vec())?);
-
-    Ok(())
 }

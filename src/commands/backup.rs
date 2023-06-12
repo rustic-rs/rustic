@@ -4,6 +4,7 @@
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::{get_repository, open_repository},
+    helpers::bytes_size_to_string,
     {status_err, Application, RUSTIC_APP},
 };
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -20,9 +21,9 @@ use path_dedot::ParseDot;
 use serde::Deserialize;
 
 use rustic_core::{
-    bytes_size_to_string, Archiver, DryRunBackend, IndexBackend, LocalSource,
-    LocalSourceFilterOptions, LocalSourceSaveOptions, PathList, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion, SnapshotOptions, StdinSource,
+    Archiver, DryRunBackend, IndexBackend, LocalSource, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
+    SnapshotOptions, StdinSource,
 };
 
 /// `backup` subcommand

@@ -25,7 +25,7 @@ edition = "2021"
 
 [features]
 default = []
-cli = ["merge", "clap", "dep:comfy-table"]
+cli = ["merge", "clap"]
 merge = ["dep:merge"]
 clap = ["dep:clap", "dep:clap_complete"]
 
@@ -68,7 +68,6 @@ chrono = { workspace = true }
 zstd = { workspace = true }
 enum-map = { workspace = true }
 enum-map-derive = { workspace = true }
-comfy-table = { workspace = true, optional = true }
 
 # local backend
 walkdir = { workspace = true }

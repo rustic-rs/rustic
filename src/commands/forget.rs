@@ -4,6 +4,7 @@
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::{get_repository, open_repository},
+    helpers::table_with_titles,
     status_err, Application, RusticConfig, RUSTIC_APP,
 };
 
@@ -22,7 +23,6 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
 
-use rustic_core::helpers::table_output::table_with_titles;
 use rustic_core::{
     DecryptWriteBackend, FileType, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, StringList,
 };

@@ -20,9 +20,7 @@ TODO
 This crate exposes a few features for controlling dependency usage.
 
 *   **cli** -
-    Enables support for CLI features by enabling `merg` and `clap` features. It
-    also enables a dependency on `comfy-table` for table output. This feature is
-    disabled by default.
+    Enables support for CLI features by enabling `merg` and `clap` features.
 *   **merge** -
     Enables support for merging multiple values into one, which enables the `merge`
     dependency. This is needed for parsing commandline arguments and merging them
@@ -95,7 +93,6 @@ pub(crate) mod chunker;
 pub(crate) mod crypto;
 pub(crate) mod error;
 pub(crate) mod file;
-pub mod helpers;
 pub(crate) mod id;
 pub(crate) mod index;
 pub(crate) mod progress;
@@ -125,7 +122,6 @@ pub use crate::{
     crypto::{aespoly1305::Key, hasher::hash},
     error::{RusticError, RusticResult},
     file::{AddFileResult, FileInfos, RestoreStats},
-    helpers::bytes_size_to_string,
     id::Id,
     index::{
         binarysorted::{IndexCollector, IndexType},
@@ -145,9 +141,4 @@ pub use crate::{
         RepoFile,
     },
     repository::{parse_command, OpenRepository, RepoInfo, Repository, RepositoryOptions},
-};
-
-#[cfg(feature = "cli")]
-pub use crate::helpers::table_output::{
-    bold_cell, print_file_info, table, table_right_from, table_with_titles,
 };

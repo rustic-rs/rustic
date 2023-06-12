@@ -11,7 +11,7 @@ use rayon::{
 
 use rustic_core::{
     parse_command, table_with_titles, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend,
-    IndexedBackend, Indexer, NodeType, OpenRepository, Packer, ReadBackend, ReadIndex,
+    IndexedBackend, Indexer, NodeType, OpenRepository, Packer, Progress, ReadBackend, ReadIndex,
     SnapshotFile, TreeStreamerOnce,
 };
 
@@ -102,9 +102,12 @@ pub(crate) fn copy(
     let be_dest = &repo_dest.dbe;
     let progress_options = &config.global.progress_options;
 
-    let snapshots = relevant_snapshots(snapshots, repo_dest, |sn| {
-        config.snapshot_filter.matches(sn)
-    })?;
+    let snapshots = relevant_snapshots(
+        snapshots,
+        repo_dest,
+        |sn| config.snapshot_filter.matches(sn),
+        &progress_options.progress_hidden(),
+    )?;
 
     match (snapshots.len(), config.global.dry_run) {
         (count, true) => {
@@ -120,7 +123,7 @@ pub(crate) fn copy(
 
     let snap_trees: Vec<_> = snapshots.iter().map(|sn| sn.tree).collect();
 
-    let index_dest = IndexBackend::new(be_dest, progress_options.progress_counter(""))?;
+    let index_dest = IndexBackend::new(be_dest, &progress_options.progress_counter(""))?;
     let indexer = Indexer::new(be_dest.clone()).into_shared();
 
     let data_packer = Packer::new(
@@ -198,12 +201,13 @@ pub(crate) fn relevant_snapshots<F>(
     snaps: &[SnapshotFile],
     dest_repo: &OpenRepository,
     filter: F,
+    p: &impl Progress,
 ) -> Result<Vec<SnapshotFile>>
 where
     F: FnMut(&SnapshotFile) -> bool,
 {
     // save snapshots in destination in BTreeSet, as we want to efficiently search within to filter out already existing snapshots before copying.
-    let snapshots_dest: BTreeSet<_> = SnapshotFile::all_from_backend(&dest_repo.dbe, filter)?
+    let snapshots_dest: BTreeSet<_> = SnapshotFile::all_from_backend(&dest_repo.dbe, filter, p)?
         .into_iter()
         .map(SnapshotFile::clear_ids)
         .collect();

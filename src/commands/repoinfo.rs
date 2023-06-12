@@ -13,7 +13,7 @@ use anyhow::Result;
 use rustic_core::helpers::table_output::{print_file_info, table_right_from};
 use rustic_core::{
     bytes_size_to_string, BlobType, BlobTypeMap, DecryptReadBackend, IndexEntry, IndexFile,
-    RepoInfo, Sum,
+    Progress, RepoInfo, Sum,
 };
 
 /// `repoinfo` subcommand
@@ -50,7 +50,7 @@ impl RepoInfoCmd {
             .progress_options
             .progress_counter("scanning index...");
         repo.dbe
-            .stream_all::<IndexFile>(p.clone())?
+            .stream_all::<IndexFile>(&p)?
             .into_iter()
             .for_each(|index| {
                 let index = match index {
@@ -77,7 +77,7 @@ impl RepoInfoCmd {
                     }
                 }
             });
-        p.finish_with_message("done");
+        p.finish();
 
         let mut table = table_right_from(
             1,

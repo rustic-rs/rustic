@@ -15,7 +15,6 @@ use std::collections::HashMap;
 use anyhow::Result;
 use bytes::Bytes;
 
-use indicatif::ProgressBar;
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use zstd::stream::decode_all;
@@ -23,7 +22,7 @@ use zstd::stream::decode_all;
 use rustic_core::{
     hash, BlobType, Cache, DecryptReadBackend, FileType, Id, IndexBackend, IndexCollector,
     IndexFile, IndexPack, IndexType, IndexedBackend, NodeType, PackHeader, PackHeaderLength,
-    PackHeaderRef, ReadBackend, SnapshotFile, TreeStreamerOnce,
+    PackHeaderRef, Progress, ReadBackend, SnapshotFile, TreeStreamerOnce,
 };
 
 /// `check` subcommand
@@ -172,7 +171,7 @@ fn check_cache_files(
     cache: &Cache,
     be: &impl ReadBackend,
     file_type: FileType,
-    p: &ProgressBar,
+    p: &impl Progress,
 ) -> Result<()> {
     let files = cache.list_with_size(file_type)?;
 
@@ -259,7 +258,7 @@ fn check_packs(
     let progress_options = &RUSTIC_APP.config().global.progress_options;
 
     let p = progress_options.progress_counter("reading index...");
-    for index in be.stream_all::<IndexFile>(p.clone())? {
+    for index in be.stream_all::<IndexFile>(&p)? {
         let index = index?.1;
         index_collector.extend(index.packs.clone());
         for p in index.packs {
@@ -308,7 +307,7 @@ fn check_snapshots(index: &impl IndexedBackend) -> Result<()> {
     let p = progress_options.progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
         .be()
-        .stream_all::<SnapshotFile>(p.clone())?
+        .stream_all::<SnapshotFile>(&p)?
         .iter()
         .map_ok(|(_, snap)| snap.tree)
         .try_collect()?;
@@ -365,7 +364,7 @@ fn check_pack(
     be: &impl DecryptReadBackend,
     index_pack: IndexPack,
     mut data: Bytes,
-    p: &mut ProgressBar,
+    p: &impl Progress,
 ) -> Result<()> {
     let id = index_pack.id;
     let size = index_pack.pack_size();

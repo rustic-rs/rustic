@@ -13,8 +13,6 @@ use std::path::Path;
 
 use anyhow::{anyhow, Result};
 
-use indicatif::ProgressBar;
-
 use rustic_core::{
     BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexedBackend, SnapshotFile, Tree,
 };
@@ -96,8 +94,10 @@ fn cat_file(be: &impl DecryptReadBackend, tpe: FileType, opt: &IdOpt) -> Result<
 }
 
 fn cat_blob(be: &impl DecryptReadBackend, tpe: BlobType, opt: &IdOpt) -> Result<()> {
+    let config = RUSTIC_APP.config();
     let id = Id::from_hex(&opt.id)?;
-    let data = IndexBackend::new(be, ProgressBar::hidden())?.blob_from_backend(tpe, &id)?;
+    let data = IndexBackend::new(be, &config.global.progress_options.progress_hidden())?
+        .blob_from_backend(tpe, &id)?;
     print!("{}", String::from_utf8(data.to_vec())?);
 
     Ok(())
@@ -113,7 +113,7 @@ fn cat_tree(be: &impl DecryptReadBackend, opts: &TreeOpts) -> Result<()> {
         |sn| config.snapshot_filter.matches(sn),
         &config.global.progress_options.progress_counter(""),
     )?;
-    let index = IndexBackend::new(be, config.global.progress_options.progress_counter(""))?;
+    let index = IndexBackend::new(be, &config.global.progress_options.progress_counter(""))?;
     let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
     let id = node.subtree.ok_or_else(|| anyhow!("{path} is no dir"))?;
     let data = index.blob_from_backend(BlobType::Tree, &id)?;

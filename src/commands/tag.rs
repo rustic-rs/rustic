@@ -81,10 +81,11 @@ impl TagCmd {
 
         let be = &repo.dbe;
 
+        let p = config.global.progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {
-            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn))?
+            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn), &p)?
         } else {
-            SnapshotFile::from_ids(be, &self.ids)?
+            SnapshotFile::from_ids(be, &self.ids, &p)?
         };
 
         let delete = match (

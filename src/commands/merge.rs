@@ -14,7 +14,7 @@ use chrono::Local;
 
 use rustic_core::{
     merge_trees, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, Indexer, Node, Packer,
-    PathList, ReadIndex, SnapshotFile, SnapshotOptions, Tree,
+    PathList, Progress, ReadIndex, SnapshotFile, SnapshotOptions, Tree,
 };
 
 /// `merge` subcommand
@@ -61,13 +61,14 @@ impl MergeCmd {
 
         let be = &repo.dbe;
 
+        let p = progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {
-            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn))?
+            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn), &p)?
         } else {
-            SnapshotFile::from_ids(be, &self.ids)?
+            SnapshotFile::from_ids(be, &self.ids, &p)?
         };
         let index =
-            IndexBackend::only_full_trees(&be.clone(), progress_options.progress_counter(""))?;
+            IndexBackend::only_full_trees(&be.clone(), &progress_options.progress_counter(""))?;
 
         let indexer = Indexer::new(be.clone()).into_shared();
         let packer = Packer::new(

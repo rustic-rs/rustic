@@ -10,6 +10,8 @@ use merge::Merge;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
+use rustic_core::Progress;
+
 #[serde_as]
 #[derive(Default, Debug, Parser, Clone, Copy, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -36,7 +38,7 @@ impl ProgressOptions {
         self.progress_interval.map_or(Duration::ZERO, |i| *i)
     }
 
-    pub fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    pub fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         if self.no_progress {
             return Self::no_progress();
         }
@@ -47,10 +49,10 @@ impl ProgressOptions {
         );
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
-        p
+        RusticProgress(p)
     }
 
-    pub fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    pub fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         if self.no_progress {
             return Self::no_progress();
         }
@@ -61,14 +63,18 @@ impl ProgressOptions {
         );
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
-        p
+        RusticProgress(p)
     }
 
-    pub fn no_progress() -> ProgressBar {
-        ProgressBar::hidden()
+    pub fn progress_hidden(&self) -> RusticProgress {
+        Self::no_progress()
     }
 
-    pub fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> ProgressBar {
+    pub fn no_progress() -> RusticProgress {
+        RusticProgress(ProgressBar::hidden())
+    }
+
+    pub fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         if self.no_progress {
             return Self::no_progress();
         }
@@ -84,6 +90,31 @@ impl ProgressOptions {
             );
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
-        p
+        RusticProgress(p)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RusticProgress(ProgressBar);
+
+impl Progress for RusticProgress {
+    fn is_hidden(&self) -> bool {
+        self.0.is_hidden()
+    }
+
+    fn set_length(&self, len: u64) {
+        self.0.set_length(len);
+    }
+
+    fn set_title(&self, title: &'static str) {
+        self.0.set_prefix(title);
+    }
+
+    fn inc(&self, inc: u64) {
+        self.0.inc(inc);
+    }
+
+    fn finish(&self) {
+        self.0.finish_with_message("done");
     }
 }

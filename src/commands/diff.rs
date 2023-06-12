@@ -16,8 +16,8 @@ use anyhow::{anyhow, bail, Context, Result};
 
 use rustic_core::{
     hash, IndexBackend, LocalDestination, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, Node, NodeStreamer, NodeType, ReadIndex, ReadSourceEntry, RusticResult,
-    SnapshotFile, Tree,
+    LocalSourceSaveOptions, Node, NodeStreamer, NodeType, Progress, ReadIndex, ReadSourceEntry,
+    RusticResult, SnapshotFile, Tree,
 };
 
 /// `diff` subcommand
@@ -68,13 +68,13 @@ impl DiffCmd {
             (Some(id1), Some(id2)) => {
                 // diff between two snapshots
                 let p = progress_options.progress_spinner("getting snapshots...");
-                let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()])?;
+                let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()], &p)?;
                 p.finish();
 
                 let snap1 = &snaps[0];
                 let snap2 = &snaps[1];
 
-                let index = IndexBackend::new(be, progress_options.progress_counter(""))?;
+                let index = IndexBackend::new(be, &progress_options.progress_counter(""))?;
                 let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
                 let node2 = Tree::node_from_path(&index, snap2.tree, Path::new(path2))?;
 
@@ -93,7 +93,7 @@ impl DiffCmd {
                     SnapshotFile::from_str(be, id1, |sn| config.snapshot_filter.matches(sn), &p)?;
                 p.finish();
 
-                let index = IndexBackend::new(be, progress_options.progress_counter(""))?;
+                let index = IndexBackend::new(be, &progress_options.progress_counter(""))?;
                 let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
                 let local = LocalDestination::new(path2, false, !node1.is_dir())?;
                 let path2 = PathBuf::from(path2);

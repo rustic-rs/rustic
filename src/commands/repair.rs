@@ -15,8 +15,8 @@ use anyhow::Result;
 
 use rustic_core::{
     BlobType, DecryptReadBackend, DecryptWriteBackend, FileType, Id, IndexBackend, IndexFile,
-    IndexPack, IndexedBackend, Indexer, NodeType, PackHeader, PackHeaderRef, Packer, ReadBackend,
-    ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
+    IndexPack, IndexedBackend, Indexer, NodeType, PackHeader, PackHeaderRef, Packer, Progress,
+    ReadBackend, ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
 };
 
 use crate::helpers::warm_up_wait;
@@ -139,7 +139,7 @@ impl IndexSubCmd {
         };
 
         let p = progress_options.progress_counter("reading index...");
-        be.stream_all::<IndexFile>(p.clone())?
+        be.stream_all::<IndexFile>(&p)?
             .into_iter()
             .for_each(|index| {
                 let (index_id, index) = match index {
@@ -247,17 +247,18 @@ impl SnapSubCmd {
         let be = &repo.dbe;
         let config_file = &repo.config;
 
+        let p = progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {
-            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn))?
+            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn), &p)?
         } else {
-            SnapshotFile::from_ids(be, &self.ids)?
+            SnapshotFile::from_ids(be, &self.ids, &p)?
         };
 
         let mut replaced = HashMap::new();
         let mut seen = HashSet::new();
         let mut delete = Vec::new();
 
-        let index = IndexBackend::new(&be.clone(), progress_options.progress_counter(""))?;
+        let index = IndexBackend::new(&be.clone(), &progress_options.progress_counter(""))?;
         let indexer = Indexer::new(be.clone()).into_shared();
         let mut packer = Packer::new(
             be.clone(),

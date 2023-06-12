@@ -24,7 +24,8 @@ use serde_with::{serde_as, DisplayFromStr};
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
 
 use rustic_core::{
-    DecryptWriteBackend, FileType, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, StringList,
+    DecryptWriteBackend, FileType, ProgressBars, SnapshotFile, SnapshotGroup,
+    SnapshotGroupCriterion, StringList,
 };
 
 type CheckFunction = fn(&SnapshotFile, &SnapshotFile) -> bool;

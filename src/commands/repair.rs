@@ -16,7 +16,7 @@ use anyhow::Result;
 use rustic_core::{
     BlobType, DecryptReadBackend, DecryptWriteBackend, FileType, Id, IndexBackend, IndexFile,
     IndexPack, IndexedBackend, Indexer, NodeType, PackHeader, PackHeaderRef, Packer, Progress,
-    ReadBackend, ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
+    ProgressBars, ReadBackend, ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
 };
 
 use crate::helpers::warm_up_wait;

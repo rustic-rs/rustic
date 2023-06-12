@@ -23,8 +23,8 @@ use rayon::ThreadPoolBuilder;
 
 use rustic_core::{
     AddFileResult, DecryptReadBackend, FileInfos, FileType, IndexBackend, IndexedBackend,
-    LocalDestination, Node, NodeStreamer, NodeType, Progress, RestoreStats, SnapshotFile, Tree,
-    TreeStreamerOptions,
+    LocalDestination, Node, NodeStreamer, NodeType, Progress, ProgressBars, RestoreStats,
+    SnapshotFile, Tree, TreeStreamerOptions,
 };
 
 use crate::{filtering::SnapshotFilter, helpers::warm_up_wait};

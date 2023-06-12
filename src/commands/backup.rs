@@ -22,8 +22,8 @@ use serde::Deserialize;
 
 use rustic_core::{
     Archiver, DryRunBackend, IndexBackend, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
-    SnapshotOptions, StdinSource,
+    LocalSourceSaveOptions, PathList, ProgressBars, SnapshotFile, SnapshotGroup,
+    SnapshotGroupCriterion, SnapshotOptions, StdinSource,
 };
 
 /// `backup` subcommand

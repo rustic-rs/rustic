@@ -11,7 +11,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::{bail, Result};
 
-use rustic_core::{DecryptReadBackend, FileType, IndexFile, ReadBackend};
+use rustic_core::{DecryptReadBackend, FileType, IndexFile, ProgressBars, ReadBackend};
 
 /// `list` subcommand
 #[derive(clap::Parser, Command, Debug)]

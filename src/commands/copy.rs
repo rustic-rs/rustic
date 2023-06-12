@@ -16,7 +16,8 @@ use serde::Deserialize;
 
 use crate::commands::key::KeyOpts;
 use rustic_core::{
-    FileType, Id, IndexBackend, ReadBackend, Repository, RepositoryOptions, SnapshotFile,
+    FileType, Id, IndexBackend, ProgressBars, ReadBackend, Repository, RepositoryOptions,
+    SnapshotFile,
 };
 
 /// `copy` subcommand

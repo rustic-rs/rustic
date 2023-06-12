@@ -13,7 +13,8 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use crate::helpers::{print_file_info, table_right_from};
 use anyhow::Result;
 use rustic_core::{
-    BlobType, BlobTypeMap, DecryptReadBackend, IndexEntry, IndexFile, Progress, RepoInfo, Sum,
+    BlobType, BlobTypeMap, DecryptReadBackend, IndexEntry, IndexFile, Progress, ProgressBars,
+    RepoInfo, Sum,
 };
 
 /// `repoinfo` subcommand

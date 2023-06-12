@@ -11,7 +11,9 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use chrono::{Duration, Local};
 
-use rustic_core::{DecryptWriteBackend, DeleteOption, FileType, Id, SnapshotFile, StringList};
+use rustic_core::{
+    DecryptWriteBackend, DeleteOption, FileType, Id, ProgressBars, SnapshotFile, StringList,
+};
 
 /// `tag` subcommand
 

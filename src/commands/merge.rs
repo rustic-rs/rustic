@@ -14,7 +14,7 @@ use chrono::Local;
 
 use rustic_core::{
     merge_trees, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, Indexer, Node, Packer,
-    PathList, Progress, ReadIndex, SnapshotFile, SnapshotOptions, Tree,
+    PathList, Progress, ProgressBars, ReadIndex, SnapshotFile, SnapshotOptions, Tree,
 };
 
 /// `merge` subcommand

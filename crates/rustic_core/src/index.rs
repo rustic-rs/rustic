@@ -2,7 +2,6 @@ use std::{num::NonZeroU32, sync::Arc, thread::sleep, time::Duration};
 
 use bytes::Bytes;
 use derive_more::Constructor;
-use indicatif::ProgressBar;
 
 use crate::{
     backend::{decrypt::DecryptReadBackend, FileType},
@@ -11,6 +10,7 @@ use crate::{
     id::Id,
     index::binarysorted::{Index, IndexCollector, IndexType},
     repofile::indexfile::{IndexBlob, IndexFile},
+    Progress,
 };
 
 pub(crate) mod binarysorted;
@@ -122,11 +122,11 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
 
     fn new_from_collector(
         be: &BE,
-        p: &ProgressBar,
+        p: &impl Progress,
         mut collector: IndexCollector,
     ) -> RusticResult<Self> {
-        p.set_prefix("reading index...");
-        for index in be.stream_all::<IndexFile>(p.clone())? {
+        p.set_title("reading index...");
+        for index in be.stream_all::<IndexFile>(p)? {
             collector.extend(index?.1.packs);
         }
 
@@ -135,12 +135,12 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
         Ok(Self::new_from_index(be, collector.into_index()))
     }
 
-    pub fn new(be: &BE, p: ProgressBar) -> RusticResult<Self> {
-        Self::new_from_collector(be, &p, IndexCollector::new(IndexType::Full))
+    pub fn new(be: &BE, p: &impl Progress) -> RusticResult<Self> {
+        Self::new_from_collector(be, p, IndexCollector::new(IndexType::Full))
     }
 
-    pub fn only_full_trees(be: &BE, p: ProgressBar) -> RusticResult<Self> {
-        Self::new_from_collector(be, &p, IndexCollector::new(IndexType::FullTrees))
+    pub fn only_full_trees(be: &BE, p: &impl Progress) -> RusticResult<Self> {
+        Self::new_from_collector(be, p, IndexCollector::new(IndexType::FullTrees))
     }
 
     pub fn into_index(self) -> Index {

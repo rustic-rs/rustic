@@ -1,7 +1,5 @@
 use std::io::Read;
 
-use indicatif::ProgressBar;
-
 use crate::{
     archiver::{
         parent::{ItemWithParent, ParentResult},
@@ -23,7 +21,7 @@ use crate::{
     error::ArchiverErrorKind,
     index::{indexer::SharedIndexer, IndexedBackend},
     repofile::configfile::ConfigFile,
-    RusticResult,
+    Progress, RusticResult,
 };
 
 #[derive(Clone)]
@@ -60,7 +58,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
     pub(crate) fn process<O: ReadSourceOpen>(
         &self,
         item: ItemWithParent<Option<O>>,
-        p: &ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<TreeItem> {
         Ok(match item {
             TreeType::NewTree(item) => TreeType::NewTree(item),
@@ -87,7 +85,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         &self,
         r: impl Read + Send + 'static,
         node: Node,
-        p: &ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<(Node, u64)> {
         let chunks: Vec<_> = ChunkIter::new(
             r,

@@ -9,7 +9,6 @@ use chrono::{DateTime, Duration, Local};
 use derivative::Derivative;
 use dunce::canonicalize;
 use gethostname::gethostname;
-use indicatif::ProgressBar;
 use itertools::Itertools;
 use log::info;
 
@@ -33,7 +32,7 @@ use crate::{
     id::Id,
     repofile::RepoFile,
     repository::parse_command,
-    RusticError, RusticResult,
+    Progress, RusticError, RusticResult,
 };
 
 #[serde_as]
@@ -249,7 +248,7 @@ impl SnapshotFile {
         be: &B,
         string: &str,
         predicate: impl FnMut(&Self) -> bool + Send + Sync,
-        p: &ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<Self> {
         match string {
             "latest" => Self::latest(be, predicate, p),
@@ -261,13 +260,13 @@ impl SnapshotFile {
     pub fn latest<B: DecryptReadBackend>(
         be: &B,
         predicate: impl FnMut(&Self) -> bool + Send + Sync,
-        p: &ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<Self> {
-        p.set_prefix("getting latest snapshot...");
+        p.set_title("getting latest snapshot...");
         let mut latest: Option<Self> = None;
         let mut pred = predicate;
 
-        for snap in be.stream_all::<Self>(p.clone())? {
+        for snap in be.stream_all::<Self>(p)? {
             let (id, mut snap) = snap?;
             if !pred(&snap) {
                 continue;
@@ -293,9 +292,13 @@ impl SnapshotFile {
     }
 
     /// Get a Vector of [`SnapshotFile`] from the backend by list of (parts of the) ids
-    pub fn from_ids<B: DecryptReadBackend>(be: &B, ids: &[String]) -> RusticResult<Vec<Self>> {
+    pub fn from_ids<B: DecryptReadBackend>(
+        be: &B,
+        ids: &[String],
+        p: &impl Progress,
+    ) -> RusticResult<Vec<Self>> {
         let ids = be.find_ids(FileType::Snapshot, ids)?;
-        be.stream_list::<Self>(ids, ProgressBar::hidden())?
+        be.stream_list::<Self>(ids, p)?
             .into_iter()
             .map_ok(Self::set_id)
             .try_collect()
@@ -347,12 +350,13 @@ impl SnapshotFile {
         be: &B,
         filter: F,
         crit: &SnapshotGroupCriterion,
+        p: &impl Progress,
     ) -> RusticResult<Vec<(SnapshotGroup, Vec<Self>)>>
     where
         B: DecryptReadBackend,
         F: FnMut(&Self) -> bool,
     {
-        let mut snaps = Self::all_from_backend(be, filter)?;
+        let mut snaps = Self::all_from_backend(be, filter, p)?;
         snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(*crit, sn2));
 
         let mut result = Vec::new();
@@ -366,12 +370,12 @@ impl SnapshotFile {
         Ok(result)
     }
 
-    pub fn all_from_backend<B, F>(be: &B, filter: F) -> RusticResult<Vec<Self>>
+    pub fn all_from_backend<B, F>(be: &B, filter: F, p: &impl Progress) -> RusticResult<Vec<Self>>
     where
         B: DecryptReadBackend,
         F: FnMut(&Self) -> bool,
     {
-        be.stream_all::<Self>(ProgressBar::hidden())?
+        be.stream_all::<Self>(p)?
             .into_iter()
             .map_ok(Self::set_id)
             .filter_ok(filter)

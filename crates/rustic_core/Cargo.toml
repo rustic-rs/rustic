@@ -97,7 +97,6 @@ merge = { workspace = true, optional = true }
 rpassword = { workspace = true }
 directories = { workspace = true }
 nom = { workspace = true }
-indicatif = { workspace = true }
 path-dedot = { workspace = true }
 dunce = { workspace = true }
 gethostname = { workspace = true }

@@ -10,7 +10,6 @@ use std::{
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use ignore::overrides::{Override, OverrideBuilder};
 use ignore::Match;
-use indicatif::ProgressBar;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -21,7 +20,7 @@ use crate::{
     id::Id,
     index::IndexedBackend,
     repofile::snapshotfile::SnapshotSummary,
-    RusticResult,
+    Progress, RusticResult,
 };
 
 pub(super) mod constants {
@@ -281,17 +280,17 @@ where
 /// [`TreeStreamerOnce`] recursively visits all trees and subtrees, but each tree ID only once
 
 #[derive(Debug)]
-pub struct TreeStreamerOnce {
+pub struct TreeStreamerOnce<P> {
     visited: HashSet<Id>,
     queue_in: Option<Sender<(PathBuf, Id, usize)>>,
     queue_out: Receiver<RusticResult<(PathBuf, Tree, usize)>>,
-    p: ProgressBar,
+    p: P,
     counter: Vec<usize>,
     finished_ids: usize,
 }
 
-impl TreeStreamerOnce {
-    pub fn new<BE: IndexedBackend>(be: BE, ids: Vec<Id>, p: ProgressBar) -> RusticResult<Self> {
+impl<P: Progress> TreeStreamerOnce<P> {
+    pub fn new<BE: IndexedBackend>(be: BE, ids: Vec<Id>, p: P) -> RusticResult<Self> {
         p.set_length(ids.len() as u64);
 
         let (out_tx, out_rx) = bounded(constants::MAX_TREE_LOADER);
@@ -345,7 +344,7 @@ impl TreeStreamerOnce {
     }
 }
 
-impl Iterator for TreeStreamerOnce {
+impl<P: Progress> Iterator for TreeStreamerOnce<P> {
     type Item = TreeStreamItem;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -2,7 +2,6 @@ use std::num::NonZeroU32;
 
 use bytes::Bytes;
 use crossbeam_channel::{unbounded, Receiver};
-use indicatif::ProgressBar;
 use rayon::prelude::*;
 use zstd::stream::{copy_encode, decode_all};
 
@@ -14,7 +13,7 @@ use crate::{
     error::CryptBackendErrorKind,
     id::Id,
     repofile::RepoFile,
-    RusticResult,
+    Progress, RusticResult,
 };
 
 pub trait DecryptFullBackend: DecryptWriteBackend + DecryptReadBackend {}
@@ -53,7 +52,7 @@ pub trait DecryptReadBackend: ReadBackend {
 
     fn stream_all<F: RepoFile>(
         &self,
-        p: ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<Receiver<RusticResult<(Id, F)>>> {
         let list = self.list(F::TYPE)?;
         self.stream_list(list, p)
@@ -62,7 +61,7 @@ pub trait DecryptReadBackend: ReadBackend {
     fn stream_list<F: RepoFile>(
         &self,
         list: Vec<Id>,
-        p: ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<Receiver<RusticResult<(Id, F)>>> {
         p.set_length(list.len() as u64);
         let (tx, rx) = unbounded();
@@ -92,7 +91,7 @@ pub trait DecryptWriteBackend: WriteBackend {
     fn save_list<'a, F: RepoFile, I: ExactSizeIterator<Item = &'a F> + Send>(
         &self,
         list: I,
-        p: ProgressBar,
+        p: impl Progress,
     ) -> RusticResult<()> {
         p.set_length(list.len() as u64);
         list.par_bridge().try_for_each(|file| -> RusticResult<_> {
@@ -109,7 +108,7 @@ pub trait DecryptWriteBackend: WriteBackend {
         tpe: FileType,
         cacheable: bool,
         list: I,
-        p: ProgressBar,
+        p: impl Progress,
     ) -> RusticResult<()> {
         p.set_length(list.len() as u64);
         list.par_bridge().try_for_each(|id| -> RusticResult<_> {

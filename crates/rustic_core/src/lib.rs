@@ -98,6 +98,7 @@ pub(crate) mod file;
 pub mod helpers;
 pub(crate) mod id;
 pub(crate) mod index;
+pub(crate) mod progress;
 pub(crate) mod repofile;
 pub(crate) mod repository;
 
@@ -131,6 +132,7 @@ pub use crate::{
         indexer::Indexer,
         IndexBackend, IndexEntry, IndexedBackend, ReadIndex,
     },
+    progress::Progress,
     repofile::{
         configfile::ConfigFile,
         indexfile::{IndexBlob, IndexFile, IndexPack},

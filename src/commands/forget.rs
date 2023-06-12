@@ -107,12 +107,18 @@ impl ForgetCmd {
             .group_by
             .unwrap_or_else(|| SnapshotGroupCriterion::from_str("host,label,paths").unwrap());
 
+        let p = progress_options.progress_hidden();
         let groups = if self.ids.is_empty() {
-            SnapshotFile::group_from_backend(be, |sn| config.forget.filter.matches(sn), &group_by)?
+            SnapshotFile::group_from_backend(
+                be,
+                |sn| config.forget.filter.matches(sn),
+                &group_by,
+                &p,
+            )?
         } else {
             let item = (
                 SnapshotGroup::default(),
-                SnapshotFile::from_ids(be, &self.ids)?,
+                SnapshotFile::from_ids(be, &self.ids, &p)?,
             );
             vec![item]
         };

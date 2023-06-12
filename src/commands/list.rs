@@ -10,7 +10,6 @@ use crate::{
 use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::{bail, Result};
-use indicatif::ProgressBar;
 
 use rustic_core::{DecryptReadBackend, FileType, IndexFile, ReadBackend};
 
@@ -41,7 +40,7 @@ impl ListCmd {
             // special treatment for listing blobs: read the index and display it
             "blobs" => {
                 repo.dbe
-                    .stream_all::<IndexFile>(ProgressBar::hidden())?
+                    .stream_all::<IndexFile>(&config.global.progress_options.progress_hidden())?
                     .into_iter()
                     .for_each(|index| {
                         match index {

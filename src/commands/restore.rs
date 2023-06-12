@@ -22,8 +22,8 @@ use rayon::ThreadPoolBuilder;
 
 use rustic_core::{
     bytes_size_to_string, AddFileResult, DecryptReadBackend, FileInfos, FileType, IndexBackend,
-    IndexedBackend, LocalDestination, Node, NodeStreamer, NodeType, RestoreStats, SnapshotFile,
-    Tree, TreeStreamerOptions,
+    IndexedBackend, LocalDestination, Node, NodeStreamer, NodeType, Progress, RestoreStats,
+    SnapshotFile, Tree, TreeStreamerOptions,
 };
 
 use crate::{filtering::SnapshotFilter, helpers::warm_up_wait};
@@ -94,7 +94,7 @@ impl RestoreCmd {
             &progress_options.progress_counter(""),
         )?;
 
-        let index = IndexBackend::new(be, progress_options.progress_counter(""))?;
+        let index = IndexBackend::new(be, &progress_options.progress_counter(""))?;
         let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
 
         let dest = LocalDestination::new(&self.dest, true, !node.is_dir())?;

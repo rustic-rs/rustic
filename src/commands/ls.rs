@@ -58,7 +58,7 @@ impl LsCmd {
             |sn| config.snapshot_filter.matches(sn),
             &progress_options.progress_counter(""),
         )?;
-        let index = IndexBackend::new(be, progress_options.progress_counter(""))?;
+        let index = IndexBackend::new(be, &progress_options.progress_counter(""))?;
         let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
 
         if recursive {

@@ -6,7 +6,6 @@ pub(crate) mod tree_archiver;
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
-use indicatif::ProgressBar;
 use log::warn;
 use pariter::{scope, IteratorExt};
 
@@ -20,7 +19,7 @@ use crate::{
     id::Id,
     index::{indexer::Indexer, indexer::SharedIndexer, IndexedBackend},
     repofile::{configfile::ConfigFile, snapshotfile::SnapshotFile},
-    RusticResult,
+    Progress, RusticResult,
 };
 #[allow(missing_debug_implementations)]
 pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
@@ -66,7 +65,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         src: R,
         backup_path: &Path,
         as_path: Option<&PathBuf>,
-        p: &ProgressBar,
+        p: &impl Progress,
     ) -> RusticResult<SnapshotFile>
     where
         R: ReadSource + 'static,
@@ -78,7 +77,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
                 p.set_length(size);
             }
         };
-        p.set_prefix("backing up...");
+        p.set_title("backing up...");
 
         // filter out errors and handle as_path
         let iter = src.entries().filter_map(|item| match item {
@@ -147,7 +146,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         let id = self.be.save_file(&self.snap)?;
         self.snap.id = id;
 
-        p.finish_with_message("done");
+        p.finish();
         Ok(self.snap)
     }
 }

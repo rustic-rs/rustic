@@ -57,16 +57,19 @@ impl SnapshotCmd {
 
         let repo = open_repository(get_repository(&config));
 
+        let p = config.global.progress_options.progress_hidden();
         let groups = match &self.ids[..] {
             [] => SnapshotFile::group_from_backend(
                 &repo.dbe,
                 |sn| config.snapshot_filter.matches(sn),
                 &self.group_by,
+                &p,
             )?,
             [id] if id == "latest" => SnapshotFile::group_from_backend(
                 &repo.dbe,
                 |sn| config.snapshot_filter.matches(sn),
                 &self.group_by,
+                &p,
             )?
             .into_iter()
             .map(|(group, mut snaps)| {
@@ -80,7 +83,7 @@ impl SnapshotCmd {
             _ => {
                 let item = (
                     SnapshotGroup::default(),
-                    SnapshotFile::from_ids(&repo.dbe, &self.ids)?,
+                    SnapshotFile::from_ids(&repo.dbe, &self.ids, &p)?,
                 );
                 vec![item]
             }

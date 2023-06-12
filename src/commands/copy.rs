@@ -61,16 +61,17 @@ impl CopyCmd {
         }
 
         let be = &repo.dbe;
+        let p = config.global.progress_options.progress_hidden();
         let mut snapshots = if self.ids.is_empty() {
-            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn))?
+            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn), &p)?
         } else {
-            SnapshotFile::from_ids(be, &self.ids)?
+            SnapshotFile::from_ids(be, &self.ids, &p)?
         };
         // sort for nicer output
         snapshots.sort_unstable();
 
         let be = &repo.dbe;
-        let index = IndexBackend::new(be, config.global.progress_options.progress_counter(""))?;
+        let index = IndexBackend::new(be, &config.global.progress_options.progress_counter(""))?;
 
         let poly = repo.config.poly()?;
 

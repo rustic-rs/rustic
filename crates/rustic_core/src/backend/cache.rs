@@ -7,7 +7,7 @@ use std::{
 
 use bytes::Bytes;
 use dirs::cache_dir;
-use log::trace;
+use log::{trace, warn};
 use walkdir::WalkDir;
 
 use crate::{
@@ -55,7 +55,7 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
             (None, _) | (Some(_), false) => self.be.read_full(tpe, id),
             (Some(cache), true) => cache.read_full(tpe, id).map_or_else(
                 |err| {
-                    eprintln!("Error in cache backend: {err}");
+                    warn!("Error in cache backend: {err}");
                     let res = self.be.read_full(tpe, id);
                     if let Ok(data) = &res {
                         _ = cache.write_bytes(tpe, id, data.clone());
@@ -82,7 +82,7 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
             (Some(cache), true) => {
                 cache.read_partial(tpe, id, offset, length).map_or_else(
                     |err| {
-                        eprintln!("Error in cache backend: {err}");
+                        warn!("Error in cache backend: {err}");
                         match self.be.read_full(tpe, id) {
                             // read full file, save to cache and return partial content from cache
                             // TODO: - Do not read to memory, but use a Reader

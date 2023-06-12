@@ -195,7 +195,7 @@ impl BackupCmd {
         };
 
         let index =
-            IndexBackend::only_full_trees(&repo.dbe, progress_options.progress_counter(""))?;
+            IndexBackend::only_full_trees(&repo.dbe, &progress_options.progress_counter(""))?;
 
         for source in sources {
             let mut opts = self.clone();

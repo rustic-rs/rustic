@@ -30,8 +30,8 @@ use crate::helpers::warm_up_wait;
 use rustic_core::{
     bytes_size_to_string, BlobType, BlobTypeMap, DecryptReadBackend, DecryptWriteBackend, FileType,
     HeaderEntry, Id, IndexBackend, IndexBlob, IndexCollector, IndexFile, IndexPack, IndexType,
-    IndexedBackend, Indexer, Initialize, NodeType, OpenRepository, PackSizer, ReadBackend,
-    ReadIndex, Repacker, SnapshotFile, Sum, TreeStreamerOnce,
+    IndexedBackend, Indexer, Initialize, NodeType, OpenRepository, PackSizer, Progress,
+    ReadBackend, ReadIndex, Repacker, SnapshotFile, Sum, TreeStreamerOnce,
 };
 
 pub(super) mod constants {
@@ -117,7 +117,7 @@ impl PruneCmd {
         let p = progress_options.progress_counter("reading index...");
         let mut index_collector = IndexCollector::new(IndexType::OnlyTrees);
 
-        be.stream_all::<IndexFile>(p.clone())?
+        be.stream_all::<IndexFile>(&p)?
             .into_iter()
             .for_each(|index| {
                 let (id, index) = match index {
@@ -1159,7 +1159,7 @@ fn find_used_blobs(
         .collect();
     let snap_trees: Vec<_> = index
         .be()
-        .stream_list::<SnapshotFile>(list, p.clone())?
+        .stream_list::<SnapshotFile>(list, &p)?
         .into_iter()
         .map_ok(|(_, snap)| snap.tree)
         .try_collect()?;

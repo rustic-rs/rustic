@@ -2307,7 +2307,6 @@ dependencies = [
  "chrono",
  "clap",
  "clap_complete",
- "comfy-table",
  "crossbeam-channel",
  "derivative",
  "derive_more",

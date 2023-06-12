@@ -4,6 +4,7 @@
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::{get_repository, open_repository},
+    helpers::bytes_size_to_string,
     status_err, Application, RUSTIC_APP,
 };
 
@@ -21,9 +22,9 @@ use ignore::{DirEntry, WalkBuilder};
 use rayon::ThreadPoolBuilder;
 
 use rustic_core::{
-    bytes_size_to_string, AddFileResult, DecryptReadBackend, FileInfos, FileType, IndexBackend,
-    IndexedBackend, LocalDestination, Node, NodeStreamer, NodeType, Progress, RestoreStats,
-    SnapshotFile, Tree, TreeStreamerOptions,
+    AddFileResult, DecryptReadBackend, FileInfos, FileType, IndexBackend, IndexedBackend,
+    LocalDestination, Node, NodeStreamer, NodeType, Progress, RestoreStats, SnapshotFile, Tree,
+    TreeStreamerOptions,
 };
 
 use crate::{filtering::SnapshotFilter, helpers::warm_up_wait};

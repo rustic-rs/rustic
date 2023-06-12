@@ -4,16 +4,16 @@
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::{get_repository, open_repository},
+    helpers::bytes_size_to_string,
     status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
+use crate::helpers::{print_file_info, table_right_from};
 use anyhow::Result;
-use rustic_core::helpers::table_output::{print_file_info, table_right_from};
 use rustic_core::{
-    bytes_size_to_string, BlobType, BlobTypeMap, DecryptReadBackend, IndexEntry, IndexFile,
-    Progress, RepoInfo, Sum,
+    BlobType, BlobTypeMap, DecryptReadBackend, IndexEntry, IndexFile, Progress, RepoInfo, Sum,
 };
 
 /// `repoinfo` subcommand

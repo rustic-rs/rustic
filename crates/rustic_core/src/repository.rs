@@ -6,6 +6,7 @@ use std::{
     process::Command,
 };
 
+use bytes::Bytes;
 use derive_more::Add;
 use log::{debug, info};
 
@@ -28,11 +29,12 @@ use crate::{
         decrypt::DecryptReadBackend, decrypt::DecryptWriteBackend, hotcold::HotColdBackend,
         FileType, ReadBackend,
     },
+    commands::{self, check::CheckOpts},
     crypto::aespoly1305::Key,
     error::RepositoryErrorKind,
     index::IndexEntry,
     repofile::{configfile::ConfigFile, indexfile::IndexPack, keyfile::find_key_in_backend},
-    RusticResult,
+    BlobType, IndexBackend, ProgressBars, RusticResult, SnapshotFile,
 };
 
 pub(super) mod constants {
@@ -331,18 +333,6 @@ impl Repository {
     }
 }
 
-#[derive(Debug)]
-pub struct OpenRepository {
-    pub name: String,
-    pub be: HotColdBackend<ChooseBackend>,
-    pub be_hot: Option<ChooseBackend>,
-    pub key: Key,
-    pub cache: Option<Cache>,
-    pub dbe: DecryptBackend<CachedBackend<HotColdBackend<ChooseBackend>>, Key>,
-    pub config: ConfigFile,
-    pub opts: RepositoryOptions,
-}
-
 pub(crate) fn get_key(be: &impl ReadBackend, password: Option<String>) -> RusticResult<Key> {
     for _ in 0..constants::MAX_PASSWORD_RETRIES {
         match password {
@@ -364,4 +354,52 @@ pub(crate) fn get_key(be: &impl ReadBackend, password: Option<String>) -> Rustic
         }
     }
     Err(RepositoryErrorKind::IncorrectPassword.into())
+}
+
+#[derive(Debug)]
+pub struct OpenRepository {
+    pub name: String,
+    pub be: HotColdBackend<ChooseBackend>,
+    pub be_hot: Option<ChooseBackend>,
+    pub key: Key,
+    pub cache: Option<Cache>,
+    pub dbe: DecryptBackend<CachedBackend<HotColdBackend<ChooseBackend>>, Key>,
+    pub config: ConfigFile,
+    pub opts: RepositoryOptions,
+}
+
+impl OpenRepository {
+    pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
+        commands::cat::cat_file(self, tpe, id)
+    }
+
+    pub fn check(&self, opts: CheckOpts, pb: &impl ProgressBars) -> RusticResult<()> {
+        opts.run(self, pb)
+    }
+
+    pub fn to_indexed(self, pb: &impl ProgressBars) -> RusticResult<IndexedRepository> {
+        let index = IndexBackend::new(&self.dbe, &pb.progress_counter(""))?;
+        Ok(IndexedRepository { repo: self, index })
+    }
+}
+
+#[derive(Debug)]
+pub struct IndexedRepository {
+    pub(crate) repo: OpenRepository,
+    pub(crate) index:
+        IndexBackend<DecryptBackend<CachedBackend<HotColdBackend<ChooseBackend>>, Key>>,
+}
+
+impl IndexedRepository {
+    pub fn cat_blob(&self, tpe: BlobType, id: &str) -> RusticResult<Bytes> {
+        commands::cat::cat_blob(self, tpe, id)
+    }
+    pub fn cat_tree(
+        &self,
+        snap: &str,
+        sn_filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
+        pb: &impl ProgressBars,
+    ) -> RusticResult<Bytes> {
+        commands::cat::cat_tree(self, snap, sn_filter, pb)
+    }
 }

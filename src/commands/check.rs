@@ -24,7 +24,7 @@ impl Runnable for CheckCmd {
         let progress_options = config.global.progress_options;
 
         let repo = open_repository(get_repository(&config));
-        if let Err(err) = self.opts.run(&repo, &progress_options) {
+        if let Err(err) = repo.check(self.opts, &progress_options) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };

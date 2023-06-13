@@ -28,7 +28,7 @@ pub struct CheckOpts {
 }
 
 impl CheckOpts {
-    pub fn run(&self, repo: &OpenRepository, pb: &impl ProgressBars) -> RusticResult<()> {
+    pub fn run(self, repo: &OpenRepository, pb: &impl ProgressBars) -> RusticResult<()> {
         let be = &repo.dbe;
         let cache = &repo.cache;
         let hot_be = &repo.be_hot;

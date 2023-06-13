@@ -6,7 +6,7 @@
 
 pub(crate) mod progress_options;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use directories::ProjectDirs;
 
@@ -16,6 +16,7 @@ use abscissa_core::config::Config;
 use abscissa_core::path::AbsPathBuf;
 use abscissa_core::FrameworkError;
 use clap::Parser;
+use itertools::Itertools;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
@@ -50,29 +51,27 @@ pub struct RusticConfig {
 
 impl RusticConfig {
     pub fn merge_profile(&mut self, profile: &str) -> Result<(), FrameworkError> {
-        let mut path = ProjectDirs::from("", "", "rustic").map_or_else(
-            || Path::new(".").to_path_buf(),
-            |path| path.config_dir().to_path_buf(),
-        );
-        if !path.exists() {
-            path = Path::new(".").to_path_buf();
-        };
-        let path = path.join(profile.to_string() + ".toml");
+        let profile_filename = profile.to_string() + ".toml";
+        let paths = get_config_paths(&profile_filename);
 
-        if path.exists() {
+        if let Some(path) = paths.iter().find(|path| path.exists()) {
             // TODO: This should be log::info! - however, the logging config
             // can be stored in the config file and is needed to initialize the logger
             eprintln!("using config {}", path.display());
-            let mut config = Self::load_toml_file(AbsPathBuf::new(&path)?)?;
+            let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profile.clone() {
                 config.merge_profile(profile)?;
             }
             self.merge(config);
         } else {
+            let paths_string = paths.iter().map(|path| path.display()).join(", ");
             // TODO: This should be log::warn! - however, the logging config
             // can be stored in the config file and is needed to initialize the logger
-            eprintln!("using no config file ({} doesn't exist)", path.display());
+            eprintln!(
+                "using no config file, none of these exist: {}",
+                &paths_string
+            );
         };
         Ok(())
     }
@@ -111,4 +110,42 @@ pub struct GlobalOptions {
     #[clap(flatten)]
     #[serde(flatten)]
     pub progress_options: ProgressOptions,
+}
+
+fn get_config_paths(filename: &str) -> Vec<PathBuf> {
+    [
+        ProjectDirs::from("", "", "rustic")
+            .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
+        get_global_config_path(),
+        Some(PathBuf::from(".")),
+    ]
+    .into_iter()
+    .filter_map(|path| {
+        path.map(|mut p| {
+            p.push(filename);
+            p
+        })
+    })
+    .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn get_global_config_path() -> Option<PathBuf> {
+    if let Some(program_data) = std::env::var_os("PROGRAMDATA") {
+        let mut path = PathBuf::from(program_data);
+        path.push(r"rustic\config");
+        Some(path)
+    } else {
+        None
+    }
+}
+
+#[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+fn get_global_config_path() -> Option<PathBuf> {
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "ios", target_arch = "wasm32")))]
+fn get_global_config_path() -> Option<PathBuf> {
+    Some(PathBuf::from("/etc/rustic"))
 }

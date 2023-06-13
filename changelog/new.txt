@@ -5,3 +5,4 @@ Breaking changes:
 Bugs fixed:
 
 New features:
+- new global configuration paths are available, located at /etc/rustic/*.toml or %PROGRAMDATA%/rustic/config/*.toml, depending on your platform

@@ -120,10 +120,7 @@ pub use crate::{
         BlobLocation, BlobType, BlobTypeMap, Initialize, Sum,
     },
     chunker::random_poly,
-    commands::{
-        cat::{cat_blob, cat_file, cat_tree},
-        check::CheckOpts,
-    },
+    commands::check::CheckOpts,
     crypto::{aespoly1305::Key, hasher::hash},
     error::{RusticError, RusticResult},
     file::{AddFileResult, FileInfos, RestoreStats},

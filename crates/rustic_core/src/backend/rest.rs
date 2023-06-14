@@ -81,6 +81,7 @@ impl RestBackend {
 
         let client = ClientBuilder::new()
             .default_headers(headers)
+            .timeout(Duration::from_secs(600)) // set default timeout to 10 minutes (we can have *large* packfiles)
             .build()
             .map_err(RestErrorKind::BuildingClientFailed)?;
 

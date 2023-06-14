@@ -191,7 +191,8 @@ impl ReadBackend for RestBackend {
                     .header("Accept", "application/vnd.x.restic.rest.v2")
                     .send()?
                     .check_error()?
-                    .json::<Vec<ListEntry>>()?;
+                    .json::<Option<Vec<ListEntry>>>()? // use Option to be handle null json value
+                    .unwrap_or_default();
                 Ok(list
                     .into_iter()
                     .filter_map(|i| match Id::from_hex(&i.name) {

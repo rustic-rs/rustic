@@ -72,6 +72,7 @@ enum-map-derive = { workspace = true }
 # local backend
 walkdir = { workspace = true }
 ignore = { workspace = true }
+cached = { workspace = true }
 nix = { workspace = true }
 filetime = { workspace = true }
 aho-corasick = { workspace = true }
@@ -105,7 +106,6 @@ humantime = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }
-users = "0.11"
 
 [target.'cfg(windows)'.dependencies]
 # unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17

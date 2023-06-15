@@ -10,12 +10,14 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use bytesize::ByteSize;
 #[cfg(not(windows))]
+use cached::proc_macro::cached;
+#[cfg(not(windows))]
 use chrono::TimeZone;
 use chrono::{DateTime, Local, Utc};
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
 use log::warn;
 #[cfg(not(windows))]
-use users::{Groups, Users, UsersCache};
+use nix::unistd::{Gid, Group, Uid, User};
 
 #[cfg(not(any(windows, target_os = "openbsd")))]
 use crate::backend::node::ExtendedAttribute;
@@ -35,8 +37,6 @@ pub struct LocalSource {
     builder: WalkBuilder,
     walker: Walk,
     save_opts: LocalSourceSaveOptions,
-    #[cfg(not(windows))]
-    cache: UsersCache,
 }
 
 #[serde_as]
@@ -207,8 +207,6 @@ impl LocalSource {
             builder,
             walker,
             save_opts,
-            #[cfg(not(windows))]
-            cache: UsersCache::new(),
         })
     }
 }
@@ -262,8 +260,6 @@ impl Iterator for LocalSource {
                 e.map_err(IgnoreErrorKind::GenericError)?,
                 self.save_opts.with_atime,
                 self.save_opts.ignore_devid,
-                #[cfg(not(windows))]
-                &self.cache,
             )
             .map_err(std::convert::Into::into)
         })
@@ -348,25 +344,45 @@ fn map_entry(
 }
 
 #[cfg(not(windows))]
+#[cached]
+fn get_user_by_uid(uid: u32) -> Option<String> {
+    match User::from_uid(Uid::from_raw(uid)) {
+        Ok(Some(user)) => Some(user.name),
+        Ok(None) => None,
+        Err(err) => {
+            warn!("error getting user from uid {uid}: {err}");
+            None
+        }
+    }
+}
+
+#[cfg(not(windows))]
+#[cached]
+fn get_group_by_gid(gid: u32) -> Option<String> {
+    match Group::from_gid(Gid::from_raw(gid)) {
+        Ok(Some(group)) => Some(group.name),
+        Ok(None) => None,
+        Err(err) => {
+            warn!("error getting group from gid {gid}: {err}");
+            None
+        }
+    }
+}
+
+#[cfg(not(windows))]
 // map_entry: turn entry into (Path, Node)
 fn map_entry(
     entry: DirEntry,
     with_atime: bool,
     ignore_devid: bool,
-    cache: &UsersCache,
 ) -> RusticResult<ReadSourceEntry<OpenFile>> {
     let name = entry.file_name();
     let m = entry.metadata().map_err(IgnoreErrorKind::GenericError)?;
 
     let uid = m.uid();
     let gid = m.gid();
-    let user = cache
-        .get_user_by_uid(uid)
-        .map(|u| u.name().to_str().unwrap().to_string());
-
-    let group = cache
-        .get_group_by_gid(gid)
-        .map(|g| g.name().to_str().unwrap().to_string());
+    let user = get_user_by_uid(uid);
+    let group = get_group_by_gid(gid);
 
     let mtime = m
         .modified()

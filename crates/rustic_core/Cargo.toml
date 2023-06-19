@@ -123,6 +123,7 @@ expect-test = "1.4.1"
 quickcheck = { workspace = true }
 quickcheck_macros = { workspace = true }
 pretty_assertions = { workspace = true }
+simplelog = { workspace = true }
 
 [profile.dev]
 opt-level = 0

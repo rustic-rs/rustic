@@ -79,19 +79,19 @@ pub struct RepositoryOptions {
         feature = "clap",
         clap(short, long, global = true, alias = "repo", env = "RUSTIC_REPOSITORY")
     )]
-    repository: Option<String>,
+    pub repository: Option<String>,
 
     /// Repository to use as hot storage
     #[cfg_attr(
         feature = "clap",
         clap(long, global = true, alias = "repository_hot", env = "RUSTIC_REPO_HOT")
     )]
-    repo_hot: Option<String>,
+    pub repo_hot: Option<String>,
 
     /// Password of the repository - WARNING: Using --password can reveal the password in the process list!
     #[cfg_attr(feature = "clap", clap(long, global = true, env = "RUSTIC_PASSWORD"))]
     // TODO: use `secrecy` library
-    password: Option<String>,
+    pub password: Option<String>,
 
     /// File to read the password from
     #[cfg_attr(
@@ -104,7 +104,7 @@ pub struct RepositoryOptions {
             conflicts_with = "password"
         )
     )]
-    password_file: Option<PathBuf>,
+    pub password_file: Option<PathBuf>,
 
     /// Command to read the password from
     #[cfg_attr(feature = "clap", clap(
@@ -113,12 +113,12 @@ pub struct RepositoryOptions {
         env = "RUSTIC_PASSWORD_COMMAND",
         conflicts_with_all = &["password", "password_file"],
     ))]
-    password_command: Option<String>,
+    pub password_command: Option<String>,
 
     /// Don't use a cache.
     #[cfg_attr(feature = "clap", clap(long, global = true, env = "RUSTIC_NO_CACHE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
-    no_cache: bool,
+    pub no_cache: bool,
 
     /// Use this dir as cache dir instead of the standard cache dir
     #[cfg_attr(
@@ -130,7 +130,7 @@ pub struct RepositoryOptions {
             env = "RUSTIC_CACHE_DIR"
         )
     )]
-    cache_dir: Option<PathBuf>,
+    pub cache_dir: Option<PathBuf>,
 
     /// Warm up needed data pack files by only requesting them without processing
     #[cfg_attr(feature = "clap", clap(long, global = true))]
@@ -151,7 +151,7 @@ pub struct RepositoryOptions {
 
     #[cfg_attr(feature = "clap", clap(skip))]
     #[cfg_attr(feature = "merge", merge(strategy = overwrite))]
-    options: HashMap<String, String>,
+    pub options: HashMap<String, String>,
 }
 
 // TODO: Unused function

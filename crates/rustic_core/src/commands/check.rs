@@ -16,15 +16,15 @@ use crate::{
 
 /// `check` subcommand
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CheckOpts {
     /// Don't verify the data saved in the cache
     #[cfg_attr(feature = "clap", clap(long, conflicts_with = "no_cache"))]
-    trust_cache: bool,
+    pub trust_cache: bool,
 
     /// Read all data blobs
     #[cfg_attr(feature = "clap", clap(long))]
-    read_data: bool,
+    pub read_data: bool,
 }
 
 impl CheckOpts {

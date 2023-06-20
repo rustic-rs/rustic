@@ -16,23 +16,24 @@ use crate::{
 
 /// `check` subcommand
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CheckOpts {
     /// Don't verify the data saved in the cache
     #[cfg_attr(feature = "clap", clap(long, conflicts_with = "no_cache"))]
-    trust_cache: bool,
+    pub trust_cache: bool,
 
     /// Read all data blobs
     #[cfg_attr(feature = "clap", clap(long))]
-    read_data: bool,
+    pub read_data: bool,
 }
 
 impl CheckOpts {
-    pub fn run(self, repo: &OpenRepository, pb: &impl ProgressBars) -> RusticResult<()> {
+    pub fn run<P: ProgressBars>(self, repo: &OpenRepository<P>) -> RusticResult<()> {
         let be = &repo.dbe;
         let cache = &repo.cache;
         let hot_be = &repo.be_hot;
         let raw_be = &repo.be;
+        let pb = &repo.pb;
         if !self.trust_cache {
             if let Some(cache) = &cache {
                 for file_type in [FileType::Snapshot, FileType::Index] {

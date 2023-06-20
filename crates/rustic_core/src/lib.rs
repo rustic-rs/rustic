@@ -130,7 +130,7 @@ pub use crate::{
         indexer::Indexer,
         IndexBackend, IndexEntry, IndexedBackend, ReadIndex,
     },
-    progress::{Progress, ProgressBars},
+    progress::{NoProgress, NoProgressBars, Progress, ProgressBars},
     repofile::{
         configfile::ConfigFile,
         indexfile::{IndexBlob, IndexFile, IndexPack},

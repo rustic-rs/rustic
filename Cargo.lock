@@ -2440,6 +2440,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sha2",
+ "simplelog",
  "thiserror",
  "url",
  "walkdir",

@@ -34,7 +34,7 @@ use crate::{
         repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
         show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
     },
-    config::RusticConfig,
+    config::{progress_options::ProgressOptions, RusticConfig},
     {Application, RUSTIC_APP},
 };
 
@@ -167,7 +167,7 @@ impl Configurable<RusticConfig> for EntryPoint {
     }
 }
 
-fn open_repository(repo: Repository) -> OpenRepository {
+fn open_repository<P>(repo: Repository<P>) -> OpenRepository<P> {
     match repo.open() {
         Ok(it) => it,
         Err(err) => {
@@ -177,8 +177,9 @@ fn open_repository(repo: Repository) -> OpenRepository {
     }
 }
 
-fn get_repository(config: &Arc<RusticConfig>) -> Repository {
-    match Repository::new(&config.repository) {
+fn get_repository(config: &Arc<RusticConfig>) -> Repository<ProgressOptions> {
+    let po = config.global.progress_options;
+    match Repository::new_with_progress(&config.repository, po) {
         Ok(it) => it,
         Err(err) => {
             status_err!("{}", err);

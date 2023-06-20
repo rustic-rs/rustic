@@ -215,7 +215,7 @@ chrono = { version = "0.4", default-features = false, features = [
 zstd = "0.12"
 enum-map = "2"
 enum-map-derive = "0.11"
-rhai = { version = "1.14", features = [
+rhai = { version = "1.15", features = [
     "sync",
     "serde",
     "no_optimize",

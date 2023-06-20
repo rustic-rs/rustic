@@ -18,6 +18,7 @@ use std::{
     io::Read,
     num::NonZeroU32,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 use anyhow::{anyhow, Context, Result};
@@ -259,24 +260,13 @@ impl RestoreCmd {
                         }
                         // TODO: The differentiation between files to modify and files to create could be done only by add_file
                         // Currently, add_file never returns Modify, but always New, so we differentiate based on exists
-                        (true, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
+                        (true, AddFileResult::Modify) => {
                             stats.file.modify += 1;
                             debug!("to modify: {path:?}");
-                            if !config.global.dry_run {
-                                // set the right file size
-                                dest.set_length(path, size).with_context(|| {
-                                    format!("error setting length for {path:?}")
-                                })?;
-                            }
                         }
-                        (false, AddFileResult::New(size) | AddFileResult::Modify(size)) => {
+                        (false, AddFileResult::Modify) => {
                             stats.file.restore += 1;
                             debug!("to restore: {path:?}");
-                            if !config.global.dry_run {
-                                // create the file as it doesn't exist
-                                dest.set_length(path, size)
-                                    .with_context(|| format!("error creating {path:?}"))?;
-                            }
                         }
                     }
                 }
@@ -420,11 +410,23 @@ fn restore_contents(
 ) -> Result<()> {
     let FileInfos {
         names: filenames,
+        file_lengths,
         r: restore_info,
         restore_size: total_size,
         ..
     } = file_infos;
     let filenames = &filenames;
+
+    // first create needed empty files, as they are not created later.
+    for (i, size) in file_lengths.iter().enumerate() {
+        if *size == 0 {
+            let path = &filenames[i];
+            dest.set_length(path, *size)
+                .with_context(|| format!("error setting length for {path:?}"))?;
+        }
+    }
+
+    let sizes = &Mutex::new(file_lengths);
 
     let p = RUSTIC_APP
         .config()
@@ -499,7 +501,20 @@ fn restore_contents(
                         for (_, file_idx, start) in group {
                             let data = data.clone();
                             s1.spawn(move |_| {
-                                dest.write_at(&filenames[file_idx], start, &data).unwrap();
+                                let path = &filenames[file_idx];
+                                // Allocate file if it is not yet allocated
+                                let mut sizes_guard = sizes.lock().unwrap();
+                                let filesize = sizes_guard[file_idx];
+                                if filesize > 0 {
+                                    dest.set_length(path, filesize)
+                                        .with_context(|| {
+                                            format!("error setting length for {path:?}")
+                                        })
+                                        .unwrap();
+                                    sizes_guard[file_idx] = 0;
+                                }
+                                drop(sizes_guard);
+                                dest.write_at(path, start, &data).unwrap();
                                 p.inc(size);
                             });
                         }
@@ -521,6 +536,7 @@ fn restore_contents(
 #[derive(Debug)]
 struct FileInfos {
     names: Filenames,
+    file_lengths: Vec<u64>,
     r: RestoreInfo,
     restore_size: u64,
     matched_size: u64,
@@ -557,14 +573,14 @@ struct FileLocation {
 enum AddFileResult {
     Existing,
     Verified,
-    New(u64),
-    Modify(u64),
+    Modify,
 }
 
 impl FileInfos {
     fn new() -> Self {
         Self {
             names: Vec::new(),
+            file_lengths: Vec::new(),
             r: BTreeMap::new(),
             restore_size: 0,
             matched_size: 0,
@@ -572,7 +588,6 @@ impl FileInfos {
     }
 
     /// Add the file to [`FileInfos`] using `index` to get blob information.
-    /// Returns the computed length of the file
     fn add_file(
         &mut self,
         dest: &LocalDestination,
@@ -582,6 +597,16 @@ impl FileInfos {
         ignore_mtime: bool,
     ) -> Result<AddFileResult> {
         let mut open_file = dest.get_matching_file(&name, file.meta.size);
+
+        // Empty files which exists with correct size should always return Ok(Existsing)!
+        if file.meta.size == 0 {
+            if let Some(meta) = open_file.as_ref().map(|f| f.metadata()).transpose()? {
+                if meta.len() == 0 {
+                    // Empty file exists
+                    return Ok(AddFileResult::Existing);
+                }
+            }
+        }
 
         if !ignore_mtime {
             if let Some(meta) = open_file.as_ref().map(|f| f.metadata()).transpose()? {
@@ -637,10 +662,12 @@ impl FileInfos {
             file_pos += length;
         }
 
-        match (has_unmatched, open_file.is_some()) {
-            (true, true) => Ok(AddFileResult::Modify(file_pos)),
-            (false, true) => Ok(AddFileResult::Verified),
-            (_, false) => Ok(AddFileResult::New(file_pos)),
+        self.file_lengths.push(file_pos);
+
+        if !has_unmatched && open_file.is_some() {
+            Ok(AddFileResult::Verified)
+        } else {
+            Ok(AddFileResult::Modify)
         }
     }
 

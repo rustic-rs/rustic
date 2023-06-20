@@ -8,3 +8,4 @@ New features:
 - New global configuration paths are available, located at /etc/rustic/*.toml or %PROGRAMDATA%/rustic/config/*.toml, depending on your platform.
 - REST backend: Now allows to use custom TLS root certificates.
 - restore: The restore algorithm has been improved and should now be faster for remote repositories.
+- restore: Files are now allocated just before being first processed. This allows easier resumed restores.

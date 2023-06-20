@@ -28,11 +28,12 @@ pub struct CheckOpts {
 }
 
 impl CheckOpts {
-    pub fn run(self, repo: &OpenRepository, pb: &impl ProgressBars) -> RusticResult<()> {
+    pub fn run<P: ProgressBars>(self, repo: &OpenRepository<P>) -> RusticResult<()> {
         let be = &repo.dbe;
         let cache = &repo.cache;
         let hot_be = &repo.be_hot;
         let raw_be = &repo.be;
+        let pb = &repo.pb;
         if !self.trust_cache {
             if let Some(cache) = &cache {
                 for file_type in [FileType::Snapshot, FileType::Index] {

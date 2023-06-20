@@ -21,10 +21,9 @@ pub(crate) struct CheckCmd {
 impl Runnable for CheckCmd {
     fn run(&self) {
         let config = RUSTIC_APP.config();
-        let progress_options = config.global.progress_options;
 
         let repo = open_repository(get_repository(&config));
-        if let Err(err) = repo.check(self.opts, &progress_options) {
+        if let Err(err) = repo.check(self.opts) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };

@@ -1,5 +1,5 @@
 //! `check` example
-use rustic_core::{CheckOpts, NoProgressBars, Repository, RepositoryOptions};
+use rustic_core::{CheckOpts, Repository, RepositoryOptions};
 use simplelog::{Config, LevelFilter, SimpleLogger};
 
 fn main() {
@@ -14,6 +14,5 @@ fn main() {
 
     // Check respository with standard options
     let opts = CheckOpts::default();
-    let progress = NoProgressBars {};
-    repo.check(opts, &progress).unwrap()
+    repo.check(opts).unwrap()
 }

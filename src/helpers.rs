@@ -25,8 +25,8 @@ pub(super) mod constants {
     pub(super) const MAX_READER_THREADS_NUM: usize = 20;
 }
 
-pub(crate) fn warm_up_wait(
-    repo: &OpenRepository,
+pub(crate) fn warm_up_wait<P>(
+    repo: &OpenRepository<P>,
     packs: impl ExactSizeIterator<Item = Id>,
     wait: bool,
     progress_options: &ProgressOptions,
@@ -97,10 +97,10 @@ pub(crate) fn warm_up(
     Ok(())
 }
 
-pub(crate) fn copy(
+pub(crate) fn copy<P>(
     snapshots: &[SnapshotFile],
     index: &impl IndexedBackend,
-    repo_dest: &OpenRepository,
+    repo_dest: &OpenRepository<P>,
 ) -> Result<()> {
     let config = RUSTIC_APP.config();
     let be_dest = &repo_dest.dbe;
@@ -201,9 +201,9 @@ pub(crate) fn copy(
     Ok(())
 }
 
-pub(crate) fn relevant_snapshots<F>(
+pub(crate) fn relevant_snapshots<F, P>(
     snaps: &[SnapshotFile],
-    dest_repo: &OpenRepository,
+    dest_repo: &OpenRepository<P>,
     filter: F,
     p: &impl Progress,
 ) -> Result<Vec<SnapshotFile>>

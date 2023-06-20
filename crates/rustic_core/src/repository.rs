@@ -34,7 +34,7 @@ use crate::{
     error::RepositoryErrorKind,
     index::IndexEntry,
     repofile::{configfile::ConfigFile, indexfile::IndexPack, keyfile::find_key_in_backend},
-    BlobType, IndexBackend, ProgressBars, RusticResult, SnapshotFile,
+    BlobType, IndexBackend, NoProgressBars, ProgressBars, RusticResult, SnapshotFile,
 };
 
 pub(super) mod constants {
@@ -196,15 +196,22 @@ pub(crate) fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult
 }
 
 #[derive(Debug)]
-pub struct Repository {
+pub struct Repository<P> {
     name: String,
     pub be: HotColdBackend<ChooseBackend>,
     pub be_hot: Option<ChooseBackend>,
     opts: RepositoryOptions,
+    pb: P,
 }
 
-impl Repository {
+impl Repository<NoProgressBars> {
     pub fn new(opts: &RepositoryOptions) -> RusticResult<Self> {
+        Self::new_with_progress(opts, NoProgressBars {})
+    }
+}
+
+impl<P> Repository<P> {
+    pub fn new_with_progress(opts: &RepositoryOptions, pb: P) -> RusticResult<Self> {
         let be = match &opts.repository {
             Some(repo) => ChooseBackend::from_url(repo)?,
             None => return Err(RepositoryErrorKind::NoRepositoryGiven.into()),
@@ -238,6 +245,7 @@ impl Repository {
             be,
             be_hot,
             opts: opts.clone(),
+            pb,
         })
     }
 
@@ -276,7 +284,7 @@ impl Repository {
         }
     }
 
-    pub fn open(self) -> RusticResult<OpenRepository> {
+    pub fn open(self) -> RusticResult<OpenRepository<P>> {
         let config_ids = match self.be.list(FileType::Config) {
             Ok(val) => val,
             Err(_e) => return Err(RepositoryErrorKind::ListingRepositoryConfigFileFailed.into()),
@@ -329,6 +337,7 @@ impl Repository {
             be_hot: self.be_hot,
             config,
             opts: self.opts,
+            pb: self.pb,
         })
     }
 }
@@ -357,7 +366,7 @@ pub(crate) fn get_key(be: &impl ReadBackend, password: Option<String>) -> Rustic
 }
 
 #[derive(Debug)]
-pub struct OpenRepository {
+pub struct OpenRepository<P> {
     pub name: String,
     pub be: HotColdBackend<ChooseBackend>,
     pub be_hot: Option<ChooseBackend>,
@@ -366,31 +375,32 @@ pub struct OpenRepository {
     pub dbe: DecryptBackend<CachedBackend<HotColdBackend<ChooseBackend>>, Key>,
     pub config: ConfigFile,
     pub opts: RepositoryOptions,
+    pub(crate) pb: P,
 }
 
-impl OpenRepository {
+impl<P: ProgressBars> OpenRepository<P> {
     pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
         commands::cat::cat_file(self, tpe, id)
     }
 
-    pub fn check(&self, opts: CheckOpts, pb: &impl ProgressBars) -> RusticResult<()> {
-        opts.run(self, pb)
+    pub fn check(&self, opts: CheckOpts) -> RusticResult<()> {
+        opts.run(self)
     }
 
-    pub fn to_indexed(self, pb: &impl ProgressBars) -> RusticResult<IndexedRepository> {
-        let index = IndexBackend::new(&self.dbe, &pb.progress_counter(""))?;
+    pub fn to_indexed(self) -> RusticResult<IndexedRepository<P>> {
+        let index = IndexBackend::new(&self.dbe, &self.pb.progress_counter(""))?;
         Ok(IndexedRepository { repo: self, index })
     }
 }
 
 #[derive(Debug)]
-pub struct IndexedRepository {
-    pub(crate) repo: OpenRepository,
+pub struct IndexedRepository<P> {
+    pub(crate) repo: OpenRepository<P>,
     pub(crate) index:
         IndexBackend<DecryptBackend<CachedBackend<HotColdBackend<ChooseBackend>>, Key>>,
 }
 
-impl IndexedRepository {
+impl<P: ProgressBars> IndexedRepository<P> {
     pub fn cat_blob(&self, tpe: BlobType, id: &str) -> RusticResult<Bytes> {
         commands::cat::cat_blob(self, tpe, id)
     }
@@ -398,8 +408,7 @@ impl IndexedRepository {
         &self,
         snap: &str,
         sn_filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
-        pb: &impl ProgressBars,
     ) -> RusticResult<Bytes> {
-        commands::cat::cat_tree(self, snap, sn_filter, pb)
+        commands::cat::cat_tree(self, snap, sn_filter)
     }
 }

@@ -61,8 +61,6 @@ impl Runnable for CatCmd {
 impl CatCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let po = config.global.progress_options;
-
         let repo = open_repository(get_repository(&config));
 
         let data = match &self.cmd {
@@ -70,14 +68,12 @@ impl CatCmd {
             CatSubCmd::Index(opt) => repo.cat_file(FileType::Index, &opt.id)?,
             CatSubCmd::Snapshot(opt) => repo.cat_file(FileType::Snapshot, &opt.id)?,
             // special treatment for cating blobs: read the index and use it to locate the blob
-            CatSubCmd::TreeBlob(opt) => repo.to_indexed(&po)?.cat_blob(BlobType::Tree, &opt.id)?,
-            CatSubCmd::DataBlob(opt) => repo.to_indexed(&po)?.cat_blob(BlobType::Data, &opt.id)?,
+            CatSubCmd::TreeBlob(opt) => repo.to_indexed()?.cat_blob(BlobType::Tree, &opt.id)?,
+            CatSubCmd::DataBlob(opt) => repo.to_indexed()?.cat_blob(BlobType::Data, &opt.id)?,
             // special treatment for cating a tree within a snapshot
-            CatSubCmd::Tree(opt) => repo.to_indexed(&po)?.cat_tree(
-                &opt.snap,
-                |sn| config.snapshot_filter.matches(sn),
-                &po,
-            )?,
+            CatSubCmd::Tree(opt) => repo
+                .to_indexed()?
+                .cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?,
         };
         println!("{}", String::from_utf8(data.to_vec())?);
 

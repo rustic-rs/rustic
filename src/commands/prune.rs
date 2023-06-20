@@ -849,9 +849,9 @@ impl Pruner {
     }
 
     #[allow(clippy::significant_drop_tightening)]
-    fn do_prune(
+    fn do_prune<P>(
         self,
-        repo: OpenRepository,
+        repo: OpenRepository<P>,
         opts: &PruneCmd,
         progress_options: &ProgressOptions,
     ) -> Result<()> {

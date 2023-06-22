@@ -96,6 +96,11 @@ pub struct LocalSourceFilterOptions {
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
     git_ignore: bool,
 
+    /// Do not require a git repository to apply git-ignore rule
+    #[cfg_attr(feature = "clap", clap(long, help_heading = "Exclude options"))]
+    #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
+    no_require_git: bool,
+
     /// Exclude contents of directories containing this filename (can be specified multiple times)
     #[cfg_attr(
         feature = "clap",
@@ -177,6 +182,7 @@ impl LocalSource {
             .hidden(false)
             .ignore(false)
             .git_ignore(filter_opts.git_ignore)
+            .require_git(!filter_opts.no_require_git)
             .sort_by_file_path(Path::cmp)
             .same_file_system(filter_opts.one_file_system)
             .max_filesize(filter_opts.exclude_larger_than.map(|s| s.as_u64()))

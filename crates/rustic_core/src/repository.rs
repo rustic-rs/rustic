@@ -3,12 +3,12 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::PathBuf,
-    process::Command,
+    process::{Command, Stdio},
 };
 
 use bytes::Bytes;
 use derive_more::Add;
-use log::{debug, info};
+use log::{debug, error, info};
 
 use nom::{
     branch::alt,
@@ -106,7 +106,7 @@ pub struct RepositoryOptions {
     )]
     pub password_file: Option<PathBuf>,
 
-    /// Command to read the password from
+    /// Command to read the password from. Password is read from stdout
     #[cfg_attr(feature = "clap", clap(
         long,
         global = true,
@@ -267,10 +267,22 @@ impl<P> Repository<P> {
                     .map_err(RepositoryErrorKind::FromNomError)?
                     .1;
                 debug!("commands: {commands:?}");
-                let Ok(output) = Command::new(commands[0]).args(&commands[1..]).output() else {
-                        return Err(
-                            RepositoryErrorKind::PasswordCommandParsingFailed.into());
+                let command = Command::new(commands[0])
+                    .args(&commands[1..])
+                    .stdout(Stdio::piped())
+                    .spawn()?;
+                let Ok(output) = command.wait_with_output() else {
+                    return Err(RepositoryErrorKind::PasswordCommandParsingFailed.into());
+                };
+                if !output.status.success() {
+                    #[allow(clippy::option_if_let_else)]
+                    let s = match output.status.code() {
+                        Some(c) => format!("exited with status code {c}"),
+                        None => "was terminated".into(),
                     };
+                    error!("password-command {s}");
+                    return Err(RepositoryErrorKind::ReadingPasswordFromCommandFailed.into());
+                }
 
                 let mut pwd = BufReader::new(&*output.stdout);
                 Ok(Some(match read_password_from_reader(&mut pwd) {

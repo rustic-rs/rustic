@@ -16,7 +16,7 @@ use rayon::{
 use rustic_core::{
     parse_command, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, IndexedBackend,
     Indexer, NodeType, OpenRepository, Packer, Progress, ProgressBars, ReadBackend, ReadIndex,
-    RusticResult, SnapshotFile, TreeStreamerOnce, ALL_FILE_TYPES,
+    SnapshotFile, TreeStreamerOnce,
 };
 
 use crate::{application::RUSTIC_APP, config::progress_options::ProgressOptions};
@@ -272,37 +272,6 @@ pub fn table_right_from<I: IntoIterator<Item = T>, T: ToString>(start: usize, ti
         .for_each(|c| c.set_cell_alignment(CellAlignment::Right));
 
     table
-}
-
-pub fn print_file_info(text: &str, be: &impl ReadBackend) -> RusticResult<()> {
-    info!("scanning files...");
-
-    let mut table = table_right_from(1, ["File type", "Count", "Total Size"]);
-    let mut total_count = 0;
-    let mut total_size = 0;
-    for tpe in ALL_FILE_TYPES {
-        let list = be.list_with_size(tpe)?;
-        let count = list.len();
-        let size = list.iter().map(|f| u64::from(f.1)).sum();
-        _ = table.add_row([
-            format!("{tpe:?}"),
-            count.to_string(),
-            bytes_size_to_string(size),
-        ]);
-        total_count += count;
-        total_size += size;
-    }
-    println!("{text}");
-    _ = table.add_row([
-        "Total".to_string(),
-        total_count.to_string(),
-        bytes_size_to_string(total_size),
-    ]);
-
-    println!();
-    println!("{table}");
-    println!();
-    Ok(())
 }
 
 #[must_use]

@@ -15,6 +15,7 @@ use std::{io::Read, path::PathBuf};
 use bytes::Bytes;
 use displaydoc::Display;
 use log::trace;
+use serde::{Deserialize, Serialize};
 
 use crate::{backend::node::Node, error::BackendErrorKind, id::Id, RusticResult};
 
@@ -27,17 +28,22 @@ pub const ALL_FILE_TYPES: [FileType; 4] = [
 ];
 
 /// Type for describing the kind of a file that can occur.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Display)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum FileType {
     /// config
+    #[serde(rename = "config")]
     Config,
     /// index
+    #[serde(rename = "index")]
     Index,
     /// keys
+    #[serde(rename = "key")]
     Key,
     /// snapshots
+    #[serde(rename = "snapshot")]
     Snapshot,
     /// data
+    #[serde(rename = "pack")]
     Pack,
 }
 

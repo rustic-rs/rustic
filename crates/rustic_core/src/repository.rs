@@ -7,7 +7,6 @@ use std::{
 };
 
 use bytes::Bytes;
-use derive_more::Add;
 use log::{debug, error, info};
 
 use nom::{
@@ -29,43 +28,19 @@ use crate::{
         decrypt::DecryptReadBackend, decrypt::DecryptWriteBackend, hotcold::HotColdBackend,
         FileType, ReadBackend,
     },
-    commands::{self, check::CheckOpts},
+    commands::{
+        self,
+        check::CheckOpts,
+        repoinfo::{IndexInfos, RepoFileInfos},
+    },
     crypto::aespoly1305::Key,
     error::RepositoryErrorKind,
-    index::IndexEntry,
-    repofile::{configfile::ConfigFile, indexfile::IndexPack, keyfile::find_key_in_backend},
+    repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
     BlobType, IndexBackend, NoProgressBars, ProgressBars, RusticResult, SnapshotFile,
 };
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
-}
-
-#[derive(Default, Clone, Copy, Add, Debug)]
-pub struct RepoInfo {
-    pub count: u64,
-    pub size: u64,
-    pub data_size: u64,
-    pub pack_count: u64,
-    pub total_pack_size: u64,
-    pub min_pack_size: u64,
-    pub max_pack_size: u64,
-}
-
-impl RepoInfo {
-    pub fn add(&mut self, ie: IndexEntry) {
-        self.count += 1;
-        self.size += u64::from(ie.length);
-        self.data_size += u64::from(ie.data_length());
-    }
-
-    pub fn add_pack(&mut self, ip: &IndexPack) {
-        self.pack_count += 1;
-        let size = u64::from(ip.pack_size());
-        self.total_pack_size += size;
-        self.min_pack_size = self.min_pack_size.min(size);
-        self.max_pack_size = self.max_pack_size.max(size);
-    }
 }
 
 #[serde_as]
@@ -201,7 +176,7 @@ pub struct Repository<P> {
     pub be: HotColdBackend<ChooseBackend>,
     pub be_hot: Option<ChooseBackend>,
     opts: RepositoryOptions,
-    pb: P,
+    pub(crate) pb: P,
 }
 
 impl Repository<NoProgressBars> {
@@ -354,6 +329,12 @@ impl<P> Repository<P> {
     }
 }
 
+impl<P: ProgressBars> Repository<P> {
+    pub fn infos_files(&self) -> RusticResult<RepoFileInfos> {
+        commands::repoinfo::collect_file_infos(self)
+    }
+}
+
 pub(crate) fn get_key(be: &impl ReadBackend, password: Option<String>) -> RusticResult<Key> {
     for _ in 0..constants::MAX_PASSWORD_RETRIES {
         match password {
@@ -402,6 +383,10 @@ impl<P: ProgressBars> OpenRepository<P> {
     pub fn to_indexed(self) -> RusticResult<IndexedRepository<P>> {
         let index = IndexBackend::new(&self.dbe, &self.pb.progress_counter(""))?;
         Ok(IndexedRepository { repo: self, index })
+    }
+
+    pub fn infos_index(&self) -> RusticResult<IndexInfos> {
+        commands::repoinfo::collect_index_infos(self)
     }
 }
 

@@ -11,3 +11,4 @@ New features:
 - restore: Files are now allocated just before being first processed. This allows easier resumed restores.
 - New option: `no-require-git` for backup - if enabled, a git repository is not required to apply `git-ignore` rule.
 - fix: wait for password-command to successfully exit, allowing to input something into the command, and read password from stdout.
+- repoinfo: Added new options --json, --only-files, --only-index

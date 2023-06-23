@@ -144,6 +144,24 @@ pub enum RusticErrorKind {
 pub enum CommandErrorKind {
     /// path is no dir: `{0:?}`
     PathIsNoDir(String),
+    /// used blobs are missing: blob {0} doesn't existing
+    BlobsMissing(Id),
+    /// packs_to_delete doesn't contain `time`.
+    NoTimeInPacksToDelete,
+    /// used pack {0}: size does not match! Expected size: {1}, real size: {2}
+    PackSizeNotMatching(Id, u32, u32),
+    /// "used pack {0} does not exist!
+    PackNotExisting(Id),
+    /// pack {0} got no decicion what to do
+    NoDecicion(Id),
+    /// {0:?}
+    FromParseIntError(#[from] ParseIntError),
+    /// {0}
+    FromByteSizeParser(String),
+    /// --repack-uncompressed makes no sense for v1 repo!
+    RepackUncompressedRepoV1,
+    /// datetime out of range: `{0:?}`
+    FromOutOfRangeError(#[from] OutOfRangeError),
 }
 
 /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions

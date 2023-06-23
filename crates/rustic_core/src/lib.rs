@@ -122,6 +122,7 @@ pub use crate::{
     chunker::random_poly,
     commands::{
         check::CheckOpts,
+        prune::{PruneOpts, PrunePlan, PruneStats},
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
     },
     crypto::{aespoly1305::Key, hasher::hash},

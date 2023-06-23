@@ -201,7 +201,7 @@ impl ForgetCmd {
 
         if self.config.prune {
             let mut prune_opts = self.prune_opts.clone();
-            prune_opts.ignore_snaps = forget_snaps;
+            prune_opts.opts.ignore_snaps = forget_snaps;
             prune_opts.run();
         }
 

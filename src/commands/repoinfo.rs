@@ -3,19 +3,14 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::{get_repository, open_repository},
-    helpers::bytes_size_to_string,
-    status_err, Application, RUSTIC_APP,
+    commands::get_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
-use crate::helpers::{print_file_info, table_right_from};
+use crate::helpers::table_right_from;
 use anyhow::Result;
-use rustic_core::{
-    BlobType, BlobTypeMap, DecryptReadBackend, IndexEntry, IndexFile, Progress, ProgressBars,
-    RepoInfo, Sum,
-};
+use rustic_core::RepoFileInfo;
 
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -33,83 +28,55 @@ impl Runnable for RepoInfoCmd {
 impl RepoInfoCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(get_repository(&config));
-
-        print_file_info("repository files", &repo.be)?;
-
-        if let Some(hot_be) = &repo.be_hot {
-            print_file_info("hot repository files", hot_be)?;
+        let repo = get_repository(&config);
+        let file_info = repo.infos_files()?;
+        print_file_info("repository files", file_info.files);
+        if let Some(info) = file_info.files_hot {
+            print_file_info("hot repository files", info);
         }
 
-        let mut info = BlobTypeMap::<RepoInfo>::default();
-        info[BlobType::Tree].min_pack_size = u64::MAX;
-        info[BlobType::Data].min_pack_size = u64::MAX;
-        let mut info_delete = BlobTypeMap::<RepoInfo>::default();
-
-        let p = config
-            .global
-            .progress_options
-            .progress_counter("scanning index...");
-        repo.dbe
-            .stream_all::<IndexFile>(&p)?
-            .into_iter()
-            .for_each(|index| {
-                let index = match index {
-                    Ok(it) => it,
-                    Err(err) => {
-                        status_err!("{}", err);
-                        RUSTIC_APP.shutdown(Shutdown::Crash);
-                    }
-                }
-                .1;
-                for pack in &index.packs {
-                    info[pack.blob_type()].add_pack(pack);
-
-                    for blob in &pack.blobs {
-                        let ie = IndexEntry::from_index_blob(blob, pack.id);
-                        info[pack.blob_type()].add(ie);
-                    }
-                }
-
-                for pack in &index.packs_to_delete {
-                    for blob in &pack.blobs {
-                        let ie = IndexEntry::from_index_blob(blob, pack.id);
-                        info_delete[pack.blob_type()].add(ie);
-                    }
-                }
-            });
-        p.finish();
+        let repo = repo.open()?;
+        let index_info = repo.infos_index()?;
 
         let mut table = table_right_from(
             1,
             ["Blob type", "Count", "Total Size", "Total Size in Packs"],
         );
 
-        for (blob_type, info) in &info {
-            _ = table.add_row([
-                format!("{blob_type:?}"),
-                info.count.to_string(),
-                bytes_size_to_string(info.data_size),
-                bytes_size_to_string(info.size),
-            ]);
-        }
+        let mut total_count = 0;
+        let mut total_data_size = 0;
+        let mut total_size = 0;
 
-        for (blob_type, info_delete) in &info_delete {
-            if info_delete.count > 0 {
+        for blobs in &index_info.blobs {
+            _ = table.add_row([
+                format!("{:?}", blobs.blob_type),
+                blobs.count.to_string(),
+                bytes_size_to_string(blobs.data_size),
+                bytes_size_to_string(blobs.size),
+            ]);
+            total_count += blobs.count;
+            total_data_size += blobs.data_size;
+            total_size += blobs.size;
+        }
+        for blobs in &index_info.blobs_delete {
+            if blobs.count > 0 {
                 _ = table.add_row([
-                    format!("{blob_type:?} to delete"),
-                    info_delete.count.to_string(),
-                    bytes_size_to_string(info_delete.data_size),
-                    bytes_size_to_string(info_delete.size),
+                    format!("{:?} to delete", blobs.blob_type),
+                    blobs.count.to_string(),
+                    bytes_size_to_string(blobs.data_size),
+                    bytes_size_to_string(blobs.size),
                 ]);
+                total_count += blobs.count;
+                total_data_size += blobs.data_size;
+                total_size += blobs.size;
             }
         }
-        let total = info.sum() + info_delete.sum();
+
         _ = table.add_row([
             "Total".to_string(),
-            total.count.to_string(),
-            bytes_size_to_string(total.data_size),
-            bytes_size_to_string(total.size),
+            total_count.to_string(),
+            bytes_size_to_string(total_data_size),
+            bytes_size_to_string(total_size),
         ]);
 
         println!();
@@ -120,17 +87,132 @@ impl RepoInfoCmd {
             ["Blob type", "Pack Count", "Minimum Size", "Maximum Size"],
         );
 
-        for (blob_type, info) in info {
+        for packs in index_info.packs {
             _ = table.add_row([
-                format!("{blob_type:?} packs"),
-                info.pack_count.to_string(),
-                bytes_size_to_string(info.min_pack_size),
-                bytes_size_to_string(info.max_pack_size),
+                format!("{:?} packs", packs.blob_type),
+                packs.count.to_string(),
+                packs
+                    .min_size
+                    .map_or("-".to_string(), |s| bytes_size_to_string(s)),
+                packs
+                    .max_size
+                    .map_or("-".to_string(), |s| bytes_size_to_string(s)),
             ]);
+        }
+        for packs in index_info.packs_delete {
+            if packs.count > 0 {
+                _ = table.add_row([
+                    format!("{:?} packs to delete", packs.blob_type),
+                    packs.count.to_string(),
+                    packs
+                        .min_size
+                        .map_or("-".to_string(), |s| bytes_size_to_string(s)),
+                    packs
+                        .max_size
+                        .map_or("-".to_string(), |s| bytes_size_to_string(s)),
+                ]);
+            }
         }
         println!();
         println!("{table}");
 
         Ok(())
     }
+}
+
+pub fn print_file_info(text: &str, info: Vec<RepoFileInfo>) {
+    let mut table = table_right_from(1, ["File type", "Count", "Total Size"]);
+    let mut total_count = 0;
+    let mut total_size = 0;
+    for row in info {
+        _ = table.add_row([
+            format!("{:?}", row.tpe),
+            row.count.to_string(),
+            bytes_size_to_string(row.size),
+        ]);
+        total_count += row.count;
+        total_size += row.size;
+    }
+    println!("{text}");
+    _ = table.add_row([
+        "Total".to_string(),
+        total_count.to_string(),
+        bytes_size_to_string(total_size),
+    ]);
+
+    println!();
+    println!("{table}");
+    println!();
+}
+
+pub fn print_index_info(index_info: IndexInfos) {
+    let mut table = table_right_from(
+        1,
+        ["Blob type", "Count", "Total Size", "Total Size in Packs"],
+    );
+
+    let mut total_count = 0;
+    let mut total_data_size = 0;
+    let mut total_size = 0;
+
+    for blobs in &index_info.blobs {
+        _ = table.add_row([
+            format!("{:?}", blobs.blob_type),
+            blobs.count.to_string(),
+            bytes_size_to_string(blobs.data_size),
+            bytes_size_to_string(blobs.size),
+        ]);
+        total_count += blobs.count;
+        total_data_size += blobs.data_size;
+        total_size += blobs.size;
+    }
+    for blobs in &index_info.blobs_delete {
+        if blobs.count > 0 {
+            _ = table.add_row([
+                format!("{:?} to delete", blobs.blob_type),
+                blobs.count.to_string(),
+                bytes_size_to_string(blobs.data_size),
+                bytes_size_to_string(blobs.size),
+            ]);
+            total_count += blobs.count;
+            total_data_size += blobs.data_size;
+            total_size += blobs.size;
+        }
+    }
+
+    _ = table.add_row([
+        "Total".to_string(),
+        total_count.to_string(),
+        bytes_size_to_string(total_data_size),
+        bytes_size_to_string(total_size),
+    ]);
+
+    println!();
+    println!("{table}");
+
+    let mut table = table_right_from(
+        1,
+        ["Blob type", "Pack Count", "Minimum Size", "Maximum Size"],
+    );
+
+    for packs in index_info.packs {
+        _ = table.add_row([
+            format!("{:?} packs", packs.blob_type),
+            packs.count.to_string(),
+            packs.min_size.map_or("-".to_string(), bytes_size_to_string),
+            packs.max_size.map_or("-".to_string(), bytes_size_to_string),
+        ]);
+    }
+    for packs in index_info.packs_delete {
+        if packs.count > 0 {
+            _ = table.add_row([
+                format!("{:?} packs to delete", packs.blob_type),
+                packs.count.to_string(),
+                packs.min_size.map_or("-".to_string(), bytes_size_to_string),
+                packs.max_size.map_or("-".to_string(), bytes_size_to_string),
+            ]);
+        }
+    }
+    println!();
+    println!("{table}");
 }

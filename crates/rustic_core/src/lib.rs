@@ -120,7 +120,10 @@ pub use crate::{
         BlobLocation, BlobType, BlobTypeMap, Initialize, Sum,
     },
     chunker::random_poly,
-    commands::check::CheckOpts,
+    commands::{
+        check::CheckOpts,
+        repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
+    },
     crypto::{aespoly1305::Key, hasher::hash},
     error::{RusticError, RusticResult},
     file::{AddFileResult, FileInfos, RestoreStats},
@@ -142,5 +145,5 @@ pub use crate::{
         },
         RepoFile,
     },
-    repository::{parse_command, OpenRepository, RepoInfo, Repository, RepositoryOptions},
+    repository::{parse_command, OpenRepository, Repository, RepositoryOptions},
 };

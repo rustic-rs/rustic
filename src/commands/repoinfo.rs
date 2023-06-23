@@ -7,14 +7,27 @@ use crate::{
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
+use serde::Serialize;
 
 use crate::helpers::table_right_from;
 use anyhow::Result;
-use rustic_core::RepoFileInfo;
+use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos};
 
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]
-pub(crate) struct RepoInfoCmd;
+pub(crate) struct RepoInfoCmd {
+    /// Only scan repository files (doesn't need repository password)
+    #[clap(long)]
+    only_files: bool,
+
+    /// Only scan index
+    #[clap(long)]
+    only_index: bool,
+
+    /// Show infos in json format
+    #[clap(long)]
+    json: bool,
+}
 
 impl Runnable for RepoInfoCmd {
     fn run(&self) {
@@ -25,97 +38,45 @@ impl Runnable for RepoInfoCmd {
     }
 }
 
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
+#[derive(Serialize)]
+struct Infos {
+    files: Option<RepoFileInfos>,
+    index: Option<IndexInfos>,
+}
+
 impl RepoInfoCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = get_repository(&config);
-        let file_info = repo.infos_files()?;
-        print_file_info("repository files", file_info.files);
-        if let Some(info) = file_info.files_hot {
-            print_file_info("hot repository files", info);
+
+        let infos = Infos {
+            files: (!self.only_index).then(|| repo.infos_files()).transpose()?,
+            index: (!self.only_files)
+                .then(|| -> Result<_> {
+                    let repo = repo.open()?;
+                    let info_index = repo.infos_index()?;
+                    Ok(info_index)
+                })
+                .transpose()?,
+        };
+
+        if self.json {
+            let mut stdout = std::io::stdout();
+            serde_json::to_writer_pretty(&mut stdout, &infos)?;
+            return Ok(());
         }
 
-        let repo = repo.open()?;
-        let index_info = repo.infos_index()?;
-
-        let mut table = table_right_from(
-            1,
-            ["Blob type", "Count", "Total Size", "Total Size in Packs"],
-        );
-
-        let mut total_count = 0;
-        let mut total_data_size = 0;
-        let mut total_size = 0;
-
-        for blobs in &index_info.blobs {
-            _ = table.add_row([
-                format!("{:?}", blobs.blob_type),
-                blobs.count.to_string(),
-                bytes_size_to_string(blobs.data_size),
-                bytes_size_to_string(blobs.size),
-            ]);
-            total_count += blobs.count;
-            total_data_size += blobs.data_size;
-            total_size += blobs.size;
-        }
-        for blobs in &index_info.blobs_delete {
-            if blobs.count > 0 {
-                _ = table.add_row([
-                    format!("{:?} to delete", blobs.blob_type),
-                    blobs.count.to_string(),
-                    bytes_size_to_string(blobs.data_size),
-                    bytes_size_to_string(blobs.size),
-                ]);
-                total_count += blobs.count;
-                total_data_size += blobs.data_size;
-                total_size += blobs.size;
+        if let Some(file_info) = infos.files {
+            print_file_info("repository files", file_info.repo);
+            if let Some(info) = file_info.repo_hot {
+                print_file_info("hot repository files", info);
             }
         }
 
-        _ = table.add_row([
-            "Total".to_string(),
-            total_count.to_string(),
-            bytes_size_to_string(total_data_size),
-            bytes_size_to_string(total_size),
-        ]);
-
-        println!();
-        println!("{table}");
-
-        let mut table = table_right_from(
-            1,
-            ["Blob type", "Pack Count", "Minimum Size", "Maximum Size"],
-        );
-
-        for packs in index_info.packs {
-            _ = table.add_row([
-                format!("{:?} packs", packs.blob_type),
-                packs.count.to_string(),
-                packs
-                    .min_size
-                    .map_or("-".to_string(), |s| bytes_size_to_string(s)),
-                packs
-                    .max_size
-                    .map_or("-".to_string(), |s| bytes_size_to_string(s)),
-            ]);
+        if let Some(index_info) = infos.index {
+            print_index_info(index_info);
         }
-        for packs in index_info.packs_delete {
-            if packs.count > 0 {
-                _ = table.add_row([
-                    format!("{:?} packs to delete", packs.blob_type),
-                    packs.count.to_string(),
-                    packs
-                        .min_size
-                        .map_or("-".to_string(), |s| bytes_size_to_string(s)),
-                    packs
-                        .max_size
-                        .map_or("-".to_string(), |s| bytes_size_to_string(s)),
-                ]);
-            }
-        }
-        println!();
-        println!("{table}");
-
         Ok(())
     }
 }

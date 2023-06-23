@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     index::IndexEntry,
     repofile::indexfile::{IndexFile, IndexPack},
@@ -5,7 +7,7 @@ use crate::{
     ReadBackend, Repository, RusticResult, ALL_FILE_TYPES,
 };
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct IndexInfos {
     pub blobs: Vec<BlobInfo>,
     pub blobs_delete: Vec<BlobInfo>,
@@ -13,7 +15,7 @@ pub struct IndexInfos {
     pub packs_delete: Vec<PackInfo>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct BlobInfo {
     pub blob_type: BlobType,
     pub count: u64,
@@ -29,7 +31,8 @@ impl BlobInfo {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct PackInfo {
     pub blob_type: BlobType,
     pub count: u64,
@@ -102,13 +105,14 @@ pub(crate) fn collect_index_infos<P: ProgressBars>(
     Ok(info)
 }
 
-#[derive(Default, Clone, Debug)]
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct RepoFileInfos {
-    pub files: Vec<RepoFileInfo>,
-    pub files_hot: Option<Vec<RepoFileInfo>>,
+    pub repo: Vec<RepoFileInfo>,
+    pub repo_hot: Option<Vec<RepoFileInfo>>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct RepoFileInfo {
     pub tpe: FileType,
     pub count: u64,
@@ -132,5 +136,8 @@ pub fn collect_file_infos<P: ProgressBars>(repo: &Repository<P>) -> RusticResult
     let files_hot = repo.be_hot.as_ref().map(collect_file_info).transpose()?;
     p.finish();
 
-    Ok(RepoFileInfos { files, files_hot })
+    Ok(RepoFileInfos {
+        repo: files,
+        repo_hot: files_hot,
+    })
 }

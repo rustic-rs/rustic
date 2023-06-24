@@ -36,7 +36,8 @@ use crate::{
     crypto::aespoly1305::Key,
     error::RepositoryErrorKind,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
-    BlobType, IndexBackend, NoProgressBars, ProgressBars, RusticResult, SnapshotFile,
+    BlobType, IndexBackend, NoProgressBars, ProgressBars, PruneOpts, PrunePlan, RusticResult,
+    SnapshotFile,
 };
 
 pub(super) mod constants {
@@ -378,6 +379,10 @@ impl<P: ProgressBars> OpenRepository<P> {
 
     pub fn check(&self, opts: CheckOpts) -> RusticResult<()> {
         opts.run(self)
+    }
+
+    pub fn prune_plan(&self, opts: &PruneOpts) -> RusticResult<PrunePlan> {
+        opts.get_plan(self)
     }
 
     pub fn to_indexed(self) -> RusticResult<IndexedRepository<P>> {

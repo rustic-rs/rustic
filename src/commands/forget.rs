@@ -113,7 +113,7 @@ impl ForgetCmd {
             SnapshotFile::group_from_backend(
                 be,
                 |sn| config.forget.filter.matches(sn),
-                &group_by,
+                group_by,
                 &p,
             )?
         } else {

@@ -77,10 +77,10 @@ fn test_backup_and_check_passes() -> TestResult<()> {
         let mut output = String::new();
         cmd.stdout().read_to_string(&mut output)?;
 
-        let patterns = &["1 snapshot(s)"];
+        let patterns = &["total: 1 snapshot(s)"];
         let matches = get_matches(patterns, output)?;
 
-        assert_eq!(matches, vec![(PatternID::must(0), 13)]);
+        assert_eq!(matches, vec![(PatternID::must(0), 20)]);
 
         cmd.wait()?.expect_success();
     }
@@ -111,10 +111,10 @@ fn test_backup_and_check_passes() -> TestResult<()> {
         let mut output = String::new();
         cmd.stdout().read_to_string(&mut output)?;
 
-        let patterns = &["2 snapshot(s)"];
+        let patterns = &["total: 2 snapshot(s)"];
         let matches = get_matches(patterns, output)?;
 
-        assert_eq!(matches, vec![(PatternID::must(0), 13)]);
+        assert_eq!(matches, vec![(PatternID::must(0), 20)]);
 
         cmd.wait()?.expect_success();
     }

@@ -252,7 +252,7 @@ impl BackupCmd {
             // get suitable snapshot group from snapshot and opts.group_by. This is used to filter snapshots for the parent detection
             let group = SnapshotGroup::from_sn(
                 &snap,
-                &opts.group_by.unwrap_or_else(|| {
+                opts.group_by.unwrap_or_else(|| {
                     SnapshotGroupCriterion::from_str("host,label,paths").unwrap()
                 }),
             );

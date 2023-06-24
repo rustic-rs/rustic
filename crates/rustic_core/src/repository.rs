@@ -37,7 +37,7 @@ use crate::{
     error::RepositoryErrorKind,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
     BlobType, IndexBackend, NoProgressBars, ProgressBars, PruneOpts, PrunePlan, RusticResult,
-    SnapshotFile,
+    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
 };
 
 pub(super) mod constants {
@@ -373,6 +373,15 @@ pub struct OpenRepository<P> {
 }
 
 impl<P: ProgressBars> OpenRepository<P> {
+    pub fn get_snapshot_group(
+        &self,
+        ids: &[String],
+        group_by: SnapshotGroupCriterion,
+        filter: impl FnMut(&SnapshotFile) -> bool,
+    ) -> RusticResult<Vec<(SnapshotGroup, Vec<SnapshotFile>)>> {
+        commands::snapshots::get_snapshot_group(self, ids, group_by, filter)
+    }
+
     pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
         commands::cat::cat_file(self, tpe, id)
     }

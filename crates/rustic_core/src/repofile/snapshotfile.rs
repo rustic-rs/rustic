@@ -341,7 +341,7 @@ impl SnapshotFile {
     pub fn group_from_backend<B, F>(
         be: &B,
         filter: F,
-        crit: &SnapshotGroupCriterion,
+        crit: SnapshotGroupCriterion,
         p: &impl Progress,
     ) -> RusticResult<Vec<(SnapshotGroup, Vec<Self>)>>
     where
@@ -349,7 +349,7 @@ impl SnapshotFile {
         F: FnMut(&Self) -> bool,
     {
         let mut snaps = Self::all_from_backend(be, filter, p)?;
-        snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(*crit, sn2));
+        snaps.sort_unstable_by(|sn1, sn2| sn1.cmp_group(crit, sn2));
 
         let mut result = Vec::new();
         for (group, snaps) in &snaps
@@ -528,7 +528,7 @@ impl Display for SnapshotGroup {
 
 impl SnapshotGroup {
     #[must_use]
-    pub fn from_sn(sn: &SnapshotFile, crit: &SnapshotGroupCriterion) -> Self {
+    pub fn from_sn(sn: &SnapshotFile, crit: SnapshotGroupCriterion) -> Self {
         Self {
             hostname: crit.hostname.then(|| sn.hostname.clone()),
             label: crit.label.then(|| sn.label.clone()),

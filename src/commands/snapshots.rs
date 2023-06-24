@@ -3,20 +3,18 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::{get_repository, open_repository},
+    commands::get_repository,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
     status_err, Application, RUSTIC_APP,
 };
 
+use abscissa_core::{Command, Runnable, Shutdown};
+use anyhow::Result;
 use comfy_table::Cell;
 use humantime::format_duration;
-
-use abscissa_core::{Command, Runnable, Shutdown};
-
 use itertools::Itertools;
 
-use rustic_core::DeleteOption;
-use rustic_core::{ProgressBars, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion};
+use rustic_core::{DeleteOption, SnapshotFile, SnapshotGroupCriterion};
 
 /// `snapshot` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -56,42 +54,13 @@ impl Runnable for SnapshotCmd {
 }
 
 impl SnapshotCmd {
-    fn inner_run(&self) -> anyhow::Result<()> {
+    fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+        let repo = get_repository(&config).open()?;
 
-        let repo = open_repository(get_repository(&config));
-
-        let p = config.global.progress_options.progress_hidden();
-        let groups = match &self.ids[..] {
-            [] => SnapshotFile::group_from_backend(
-                &repo.dbe,
-                |sn| config.snapshot_filter.matches(sn),
-                &self.group_by,
-                &p,
-            )?,
-            [id] if id == "latest" => SnapshotFile::group_from_backend(
-                &repo.dbe,
-                |sn| config.snapshot_filter.matches(sn),
-                &self.group_by,
-                &p,
-            )?
-            .into_iter()
-            .map(|(group, mut snaps)| {
-                snaps.sort_unstable();
-                let last_idx = snaps.len() - 1;
-                snaps.swap(0, last_idx);
-                snaps.truncate(1);
-                (group, snaps)
-            })
-            .collect::<Vec<_>>(),
-            _ => {
-                let item = (
-                    SnapshotGroup::default(),
-                    SnapshotFile::from_ids(&repo.dbe, &self.ids, &p)?,
-                );
-                vec![item]
-            }
-        };
+        let groups = repo.get_snapshot_group(&self.ids, self.group_by, |sn| {
+            config.snapshot_filter.matches(sn)
+        })?;
 
         if self.json {
             let mut stdout = std::io::stdout();
@@ -99,6 +68,7 @@ impl SnapshotCmd {
             return Ok(());
         }
 
+        let mut total_count = 0;
         for (group, mut snapshots) in groups {
             if !group.is_empty() {
                 println!("\nsnapshots for {group}");
@@ -160,7 +130,10 @@ impl SnapshotCmd {
                 println!("{table}");
             }
             println!("{count} snapshot(s)");
+            total_count += count;
         }
+        println!();
+        println!("total: {total_count} snapshot(s)");
 
         Ok(())
     }

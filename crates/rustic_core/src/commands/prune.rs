@@ -34,54 +34,84 @@ pub(super) mod constants {
 #[allow(clippy::struct_excessive_bools)]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[derive(Debug, Clone)]
-#[group(id = "prune_opts")]
+#[cfg_attr(feature = "clap", group(id = "prune_opts"))]
 pub struct PruneOpts {
     /// Define maximum data to repack in % of reposize or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
-    #[clap(long, value_name = "LIMIT", default_value = "unlimited")]
+    #[cfg_attr(
+        feature = "clap",
+        clap(long, value_name = "LIMIT", default_value = "unlimited")
+    )]
     pub max_repack: LimitOption,
 
     /// Tolerate limit of unused data in % of reposize after pruning or as size (e.g. '5b', '2 kB', '3M', '4TiB') or 'unlimited'
-    #[clap(long, value_name = "LIMIT", default_value = "5%")]
+    #[cfg_attr(
+        feature = "clap",
+        clap(long, value_name = "LIMIT", default_value = "5%")
+    )]
     pub max_unused: LimitOption,
 
     /// Minimum duration (e.g. 90d) to keep packs before repacking or removing. More recently created
     /// packs won't be repacked or marked for deletion within this prune run.
-    #[clap(long, value_name = "DURATION", default_value = "0d")]
+    #[cfg_attr(
+        feature = "clap",
+        clap(long, value_name = "DURATION", default_value = "0d")
+    )]
     pub keep_pack: humantime::Duration,
 
     /// Minimum duration (e.g. 10m) to keep packs marked for deletion. More recently marked packs won't be
     /// deleted within this prune run.
-    #[clap(long, value_name = "DURATION", default_value = "23h")]
+    #[cfg_attr(
+        feature = "clap",
+        clap(long, value_name = "DURATION", default_value = "23h")
+    )]
     pub keep_delete: humantime::Duration,
 
     /// Delete files immediately instead of marking them. This also removes all files already marked for deletion.
     /// WARNING: Only use if you are sure the repository is not accessed by parallel processes!
-    #[clap(long)]
+    #[cfg_attr(feature = "clap", clap(long))]
     pub instant_delete: bool,
 
     /// Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting
-    #[clap(long)]
+    #[cfg_attr(feature = "clap", clap(long))]
     pub fast_repack: bool,
 
     /// Repack packs containing uncompressed blobs. This cannot be used with --fast-repack.
     /// Implies --max-unused=0.
-    #[clap(long, conflicts_with = "fast_repack")]
+    #[cfg_attr(feature = "clap", clap(long, conflicts_with = "fast_repack"))]
     pub repack_uncompressed: bool,
 
     /// Repack all packs. Implies --max-unused=0.
-    #[clap(long)]
+    #[cfg_attr(feature = "clap", clap(long))]
     pub repack_all: bool,
 
     /// Only repack packs which are cacheable [default: true for a hot/cold repository, else false]
-    #[clap(long, value_name = "TRUE/FALSE")]
+    #[cfg_attr(feature = "clap", clap(long, value_name = "TRUE/FALSE"))]
     pub repack_cacheable_only: Option<bool>,
 
     /// Do not repack packs which only needs to be resized
-    #[clap(long)]
+    #[cfg_attr(feature = "clap", clap(long))]
     pub no_resize: bool,
 
-    #[clap(skip)]
+    #[cfg_attr(feature = "clap", clap(skip))]
     pub ignore_snaps: Vec<Id>,
+}
+
+impl Default for PruneOpts {
+    fn default() -> Self {
+        Self {
+            max_repack: LimitOption::Unlimited,
+            max_unused: LimitOption::Percentage(5),
+            keep_pack: std::time::Duration::from_secs(0).into(),
+            keep_delete: std::time::Duration::from_secs(82800).into(), // = 23h
+            instant_delete: false,
+            fast_repack: false,
+            repack_uncompressed: false,
+            repack_all: false,
+            repack_cacheable_only: None,
+            no_resize: false,
+            ignore_snaps: Vec::new(),
+        }
+    }
 }
 
 impl PruneOpts {

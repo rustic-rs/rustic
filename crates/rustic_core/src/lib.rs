@@ -146,5 +146,5 @@ pub use crate::{
         },
         RepoFile,
     },
-    repository::{OpenRepository, Repository, RepositoryOptions},
+    repository::{read_password_from_reader, OpenRepository, Repository, RepositoryOptions},
 };

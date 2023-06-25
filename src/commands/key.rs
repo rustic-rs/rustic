@@ -12,9 +12,9 @@ use anyhow::Result;
 
 use std::{fs::File, io::BufReader};
 
-use rpassword::{prompt_password, read_password_from_bufread};
+use dialoguer::Password;
 
-use rustic_core::{hash, FileType, KeyFile, WriteBackend};
+use rustic_core::{hash, read_password_from_reader, FileType, KeyFile, WriteBackend};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -79,7 +79,11 @@ impl AddCmd {
         let key = repo.key;
 
         let pass = self.new_password_file.as_ref().map_or_else(
-            || match prompt_password("enter password for new key: ") {
+            || match Password::new().with_prompt("enter password for new key")
+            .allow_empty_password(true)
+            .with_confirmation("confirm password", "passwords do not match")
+            .interact()
+            {
                 Ok(it) => it,
                 Err(err) => {
                     status_err!("{}", err);
@@ -94,7 +98,7 @@ impl AddCmd {
                         RUSTIC_APP.shutdown(Shutdown::Crash);
                     }
                 });
-                match read_password_from_bufread(&mut file) {
+                match read_password_from_reader(&mut file) {
                     Ok(it) => it,
                     Err(err) => {
                         status_err!("{}", err);

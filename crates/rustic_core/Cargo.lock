@@ -2060,7 +2060,7 @@ dependencies = [
  "rayon",
  "reqwest",
  "rhai",
- "rpassword",
+ "dialoguer",
  "rstest",
  "rustdoc-json",
  "rustup-toolchain",

@@ -8,7 +8,7 @@ use anyhow::{bail, Result};
 use crate::{commands::get_repository, Application, RUSTIC_APP};
 
 use bytes::Bytes;
-use rpassword::prompt_password;
+use dialoguer::Password;
 
 use rustic_core::{
     hash, random_poly, ConfigFile, DecryptBackend, DecryptWriteBackend, FileType, Id, Key, KeyFile,
@@ -80,7 +80,11 @@ pub(crate) fn save_config(
     let key = Key::new();
 
     let pass = password.map_or_else(
-        || match prompt_password("enter password for new key: ") {
+        || match Password::new().with_prompt("enter password for new key")
+        .allow_empty_password(true)
+        .with_confirmation("confirm password", "passwords do not match")
+        .interact()
+        {
             Ok(it) => it,
             Err(err) => {
                 status_err!("{}", err);

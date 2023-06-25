@@ -108,7 +108,7 @@ merge = { workspace = true }
 
 directories = { workspace = true }
 nom = { workspace = true }
-rpassword = { workspace = true }
+dialoguer = "0.10.4"
 bytesize = { workspace = true }
 indicatif = { workspace = true }
 path-dedot = { workspace = true }
@@ -232,7 +232,6 @@ cachedir = "0.3"
 
 # commands
 merge = "0.1"
-rpassword = "7"
 directories = "5"
 nom = "7"
 indicatif = "0.17"

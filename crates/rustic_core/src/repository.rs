@@ -18,7 +18,7 @@ use nom::{
     sequence::delimited,
     IResult,
 };
-use rpassword::prompt_password;
+use dialoguer::Password;
 
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -155,7 +155,7 @@ pub fn parse_command<'a, E: ParseError<&'a str>>(
     )(input)
 }
 
-pub(crate) fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult<String> {
+pub fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult<String> {
     let mut password = String::new();
     _ = file
         .read_line(&mut password)
@@ -350,7 +350,10 @@ pub(crate) fn get_key(be: &impl ReadBackend, password: Option<String>) -> Rustic
                 // TODO: Differentiate between wrong password and other error!
                 if let Ok(key) = find_key_in_backend(
                     be,
-                    &prompt_password("enter repository password: ")
+                    &Password::new()
+                        .with_prompt("enter repository password")
+                        .allow_empty_password(true)
+                        .interact()
                         .map_err(RepositoryErrorKind::ReadingPasswordFromPromptFailed)?,
                     None,
                 ) {

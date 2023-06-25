@@ -94,7 +94,7 @@ clap = { workspace = true, optional = true }
 clap_complete = { workspace = true, optional = true }
 
 merge = { workspace = true, optional = true }
-rpassword = { workspace = true }
+dialoguer = "0.10.4"
 directories = { workspace = true }
 nom = { workspace = true }
 path-dedot = { workspace = true }

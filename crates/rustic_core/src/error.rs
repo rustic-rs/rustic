@@ -235,6 +235,8 @@ pub enum RepositoryErrorKind {
     AccessToConfigFileFailed,
     /// {0:?}
     FromNomError(nom::Err<()>),
+    /// {0:?}
+    FromThreadPoolbilderError(rayon::ThreadPoolBuildError),
     /// reading Password failed: `{0:?}`
     ReadingPasswordFromReaderFailed(std::io::Error),
     /// reading Password from prompt failed: `{0:?}`

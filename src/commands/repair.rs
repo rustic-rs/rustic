@@ -19,8 +19,6 @@ use rustic_core::{
     ProgressBars, ReadBackend, ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
 };
 
-use crate::helpers::warm_up_wait;
-
 /// `repair` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct RepairCmd {
@@ -185,12 +183,7 @@ impl IndexSubCmd {
         // process packs which are listed but not contained in the index
         pack_read_header.extend(packs.into_iter().map(|(id, size)| (id, false, None, size)));
 
-        warm_up_wait(
-            &repo,
-            pack_read_header.iter().map(|(id, _, _, _)| *id),
-            true,
-            progress_options,
-        )?;
+        repo.warm_up_wait(pack_read_header.iter().map(|(id, _, _, _)| *id))?;
 
         let indexer = Indexer::new(be.clone()).into_shared();
         let p = progress_options.progress_counter("reading pack headers");

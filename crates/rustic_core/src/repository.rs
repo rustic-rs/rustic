@@ -36,13 +36,16 @@ use crate::{
     crypto::aespoly1305::Key,
     error::RepositoryErrorKind,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
-    BlobType, IndexBackend, NoProgressBars, ProgressBars, PruneOpts, PrunePlan, RusticResult,
+    BlobType, Id, IndexBackend, NoProgressBars, ProgressBars, PruneOpts, PrunePlan, RusticResult,
     SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
 };
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
 }
+
+mod warm_up;
+use warm_up::{warm_up, warm_up_wait};
 
 #[serde_as]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
@@ -401,6 +404,14 @@ impl<P: ProgressBars> OpenRepository<P> {
 
     pub fn infos_index(&self) -> RusticResult<IndexInfos> {
         commands::repoinfo::collect_index_infos(self)
+    }
+
+    pub fn warm_up(&self, packs: impl ExactSizeIterator<Item = Id>) -> RusticResult<()> {
+        warm_up(self, packs)
+    }
+
+    pub fn warm_up_wait(&self, packs: impl ExactSizeIterator<Item = Id>) -> RusticResult<()> {
+        warm_up_wait(self, packs)
     }
 }
 

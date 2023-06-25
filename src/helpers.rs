@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, process::Command};
+use std::collections::BTreeSet;
 
 use abscissa_core::Application;
 use anyhow::Result;
@@ -7,95 +7,15 @@ use comfy_table::{
     presets::ASCII_MARKDOWN, Attribute, Cell, CellAlignment, ContentArrangement, Table,
 };
 
-use log::{debug, info, trace, warn};
-use rayon::{
-    prelude::{IntoParallelRefIterator, ParallelBridge, ParallelIterator},
-    ThreadPoolBuilder,
-};
+use log::{info, trace};
+use rayon::prelude::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
 use rustic_core::{
-    parse_command, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, IndexedBackend,
-    Indexer, NodeType, OpenRepository, Packer, Progress, ProgressBars, ReadBackend, ReadIndex,
-    SnapshotFile, TreeStreamerOnce,
+    BlobType, DecryptWriteBackend, IndexBackend, IndexedBackend, Indexer, NodeType, OpenRepository,
+    Packer, Progress, ProgressBars, ReadIndex, SnapshotFile, TreeStreamerOnce,
 };
 
-use crate::{application::RUSTIC_APP, config::progress_options::ProgressOptions};
-
-pub(super) mod constants {
-    pub(super) const MAX_READER_THREADS_NUM: usize = 20;
-}
-
-pub(crate) fn warm_up_wait<P>(
-    repo: &OpenRepository<P>,
-    packs: impl ExactSizeIterator<Item = Id>,
-    wait: bool,
-    progress_options: &ProgressOptions,
-) -> Result<()> {
-    if let Some(command) = &repo.opts.warm_up_command {
-        warm_up_command(packs, command, progress_options)?;
-    } else if repo.opts.warm_up {
-        warm_up(&repo.be, packs, progress_options)?;
-    }
-    if wait {
-        if let Some(wait) = repo.opts.warm_up_wait {
-            let p = progress_options.progress_spinner(format!("waiting {wait}..."));
-            std::thread::sleep(*wait);
-            p.finish();
-        }
-    }
-    Ok(())
-}
-
-pub(crate) fn warm_up_command(
-    packs: impl ExactSizeIterator<Item = Id>,
-    command: &str,
-    progress_options: &ProgressOptions,
-) -> Result<()> {
-    let p = progress_options.progress_counter("warming up packs...");
-    p.set_length(packs.len() as u64);
-    for pack in packs {
-        let actual_command = command.replace("%id", &pack.to_hex());
-        debug!("calling {actual_command}...");
-        let commands = parse_command::<()>(&actual_command)?.1;
-        let status = Command::new(commands[0]).args(&commands[1..]).status()?;
-        if !status.success() {
-            warn!("warm-up command was not successful for pack {pack:?}. {status}");
-        }
-    }
-    p.finish();
-    Ok(())
-}
-
-pub(crate) fn warm_up(
-    be: &impl ReadBackend,
-    packs: impl ExactSizeIterator<Item = Id>,
-    progress_options: &ProgressOptions,
-) -> Result<()> {
-    let mut be = be.clone();
-    be.set_option("retry", "false")?;
-
-    let p = progress_options.progress_counter("warming up packs...");
-    p.set_length(packs.len() as u64);
-
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(constants::MAX_READER_THREADS_NUM)
-        .build()?;
-    let p = &p;
-    let be = &be;
-    pool.in_place_scope(|s| {
-        for pack in packs {
-            s.spawn(move |_| {
-                // ignore errors as they are expected from the warm-up
-                _ = be.read_partial(FileType::Pack, &pack, false, 0, 1);
-                p.inc(1);
-            });
-        }
-    });
-
-    p.finish();
-
-    Ok(())
-}
+use crate::application::RUSTIC_APP;
 
 pub(crate) fn copy<P>(
     snapshots: &[SnapshotFile],

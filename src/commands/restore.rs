@@ -33,7 +33,7 @@ use rustic_core::{
     TreeStreamerOptions,
 };
 
-use crate::{filtering::SnapshotFilter, helpers::warm_up_wait};
+use crate::filtering::SnapshotFilter;
 
 pub(crate) mod constants {
     pub(crate) const MAX_READER_THREADS_NUM: usize = 20;
@@ -134,16 +134,11 @@ impl RestoreCmd {
 
         if file_infos.restore_size == 0 {
             info!("all file contents are fine.");
+        } else if config.global.dry_run {
+            repo.warm_up(file_infos.to_packs().into_iter())?;
         } else {
-            warm_up_wait(
-                &repo,
-                file_infos.to_packs().into_iter(),
-                !config.global.dry_run,
-                progress_options,
-            )?;
-            if !config.global.dry_run {
-                restore_contents(be, &dest, file_infos)?;
-            }
+            repo.warm_up_wait(file_infos.to_packs().into_iter())?;
+            restore_contents(be, &dest, file_infos)?;
         }
 
         if !config.global.dry_run {

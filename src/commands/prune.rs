@@ -12,8 +12,6 @@ use log::debug;
 
 use anyhow::Result;
 
-use crate::helpers::warm_up_wait;
-
 use rustic_core::{PruneOpts, PruneStats, Sum};
 
 /// `prune` subcommand
@@ -37,23 +35,15 @@ impl Runnable for PruneCmd {
 impl PruneCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let progress_options = &config.global.progress_options;
-
         let repo = open_repository(get_repository(&config));
 
         let pruner = repo.prune_plan(&self.opts)?;
 
         print_stats(&pruner.stats);
 
-        let dry_run = config.global.dry_run;
-        warm_up_wait(
-            &repo,
-            pruner.repack_packs().into_iter(),
-            !dry_run,
-            progress_options,
-        )?;
-
-        if !dry_run {
+        if config.global.dry_run {
+            repo.warm_up(pruner.repack_packs().into_iter())?;
+        } else {
             pruner.do_prune(&repo, &self.opts)?;
         }
 

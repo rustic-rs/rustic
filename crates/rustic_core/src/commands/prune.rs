@@ -715,6 +715,8 @@ impl PrunePlan {
         repo: &OpenRepository<P>,
         opts: &PruneOpts,
     ) -> RusticResult<()> {
+        repo.warm_up_wait(self.repack_packs().into_iter())?;
+
         let be = &repo.dbe;
         let pb = &repo.pb;
 

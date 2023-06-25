@@ -146,5 +146,5 @@ pub use crate::{
         },
         RepoFile,
     },
-    repository::{parse_command, OpenRepository, Repository, RepositoryOptions},
+    repository::{OpenRepository, Repository, RepositoryOptions},
 };

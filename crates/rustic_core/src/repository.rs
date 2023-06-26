@@ -31,6 +31,7 @@ use crate::{
     commands::{
         self,
         check::CheckOpts,
+        forget::{ForgetGroups, KeepOptions},
         repoinfo::{IndexInfos, RepoFileInfos},
     },
     crypto::aespoly1305::Key,
@@ -386,6 +387,27 @@ impl<P: ProgressBars> OpenRepository<P> {
         filter: impl FnMut(&SnapshotFile) -> bool,
     ) -> RusticResult<Vec<(SnapshotGroup, Vec<SnapshotFile>)>> {
         commands::snapshots::get_snapshot_group(self, ids, group_by, filter)
+    }
+
+    pub fn get_snapshots(&self, ids: &[String]) -> RusticResult<Vec<SnapshotFile>> {
+        let p = self.pb.progress_counter("getting snapshots...");
+        SnapshotFile::from_ids(&self.dbe, ids, &p)
+    }
+
+    pub fn get_forget_snapshots(
+        &self,
+        keep: &KeepOptions,
+        group_by: SnapshotGroupCriterion,
+        filter: impl FnMut(&SnapshotFile) -> bool,
+    ) -> RusticResult<ForgetGroups> {
+        commands::forget::get_forget_snapshots(self, keep, group_by, filter)
+    }
+
+    pub fn delete_snapshots(&self, ids: &[Id]) -> RusticResult<()> {
+        let p = self.pb.progress_counter("removing snapshots...");
+        self.dbe
+            .delete_list(FileType::Snapshot, true, ids.iter(), p)?;
+        Ok(())
     }
 
     pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {

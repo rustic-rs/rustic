@@ -469,12 +469,23 @@ impl Ord for SnapshotFile {
 }
 
 #[allow(clippy::struct_excessive_bools)]
-#[derive(DeserializeFromStr, Clone, Default, Debug, Copy)]
+#[derive(DeserializeFromStr, Clone, Debug, Copy)]
 pub struct SnapshotGroupCriterion {
     hostname: bool,
     label: bool,
     paths: bool,
     tags: bool,
+}
+
+impl Default for SnapshotGroupCriterion {
+    fn default() -> Self {
+        Self {
+            hostname: true,
+            label: true,
+            paths: true,
+            tags: false,
+        }
+    }
 }
 
 impl FromStr for SnapshotGroupCriterion {

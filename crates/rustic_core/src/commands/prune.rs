@@ -2,7 +2,7 @@
 
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
-use log::info;
+use log::{info, warn};
 
 use std::{
     cmp::Ordering,
@@ -279,6 +279,7 @@ enum PackToDo {
     Repack,
     MarkDelete,
     KeepMarked,
+    KeepMarkedAndCorrect,
     Recover,
     Delete,
 }
@@ -370,7 +371,7 @@ impl PrunePack {
                 stats.packs_to_delete.remove += 1;
                 stats.size_to_delete.remove += u64::from(self.size);
             }
-            PackToDo::KeepMarked => {
+            PackToDo::KeepMarked | PackToDo::KeepMarkedAndCorrect => {
                 stats.packs_to_delete.keep += 1;
                 stats.size_to_delete.keep += u64::from(self.size);
             }
@@ -571,15 +572,16 @@ impl PrunePlan {
                                     .push((pi, PartlyUsed, index_num, pack_num));
                             }
                         }
-                        (true, 0, _) => {
-                            let local_date_time =
-                                pack.time.ok_or(CommandErrorKind::NoTimeInPacksToDelete)?;
-                            if self.time - local_date_time >= keep_delete {
+                        (true, 0, _) => match pack.time {
+                            Some(local_date_time) if self.time - local_date_time >= keep_delete => {
                                 pack.set_todo(PackToDo::Delete, &pi, &mut self.stats);
-                            } else {
-                                pack.set_todo(PackToDo::KeepMarked, &pi, &mut self.stats);
                             }
-                        }
+                            None => {
+                                warn!("pack to delete {}: no time set, this should not happen! Keeping this pack.", pack.id);
+                                pack.set_todo(PackToDo::KeepMarkedAndCorrect, &pi, &mut self.stats);
+                            }
+                            Some(_) => pack.set_todo(PackToDo::KeepMarked, &pi, &mut self.stats),
+                        },
                         (true, 1.., _) => {
                             // needed blobs; mark this pack for recovery
                             pack.set_todo(PackToDo::Recover, &pi, &mut self.stats);
@@ -685,7 +687,10 @@ impl PrunePlan {
                 PackToDo::Repack => {
                     check_size()?;
                 }
-                PackToDo::MarkDelete | PackToDo::Delete | PackToDo::KeepMarked => {}
+                PackToDo::MarkDelete
+                | PackToDo::Delete
+                | PackToDo::KeepMarked
+                | PackToDo::KeepMarkedAndCorrect => {}
             }
         }
 
@@ -746,7 +751,6 @@ impl PrunePlan {
         opts: &PruneOpts,
     ) -> RusticResult<()> {
         repo.warm_up_wait(self.repack_packs().into_iter())?;
-
         let be = &repo.dbe;
         let pb = &repo.pb;
 
@@ -891,12 +895,14 @@ impl PrunePlan {
                             indexer.write().unwrap().add_remove(pack)?;
                         }
                     }
-                    PackToDo::KeepMarked => {
+                    PackToDo::KeepMarked | PackToDo::KeepMarkedAndCorrect => {
                         if opts.instant_delete {
                             delete_pack(pack);
                         } else {
-                            // keep pack: add to new index
-                            let pack = pack.into_index_pack();
+                            // keep pack: add to new index; keep the timestamp.
+                            // Note the timestap shouldn't be None here, however if it is not not set, use the current time to heal the entry!
+                            let time = pack.time.unwrap_or(self.time);
+                            let pack = pack.into_index_pack_with_time(time);
                             indexer.write().unwrap().add_remove(pack)?;
                         }
                     }

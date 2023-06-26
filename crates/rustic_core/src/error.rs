@@ -146,8 +146,6 @@ pub enum CommandErrorKind {
     PathIsNoDir(String),
     /// used blobs are missing: blob {0} doesn't existing
     BlobsMissing(Id),
-    /// packs_to_delete doesn't contain `time`.
-    NoTimeInPacksToDelete,
     /// used pack {0}: size does not match! Expected size: {1}, real size: {2}
     PackSizeNotMatching(Id, u32, u32),
     /// "used pack {0} does not exist!

@@ -79,10 +79,11 @@ impl AddCmd {
         let key = repo.key;
 
         let pass = self.new_password_file.as_ref().map_or_else(
-            || match Password::new().with_prompt("enter password for new key")
-            .allow_empty_password(true)
-            .with_confirmation("confirm password", "passwords do not match")
-            .interact()
+            || match Password::new()
+                .with_prompt("enter password for new key")
+                .allow_empty_password(true)
+                .with_confirmation("confirm password", "passwords do not match")
+                .interact()
             {
                 Ok(it) => it,
                 Err(err) => {

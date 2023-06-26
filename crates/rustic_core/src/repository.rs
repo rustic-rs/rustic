@@ -9,6 +9,7 @@ use std::{
 use bytes::Bytes;
 use log::{debug, error, info};
 
+use dialoguer::Password;
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
@@ -18,7 +19,6 @@ use nom::{
     sequence::delimited,
     IResult,
 };
-use dialoguer::Password;
 
 use serde_with::{serde_as, DisplayFromStr};
 

@@ -80,10 +80,11 @@ pub(crate) fn save_config(
     let key = Key::new();
 
     let pass = password.map_or_else(
-        || match Password::new().with_prompt("enter password for new key")
-        .allow_empty_password(true)
-        .with_confirmation("confirm password", "passwords do not match")
-        .interact()
+        || match Password::new()
+            .with_prompt("enter password for new key")
+            .allow_empty_password(true)
+            .with_confirmation("confirm password", "passwords do not match")
+            .interact()
         {
             Ok(it) => it,
             Err(err) => {

@@ -199,12 +199,17 @@ fn check_packs(
         IndexType::FullTrees
     });
 
-    let mut process_pack = |p: IndexPack| {
+    let mut process_pack = |p: IndexPack, check_time: bool| {
         let blob_type = p.blob_type();
         let pack_size = p.pack_size();
         _ = packs.insert(p.id, pack_size);
         if hot_be.is_some() && blob_type == BlobType::Tree {
             _ = tree_packs.insert(p.id, pack_size);
+        }
+
+        // Check if time is set _
+        if check_time && p.time.is_none() {
+            error!("pack {}: No time is set! Run prune to correct this!", p.id);
         }
 
         // check offsests in index
@@ -234,10 +239,10 @@ fn check_packs(
         let index = index?.1;
         index_collector.extend(index.packs.clone());
         for p in index.packs {
-            process_pack(p);
+            process_pack(p, false);
         }
         for p in index.packs_to_delete {
-            process_pack(p);
+            process_pack(p, true);
         }
     }
 

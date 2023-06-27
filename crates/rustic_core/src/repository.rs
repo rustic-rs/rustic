@@ -1,8 +1,8 @@
 use std::{
     collections::HashMap,
     fs::File,
-    io::{BufRead, BufReader},
-    path::PathBuf,
+    io::{BufRead, BufReader, Write},
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -37,8 +37,8 @@ use crate::{
     crypto::aespoly1305::Key,
     error::RepositoryErrorKind,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
-    BlobType, Id, IndexBackend, NoProgressBars, ProgressBars, PruneOpts, PrunePlan, RusticResult,
-    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
+    BlobType, Id, IndexBackend, NoProgressBars, Node, ProgressBars, PruneOpts, PrunePlan,
+    RusticResult, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree,
 };
 
 pub(super) mod constants {
@@ -448,14 +448,32 @@ pub struct IndexedRepository<P> {
 }
 
 impl<P: ProgressBars> IndexedRepository<P> {
+    pub fn node_from_snapshot_path(
+        &self,
+        snap_path: &str,
+        filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
+    ) -> RusticResult<Node> {
+        let (id, path) = snap_path.split_once(':').unwrap_or((snap_path, ""));
+
+        let p = &self.repo.pb.progress_counter("getting snapshot...");
+        let snap = SnapshotFile::from_str(&self.repo.dbe, id, filter, p)?;
+
+        Tree::node_from_path(&self.index, snap.tree, Path::new(path))
+    }
+
     pub fn cat_blob(&self, tpe: BlobType, id: &str) -> RusticResult<Bytes> {
         commands::cat::cat_blob(self, tpe, id)
     }
+
     pub fn cat_tree(
         &self,
         snap: &str,
         sn_filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
     ) -> RusticResult<Bytes> {
         commands::cat::cat_tree(self, snap, sn_filter)
+    }
+
+    pub fn dump(&self, node: &Node, w: &mut impl Write) -> RusticResult<()> {
+        commands::dump::dump(self, node, w)
     }
 }

@@ -21,7 +21,7 @@ use chrono::OutOfRangeError;
 use displaydoc::Display;
 use thiserror::Error;
 
-use crate::{id::Id, repofile::indexfile::IndexPack};
+use crate::{id::Id, repofile::indexfile::IndexPack, NodeType};
 
 /// Result type often returned from methods that can have rustic `Error`s.
 pub type RusticResult<T> = Result<T, RusticError>;
@@ -160,6 +160,8 @@ pub enum CommandErrorKind {
     RepackUncompressedRepoV1,
     /// datetime out of range: `{0:?}`
     FromOutOfRangeError(#[from] OutOfRangeError),
+    /// node type {0:?} not supported by dump
+    DumpNotSupported(NodeType),
 }
 
 /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions

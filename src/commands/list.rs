@@ -11,7 +11,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::{bail, Result};
 
-use rustic_core::{DecryptReadBackend, FileType, IndexFile, ProgressBars, ReadBackend};
+use rustic_core::{DecryptReadBackend, FileType, IndexFile, Open, ProgressBars, ReadBackend};
 
 /// `list` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -39,7 +39,7 @@ impl ListCmd {
         let tpe = match self.tpe.as_str() {
             // special treatment for listing blobs: read the index and display it
             "blobs" => {
-                repo.dbe
+                repo.dbe()
                     .stream_all::<IndexFile>(&config.global.progress_options.progress_hidden())?
                     .into_iter()
                     .for_each(|index| {

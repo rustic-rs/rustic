@@ -12,7 +12,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use chrono::{Duration, Local};
 
 use rustic_core::{
-    DecryptWriteBackend, DeleteOption, FileType, Id, ProgressBars, SnapshotFile, StringList,
+    DecryptWriteBackend, DeleteOption, FileType, Id, Open, ProgressBars, SnapshotFile, StringList,
 };
 
 /// `tag` subcommand
@@ -81,7 +81,7 @@ impl TagCmd {
         let config = RUSTIC_APP.config();
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
+        let be = repo.dbe();
 
         let p = config.global.progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {

@@ -6,7 +6,7 @@ use rayon::ThreadPoolBuilder;
 
 use super::parse_command;
 use crate::{
-    error::RepositoryErrorKind, FileType, Id, OpenRepository, Progress, ProgressBars, ReadBackend,
+    error::RepositoryErrorKind, FileType, Id, Progress, ProgressBars, ReadBackend, Repository,
     RusticResult,
 };
 
@@ -14,8 +14,8 @@ pub(super) mod constants {
     pub(super) const MAX_READER_THREADS_NUM: usize = 20;
 }
 
-pub(crate) fn warm_up_wait<P: ProgressBars>(
-    repo: &OpenRepository<P>,
+pub(crate) fn warm_up_wait<P: ProgressBars, S>(
+    repo: &Repository<P, S>,
     packs: impl ExactSizeIterator<Item = Id>,
 ) -> RusticResult<()> {
     warm_up(repo, packs)?;
@@ -27,8 +27,8 @@ pub(crate) fn warm_up_wait<P: ProgressBars>(
     Ok(())
 }
 
-pub(crate) fn warm_up<P: ProgressBars>(
-    repo: &OpenRepository<P>,
+pub(crate) fn warm_up<P: ProgressBars, S>(
+    repo: &Repository<P, S>,
     packs: impl ExactSizeIterator<Item = Id>,
 ) -> RusticResult<()> {
     if let Some(command) = &repo.opts.warm_up_command {
@@ -61,8 +61,8 @@ fn warm_up_command<P: ProgressBars>(
     Ok(())
 }
 
-fn warm_up_access<P: ProgressBars>(
-    repo: &OpenRepository<P>,
+fn warm_up_access<P: ProgressBars, S>(
+    repo: &Repository<P, S>,
     packs: impl ExactSizeIterator<Item = Id>,
 ) -> RusticResult<()> {
     let mut be = repo.be.clone();

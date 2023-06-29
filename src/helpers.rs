@@ -11,19 +11,19 @@ use log::{info, trace};
 use rayon::prelude::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
 use rustic_core::{
-    BlobType, DecryptWriteBackend, IndexBackend, IndexedBackend, Indexer, NodeType, OpenRepository,
-    Packer, Progress, ProgressBars, ReadIndex, SnapshotFile, TreeStreamerOnce,
+    BlobType, DecryptWriteBackend, IndexBackend, IndexedBackend, Indexer, NodeType, Open, Packer,
+    Progress, ProgressBars, ReadIndex, Repository, SnapshotFile, TreeStreamerOnce,
 };
 
 use crate::application::RUSTIC_APP;
 
-pub(crate) fn copy<P>(
+pub(crate) fn copy<P, S: Open>(
     snapshots: &[SnapshotFile],
     index: &impl IndexedBackend,
-    repo_dest: &OpenRepository<P>,
+    repo_dest: &Repository<P, S>,
 ) -> Result<()> {
     let config = RUSTIC_APP.config();
-    let be_dest = &repo_dest.dbe;
+    let be_dest = repo_dest.dbe();
     let progress_options = &config.global.progress_options;
 
     let snapshots = relevant_snapshots(
@@ -54,14 +54,14 @@ pub(crate) fn copy<P>(
         be_dest.clone(),
         BlobType::Data,
         indexer.clone(),
-        &repo_dest.config,
+        repo_dest.config(),
         index.total_size(BlobType::Data),
     )?;
     let tree_packer = Packer::new(
         be_dest.clone(),
         BlobType::Tree,
         indexer.clone(),
-        &repo_dest.config,
+        repo_dest.config(),
         index.total_size(BlobType::Tree),
     )?;
 
@@ -121,9 +121,9 @@ pub(crate) fn copy<P>(
     Ok(())
 }
 
-pub(crate) fn relevant_snapshots<F, P>(
+pub(crate) fn relevant_snapshots<F, P, S: Open>(
     snaps: &[SnapshotFile],
-    dest_repo: &OpenRepository<P>,
+    dest_repo: &Repository<P, S>,
     filter: F,
     p: &impl Progress,
 ) -> Result<Vec<SnapshotFile>>
@@ -131,7 +131,7 @@ where
     F: FnMut(&SnapshotFile) -> bool,
 {
     // save snapshots in destination in BTreeSet, as we want to efficiently search within to filter out already existing snapshots before copying.
-    let snapshots_dest: BTreeSet<_> = SnapshotFile::all_from_backend(&dest_repo.dbe, filter, p)?
+    let snapshots_dest: BTreeSet<_> = SnapshotFile::all_from_backend(dest_repo.dbe(), filter, p)?
         .into_iter()
         .map(SnapshotFile::clear_ids)
         .collect();

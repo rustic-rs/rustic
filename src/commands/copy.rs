@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 use crate::commands::key::KeyOpts;
 use rustic_core::{
-    FileType, Id, IndexBackend, ProgressBars, ReadBackend, Repository, RepositoryOptions,
+    FileType, Id, IndexBackend, Open, ProgressBars, ReadBackend, Repository, RepositoryOptions,
     SnapshotFile,
 };
 
@@ -61,7 +61,7 @@ impl CopyCmd {
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
-        let be = &repo.dbe;
+        let be = repo.dbe();
         let p = config.global.progress_options.progress_hidden();
         let mut snapshots = if self.ids.is_empty() {
             SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn), &p)?
@@ -71,16 +71,15 @@ impl CopyCmd {
         // sort for nicer output
         snapshots.sort_unstable();
 
-        let be = &repo.dbe;
         let index = IndexBackend::new(be, &config.global.progress_options.progress_counter(""))?;
 
-        let poly = repo.config.poly()?;
+        let poly = repo.config().poly()?;
 
         for target_opt in &config.copy.targets {
             let repo_dest = Repository::new(target_opt)?;
 
             if self.init && repo_dest.be.list(FileType::Config)?.is_empty() {
-                let mut config_dest = repo.config.clone();
+                let mut config_dest = repo.config().clone();
                 config_dest.id = Id::random();
                 save_config(
                     config_dest,
@@ -92,8 +91,8 @@ impl CopyCmd {
             }
 
             let repo_dest = repo_dest.open()?;
-            info!("copying to target {}...", repo_dest.name);
-            if poly != repo_dest.config.poly()? {
+            info!("copying to target {:?}...", repo_dest); // TODO: repo_dest.name
+            if poly != repo_dest.config().poly()? {
                 bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
             }
             copy(&snapshots, &index, &repo_dest)?;

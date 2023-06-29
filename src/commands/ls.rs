@@ -13,7 +13,7 @@ use anyhow::Result;
 use std::path::Path;
 
 use rustic_core::{
-    IndexBackend, NodeStreamer, ProgressBars, SnapshotFile, Tree, TreeStreamerOptions,
+    IndexBackend, NodeStreamer, Open, ProgressBars, SnapshotFile, Tree, TreeStreamerOptions,
 };
 
 /// `ls` subcommand
@@ -47,7 +47,7 @@ impl LsCmd {
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
+        let be = repo.dbe();
         let mut recursive = self.recursive;
 
         let (id, path) = self.snap.split_once(':').unwrap_or_else(|| {

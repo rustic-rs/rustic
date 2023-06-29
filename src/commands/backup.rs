@@ -22,7 +22,7 @@ use serde::Deserialize;
 
 use rustic_core::{
     Archiver, DryRunBackend, IndexBackend, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, PathList, ProgressBars, SnapshotFile, SnapshotGroup,
+    LocalSourceSaveOptions, Open, PathList, ProgressBars, SnapshotFile, SnapshotGroup,
     SnapshotGroupCriterion, SnapshotOptions, StdinSource,
 };
 
@@ -196,7 +196,7 @@ impl BackupCmd {
         };
 
         let index =
-            IndexBackend::only_full_trees(&repo.dbe, &progress_options.progress_counter(""))?;
+            IndexBackend::only_full_trees(repo.dbe(), &progress_options.progress_counter(""))?;
 
         for source in sources {
             let mut opts = self.clone();
@@ -230,7 +230,7 @@ impl BackupCmd {
             // merge "backup" section from config file, if given
             opts.merge(config.backup.clone());
 
-            let be = DryRunBackend::new(repo.dbe.clone(), config.global.dry_run);
+            let be = DryRunBackend::new(repo.dbe().clone(), config.global.dry_run);
             info!("starting to backup {source}...");
             let as_path = opts.as_path.map(|p| {
                 match p.parse_dot() {
@@ -283,7 +283,7 @@ impl BackupCmd {
             let archiver = Archiver::new(
                 be,
                 index,
-                &repo.config,
+                repo.config(),
                 parent_tree,
                 opts.ignore_ctime,
                 opts.ignore_inode,

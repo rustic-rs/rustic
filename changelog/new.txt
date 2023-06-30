@@ -4,6 +4,7 @@ Breaking changes:
 
 Bugs fixed:
 - prune did abort when no time was set for a pack-do-delete. This case is now handled correctly.
+- retrying backend access didn't work for long operations. This has been fixed (and retries are now customizable)
 
 New features:
 - New global configuration paths are available, located at /etc/rustic/*.toml or %PROGRAMDATA%/rustic/config/*.toml, depending on your platform.

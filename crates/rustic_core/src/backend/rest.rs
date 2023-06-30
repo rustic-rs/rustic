@@ -17,6 +17,10 @@ use crate::{
     id::Id,
 };
 
+mod consts {
+    pub(super) const DEFAULT_RETRY: usize = 5;
+}
+
 // trait CheckError to add user-defined method check_error on Response
 pub(crate) trait CheckError {
     fn check_error(self) -> Result<Response, Error<reqwest::Error>>;
@@ -38,19 +42,37 @@ impl CheckError for Response {
 }
 
 #[derive(Clone, Debug)]
-struct MaybeBackoff(Option<ExponentialBackoff>);
+struct LimitRetryBackoff {
+    max_retries: usize,
+    retries: usize,
+    exp: ExponentialBackoff,
+}
 
-impl Backoff for MaybeBackoff {
+impl Default for LimitRetryBackoff {
+    fn default() -> Self {
+        Self {
+            max_retries: consts::DEFAULT_RETRY,
+            retries: 0,
+            exp: ExponentialBackoffBuilder::new()
+                .with_max_elapsed_time(None) // no maximum elapsed time; we count number of retires
+                .build(),
+        }
+    }
+}
+
+impl Backoff for LimitRetryBackoff {
     fn next_backoff(&mut self) -> Option<Duration> {
-        self.0
-            .as_mut()
-            .and_then(backoff::backoff::Backoff::next_backoff)
+        self.retries += 1;
+        if self.retries > self.max_retries {
+            None
+        } else {
+            self.exp.next_backoff()
+        }
     }
 
     fn reset(&mut self) {
-        if let Some(b) = self.0.as_mut() {
-            b.reset();
-        }
+        self.retries = 0;
+        self.exp.reset();
     }
 }
 
@@ -58,7 +80,7 @@ impl Backoff for MaybeBackoff {
 pub struct RestBackend {
     url: Url,
     client: Client,
-    backoff: MaybeBackoff,
+    backoff: LimitRetryBackoff,
 }
 
 fn notify(err: reqwest::Error, duration: Duration) {
@@ -88,11 +110,7 @@ impl RestBackend {
         Ok(Self {
             url,
             client,
-            backoff: MaybeBackoff(Some(
-                ExponentialBackoffBuilder::new()
-                    .with_max_elapsed_time(Some(Duration::from_secs(600)))
-                    .build(),
-            )),
+            backoff: LimitRetryBackoff::default(),
         })
     }
 
@@ -126,19 +144,13 @@ impl ReadBackend for RestBackend {
 
     fn set_option(&mut self, option: &str, value: &str) -> RusticResult<()> {
         if option == "retry" {
-            match value {
-                "true" => {
-                    self.backoff = MaybeBackoff(Some(
-                        ExponentialBackoffBuilder::new()
-                            .with_max_elapsed_time(Some(Duration::from_secs(120)))
-                            .build(),
-                    ));
-                }
-                "false" => {
-                    self.backoff = MaybeBackoff(None);
-                }
-                val => return Err(RestErrorKind::NotSupportedForRetry(val.into()).into()),
-            }
+            let max_retries = match value {
+                "false" | "off" => 0,
+                "default" => consts::DEFAULT_RETRY,
+                _ => usize::from_str(value)
+                    .map_err(|_| RestErrorKind::NotSupportedForRetry(value.into()))?,
+            };
+            self.backoff.max_retries = max_retries;
         } else if option == "timeout" {
             let timeout = match humantime::Duration::from_str(value) {
                 Ok(val) => val,

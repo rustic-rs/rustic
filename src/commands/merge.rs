@@ -13,8 +13,8 @@ use log::info;
 use chrono::Local;
 
 use rustic_core::{
-    merge_trees, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, Indexer, Node, Packer,
-    PathList, Progress, ProgressBars, ReadIndex, SnapshotFile, SnapshotOptions, Tree,
+    merge_trees, BlobType, DecryptWriteBackend, FileType, Id, IndexBackend, Indexer, Node, Open,
+    Packer, PathList, Progress, ProgressBars, ReadIndex, SnapshotFile, SnapshotOptions, Tree,
 };
 
 /// `merge` subcommand
@@ -59,7 +59,7 @@ impl MergeCmd {
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
+        let be = repo.dbe();
 
         let p = progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {
@@ -75,7 +75,7 @@ impl MergeCmd {
             be.clone(),
             BlobType::Tree,
             indexer.clone(),
-            &repo.config,
+            repo.config(),
             index.total_size(BlobType::Tree),
         )?;
 

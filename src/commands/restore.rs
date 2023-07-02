@@ -29,7 +29,7 @@ use rayon::ThreadPoolBuilder;
 
 use rustic_core::{
     hash, DecryptReadBackend, FileType, Id, IndexBackend, IndexedBackend, LocalDestination, Node,
-    NodeStreamer, NodeType, Progress, ProgressBars, RestoreStats, SnapshotFile, Tree,
+    NodeStreamer, NodeType, Open, Progress, ProgressBars, RestoreStats, SnapshotFile, Tree,
     TreeStreamerOptions,
 };
 
@@ -91,7 +91,7 @@ impl RestoreCmd {
         let config = RUSTIC_APP.config();
         let progress_options = &config.global.progress_options;
         let repo = open_repository(get_repository(&config));
-        let be = &repo.dbe;
+        let be = repo.dbe();
 
         let (id, path) = self.snap.split_once(':').unwrap_or((&self.snap, ""));
         let snap = SnapshotFile::from_str(

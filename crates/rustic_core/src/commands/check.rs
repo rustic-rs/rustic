@@ -8,10 +8,12 @@ use rayon::prelude::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use zstd::stream::decode_all;
 
 use crate::{
-    hash, progress::ProgressBars, BlobType, Cache, DecryptReadBackend, FileType, Id, IndexBackend,
-    IndexCollector, IndexFile, IndexPack, IndexType, IndexedBackend, NodeType, OpenRepository,
-    PackHeader, PackHeaderLength, PackHeaderRef, Progress, ReadBackend, RusticResult, SnapshotFile,
-    TreeStreamerOnce,
+    hash,
+    progress::ProgressBars,
+    repository::{Open, Repository},
+    BlobType, Cache, DecryptReadBackend, FileType, Id, IndexBackend, IndexCollector, IndexFile,
+    IndexPack, IndexType, IndexedBackend, NodeType, PackHeader, PackHeaderLength, PackHeaderRef,
+    Progress, ReadBackend, RusticResult, SnapshotFile, TreeStreamerOnce,
 };
 
 /// `check` subcommand
@@ -28,9 +30,9 @@ pub struct CheckOpts {
 }
 
 impl CheckOpts {
-    pub fn run<P: ProgressBars>(self, repo: &OpenRepository<P>) -> RusticResult<()> {
-        let be = &repo.dbe;
-        let cache = &repo.cache;
+    pub(crate) fn run<P: ProgressBars, S: Open>(self, repo: &Repository<P, S>) -> RusticResult<()> {
+        let be = repo.dbe();
+        let cache = repo.cache();
         let hot_be = &repo.be_hot;
         let raw_be = &repo.be;
         let pb = &repo.pb;

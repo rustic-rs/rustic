@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    Id, OpenRepository, ProgressBars, RusticResult, SnapshotFile, SnapshotGroup,
+    repository::Open, Id, ProgressBars, Repository, RusticResult, SnapshotFile, SnapshotGroup,
     SnapshotGroupCriterion, StringList,
 };
 
@@ -41,8 +41,8 @@ impl ForgetGroups {
     }
 }
 
-pub(crate) fn get_forget_snapshots<P: ProgressBars>(
-    repo: &OpenRepository<P>,
+pub(crate) fn get_forget_snapshots<P: ProgressBars, S: Open>(
+    repo: &Repository<P, S>,
     keep: &KeepOptions,
     group_by: SnapshotGroupCriterion,
     filter: impl FnMut(&SnapshotFile) -> bool,

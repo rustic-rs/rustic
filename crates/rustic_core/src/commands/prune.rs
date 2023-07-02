@@ -19,11 +19,11 @@ use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    error::CommandErrorKind, BlobType, BlobTypeMap, DecryptReadBackend, DecryptWriteBackend,
-    FileType, HeaderEntry, Id, IndexBackend, IndexBlob, IndexCollector, IndexFile, IndexPack,
-    IndexType, IndexedBackend, Indexer, Initialize, NodeType, OpenRepository, PackSizer, Progress,
-    ProgressBars, ReadBackend, ReadIndex, Repacker, RusticResult, SnapshotFile, Sum,
-    TreeStreamerOnce,
+    error::CommandErrorKind, repository::Open, BlobType, BlobTypeMap, DecryptReadBackend,
+    DecryptWriteBackend, FileType, HeaderEntry, Id, IndexBackend, IndexBlob, IndexCollector,
+    IndexFile, IndexPack, IndexType, IndexedBackend, Indexer, Initialize, NodeType, PackSizer,
+    Progress, ProgressBars, ReadBackend, ReadIndex, Repacker, Repository, RusticResult,
+    SnapshotFile, Sum, TreeStreamerOnce,
 };
 
 pub(super) mod constants {
@@ -115,11 +115,14 @@ impl Default for PruneOpts {
 }
 
 impl PruneOpts {
-    pub fn get_plan<P: ProgressBars>(&self, repo: &OpenRepository<P>) -> RusticResult<PrunePlan> {
+    pub fn get_plan<P: ProgressBars, S: Open>(
+        &self,
+        repo: &Repository<P, S>,
+    ) -> RusticResult<PrunePlan> {
         let pb = &repo.pb;
-        let be = &repo.dbe;
+        let be = repo.dbe();
 
-        if repo.config.version < 2 && self.repack_uncompressed {
+        if repo.config().version < 2 && self.repack_uncompressed {
             return Err(CommandErrorKind::RepackUncompressedRepoV1.into());
         }
 
@@ -158,9 +161,9 @@ impl PruneOpts {
         pruner.check()?;
         let repack_cacheable_only = self
             .repack_cacheable_only
-            .unwrap_or_else(|| repo.config.is_hot == Some(true));
+            .unwrap_or_else(|| repo.config().is_hot == Some(true));
         let pack_sizer =
-            total_size.map(|tpe, size| PackSizer::from_config(&repo.config, tpe, size));
+            total_size.map(|tpe, size| PackSizer::from_config(repo.config(), tpe, size));
         pruner.decide_packs(
             Duration::from_std(*self.keep_pack).map_err(CommandErrorKind::FromOutOfRangeError)?,
             Duration::from_std(*self.keep_delete).map_err(CommandErrorKind::FromOutOfRangeError)?,
@@ -745,13 +748,13 @@ impl PrunePlan {
     }
 
     #[allow(clippy::significant_drop_tightening)]
-    pub fn do_prune<P: ProgressBars>(
+    pub fn do_prune<P: ProgressBars, S: Open>(
         self,
-        repo: &OpenRepository<P>,
+        repo: &Repository<P, S>,
         opts: &PruneOpts,
     ) -> RusticResult<()> {
         repo.warm_up_wait(self.repack_packs().into_iter())?;
-        let be = &repo.dbe;
+        let be = repo.dbe();
         let pb = &repo.pb;
 
         let indexer = Indexer::new_unindexed(be.clone()).into_shared();
@@ -776,7 +779,7 @@ impl PrunePlan {
             be.clone(),
             BlobType::Tree,
             indexer.clone(),
-            &repo.config,
+            repo.config(),
             size_after_prune[BlobType::Tree],
         )?;
 
@@ -784,7 +787,7 @@ impl PrunePlan {
             be.clone(),
             BlobType::Data,
             indexer.clone(),
-            &repo.config,
+            repo.config(),
             size_after_prune[BlobType::Data],
         )?;
 
@@ -1050,7 +1053,7 @@ impl PackInfo {
 
 // find used blobs in repo
 fn find_used_blobs(
-    index: &(impl IndexedBackend + Unpin),
+    index: &impl IndexedBackend,
     ignore_snaps: &[Id],
     pb: &impl ProgressBars,
 ) -> RusticResult<HashMap<Id, u8>> {

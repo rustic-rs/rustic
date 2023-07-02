@@ -14,7 +14,7 @@ use std::{fs::File, io::BufReader};
 
 use dialoguer::Password;
 
-use rustic_core::{hash, read_password_from_reader, FileType, KeyFile, WriteBackend};
+use rustic_core::{hash, read_password_from_reader, FileType, KeyFile, Open, WriteBackend};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -75,8 +75,8 @@ impl AddCmd {
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
-        let key = repo.key;
+        let be = repo.dbe();
+        let key = repo.key();
 
         let pass = self.new_password_file.as_ref().map_or_else(
             || match Password::new()
@@ -109,7 +109,7 @@ impl AddCmd {
             },
         );
         let ko = self.key_opts.clone();
-        let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
+        let keyfile = KeyFile::generate(*key, &pass, ko.hostname, ko.username, ko.with_created)?;
         let data = serde_json::to_vec(&keyfile)?;
         let id = hash(&data);
         be.write_bytes(FileType::Key, &id, false, data.into())?;

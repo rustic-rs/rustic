@@ -16,7 +16,7 @@ use anyhow::{anyhow, bail, Context, Result};
 
 use rustic_core::{
     hash, IndexBackend, LocalDestination, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, Node, NodeStreamer, NodeType, Progress, ProgressBars, ReadIndex,
+    LocalSourceSaveOptions, Node, NodeStreamer, NodeType, Open, Progress, ProgressBars, ReadIndex,
     ReadSourceEntry, RusticResult, SnapshotFile, Tree,
 };
 
@@ -58,7 +58,7 @@ impl DiffCmd {
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
+        let be = repo.dbe();
         let (id1, path1) = arg_to_snap_path(&self.snap1, "");
         let (id2, path2) = arg_to_snap_path(&self.snap2, path1);
 

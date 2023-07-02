@@ -131,13 +131,11 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
 
 #[cfg(target_os = "windows")]
 fn get_global_config_path() -> Option<PathBuf> {
-    if let Some(program_data) = std::env::var_os("PROGRAMDATA") {
+    std::env::var_os("PROGRAMDATA").map(|program_data| {
         let mut path = PathBuf::from(program_data);
         path.push(r"rustic\config");
-        Some(path)
-    } else {
-        None
-    }
+        path
+    })
 }
 
 #[cfg(any(target_os = "ios", target_arch = "wasm32"))]

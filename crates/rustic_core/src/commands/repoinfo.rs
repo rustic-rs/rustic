@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     index::IndexEntry,
     repofile::indexfile::{IndexFile, IndexPack},
-    BlobType, BlobTypeMap, DecryptReadBackend, FileType, OpenRepository, Progress, ProgressBars,
-    ReadBackend, Repository, RusticResult, ALL_FILE_TYPES,
+    repository::Open,
+    BlobType, BlobTypeMap, DecryptReadBackend, FileType, Progress, ProgressBars, ReadBackend,
+    Repository, RusticResult, ALL_FILE_TYPES,
 };
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
@@ -53,8 +54,8 @@ impl PackInfo {
     }
 }
 
-pub(crate) fn collect_index_infos<P: ProgressBars>(
-    repo: &OpenRepository<P>,
+pub(crate) fn collect_index_infos<P: ProgressBars, S: Open>(
+    repo: &Repository<P, S>,
 ) -> RusticResult<IndexInfos> {
     let mut blob_info = BlobTypeMap::<()>::default().map(|blob_type, _| BlobInfo {
         blob_type,
@@ -72,7 +73,7 @@ pub(crate) fn collect_index_infos<P: ProgressBars>(
     let mut pack_info_delete = pack_info;
 
     let p = repo.pb.progress_counter("scanning index...");
-    for index in repo.dbe.stream_all::<IndexFile>(&p)? {
+    for index in repo.dbe().stream_all::<IndexFile>(&p)? {
         let index = index?.1;
         for pack in &index.packs {
             let tpe = pack.blob_type();
@@ -130,7 +131,9 @@ pub(crate) fn collect_file_info(be: &impl ReadBackend) -> RusticResult<Vec<RepoF
     Ok(files)
 }
 
-pub fn collect_file_infos<P: ProgressBars>(repo: &Repository<P>) -> RusticResult<RepoFileInfos> {
+pub fn collect_file_infos<P: ProgressBars, S>(
+    repo: &Repository<P, S>,
+) -> RusticResult<RepoFileInfos> {
     let p = repo.pb.progress_spinner("scanning files...");
     let files = collect_file_info(&repo.be)?;
     let files_hot = repo.be_hot.as_ref().map(collect_file_info).transpose()?;

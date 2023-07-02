@@ -12,7 +12,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 use bytesize::ByteSize;
 
-use rustic_core::{ConfigFile, DecryptBackend, DecryptWriteBackend};
+use rustic_core::{ConfigFile, DecryptBackend, DecryptWriteBackend, Open};
 
 /// `config` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -33,23 +33,24 @@ impl Runnable for ConfigCmd {
 impl ConfigCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let mut repo = open_repository(get_repository(&config));
+        let repo = open_repository(get_repository(&config));
 
-        let mut new_config = repo.config.clone();
+        let mut new_config = repo.config().clone();
         self.config_opts.apply(&mut new_config)?;
 
-        if new_config == repo.config {
+        if &new_config == repo.config() {
             println!("config is unchanged");
         } else {
             new_config.is_hot = None;
             // don't compress the config file
-            repo.dbe.set_zstd(None);
+            let mut dbe = repo.dbe().clone();
+            dbe.set_zstd(None);
             // for hot/cold backend, this only saves the config to the cold repo.
-            _ = repo.dbe.save_file(&new_config)?;
+            _ = dbe.save_file(&new_config)?;
 
-            if let Some(hot_be) = repo.be_hot {
+            if let Some(hot_be) = repo.be_hot.clone() {
                 // save config to hot repo
-                let mut dbe = DecryptBackend::new(&hot_be, repo.key);
+                let mut dbe = DecryptBackend::new(&hot_be, *repo.key());
                 // don't compress the config file
                 dbe.set_zstd(None);
                 new_config.is_hot = Some(true);

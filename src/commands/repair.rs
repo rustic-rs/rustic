@@ -15,8 +15,8 @@ use anyhow::Result;
 
 use rustic_core::{
     BlobType, DecryptReadBackend, DecryptWriteBackend, FileType, Id, IndexBackend, IndexFile,
-    IndexPack, IndexedBackend, Indexer, NodeType, PackHeader, PackHeaderRef, Packer, Progress,
-    ProgressBars, ReadBackend, ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
+    IndexPack, IndexedBackend, Indexer, NodeType, Open, PackHeader, PackHeaderRef, Packer,
+    Progress, ProgressBars, ReadBackend, ReadIndex, SnapshotFile, StringList, Tree, WriteBackend,
 };
 
 /// `repair` subcommand
@@ -89,7 +89,7 @@ impl IndexSubCmd {
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
+        let be = repo.dbe();
         let p = progress_options.progress_spinner("listing packs...");
         let mut packs: HashMap<_, _> = be.list_with_size(FileType::Pack)?.into_iter().collect();
         p.finish();
@@ -237,8 +237,8 @@ impl SnapSubCmd {
 
         let repo = open_repository(get_repository(&config));
 
-        let be = &repo.dbe;
-        let config_file = &repo.config;
+        let be = repo.dbe();
+        let config_file = repo.config();
 
         let p = progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {

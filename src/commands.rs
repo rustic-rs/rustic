@@ -41,7 +41,7 @@ use crate::{
 use abscissa_core::{
     config::Override, status_err, Command, Configurable, FrameworkError, Runnable, Shutdown,
 };
-use rustic_core::{OpenRepository, Repository};
+use rustic_core::{OpenStatus, Repository};
 
 /// Rustic Subcommands
 /// Subcommands need to be listed in an enum.
@@ -167,7 +167,7 @@ impl Configurable<RusticConfig> for EntryPoint {
     }
 }
 
-fn open_repository<P>(repo: Repository<P>) -> OpenRepository<P> {
+fn open_repository<P>(repo: Repository<P, ()>) -> Repository<P, OpenStatus> {
     match repo.open() {
         Ok(it) => it,
         Err(err) => {
@@ -177,7 +177,7 @@ fn open_repository<P>(repo: Repository<P>) -> OpenRepository<P> {
     }
 }
 
-fn get_repository(config: &Arc<RusticConfig>) -> Repository<ProgressOptions> {
+fn get_repository(config: &Arc<RusticConfig>) -> Repository<ProgressOptions, ()> {
     let po = config.global.progress_options;
     match Repository::new_with_progress(&config.repository, po) {
         Ok(it) => it,

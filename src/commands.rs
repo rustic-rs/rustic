@@ -38,10 +38,14 @@ use crate::{
     {Application, RUSTIC_APP},
 };
 
-use abscissa_core::{
-    config::Override, status_err, Command, Configurable, FrameworkError, Runnable, Shutdown,
-};
+use abscissa_core::{config::Override, Command, Configurable, FrameworkError, Runnable, Shutdown};
+use anyhow::{anyhow, Result};
+use dialoguer::Password;
 use rustic_core::{OpenStatus, Repository};
+
+pub(super) mod constants {
+    pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
+}
 
 /// Rustic Subcommands
 /// Subcommands need to be listed in an enum.
@@ -167,25 +171,29 @@ impl Configurable<RusticConfig> for EntryPoint {
     }
 }
 
-fn open_repository<P>(repo: Repository<P, ()>) -> Repository<P, OpenStatus> {
-    match repo.open() {
-        Ok(it) => it,
-        Err(err) => {
-            status_err!("{}", err);
-            RUSTIC_APP.shutdown(Shutdown::Crash);
-        }
-    }
-}
-
-fn get_repository(config: &Arc<RusticConfig>) -> Repository<ProgressOptions, ()> {
+fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOptions, OpenStatus>> {
     let po = config.global.progress_options;
-    match Repository::new_with_progress(&config.repository, po) {
-        Ok(it) => it,
-        Err(err) => {
-            status_err!("{}", err);
-            RUSTIC_APP.shutdown(Shutdown::Crash);
+    let repo = Repository::new_with_progress(&config.repository, po)?;
+    match repo.password()? {
+        // if password is given, directly return the result of find_key_in_backend and don't retry
+        Some(pass) => {
+            return Ok(repo.open_with_password(&pass)?);
+        }
+        None => {
+            for _ in 0..constants::MAX_PASSWORD_RETRIES {
+                let pass = Password::new()
+                    .with_prompt("enter repository password")
+                    .allow_empty_password(true)
+                    .interact()?;
+                match repo.clone().open_with_password(&pass) {
+                    Ok(repo) => return Ok(repo),
+                    // TODO: fail if error != Password incorrect
+                    Err(_) => continue,
+                }
+            }
         }
     }
+    Err(anyhow!("incorrect password"))
 }
 
 #[test]

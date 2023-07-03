@@ -2402,7 +2402,6 @@ dependencies = [
  "crossbeam-channel",
  "derivative",
  "derive_more",
- "dialoguer",
  "directories",
  "dirs",
  "displaydoc",

@@ -205,6 +205,8 @@ pub enum IdErrorKind {
 pub enum RepositoryErrorKind {
     /// No repository given. Please use the --repository option.
     NoRepositoryGiven,
+    /// No password given. Please use one of the --password-* options.
+    NoPasswordGiven,
     /// warm-up command must contain %id!
     NoIDSpecified,
     /// error opening password file `{0:?}`

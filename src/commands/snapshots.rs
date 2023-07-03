@@ -3,7 +3,7 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::get_repository,
+    commands::open_repository,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
     status_err, Application, RUSTIC_APP,
 };
@@ -56,7 +56,7 @@ impl Runnable for SnapshotCmd {
 impl SnapshotCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = get_repository(&config).open()?;
+        let repo = open_repository(&config)?;
 
         let groups = repo.get_snapshot_group(&self.ids, self.group_by, |sn| {
             config.snapshot_filter.matches(sn)

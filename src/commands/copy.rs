@@ -3,7 +3,7 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::{get_repository, init::save_config, open_repository},
+    commands::{init::save_config, open_repository},
     helpers::copy,
     status_err, Application, RUSTIC_APP,
 };
@@ -54,7 +54,7 @@ impl CopyCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let repo = open_repository(get_repository(&config));
+        let repo = open_repository(&config)?;
 
         if config.copy.targets.is_empty() {
             status_err!("no [[copy.targets]] section in config file found!");

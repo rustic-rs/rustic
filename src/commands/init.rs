@@ -5,14 +5,14 @@
 use abscissa_core::{status_err, Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 
-use crate::{commands::get_repository, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP};
 
 use bytes::Bytes;
 use dialoguer::Password;
 
 use rustic_core::{
     hash, random_poly, ConfigFile, DecryptBackend, DecryptWriteBackend, FileType, Id, Key, KeyFile,
-    ReadBackend, WriteBackend,
+    ReadBackend, Repository, WriteBackend,
 };
 
 use crate::commands::{config::ConfigOpts, key::KeyOpts};
@@ -40,7 +40,8 @@ impl InitCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let repo = get_repository(&config);
+        let po = config.global.progress_options;
+        let repo = Repository::new_with_progress(&config.repository, po)?;
 
         let config_ids = repo.be.list(FileType::Config)?;
 
@@ -79,8 +80,8 @@ pub(crate) fn save_config(
     // generate key
     let key = Key::new();
 
-    let pass = password.map_or_else(
-        || match Password::new()
+    let pass = password.unwrap_or_else(|| {
+        match Password::new()
             .with_prompt("enter password for new key")
             .allow_empty_password(true)
             .with_confirmation("confirm password", "passwords do not match")
@@ -91,9 +92,8 @@ pub(crate) fn save_config(
                 status_err!("{}", err);
                 RUSTIC_APP.shutdown(Shutdown::Crash);
             }
-        },
-        |pass| pass,
-    );
+        }
+    });
 
     let keyfile = KeyFile::generate(
         key,

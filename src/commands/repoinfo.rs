@@ -3,7 +3,7 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::get_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
+    commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -11,7 +11,7 @@ use serde::Serialize;
 
 use crate::helpers::table_right_from;
 use anyhow::Result;
-use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos};
+use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos, Repository};
 
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -48,15 +48,19 @@ struct Infos {
 impl RepoInfoCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = get_repository(&config);
 
         let infos = Infos {
-            files: (!self.only_index).then(|| repo.infos_files()).transpose()?,
+            files: (!self.only_index)
+                .then(|| {
+                    let po = config.global.progress_options;
+                    let repo = Repository::new_with_progress(&config.repository, po)?;
+                    repo.infos_files()
+                })
+                .transpose()?,
             index: (!self.only_files)
                 .then(|| -> Result<_> {
-                    let repo = repo.open()?;
-                    let info_index = repo.infos_index()?;
-                    Ok(info_index)
+                    let repo = open_repository(&config)?;
+                    Ok(repo.infos_index()?)
                 })
                 .transpose()?,
         };

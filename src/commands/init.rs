@@ -7,15 +7,14 @@ use anyhow::{bail, Result};
 
 use crate::{Application, RUSTIC_APP};
 
-use bytes::Bytes;
 use dialoguer::Password;
 
 use rustic_core::{
-    hash, random_poly, ConfigFile, DecryptBackend, DecryptWriteBackend, FileType, Id, Key, KeyFile,
+    random_poly, ConfigFile, DecryptBackend, DecryptWriteBackend, FileType, Id, KeyOpts,
     ReadBackend, Repository, WriteBackend,
 };
 
-use crate::commands::{config::ConfigOpts, key::KeyOpts};
+use crate::commands::config::ConfigOpts;
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -47,9 +46,6 @@ impl InitCmd {
 
         let password = repo.password()?;
 
-        let be = &repo.be;
-        let hot_be = &repo.be_hot;
-
         if !config_ids.is_empty() {
             bail!("Config file already exists. Aborting.");
         }
@@ -57,29 +53,21 @@ impl InitCmd {
         // Create config first to allow catching errors from here without writing anything
         let repo_id = Id::random();
         let chunker_poly = random_poly()?;
-        let version = match self.config_opts.set_version {
-            None => 2,
-            Some(_) => 1, // will be changed later
-        };
-        let mut config = ConfigFile::new(version, repo_id, chunker_poly);
+        let mut config = ConfigFile::new(2, repo_id, chunker_poly);
         self.config_opts.apply(&mut config)?;
 
-        save_config(config, be, hot_be, self.key_opts.clone(), password)?;
+        save_config(config, &repo, &self.key_opts, password)?;
 
         Ok(())
     }
 }
 
-pub(crate) fn save_config(
+pub(crate) fn save_config<P, S>(
     mut config: ConfigFile,
-    be: &impl WriteBackend,
-    hot_be: &Option<impl WriteBackend>,
-    key_opts: KeyOpts,
+    repo: &Repository<P, S>,
+    key_opts: &KeyOpts,
     password: Option<String>,
 ) -> Result<()> {
-    // generate key
-    let key = Key::new();
-
     let pass = password.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
@@ -95,26 +83,17 @@ pub(crate) fn save_config(
         }
     });
 
-    let keyfile = KeyFile::generate(
-        key,
-        &pass,
-        key_opts.hostname,
-        key_opts.username,
-        key_opts.with_created,
-    )?;
-    let data: Bytes = serde_json::to_vec(&keyfile)?.into();
-    let id = hash(&data);
-    be.create()?;
-    be.write_bytes(FileType::Key, &id, false, data)?;
+    repo.be.create()?;
+    let (key, id) = repo.init_key(&pass, key_opts)?;
     println!("key {id} successfully added.");
 
     // save config
-    let dbe = DecryptBackend::new(be, key);
+    let dbe = DecryptBackend::new(&repo.be, key);
     config.is_hot = None;
     _ = dbe.save_file(&config)?;
 
-    if let Some(hot_be) = hot_be {
-        let dbe = DecryptBackend::new(hot_be, key);
+    if let Some(be_hot) = &repo.be_hot {
+        let dbe = DecryptBackend::new(be_hot, key);
         config.is_hot = Some(true);
         _ = dbe.save_file(&config)?;
     }

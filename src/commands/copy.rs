@@ -14,10 +14,9 @@ use log::info;
 use merge::Merge;
 use serde::Deserialize;
 
-use crate::commands::key::KeyOpts;
 use rustic_core::{
-    FileType, Id, IndexBackend, Open, ProgressBars, ReadBackend, Repository, RepositoryOptions,
-    SnapshotFile,
+    FileType, Id, IndexBackend, KeyOpts, Open, ProgressBars, ReadBackend, Repository,
+    RepositoryOptions, SnapshotFile,
 };
 
 /// `copy` subcommand
@@ -83,9 +82,8 @@ impl CopyCmd {
                 config_dest.id = Id::random();
                 save_config(
                     config_dest,
-                    &repo_dest.be,
-                    &repo_dest.be_hot,
-                    self.key_opts.clone(),
+                    &repo_dest,
+                    &self.key_opts,
                     repo_dest.password()?,
                 )?;
             }

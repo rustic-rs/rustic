@@ -31,6 +31,7 @@ use crate::{
         self,
         check::CheckOpts,
         forget::{ForgetGroups, KeepOptions},
+        key::KeyOpts,
         repoinfo::{IndexInfos, RepoFileInfos},
     },
     crypto::aespoly1305::Key,
@@ -226,7 +227,8 @@ impl<P> Repository<P, ()> {
             status: (),
         })
     }
-
+}
+impl<P, S> Repository<P, S> {
     pub fn password(&self) -> RusticResult<Option<String>> {
         match (
             &self.opts.password,
@@ -355,6 +357,10 @@ impl<P> Repository<P, ()> {
             status: open,
         })
     }
+
+    pub fn init_key(&self, pass: &str, opts: &KeyOpts) -> RusticResult<(Key, Id)> {
+        opts.init_key(self, pass)
+    }
 }
 
 impl<P: ProgressBars, S> Repository<P, S> {
@@ -419,6 +425,16 @@ impl Open for OpenStatus {
     }
 }
 
+impl<P, S: Open> Repository<P, S> {
+    pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
+        commands::cat::cat_file(self, tpe, id)
+    }
+
+    pub fn add_key(&self, pass: &str, opts: &KeyOpts) -> RusticResult<Id> {
+        opts.add_key(self, pass)
+    }
+}
+
 impl<P: ProgressBars, S: Open> Repository<P, S> {
     pub fn get_snapshot_group(
         &self,
@@ -448,10 +464,6 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         self.dbe()
             .delete_list(FileType::Snapshot, true, ids.iter(), p)?;
         Ok(())
-    }
-
-    pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
-        commands::cat::cat_file(self, tpe, id)
     }
 
     pub fn check(&self, opts: CheckOpts) -> RusticResult<()> {

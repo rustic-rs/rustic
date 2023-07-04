@@ -123,6 +123,7 @@ pub use crate::{
     commands::{
         check::CheckOpts,
         forget::{ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions},
+        key::KeyOpts,
         prune::{PruneOpts, PrunePlan, PruneStats},
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
     },

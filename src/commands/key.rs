@@ -4,14 +4,14 @@
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
+use std::path::PathBuf;
+
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-
-use std::{fs::File, io::BufReader};
-
 use dialoguer::Password;
+use log::info;
 
-use rustic_core::{hash, read_password_from_reader, FileType, KeyFile, Open, WriteBackend};
+use rustic_core::{KeyOpts, Repository, RepositoryOptions};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -30,25 +30,10 @@ enum KeySubCmd {
 pub(crate) struct AddCmd {
     /// File from which to read the new password
     #[clap(long)]
-    pub(crate) new_password_file: Option<String>,
+    pub(crate) new_password_file: Option<PathBuf>,
 
     #[clap(flatten)]
     pub(crate) key_opts: KeyOpts,
-}
-
-#[derive(clap::Parser, Debug, Clone)]
-pub(crate) struct KeyOpts {
-    /// Set 'hostname' in public key information
-    #[clap(long)]
-    pub(crate) hostname: Option<String>,
-
-    /// Set 'username' in public key information
-    #[clap(long)]
-    pub(crate) username: Option<String>,
-
-    /// Add 'created' date in public key information
-    #[clap(long)]
-    pub(crate) with_created: bool,
 }
 
 impl Runnable for KeyCmd {
@@ -72,46 +57,28 @@ impl AddCmd {
 
         let repo = open_repository(&config)?;
 
-        let be = repo.dbe();
-        let key = repo.key();
+        // create new "artificial" repo using the given password options
+        let repo_opts = RepositoryOptions {
+            password_file: self.new_password_file.clone(),
+            repository: Some(String::new()), // fake repository to make Repository::new() not bail
+            ..Default::default()
+        };
+        let repo_newpass = Repository::new(&repo_opts)?;
 
-        let pass = self.new_password_file.as_ref().map_or_else(
-            || match Password::new()
-                .with_prompt("enter password for new key")
-                .allow_empty_password(true)
-                .with_confirmation("confirm password", "passwords do not match")
-                .interact()
-            {
-                Ok(it) => it,
-                Err(err) => {
-                    status_err!("{}", err);
-                    RUSTIC_APP.shutdown(Shutdown::Crash);
-                }
-            },
-            |file| {
-                let mut file = BufReader::new(match File::open(file) {
-                    Ok(it) => it,
-                    Err(err) => {
-                        status_err!("{}", err);
-                        RUSTIC_APP.shutdown(Shutdown::Crash);
-                    }
-                });
-                match read_password_from_reader(&mut file) {
-                    Ok(it) => it,
-                    Err(err) => {
-                        status_err!("{}", err);
-                        RUSTIC_APP.shutdown(Shutdown::Crash);
-                    }
-                }
-            },
-        );
-        let ko = self.key_opts.clone();
-        let keyfile = KeyFile::generate(*key, &pass, ko.hostname, ko.username, ko.with_created)?;
-        let data = serde_json::to_vec(&keyfile)?;
-        let id = hash(&data);
-        be.write_bytes(FileType::Key, &id, false, data.into())?;
+        let pass = repo_newpass
+            .password()
+            .map_err(|err| err.into())
+            .transpose()
+            .unwrap_or_else(|| -> Result<_> {
+                Ok(Password::new()
+                    .with_prompt("enter password for new key")
+                    .allow_empty_password(true)
+                    .with_confirmation("confirm password", "passwords do not match")
+                    .interact()?)
+            })?;
 
-        println!("key {id} successfully added.");
+        let id = repo.add_key(&pass, &self.key_opts)?;
+        info!("key {id} successfully added.");
 
         Ok(())
     }

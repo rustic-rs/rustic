@@ -162,6 +162,8 @@ pub enum CommandErrorKind {
     FromOutOfRangeError(#[from] OutOfRangeError),
     /// node type {0:?} not supported by dump
     DumpNotSupported(NodeType),
+    /// {0:?}
+    FromJsonError(#[from] serde_json::Error),
 }
 
 /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions

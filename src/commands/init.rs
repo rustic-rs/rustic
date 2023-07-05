@@ -10,11 +10,9 @@ use crate::{Application, RUSTIC_APP};
 use dialoguer::Password;
 
 use rustic_core::{
-    random_poly, ConfigFile, DecryptBackend, DecryptWriteBackend, FileType, Id, KeyOpts,
-    ReadBackend, Repository, WriteBackend,
+    random_poly, ConfigFile, ConfigOpts, DecryptBackend, DecryptWriteBackend, FileType, Id,
+    KeyOpts, ReadBackend, Repository, WriteBackend,
 };
-
-use crate::commands::config::ConfigOpts;
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]

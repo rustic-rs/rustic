@@ -30,6 +30,7 @@ use crate::{
     commands::{
         self,
         check::CheckOpts,
+        config::ConfigOpts,
         forget::{ForgetGroups, KeepOptions},
         key::KeyOpts,
         repoinfo::{IndexInfos, RepoFileInfos},
@@ -432,6 +433,10 @@ impl<P, S: Open> Repository<P, S> {
 
     pub fn add_key(&self, pass: &str, opts: &KeyOpts) -> RusticResult<Id> {
         opts.add_key(self, pass)
+    }
+
+    pub fn apply_config(&self, opts: &ConfigOpts) -> RusticResult<bool> {
+        commands::config::apply_config(self, opts)
     }
 }
 

@@ -122,6 +122,7 @@ pub use crate::{
     chunker::random_poly,
     commands::{
         check::CheckOpts,
+        config::ConfigOpts,
         forget::{ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions},
         key::KeyOpts,
         prune::{PruneOpts, PrunePlan, PruneStats},

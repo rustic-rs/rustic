@@ -7,6 +7,7 @@ use std::{
     error::Error,
     ffi::OsString,
     num::{ParseIntError, TryFromIntError},
+    ops::RangeInclusive,
     path::{PathBuf, StripPrefixError},
     process::ExitStatus,
     str::Utf8Error,
@@ -164,6 +165,20 @@ pub enum CommandErrorKind {
     DumpNotSupported(NodeType),
     /// {0:?}
     FromJsonError(#[from] serde_json::Error),
+    /// version {0} is not supported. Allowed values: {1:?}
+    VersionNotSupported(u32, RangeInclusive<u32>),
+    /// cannot downgrade version from {0} to {1}
+    CannotDowngrade(u32, u32),
+    /// compression level {0} is not supported for repo v1
+    NoCompressionV1Repo(i32),
+    /// compression level {0} is not supported. Allowed values: {1:?}
+    CompressionLevelNotSupported(i32, RangeInclusive<i32>),
+    /// Size is too large: {0}
+    SizeTooLarge(bytesize::ByteSize),
+    /// min_packsize_tolerate_percent must be <= 100
+    MinPackSizeTolerateWrong,
+    /// max_packsize_tolerate_percent must be >= 100 or 0"
+    MaxPackSizeTolerateWrong,
 }
 
 /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions

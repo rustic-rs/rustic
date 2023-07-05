@@ -1,5 +1,6 @@
 pub mod cat;
 pub mod check;
+pub mod config;
 pub mod dump;
 pub mod forget;
 pub mod key;

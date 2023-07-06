@@ -260,6 +260,8 @@ pub enum RepositoryErrorKind {
     ReadingPasswordFromReaderFailed(std::io::Error),
     /// reading Password from prompt failed: `{0:?}`
     ReadingPasswordFromPromptFailed(std::io::Error),
+    /// Config file already exists. Aborting.
+    ConfigFileExists,
 }
 
 /// [`IndexErrorKind`] describes the errors that can be returned by processing Indizes

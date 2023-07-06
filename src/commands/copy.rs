@@ -2,11 +2,7 @@
 
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
-use crate::{
-    commands::{init::save_config, open_repository},
-    helpers::copy,
-    status_err, Application, RUSTIC_APP,
-};
+use crate::{commands::open_repository, helpers::copy, status_err, Application, RUSTIC_APP};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 use log::info;
@@ -15,8 +11,7 @@ use merge::Merge;
 use serde::Deserialize;
 
 use rustic_core::{
-    FileType, Id, IndexBackend, KeyOpts, Open, ProgressBars, ReadBackend, Repository,
-    RepositoryOptions, SnapshotFile,
+    Id, IndexBackend, KeyOpts, Open, ProgressBars, Repository, RepositoryOptions, SnapshotFile,
 };
 
 /// `copy` subcommand
@@ -73,22 +68,18 @@ impl CopyCmd {
         let index = IndexBackend::new(be, &config.global.progress_options.progress_counter(""))?;
 
         let poly = repo.config().poly()?;
-
         for target_opt in &config.copy.targets {
             let repo_dest = Repository::new(target_opt)?;
 
-            if self.init && repo_dest.be.list(FileType::Config)?.is_empty() {
+            let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
                 let mut config_dest = repo.config().clone();
                 config_dest.id = Id::random();
-                save_config(
-                    config_dest,
-                    &repo_dest,
-                    &self.key_opts,
-                    repo_dest.password()?,
-                )?;
-            }
+                let pass = repo_dest.password()?.unwrap();
+                repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
+            } else {
+                repo_dest.open()?
+            };
 
-            let repo_dest = repo_dest.open()?;
             info!("copying to target {:?}...", repo_dest); // TODO: repo_dest.name
             if poly != repo_dest.config().poly()? {
                 bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");

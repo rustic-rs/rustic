@@ -3,6 +3,7 @@ pub mod check;
 pub mod config;
 pub mod dump;
 pub mod forget;
+pub mod init;
 pub mod key;
 pub mod prune;
 pub mod repoinfo;

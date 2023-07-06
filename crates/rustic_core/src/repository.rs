@@ -289,6 +289,7 @@ impl<P, S> Repository<P, S> {
             _ => Err(RepositoryErrorKind::MoreThanOneRepositoryConfig(self.name.clone()).into()),
         }
     }
+
     pub fn open(self) -> RusticResult<Repository<P, OpenStatus>> {
         let password = self
             .password()?
@@ -322,9 +323,47 @@ impl<P, S> Repository<P, S> {
             }
         })?;
         info!("repository {}: password is correct.", self.name);
-
         let dbe = DecryptBackend::new(&self.be, key);
         let config: ConfigFile = dbe.get_file(&config_id)?;
+        self.open_raw(key, config)
+    }
+
+    pub fn init(
+        self,
+        key_opts: &KeyOpts,
+        config_opts: &ConfigOpts,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
+        let password = self
+            .password()?
+            .ok_or(RepositoryErrorKind::NoPasswordGiven)?;
+        self.init_with_password(&password, key_opts, config_opts)
+    }
+
+    pub fn init_with_password(
+        self,
+        pass: &str,
+        key_opts: &KeyOpts,
+        config_opts: &ConfigOpts,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
+        if self.config_id()?.is_some() {
+            return Err(RepositoryErrorKind::ConfigFileExists.into());
+        }
+        let (key, config) = commands::init::init(&self, pass, key_opts, config_opts)?;
+        self.open_raw(key, config)
+    }
+
+    pub fn init_with_config(
+        self,
+        pass: &str,
+        key_opts: &KeyOpts,
+        config: ConfigFile,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
+        let key = commands::init::init_with_config(&self, pass, key_opts, &config)?;
+        info!("repository {} successfully created.", config.id);
+        self.open_raw(key, config)
+    }
+
+    fn open_raw(self, key: Key, config: ConfigFile) -> RusticResult<Repository<P, OpenStatus>> {
         match (config.is_hot == Some(true), self.be_hot.is_some()) {
             (true, false) => return Err(RepositoryErrorKind::HotRepositoryFlagMissing.into()),
             (false, true) => return Err(RepositoryErrorKind::IsNotHotRepository.into()),
@@ -357,10 +396,6 @@ impl<P, S> Repository<P, S> {
             pb: self.pb,
             status: open,
         })
-    }
-
-    pub fn init_key(&self, pass: &str, opts: &KeyOpts) -> RusticResult<(Key, Id)> {
-        opts.init_key(self, pass)
     }
 }
 

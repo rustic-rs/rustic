@@ -9,10 +9,7 @@ use crate::{Application, RUSTIC_APP};
 
 use dialoguer::Password;
 
-use rustic_core::{
-    random_poly, ConfigFile, ConfigOpts, DecryptBackend, DecryptWriteBackend, FileType, Id,
-    KeyOpts, ReadBackend, Repository, WriteBackend,
-};
+use rustic_core::{ConfigOpts, KeyOpts, Repository};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -40,33 +37,21 @@ impl InitCmd {
         let po = config.global.progress_options;
         let repo = Repository::new_with_progress(&config.repository, po)?;
 
-        let config_ids = repo.be.list(FileType::Config)?;
-
-        let password = repo.password()?;
-
-        if !config_ids.is_empty() {
+        // Note: This is again checked in repo.init_with_password(), however we want to inform
+        // users before they are prompted to enter a password
+        if repo.config_id()?.is_some() {
             bail!("Config file already exists. Aborting.");
         }
-
-        // Create config first to allow catching errors from here without writing anything
-        let repo_id = Id::random();
-        let chunker_poly = random_poly()?;
-        let mut config = ConfigFile::new(2, repo_id, chunker_poly);
-        self.config_opts.apply(&mut config)?;
-
-        save_config(config, &repo, &self.key_opts, password)?;
-
-        Ok(())
+        init(repo, &self.key_opts, &self.config_opts)
     }
 }
 
-pub(crate) fn save_config<P, S>(
-    mut config: ConfigFile,
-    repo: &Repository<P, S>,
+pub(crate) fn init<P, S>(
+    repo: Repository<P, S>,
     key_opts: &KeyOpts,
-    password: Option<String>,
+    config_opts: &ConfigOpts,
 ) -> Result<()> {
-    let pass = password.unwrap_or_else(|| {
+    let pass = repo.password()?.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
             .allow_empty_password(true)
@@ -81,21 +66,7 @@ pub(crate) fn save_config<P, S>(
         }
     });
 
-    repo.be.create()?;
-    let (key, id) = repo.init_key(&pass, key_opts)?;
-    println!("key {id} successfully added.");
-
-    // save config
-    let dbe = DecryptBackend::new(&repo.be, key);
-    config.is_hot = None;
-    _ = dbe.save_file(&config)?;
-
-    if let Some(be_hot) = &repo.be_hot {
-        let dbe = DecryptBackend::new(be_hot, key);
-        config.is_hot = Some(true);
-        _ = dbe.save_file(&config)?;
-    }
-    println!("repository {} successfully created.", config.id);
+    let _ = repo.init_with_password(&pass, key_opts, config_opts)?;
 
     Ok(())
 }

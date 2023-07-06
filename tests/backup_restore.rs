@@ -26,7 +26,8 @@ pub fn rustic_runner(temp_dir: &TempDir) -> CmdRunner {
         .arg("--password")
         .arg(password)
         .arg("--no-progress")
-        .capture_stdout();
+        .capture_stdout()
+        .capture_stderr();
     runner
 }
 
@@ -35,11 +36,13 @@ fn setup() -> TestResult<TempDir> {
     let mut runner = rustic_runner(&temp_dir);
     let mut cmd = runner.args(["init"]).run();
 
-    let mut output = String::new();
-    cmd.stdout().read_to_string(&mut output)?;
+    let mut stdout = String::new();
+    let mut stderr = String::new();
+    cmd.stdout().read_to_string(&mut stdout)?;
+    cmd.stderr().read_to_string(&mut stderr)?;
 
     let patterns = &["successfully added.", "successfully created."];
-    let matches = get_matches(patterns, output)?;
+    let matches = get_matches(patterns, stderr)?;
 
     assert_eq!(
         matches,
@@ -124,7 +127,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
         let mut runner = rustic_runner(&temp_dir);
         let mut cmd = runner.args(["check", "--read-data"]).run();
         let mut output = String::new();
-        cmd.stdout().read_to_string(&mut output)?;
+        cmd.stderr().read_to_string(&mut output)?;
 
         let patterns = &["WARN", "ERROR"];
         let matches = get_matches(patterns, output)?;

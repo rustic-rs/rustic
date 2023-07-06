@@ -2,8 +2,8 @@
 use bytesize::ByteSize;
 
 use crate::{
-    error::CommandErrorKind, ConfigFile, DecryptBackend, DecryptWriteBackend, Open, Repository,
-    RusticResult,
+    error::CommandErrorKind, ConfigFile, DecryptBackend, DecryptWriteBackend, Key, Open,
+    Repository, RusticResult,
 };
 
 pub(crate) fn apply_config<P, S: Open>(
@@ -15,25 +15,26 @@ pub(crate) fn apply_config<P, S: Open>(
     if &new_config == repo.config() {
         Ok(false)
     } else {
-        save_config(repo, new_config)?;
+        save_config(repo, new_config, *repo.key())?;
         Ok(true)
     }
 }
 
-fn save_config<P, S: Open>(
+pub(crate) fn save_config<P, S>(
     repo: &Repository<P, S>,
     mut new_config: ConfigFile,
+    key: Key,
 ) -> RusticResult<()> {
     new_config.is_hot = None;
     // don't compress the config file
-    let mut dbe = repo.dbe().clone();
+    let mut dbe = DecryptBackend::new(&repo.be, key);
     dbe.set_zstd(None);
     // for hot/cold backend, this only saves the config to the cold repo.
     _ = dbe.save_file(&new_config)?;
 
     if let Some(hot_be) = repo.be_hot.clone() {
         // save config to hot repo
-        let mut dbe = DecryptBackend::new(&hot_be, *repo.key());
+        let mut dbe = DecryptBackend::new(&hot_be, key);
         // don't compress the config file
         dbe.set_zstd(None);
         new_config.is_hot = Some(true);

@@ -8,7 +8,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::{bail, Result};
 
-use rustic_core::{DecryptReadBackend, FileType, IndexFile, Open, ProgressBars, ReadBackend};
+use rustic_core::{FileType, IndexFile};
 
 /// `list` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -36,26 +36,14 @@ impl ListCmd {
         let tpe = match self.tpe.as_str() {
             // special treatment for listing blobs: read the index and display it
             "blobs" => {
-                repo.dbe()
-                    .stream_all::<IndexFile>(&config.global.progress_options.progress_hidden())?
-                    .into_iter()
-                    .for_each(|index| {
-                        match index {
-                            Ok(it) => it,
-                            Err(err) => {
-                                status_err!("{}", err);
-                                RUSTIC_APP.shutdown(Shutdown::Crash);
-                            }
+                for item in repo.stream_files::<IndexFile>()? {
+                    let (_, index) = item?;
+                    index.packs.into_iter().for_each(|pack| {
+                        for blob in pack.blobs {
+                            println!("{:?} {:?}", blob.tpe, blob.id);
                         }
-                        .1
-                        .packs
-                        .into_iter()
-                        .for_each(|pack| {
-                            for blob in pack.blobs {
-                                println!("{:?} {:?}", blob.tpe, blob.id);
-                            }
-                        });
                     });
+                }
                 return Ok(());
             }
             "index" => FileType::Index,
@@ -67,9 +55,9 @@ impl ListCmd {
             }
         };
 
-        repo.be.list(tpe)?.into_iter().for_each(|id| {
+        for id in repo.list(tpe)? {
             println!("{id:?}");
-        });
+        }
 
         Ok(())
     }

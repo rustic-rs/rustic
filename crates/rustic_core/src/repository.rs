@@ -37,6 +37,7 @@ use crate::{
     },
     crypto::aespoly1305::Key,
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
+    repofile::RepoFile,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
     BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, NoProgressBars, Node,
     NodeStreamer, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile, SnapshotGroup,
@@ -397,6 +398,10 @@ impl<P, S> Repository<P, S> {
             status: open,
         })
     }
+
+    pub fn list(&self, tpe: FileType) -> RusticResult<impl Iterator<Item = Id>> {
+        Ok(self.be.list(tpe)?.into_iter())
+    }
 }
 
 impl<P: ProgressBars, S> Repository<P, S> {
@@ -549,6 +554,15 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
 
     pub fn infos_index(&self) -> RusticResult<IndexInfos> {
         commands::repoinfo::collect_index_infos(self)
+    }
+
+    pub fn stream_files<F: RepoFile>(
+        &self,
+    ) -> RusticResult<impl Iterator<Item = RusticResult<(Id, F)>>> {
+        Ok(self
+            .dbe()
+            .stream_all::<F>(&self.pb.progress_hidden())?
+            .into_iter())
     }
 }
 

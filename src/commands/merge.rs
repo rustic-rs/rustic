@@ -2,10 +2,7 @@
 
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
-use crate::{
-    commands::{get_repository, open_repository},
-    status_err, Application, RUSTIC_APP,
-};
+use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use log::info;
@@ -57,7 +54,7 @@ impl MergeCmd {
         let config = RUSTIC_APP.config();
         let progress_options = &config.global.progress_options;
 
-        let repo = open_repository(get_repository(&config));
+        let repo = open_repository(&config)?;
 
         let be = repo.dbe();
 

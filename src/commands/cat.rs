@@ -2,10 +2,7 @@
 
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
-use crate::{
-    commands::{get_repository, open_repository},
-    status_err, Application, RUSTIC_APP,
-};
+use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
@@ -61,7 +58,7 @@ impl Runnable for CatCmd {
 impl CatCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(get_repository(&config));
+        let repo = open_repository(&config)?;
 
         let data = match &self.cmd {
             CatSubCmd::Config => repo.cat_file(FileType::Config, "")?,

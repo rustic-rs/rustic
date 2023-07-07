@@ -3,7 +3,7 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::{get_repository, open_repository},
+    commands::open_repository,
     helpers::bytes_size_to_string,
     {status_err, Application, RUSTIC_APP},
 };
@@ -153,7 +153,7 @@ impl BackupCmd {
         let config = RUSTIC_APP.config();
         let progress_options = &config.global.progress_options;
 
-        let repo = open_repository(get_repository(&config));
+        let repo = open_repository(&config)?;
 
         // manually check for a "source" field, check is not done by serde, see above.
         if !config.backup.source.is_empty() {

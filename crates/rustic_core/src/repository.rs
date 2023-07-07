@@ -9,7 +9,6 @@ use std::{
 use bytes::Bytes;
 use log::{debug, error, info};
 
-use dialoguer::Password;
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
@@ -31,20 +30,18 @@ use crate::{
     commands::{
         self,
         check::CheckOpts,
+        config::ConfigOpts,
         forget::{ForgetGroups, KeepOptions},
+        key::KeyOpts,
         repoinfo::{IndexInfos, RepoFileInfos},
     },
     crypto::aespoly1305::Key,
-    error::RepositoryErrorKind,
+    error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
     BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, NoProgressBars, Node,
     ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile, SnapshotGroup,
     SnapshotGroupCriterion, Tree,
 };
-
-pub(super) mod constants {
-    pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
-}
 
 mod warm_up;
 use warm_up::{warm_up, warm_up_wait};
@@ -176,7 +173,7 @@ pub fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult<String
     Ok(password)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Repository<P, S> {
     name: String,
     pub be: HotColdBackend<ChooseBackend>,
@@ -231,7 +228,8 @@ impl<P> Repository<P, ()> {
             status: (),
         })
     }
-
+}
+impl<P, S> Repository<P, S> {
     pub fn password(&self) -> RusticResult<Option<String>> {
         match (
             &self.opts.password,
@@ -279,17 +277,32 @@ impl<P> Repository<P, ()> {
         }
     }
 
-    pub fn open(self) -> RusticResult<Repository<P, OpenStatus>> {
+    pub fn config_id(&self) -> RusticResult<Option<Id>> {
         let config_ids = self
             .be
             .list(FileType::Config)
             .map_err(|_| RepositoryErrorKind::ListingRepositoryConfigFileFailed)?;
 
         match config_ids.len() {
-            1 => {} // ok, continue
-            0 => return Err(RepositoryErrorKind::NoRepositoryConfigFound(self.name).into()),
-            _ => return Err(RepositoryErrorKind::MoreThanOneRepositoryConfig(self.name).into()),
+            1 => Ok(Some(config_ids[0])),
+            0 => Ok(None),
+            _ => Err(RepositoryErrorKind::MoreThanOneRepositoryConfig(self.name.clone()).into()),
         }
+    }
+
+    pub fn open(self) -> RusticResult<Repository<P, OpenStatus>> {
+        let password = self
+            .password()?
+            .ok_or(RepositoryErrorKind::NoPasswordGiven)?;
+        self.open_with_password(&password)
+    }
+
+    pub fn open_with_password(self, password: &str) -> RusticResult<Repository<P, OpenStatus>> {
+        let config_id = self
+            .config_id()?
+            .ok_or(RepositoryErrorKind::NoRepositoryConfigFound(
+                self.name.clone(),
+            ))?;
 
         if let Some(be_hot) = &self.be_hot {
             let mut keys = self.be.list_with_size(FileType::Key)?;
@@ -301,11 +314,56 @@ impl<P> Repository<P, ()> {
             }
         }
 
-        let key = get_key(&self.be, self.password()?)?;
+        let key = find_key_in_backend(&self.be, &password, None).map_err(|err| {
+            match err.into_inner() {
+                RusticErrorKind::KeyFile(KeyFileErrorKind::NoSuitableKeyFound) => {
+                    RepositoryErrorKind::IncorrectPassword.into()
+                }
+                err => err,
+            }
+        })?;
         info!("repository {}: password is correct.", self.name);
-
         let dbe = DecryptBackend::new(&self.be, key);
-        let config: ConfigFile = dbe.get_file(&config_ids[0])?;
+        let config: ConfigFile = dbe.get_file(&config_id)?;
+        self.open_raw(key, config)
+    }
+
+    pub fn init(
+        self,
+        key_opts: &KeyOpts,
+        config_opts: &ConfigOpts,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
+        let password = self
+            .password()?
+            .ok_or(RepositoryErrorKind::NoPasswordGiven)?;
+        self.init_with_password(&password, key_opts, config_opts)
+    }
+
+    pub fn init_with_password(
+        self,
+        pass: &str,
+        key_opts: &KeyOpts,
+        config_opts: &ConfigOpts,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
+        if self.config_id()?.is_some() {
+            return Err(RepositoryErrorKind::ConfigFileExists.into());
+        }
+        let (key, config) = commands::init::init(&self, pass, key_opts, config_opts)?;
+        self.open_raw(key, config)
+    }
+
+    pub fn init_with_config(
+        self,
+        pass: &str,
+        key_opts: &KeyOpts,
+        config: ConfigFile,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
+        let key = commands::init::init_with_config(&self, pass, key_opts, &config)?;
+        info!("repository {} successfully created.", config.id);
+        self.open_raw(key, config)
+    }
+
+    fn open_raw(self, key: Key, config: ConfigFile) -> RusticResult<Repository<P, OpenStatus>> {
         match (config.is_hot == Some(true), self.be_hot.is_some()) {
             (true, false) => return Err(RepositoryErrorKind::HotRepositoryFlagMissing.into()),
             (false, true) => return Err(RepositoryErrorKind::IsNotHotRepository.into()),
@@ -352,32 +410,6 @@ impl<P: ProgressBars, S> Repository<P, S> {
     pub fn warm_up_wait(&self, packs: impl ExactSizeIterator<Item = Id>) -> RusticResult<()> {
         warm_up_wait(self, packs)
     }
-}
-
-pub(crate) fn get_key(be: &impl ReadBackend, password: Option<String>) -> RusticResult<Key> {
-    for _ in 0..constants::MAX_PASSWORD_RETRIES {
-        match password {
-            // if password is given, directly return the result of find_key_in_backend and don't retry
-            Some(pass) => {
-                return find_key_in_backend(be, &pass, None).map_err(std::convert::Into::into)
-            }
-            None => {
-                // TODO: Differentiate between wrong password and other error!
-                if let Ok(key) = find_key_in_backend(
-                    be,
-                    &Password::new()
-                        .with_prompt("enter repository password")
-                        .allow_empty_password(true)
-                        .interact()
-                        .map_err(RepositoryErrorKind::ReadingPasswordFromPromptFailed)?,
-                    None,
-                ) {
-                    return Ok(key);
-                }
-            }
-        }
-    }
-    Err(RepositoryErrorKind::IncorrectPassword.into())
 }
 
 pub trait Open {
@@ -429,6 +461,20 @@ impl Open for OpenStatus {
     }
 }
 
+impl<P, S: Open> Repository<P, S> {
+    pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
+        commands::cat::cat_file(self, tpe, id)
+    }
+
+    pub fn add_key(&self, pass: &str, opts: &KeyOpts) -> RusticResult<Id> {
+        opts.add_key(self, pass)
+    }
+
+    pub fn apply_config(&self, opts: &ConfigOpts) -> RusticResult<bool> {
+        commands::config::apply_config(self, opts)
+    }
+}
+
 impl<P: ProgressBars, S: Open> Repository<P, S> {
     pub fn get_snapshot_group(
         &self,
@@ -458,10 +504,6 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         self.dbe()
             .delete_list(FileType::Snapshot, true, ids.iter(), p)?;
         Ok(())
-    }
-
-    pub fn cat_file(&self, tpe: FileType, id: &str) -> RusticResult<Bytes> {
-        commands::cat::cat_file(self, tpe, id)
     }
 
     pub fn check(&self, opts: CheckOpts) -> RusticResult<()> {

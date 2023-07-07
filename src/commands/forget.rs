@@ -3,7 +3,7 @@
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
-    commands::get_repository, helpers::table_with_titles, status_err, Application, RusticConfig,
+    commands::open_repository, helpers::table_with_titles, status_err, Application, RusticConfig,
     RUSTIC_APP,
 };
 
@@ -88,7 +88,7 @@ impl Runnable for ForgetCmd {
 impl ForgetCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = get_repository(&config).open()?;
+        let repo = open_repository(&config)?;
 
         let group_by = config.forget.group_by.unwrap_or_default();
 

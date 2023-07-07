@@ -158,6 +158,7 @@ where
     path: PathBuf,
     be: BE,
     overrides: Option<Override>,
+    recursive: bool,
 }
 
 impl<BE> NodeStreamer<BE>
@@ -165,10 +166,15 @@ where
     BE: IndexedBackend,
 {
     pub fn new(be: BE, node: &Node) -> RusticResult<Self> {
-        Self::new_streamer(be, node, None)
+        Self::new_streamer(be, node, None, true)
     }
 
-    fn new_streamer(be: BE, node: &Node, overrides: Option<Override>) -> RusticResult<Self> {
+    fn new_streamer(
+        be: BE,
+        node: &Node,
+        overrides: Option<Override>,
+        recursive: bool,
+    ) -> RusticResult<Self> {
         let inner = if node.is_dir() {
             Tree::from_backend(&be, node.subtree.unwrap())?
                 .nodes
@@ -182,10 +188,16 @@ where
             path: PathBuf::new(),
             be,
             overrides,
+            recursive,
         })
     }
 
-    pub fn new_with_glob(be: BE, node: &Node, opts: &TreeStreamerOptions) -> RusticResult<Self> {
+    pub fn new_with_glob(
+        be: BE,
+        node: &Node,
+        opts: &TreeStreamerOptions,
+        recursive: bool,
+    ) -> RusticResult<Self> {
         let mut override_builder = OverrideBuilder::new("/");
 
         for g in &opts.glob {
@@ -228,7 +240,7 @@ where
             .build()
             .map_err(TreeErrorKind::BuildingNodeStreamerFailed)?;
 
-        Self::new_streamer(be, node, Some(overrides))
+        Self::new_streamer(be, node, Some(overrides), recursive)
     }
 }
 
@@ -246,15 +258,17 @@ where
             match self.inner.next() {
                 Some(node) => {
                     let path = self.path.join(node.name());
-                    if let Some(id) = node.subtree {
-                        self.path.push(node.name());
-                        let be = self.be.clone();
-                        let tree = match Tree::from_backend(&be, id) {
-                            Ok(tree) => tree,
-                            Err(err) => return Some(Err(err)),
-                        };
-                        let old_inner = mem::replace(&mut self.inner, tree.nodes.into_iter());
-                        self.open_iterators.push(old_inner);
+                    if self.recursive {
+                        if let Some(id) = node.subtree {
+                            self.path.push(node.name());
+                            let be = self.be.clone();
+                            let tree = match Tree::from_backend(&be, id) {
+                                Ok(tree) => tree,
+                                Err(err) => return Some(Err(err)),
+                            };
+                            let old_inner = mem::replace(&mut self.inner, tree.nodes.into_iter());
+                            self.open_iterators.push(old_inner);
+                        }
                     }
 
                     if let Some(overrides) = &self.overrides {

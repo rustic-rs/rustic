@@ -278,7 +278,7 @@ impl RestoreCmd {
         let mut next_dst = dst_iter.next();
 
         let mut node_streamer =
-            NodeStreamer::new_with_glob(index.clone(), node, &self.streamer_opts.clone())?;
+            NodeStreamer::new_with_glob(index.clone(), node, &self.streamer_opts.clone(), true)?;
         let mut next_node = node_streamer.next().transpose()?;
 
         loop {
@@ -344,7 +344,7 @@ impl RestoreCmd {
     ) -> Result<()> {
         // walk over tree in repository and compare with tree in dest
         let mut node_streamer =
-            NodeStreamer::new_with_glob(index, node, &self.streamer_opts.clone())?;
+            NodeStreamer::new_with_glob(index, node, &self.streamer_opts.clone(), true)?;
         let mut dir_stack = Vec::new();
         while let Some((path, node)) = node_streamer.next().transpose()? {
             match node.node_type {

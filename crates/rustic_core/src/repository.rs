@@ -39,8 +39,8 @@ use crate::{
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
     BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, NoProgressBars, Node,
-    ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion, Tree,
+    NodeStreamer, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile, SnapshotGroup,
+    SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
 mod warm_up;
@@ -606,5 +606,14 @@ impl<P: ProgressBars, S: Indexed> Repository<P, S> {
 
     pub fn dump(&self, node: &Node, w: &mut impl Write) -> RusticResult<()> {
         commands::dump::dump(self, node, w)
+    }
+
+    pub fn ls(
+        &self,
+        node: &Node,
+        streamer_opts: &TreeStreamerOptions,
+        recursive: bool,
+    ) -> RusticResult<impl Iterator<Item = RusticResult<(PathBuf, Node)>>> {
+        NodeStreamer::new_with_glob(self.index().clone(), node, streamer_opts, recursive)
     }
 }

@@ -7,11 +7,7 @@ use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 
-use std::path::Path;
-
-use rustic_core::{
-    IndexBackend, NodeStreamer, Open, ProgressBars, SnapshotFile, Tree, TreeStreamerOptions,
-};
+use rustic_core::TreeStreamerOptions;
 
 /// `ls` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -40,44 +36,17 @@ impl Runnable for LsCmd {
 impl LsCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let progress_options = &config.global.progress_options;
 
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config)?.to_indexed()?;
 
-        let be = repo.dbe();
-        let mut recursive = self.recursive;
+        let node =
+            repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
 
-        let (id, path) = self.snap.split_once(':').unwrap_or_else(|| {
-            recursive = true;
-            (&self.snap, "")
-        });
-        let snap = SnapshotFile::from_str(
-            be,
-            id,
-            |sn| config.snapshot_filter.matches(sn),
-            &progress_options.progress_counter(""),
-        )?;
-        let index = IndexBackend::new(be, &progress_options.progress_counter(""))?;
-        let node = Tree::node_from_path(&index, snap.tree, Path::new(path))?;
+        let recursive = !self.snap.contains(':') || self.recursive;
 
-        if recursive {
-            NodeStreamer::new_with_glob(index, &node, &self.streamer_opts)?.for_each(|item| {
-                let (path, _) = match item {
-                    Ok(it) => it,
-                    Err(err) => {
-                        status_err!("{}", err);
-                        RUSTIC_APP.shutdown(Shutdown::Crash);
-                    }
-                };
-                println!("{path:?} ");
-            });
-        } else if node.is_dir() {
-            let tree = Tree::from_backend(&index, node.subtree.unwrap())?.nodes;
-            for node in tree {
-                println!("{:?} ", node.name());
-            }
-        } else {
-            println!("{:?} ", node.name());
+        for item in repo.ls(&node, &self.streamer_opts, recursive)? {
+            let (path, _) = item?;
+            println!("{path:?} ");
         }
 
         Ok(())

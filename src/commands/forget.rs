@@ -104,7 +104,7 @@ impl ForgetCmd {
                     .into_iter()
                     .map(|sn| ForgetSnapshot {
                         snapshot: sn,
-                        keep: true,
+                        keep: false,
                         reasons: vec!["id argument".to_string()],
                     })
                     .collect(),

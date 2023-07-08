@@ -965,18 +965,7 @@ version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "017b207acb4cc917f4c31758ed95c0bc63ddb0f358b22eb38f80a2b2a43f6b1f"
 dependencies = [
- "enum-map-derive 0.12.0",
-]
-
-[[package]]
-name = "enum-map-derive"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a4da76b3b6116d758c7ba93f7ec6a35d2e2cf24feda76c6e38a375f4d5c59f2"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
+ "enum-map-derive",
 ]
 
 [[package]]
@@ -2352,7 +2341,7 @@ dependencies = [
  "dirs",
  "dunce",
  "enum-map",
- "enum-map-derive 0.11.0",
+ "enum-map-derive",
  "filetime",
  "gethostname",
  "hex",
@@ -2418,7 +2407,7 @@ dependencies = [
  "displaydoc",
  "dunce",
  "enum-map",
- "enum-map-derive 0.11.0",
+ "enum-map-derive",
  "expect-test",
  "filetime",
  "gethostname",

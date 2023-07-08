@@ -147,7 +147,6 @@ pub use crate::{
             DeleteOption, PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
             SnapshotOptions, StringList,
         },
-        RepoFile,
     },
     repository::{read_password_from_reader, Open, OpenStatus, Repository, RepositoryOptions},
 };

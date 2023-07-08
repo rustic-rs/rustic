@@ -490,6 +490,14 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         SnapshotFile::from_ids(self.dbe(), ids, &p)
     }
 
+    pub fn get_matching_snapshots(
+        &self,
+        filter: impl FnMut(&SnapshotFile) -> bool,
+    ) -> RusticResult<Vec<SnapshotFile>> {
+        let p = self.pb.progress_counter("getting snapshots...");
+        SnapshotFile::all_from_backend(self.dbe(), filter, &p)
+    }
+
     pub fn get_forget_snapshots(
         &self,
         keep: &KeepOptions,
@@ -503,6 +511,15 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         let p = self.pb.progress_counter("removing snapshots...");
         self.dbe()
             .delete_list(FileType::Snapshot, true, ids.iter(), p)?;
+        Ok(())
+    }
+
+    pub fn save_snapshots(&self, mut snaps: Vec<SnapshotFile>) -> RusticResult<()> {
+        for snap in &mut snaps {
+            snap.id = Id::default();
+        }
+        let p = self.pb.progress_counter("saving snapshots...");
+        self.dbe().save_list(snaps.iter(), p)?;
         Ok(())
     }
 

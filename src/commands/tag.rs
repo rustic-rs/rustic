@@ -8,9 +8,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use chrono::{Duration, Local};
 
-use rustic_core::{
-    DecryptWriteBackend, DeleteOption, FileType, Id, Open, ProgressBars, SnapshotFile, StringList,
-};
+use rustic_core::{DeleteOption, StringList};
 
 /// `tag` subcommand
 
@@ -78,13 +76,10 @@ impl TagCmd {
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config)?;
 
-        let be = repo.dbe();
-
-        let p = config.global.progress_options.progress_hidden();
         let snapshots = if self.ids.is_empty() {
-            SnapshotFile::all_from_backend(be, |sn| config.snapshot_filter.matches(sn), &p)?
+            repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
         } else {
-            SnapshotFile::from_ids(be, &self.ids, &p)?
+            repo.get_snapshots(&self.ids)?
         };
 
         let delete = match (
@@ -98,19 +93,13 @@ impl TagCmd {
             (false, false, None) => None,
         };
 
-        let mut snapshots: Vec<_> = snapshots
+        let snapshots: Vec<_> = snapshots
             .into_iter()
             .filter_map(|mut sn| {
                 sn.modify_sn(self.set.clone(), self.add.clone(), &self.remove, &delete)
             })
             .collect();
         let old_snap_ids: Vec<_> = snapshots.iter().map(|sn| sn.id).collect();
-        // remove old ids from snapshots
-        for snap in &mut snapshots {
-            snap.id = Id::default();
-        }
-
-        let progress_options = &config.global.progress_options;
 
         match (old_snap_ids.is_empty(), config.global.dry_run) {
             (true, _) => println!("no snapshot changed."),
@@ -118,11 +107,8 @@ impl TagCmd {
                 println!("would have modified the following snapshots:\n {old_snap_ids:?}");
             }
             (false, false) => {
-                let p = progress_options.progress_counter("saving new snapshots...");
-                be.save_list(snapshots.iter(), p)?;
-
-                let p = progress_options.progress_counter("deleting old snapshots...");
-                be.delete_list(FileType::Snapshot, true, old_snap_ids.iter(), p)?;
+                repo.save_snapshots(snapshots)?;
+                repo.delete_snapshots(&old_snap_ids)?;
             }
         }
 

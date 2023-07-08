@@ -1,0 +1,12 @@
+[Unit]
+Description=Monthly rustic --use-profile %I forget
+PartOf=rustic-backup@%i.timer
+
+[Timer]
+OnCalendar=monthly
+AccuracySec=1m
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

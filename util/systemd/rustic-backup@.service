@@ -1,0 +1,8 @@
+[Unit]
+Description=rustic --use-profile %I backup
+
+[Service]
+Nice=19
+IOSchedulingClass=idle
+KillSignal=SIGINT
+ExecStart=/usr/bin/rustic --use-profile %I backup

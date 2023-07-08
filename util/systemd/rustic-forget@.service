@@ -1,0 +1,6 @@
+[Unit]
+Description=rustic --use-profile %I forget
+
+[Service]
+KillSignal=SIGINT
+ExecStart=/usr/bin/rustic --use-profile %I forget

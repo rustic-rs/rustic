@@ -179,6 +179,16 @@ pub enum CommandErrorKind {
     MinPackSizeTolerateWrong,
     /// max_packsize_tolerate_percent must be >= 100 or 0"
     MaxPackSizeTolerateWrong,
+    /// error creating {0:?}: {1:?}
+    ErrorCreating(PathBuf, Box<RusticError>),
+    /// error collecting information for {0:?}: {1:?}
+    ErrorCollecting(PathBuf, Box<RusticError>),
+    /// error setting length for {0:?}: {1:?}
+    ErrorSettingLength(PathBuf, Box<RusticError>),
+    /// did not find id {0} in index
+    IdNotFound(Id),
+    /// {0:?}
+    FromRayonError(#[from] rayon::ThreadPoolBuildError),
 }
 
 /// [`CryptoErrorKind`] describes the errors that can happen while dealing with Cryptographic functions

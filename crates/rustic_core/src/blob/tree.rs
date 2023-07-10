@@ -148,7 +148,7 @@ pub struct TreeStreamerOptions {
 }
 
 /// [`NodeStreamer`] recursively streams all nodes of a given tree including all subtrees in-order
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeStreamer<BE>
 where
     BE: IndexedBackend,

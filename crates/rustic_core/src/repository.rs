@@ -34,14 +34,15 @@ use crate::{
         forget::{ForgetGroups, KeepOptions},
         key::KeyOpts,
         repoinfo::{IndexInfos, RepoFileInfos},
+        restore::{RestoreInfos, RestoreOpts},
     },
     crypto::aespoly1305::Key,
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
     repofile::RepoFile,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
-    BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, NoProgressBars, Node,
-    NodeStreamer, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion, Tree, TreeStreamerOptions,
+    BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, LocalDestination,
+    NoProgressBars, Node, NodeStreamer, ProgressBars, PruneOpts, PrunePlan, RusticResult,
+    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
 mod warm_up;
@@ -644,7 +645,31 @@ impl<P: ProgressBars, S: Indexed> Repository<P, S> {
         node: &Node,
         streamer_opts: &TreeStreamerOptions,
         recursive: bool,
-    ) -> RusticResult<impl Iterator<Item = RusticResult<(PathBuf, Node)>>> {
+    ) -> RusticResult<impl Iterator<Item = RusticResult<(PathBuf, Node)>> + Clone> {
         NodeStreamer::new_with_glob(self.index().clone(), node, streamer_opts, recursive)
+    }
+
+    /// Prepare the restore.
+    /// If `dry_run` is set to false, it will also:
+    /// - remove existing files from the destination, if `opts.delete` is set to true
+    /// - create all dirs for the restore
+    pub fn prepare_restore(
+        &self,
+        opts: &RestoreOpts,
+        node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+        dest: &LocalDestination,
+        dry_run: bool,
+    ) -> RusticResult<RestoreInfos> {
+        opts.collect_and_prepare(self, node_streamer, dest, dry_run)
+    }
+
+    pub fn restore(
+        &self,
+        restore_infos: RestoreInfos,
+        opts: &RestoreOpts,
+        node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+        dest: &LocalDestination,
+    ) -> RusticResult<()> {
+        opts.restore(restore_infos, self, node_streamer, dest)
     }
 }

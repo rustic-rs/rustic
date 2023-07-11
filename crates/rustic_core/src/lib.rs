@@ -93,7 +93,6 @@ pub(crate) mod chunker;
 pub(crate) mod commands;
 pub(crate) mod crypto;
 pub(crate) mod error;
-pub(crate) mod file;
 pub(crate) mod id;
 pub(crate) mod index;
 pub(crate) mod progress;
@@ -127,10 +126,10 @@ pub use crate::{
         key::KeyOpts,
         prune::{PruneOpts, PrunePlan, PruneStats},
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
+        restore::{FileDirStats, RestoreInfos, RestoreOpts, RestoreStats},
     },
     crypto::{aespoly1305::Key, hasher::hash},
     error::{RusticError, RusticResult},
-    file::{AddFileResult, FileInfos, RestoreStats},
     id::Id,
     index::{
         binarysorted::{IndexCollector, IndexType},

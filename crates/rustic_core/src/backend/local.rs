@@ -282,7 +282,7 @@ impl LocalDestination {
         Ok(Self { path, is_file })
     }
 
-    fn path(&self, item: impl AsRef<Path>) -> PathBuf {
+    pub(crate) fn path(&self, item: impl AsRef<Path>) -> PathBuf {
         if self.is_file {
             self.path.clone()
         } else {

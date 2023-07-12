@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{
     error::CommandErrorKind,
-    repository::{Indexed, Open, Repository},
+    repository::{IndexedFull, IndexedTree, Open, Repository},
     BlobType, DecryptReadBackend, FileType, Id, IndexedBackend, ProgressBars, ReadBackend,
     RusticResult, SnapshotFile, Tree,
 };
@@ -19,7 +19,7 @@ pub(crate) fn cat_file<P, S: Open>(
     Ok(data)
 }
 
-pub(crate) fn cat_blob<P, S: Indexed>(
+pub(crate) fn cat_blob<P, S: IndexedFull>(
     repo: &Repository<P, S>,
     tpe: BlobType,
     id: &str,
@@ -30,7 +30,7 @@ pub(crate) fn cat_blob<P, S: Indexed>(
     Ok(data)
 }
 
-pub(crate) fn cat_tree<P: ProgressBars, S: Indexed>(
+pub(crate) fn cat_tree<P: ProgressBars, S: IndexedTree>(
     repo: &Repository<P, S>,
     snap: &str,
     sn_filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,

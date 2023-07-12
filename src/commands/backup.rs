@@ -1,5 +1,7 @@
 //! `backup` subcommand
 
+use std::path::PathBuf;
+
 /// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
 /// accessors along with logging macros. Customize as you see fit.
 use crate::{
@@ -11,25 +13,20 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 use log::{debug, info, warn};
 
-use std::path::PathBuf;
-use std::str::FromStr;
-
 use chrono::Local;
 
 use merge::Merge;
-use path_dedot::ParseDot;
 use serde::Deserialize;
 
 use rustic_core::{
-    Archiver, DryRunBackend, IndexBackend, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, Open, PathList, ProgressBars, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion, SnapshotOptions, StdinSource,
+    BackupOpts, LocalSourceFilterOptions, LocalSourceSaveOptions, ParentOpts, PathList,
+    SnapshotFile, SnapshotOptions,
 };
 
 /// `backup` subcommand
 #[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
-// Note: using cli_sources, sources and source within this strict is a hack to support serde(deny_unknown_fields)
+// Note: using cli_sources, sources and source within this struct is a hack to support serde(deny_unknown_fields)
 // for deserializing the backup options from TOML
 // Unfortunately we cannot work with nested flattened structures, see
 // https://github.com/serde-rs/serde/issues/1547
@@ -42,52 +39,6 @@ pub struct BackupCmd {
     #[merge(skip)]
     #[serde(skip)]
     cli_sources: Vec<String>,
-
-    /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,label,paths)
-    #[clap(
-        long,
-        short = 'g',
-        value_name = "CRITERION",
-        help_heading = "Options for parent processing"
-    )]
-    group_by: Option<SnapshotGroupCriterion>,
-
-    /// Snapshot to use as parent
-    #[clap(
-        long,
-        value_name = "SNAPSHOT",
-        conflicts_with = "force",
-        help_heading = "Options for parent processing"
-    )]
-    parent: Option<String>,
-
-    /// Use no parent, read all files
-    #[clap(
-        long,
-        short,
-        conflicts_with = "parent",
-        help_heading = "Options for parent processing"
-    )]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    force: bool,
-
-    /// Ignore ctime changes when checking for modified files
-    #[clap(
-        long,
-        conflicts_with = "force",
-        help_heading = "Options for parent processing"
-    )]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    ignore_ctime: bool,
-
-    /// Ignore inode number changes when checking for modified files
-    #[clap(
-        long,
-        conflicts_with = "force",
-        help_heading = "Options for parent processing"
-    )]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    ignore_inode: bool,
 
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin")]
@@ -102,18 +53,22 @@ pub struct BackupCmd {
     #[serde(flatten)]
     ignore_save_opts: LocalSourceSaveOptions,
 
-    #[clap(flatten)]
+    /// Output generated snapshot in json format
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    json: bool,
+
+    #[clap(flatten, next_help_heading = "Options for parent processing")]
+    #[serde(flatten)]
+    parent_opts: ParentOpts,
+
+    #[clap(flatten, next_help_heading = "Exclude options")]
     #[serde(flatten)]
     ignore_filter_opts: LocalSourceFilterOptions,
 
     #[clap(flatten, next_help_heading = "Snapshot options")]
     #[serde(flatten)]
     snap_opts: SnapshotOptions,
-
-    /// Output generated snapshot in json format
-    #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    json: bool,
 
     #[clap(skip)]
     #[merge(strategy = merge_sources)]
@@ -151,9 +106,8 @@ impl BackupCmd {
             .join(" ");
 
         let config = RUSTIC_APP.config();
-        let progress_options = &config.global.progress_options;
 
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config)?.to_indexed_ids()?;
 
         // manually check for a "source" field, check is not done by serde, see above.
         if !config.backup.source.is_empty() {
@@ -195,18 +149,8 @@ impl BackupCmd {
             }
         };
 
-        let index =
-            IndexBackend::only_full_trees(repo.dbe(), &progress_options.progress_counter(""))?;
-
         for source in sources {
             let mut opts = self.clone();
-            let index = index.clone();
-            let backup_stdin = source == PathList::from_string("-", false)?;
-            let backup_path = if backup_stdin {
-                vec![PathBuf::from(&opts.stdin_filename)]
-            } else {
-                source.paths()
-            };
 
             // merge Options from config file, if given
             if let Some(idx) = config_sources.iter().position(|s| s == &source) {
@@ -230,79 +174,15 @@ impl BackupCmd {
             // merge "backup" section from config file, if given
             opts.merge(config.backup.clone());
 
-            let be = DryRunBackend::new(repo.dbe().clone(), config.global.dry_run);
-            info!("starting to backup {source}...");
-            let as_path = opts.as_path.map(|p| {
-                match p.parse_dot() {
-                    Ok(it) => it,
-                    Err(err) => {
-                        status_err!("{}", err);
-                        RUSTIC_APP.shutdown(Shutdown::Crash);
-                    }
-                }
-                .to_path_buf()
-            });
-
-            let mut snap = SnapshotFile::new_from_options(&opts.snap_opts, time, command.clone())?;
-            match &as_path {
-                Some(p) => snap.paths.set_paths(&[p.clone()])?,
-                None => snap.paths.set_paths(&backup_path)?,
+            let snap = SnapshotFile::new_from_options(&opts.snap_opts, time, command.clone())?;
+            let backup_opts = BackupOpts {
+                stdin_filename: opts.stdin_filename,
+                as_path: opts.as_path,
+                parent_opts: opts.parent_opts,
+                ignore_save_opts: opts.ignore_save_opts,
+                ignore_filter_opts: opts.ignore_filter_opts,
             };
-
-            // get suitable snapshot group from snapshot and opts.group_by. This is used to filter snapshots for the parent detection
-            let group = SnapshotGroup::from_sn(
-                &snap,
-                opts.group_by.unwrap_or_else(|| {
-                    SnapshotGroupCriterion::from_str("host,label,paths").unwrap()
-                }),
-            );
-
-            let parent = match (backup_stdin, opts.force, opts.parent.clone()) {
-                (true, _, _) | (false, true, _) => None,
-                (false, false, None) => SnapshotFile::latest(
-                    &be,
-                    |snap| snap.has_group(&group),
-                    &progress_options.progress_counter(""),
-                )
-                .ok(),
-                (false, false, Some(parent)) => SnapshotFile::from_id(&be, &parent).ok(),
-            };
-
-            let parent_tree = match &parent {
-                Some(parent) => {
-                    info!("using parent {}", parent.id);
-                    snap.parent = Some(parent.id);
-                    Some(parent.tree)
-                }
-                None => {
-                    info!("using no parent");
-                    None
-                }
-            };
-
-            let archiver = Archiver::new(
-                be,
-                index,
-                repo.config(),
-                parent_tree,
-                opts.ignore_ctime,
-                opts.ignore_inode,
-                snap,
-            )?;
-            let p = progress_options.progress_bytes("determining size...");
-
-            let snap = if backup_stdin {
-                let path = &backup_path[0];
-                let src = StdinSource::new(path.clone())?;
-                archiver.archive(src, path, as_path.as_ref(), &p)?
-            } else {
-                let src = LocalSource::new(
-                    opts.ignore_save_opts,
-                    opts.ignore_filter_opts.clone(),
-                    &backup_path,
-                )?;
-                archiver.archive(src, &backup_path[0], as_path.as_ref(), &p)?
-            };
+            let snap = repo.backup(&backup_opts, source.clone(), snap, config.global.dry_run)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();

@@ -63,65 +63,47 @@ pub struct LocalSourceSaveOptions {
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LocalSourceFilterOptions {
     /// Glob pattern to exclude/include (can be specified multiple times)
-    #[cfg_attr(feature = "clap", clap(long, help_heading = "Exclude options"))]
+    #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
     glob: Vec<String>,
 
     /// Same as --glob pattern but ignores the casing of filenames
-    #[cfg_attr(
-        feature = "clap",
-        clap(long, value_name = "GLOB", help_heading = "Exclude options")
-    )]
+    #[cfg_attr(feature = "clap", clap(long, value_name = "GLOB"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
     iglob: Vec<String>,
 
     /// Read glob patterns to exclude/include from this file (can be specified multiple times)
-    #[cfg_attr(
-        feature = "clap",
-        clap(long, value_name = "FILE", help_heading = "Exclude options")
-    )]
+    #[cfg_attr(feature = "clap", clap(long, value_name = "FILE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
     glob_file: Vec<String>,
 
     /// Same as --glob-file ignores the casing of filenames in patterns
-    #[cfg_attr(
-        feature = "clap",
-        clap(long, value_name = "FILE", help_heading = "Exclude options")
-    )]
+    #[cfg_attr(feature = "clap", clap(long, value_name = "FILE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
     iglob_file: Vec<String>,
 
     /// Ignore files based on .gitignore files
-    #[cfg_attr(feature = "clap", clap(long, help_heading = "Exclude options"))]
+    #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
     git_ignore: bool,
 
     /// Do not require a git repository to apply git-ignore rule
-    #[cfg_attr(feature = "clap", clap(long, help_heading = "Exclude options"))]
+    #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
     no_require_git: bool,
 
     /// Exclude contents of directories containing this filename (can be specified multiple times)
-    #[cfg_attr(
-        feature = "clap",
-        clap(long, value_name = "FILE", help_heading = "Exclude options")
-    )]
+    #[cfg_attr(feature = "clap", clap(long, value_name = "FILE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
     exclude_if_present: Vec<String>,
 
     /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
-    #[cfg_attr(
-        feature = "clap",
-        clap(long, short = 'x', help_heading = "Exclude options")
-    )]
+    #[cfg_attr(feature = "clap", clap(long, short = 'x'))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
     one_file_system: bool,
 
     /// Maximum size of files to be backuped. Larger files will be excluded.
-    #[cfg_attr(
-        feature = "clap",
-        clap(long, value_name = "SIZE", help_heading = "Exclude options")
-    )]
+    #[cfg_attr(feature = "clap", clap(long, value_name = "SIZE"))]
     #[serde_as(as = "Option<DisplayFromStr>")]
     exclude_larger_than: Option<ByteSize>,
 }
@@ -129,7 +111,7 @@ pub struct LocalSourceFilterOptions {
 impl LocalSource {
     pub fn new(
         save_opts: LocalSourceSaveOptions,
-        filter_opts: LocalSourceFilterOptions,
+        filter_opts: &LocalSourceFilterOptions,
         backup_paths: &[impl AsRef<Path>],
     ) -> RusticResult<Self> {
         let mut walk_builder = WalkBuilder::new(&backup_paths[0]);
@@ -140,13 +122,13 @@ impl LocalSource {
 
         let mut override_builder = OverrideBuilder::new("/");
 
-        for g in filter_opts.glob {
+        for g in &filter_opts.glob {
             _ = override_builder
-                .add(&g)
+                .add(g)
                 .map_err(IgnoreErrorKind::GenericError)?;
         }
 
-        for file in filter_opts.glob_file {
+        for file in &filter_opts.glob_file {
             for line in std::fs::read_to_string(file)
                 .map_err(IgnoreErrorKind::FromIoError)?
                 .lines()
@@ -160,13 +142,13 @@ impl LocalSource {
         _ = override_builder
             .case_insensitive(true)
             .map_err(IgnoreErrorKind::GenericError)?;
-        for g in filter_opts.iglob {
+        for g in &filter_opts.iglob {
             _ = override_builder
-                .add(&g)
+                .add(g)
                 .map_err(IgnoreErrorKind::GenericError)?;
         }
 
-        for file in filter_opts.iglob_file {
+        for file in &filter_opts.iglob_file {
             for line in std::fs::read_to_string(file)
                 .map_err(IgnoreErrorKind::FromIoError)?
                 .lines()
@@ -192,10 +174,11 @@ impl LocalSource {
                     .map_err(IgnoreErrorKind::GenericError)?,
             );
 
+        let exclude_if_present = filter_opts.exclude_if_present.clone();
         if !filter_opts.exclude_if_present.is_empty() {
             _ = walk_builder.filter_entry(move |entry| match entry.file_type() {
                 Some(tpe) if tpe.is_dir() => {
-                    for file in &filter_opts.exclude_if_present {
+                    for file in &exclude_if_present {
                         if entry.path().join(file).exists() {
                             return false;
                         }

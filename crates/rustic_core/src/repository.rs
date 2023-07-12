@@ -29,6 +29,7 @@ use crate::{
     },
     commands::{
         self,
+        backup::BackupOpts,
         check::CheckOpts,
         config::ConfigOpts,
         forget::{ForgetGroups, KeepOptions},
@@ -41,7 +42,7 @@ use crate::{
     repofile::RepoFile,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
     BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, LocalDestination,
-    NoProgressBars, Node, NodeStreamer, ProgressBars, PruneOpts, PrunePlan, RusticResult,
+    NoProgressBars, Node, NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult,
     SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
@@ -537,11 +538,29 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         opts.get_plan(self)
     }
 
-    pub fn to_indexed(self) -> RusticResult<Repository<P, IndexedStatus<S>>> {
+    pub fn to_indexed(self) -> RusticResult<Repository<P, IndexedStatus<FullIndex, S>>> {
         let index = IndexBackend::new(self.dbe(), &self.pb.progress_counter(""))?;
         let status = IndexedStatus {
             open: self.status,
             index,
+            marker: std::marker::PhantomData,
+        };
+        Ok(Repository {
+            name: self.name,
+            be: self.be,
+            be_hot: self.be_hot,
+            opts: self.opts,
+            pb: self.pb,
+            status,
+        })
+    }
+
+    pub fn to_indexed_ids(self) -> RusticResult<Repository<P, IndexedStatus<IdIndex, S>>> {
+        let index = IndexBackend::only_full_trees(self.dbe(), &self.pb.progress_counter(""))?;
+        let status = IndexedStatus {
+            open: self.status,
+            index,
+            marker: std::marker::PhantomData,
         };
         Ok(Repository {
             name: self.name,
@@ -567,12 +586,15 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
     }
 }
 
-pub trait Indexed: Open {
+pub trait IndexedTree: Open {
     type I: IndexedBackend;
     fn index(&self) -> &Self::I;
 }
 
-impl<P, S: Indexed> Indexed for Repository<P, S> {
+pub trait IndexedIds: IndexedTree {}
+pub trait IndexedFull: IndexedIds {}
+
+impl<P, S: IndexedTree> IndexedTree for Repository<P, S> {
     type I = S::I;
     fn index(&self) -> &Self::I {
         self.status.index()
@@ -580,12 +602,18 @@ impl<P, S: Indexed> Indexed for Repository<P, S> {
 }
 
 #[derive(Debug)]
-pub struct IndexedStatus<S: Open> {
+pub struct IndexedStatus<T, S: Open> {
     open: S,
     index: IndexBackend<S::DBE>,
+    marker: std::marker::PhantomData<T>,
 }
 
-impl<S: Open> Indexed for IndexedStatus<S> {
+#[derive(Debug, Clone, Copy)]
+pub struct IdIndex {}
+#[derive(Debug, Clone, Copy)]
+pub struct FullIndex {}
+
+impl<T, S: Open> IndexedTree for IndexedStatus<T, S> {
     type I = IndexBackend<S::DBE>;
 
     fn index(&self) -> &Self::I {
@@ -593,7 +621,11 @@ impl<S: Open> Indexed for IndexedStatus<S> {
     }
 }
 
-impl<S: Open> Open for IndexedStatus<S> {
+impl<S: Open> IndexedIds for IndexedStatus<IdIndex, S> {}
+impl<S: Open> IndexedIds for IndexedStatus<FullIndex, S> {}
+impl<S: Open> IndexedFull for IndexedStatus<FullIndex, S> {}
+
+impl<T, S: Open> Open for IndexedStatus<T, S> {
     type DBE = S::DBE;
 
     fn key(&self) -> &Key {
@@ -610,7 +642,7 @@ impl<S: Open> Open for IndexedStatus<S> {
     }
 }
 
-impl<P: ProgressBars, S: Indexed> Repository<P, S> {
+impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
     pub fn node_from_snapshot_path(
         &self,
         snap_path: &str,
@@ -624,20 +656,12 @@ impl<P: ProgressBars, S: Indexed> Repository<P, S> {
         Tree::node_from_path(self.index(), snap.tree, Path::new(path))
     }
 
-    pub fn cat_blob(&self, tpe: BlobType, id: &str) -> RusticResult<Bytes> {
-        commands::cat::cat_blob(self, tpe, id)
-    }
-
     pub fn cat_tree(
         &self,
         snap: &str,
         sn_filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
     ) -> RusticResult<Bytes> {
         commands::cat::cat_tree(self, snap, sn_filter)
-    }
-
-    pub fn dump(&self, node: &Node, w: &mut impl Write) -> RusticResult<()> {
-        commands::dump::dump(self, node, w)
     }
 
     pub fn ls(
@@ -647,6 +671,38 @@ impl<P: ProgressBars, S: Indexed> Repository<P, S> {
         recursive: bool,
     ) -> RusticResult<impl Iterator<Item = RusticResult<(PathBuf, Node)>> + Clone> {
         NodeStreamer::new_with_glob(self.index().clone(), node, streamer_opts, recursive)
+    }
+
+    pub fn restore(
+        &self,
+        restore_infos: RestoreInfos,
+        opts: &RestoreOpts,
+        node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+        dest: &LocalDestination,
+    ) -> RusticResult<()> {
+        opts.restore(restore_infos, self, node_streamer, dest)
+    }
+}
+
+impl<P: ProgressBars, S: IndexedIds> Repository<P, S> {
+    pub fn backup(
+        &self,
+        opts: &BackupOpts,
+        source: PathList,
+        snap: SnapshotFile,
+        dry_run: bool,
+    ) -> RusticResult<SnapshotFile> {
+        commands::backup::backup(self, opts, source, snap, dry_run)
+    }
+}
+
+impl<P: ProgressBars, S: IndexedFull> Repository<P, S> {
+    pub fn cat_blob(&self, tpe: BlobType, id: &str) -> RusticResult<Bytes> {
+        commands::cat::cat_blob(self, tpe, id)
+    }
+
+    pub fn dump(&self, node: &Node, w: &mut impl Write) -> RusticResult<()> {
+        commands::dump::dump(self, node, w)
     }
 
     /// Prepare the restore.
@@ -661,15 +717,5 @@ impl<P: ProgressBars, S: Indexed> Repository<P, S> {
         dry_run: bool,
     ) -> RusticResult<RestoreInfos> {
         opts.collect_and_prepare(self, node_streamer, dest, dry_run)
-    }
-
-    pub fn restore(
-        &self,
-        restore_infos: RestoreInfos,
-        opts: &RestoreOpts,
-        node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
-        dest: &LocalDestination,
-    ) -> RusticResult<()> {
-        opts.restore(restore_infos, self, node_streamer, dest)
     }
 }

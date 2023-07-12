@@ -100,7 +100,7 @@ impl DiffCmd {
                     .is_dir();
                 let src = LocalSource::new(
                     LocalSourceSaveOptions::default(),
-                    self.ignore_opts.clone(),
+                    &self.ignore_opts,
                     &[&path2],
                 )?
                 .map(|item| {

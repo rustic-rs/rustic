@@ -122,6 +122,7 @@ pub use crate::{
         backup::{BackupOpts, ParentOpts},
         check::CheckOpts,
         config::ConfigOpts,
+        copy::CopySnapshot,
         forget::{ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions},
         key::KeyOpts,
         prune::{PruneOpts, PrunePlan, PruneStats},

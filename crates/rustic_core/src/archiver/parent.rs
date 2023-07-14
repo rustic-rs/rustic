@@ -10,11 +10,12 @@ use crate::{
     id::Id, index::IndexedBackend, RusticResult,
 };
 
-pub(crate) struct Parent<BE: IndexedBackend> {
+#[derive(Debug)]
+pub struct Parent {
+    tree_id: Option<Id>,
     tree: Option<Tree>,
     node_idx: usize,
     stack: Vec<(Option<Tree>, usize)>,
-    be: BE,
     ignore_ctime: bool,
     ignore_inode: bool,
 }
@@ -38,8 +39,8 @@ impl<T> ParentResult<T> {
 
 pub(crate) type ItemWithParent<O> = TreeType<(O, ParentResult<()>), ParentResult<Id>>;
 
-impl<BE: IndexedBackend> Parent<BE> {
-    pub(crate) fn new(
+impl Parent {
+    pub(crate) fn new<BE: IndexedBackend>(
         be: &BE,
         tree_id: Option<Id>,
         ignore_ctime: bool,
@@ -54,10 +55,10 @@ impl<BE: IndexedBackend> Parent<BE> {
             }
         });
         Self {
+            tree_id,
             tree,
             node_idx: 0,
             stack: Vec::new(),
-            be: be.clone(),
             ignore_ctime,
             ignore_inode,
         }
@@ -105,24 +106,22 @@ impl<BE: IndexedBackend> Parent<BE> {
         })
     }
 
-    fn set_dir(&mut self, name: &OsStr) {
-        let tree = match self.p_node(name) {
-            Some(p_node) => {
-                if let Some(tree_id) = p_node.subtree {
-                    match Tree::from_backend(&self.be, tree_id) {
-                        Ok(tree) => Some(tree),
-                        Err(err) => {
-                            warn!("ignoring error when loading parent tree {tree_id}: {err}");
-                            None
-                        }
-                    }
-                } else {
+    fn set_dir<BE: IndexedBackend>(&mut self, be: &BE, name: &OsStr) {
+        let tree = self.p_node(name).and_then(|p_node| {
+            p_node.subtree.map_or_else(
+                || {
                     warn!("ignoring parent node {}: is no tree!", p_node.name);
                     None
-                }
-            }
-            None => None,
-        };
+                },
+                |tree_id| match Tree::from_backend(be, tree_id) {
+                    Ok(tree) => Some(tree),
+                    Err(err) => {
+                        warn!("ignoring error when loading parent tree {tree_id}: {err}");
+                        None
+                    }
+                },
+            )
+        });
         self.stack.push((self.tree.take(), self.node_idx));
         self.tree = tree;
         self.node_idx = 0;
@@ -140,8 +139,13 @@ impl<BE: IndexedBackend> Parent<BE> {
         Ok(())
     }
 
-    pub(crate) fn process<O>(
+    pub(crate) fn tree_id(&self) -> Option<Id> {
+        self.tree_id
+    }
+
+    pub(crate) fn process<BE: IndexedBackend, O>(
         &mut self,
+        be: &BE,
         item: TreeType<O, OsString>,
     ) -> RusticResult<ItemWithParent<O>> {
         let result = match item {
@@ -149,7 +153,7 @@ impl<BE: IndexedBackend> Parent<BE> {
                 let parent_result = self
                     .is_parent(&node, &tree)
                     .map(|node| node.subtree.unwrap());
-                self.set_dir(&tree);
+                self.set_dir(be, &tree);
                 TreeType::NewTree((path, node, parent_result))
             }
             TreeType::EndTree => {
@@ -157,7 +161,7 @@ impl<BE: IndexedBackend> Parent<BE> {
                 TreeType::EndTree
             }
             TreeType::Other((path, mut node, open)) => {
-                let be = self.be.clone();
+                let be = be.clone();
                 let parent = self.is_parent(&node, &node.name());
                 let parent = match parent {
                     ParentResult::Matched(p_node) => {

@@ -2,11 +2,11 @@ use std::io::Write;
 
 use crate::{
     error::CommandErrorKind,
-    repository::{Indexed, Repository},
+    repository::{IndexedFull, IndexedTree, Repository},
     BlobType, IndexedBackend, Node, NodeType, RusticResult,
 };
 
-pub(crate) fn dump<P, S: Indexed>(
+pub(crate) fn dump<P, S: IndexedFull>(
     repo: &Repository<P, S>,
     node: &Node,
     w: &mut impl Write,

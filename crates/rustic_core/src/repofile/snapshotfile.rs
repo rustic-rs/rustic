@@ -471,10 +471,10 @@ impl Ord for SnapshotFile {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(DeserializeFromStr, Clone, Debug, Copy)]
 pub struct SnapshotGroupCriterion {
-    hostname: bool,
-    label: bool,
-    paths: bool,
-    tags: bool,
+    pub hostname: bool,
+    pub label: bool,
+    pub paths: bool,
+    pub tags: bool,
 }
 
 impl Default for SnapshotGroupCriterion {

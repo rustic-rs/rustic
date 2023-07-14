@@ -101,7 +101,6 @@ pub(crate) mod repository;
 
 // rustic_core Public API
 pub use crate::{
-    archiver::Archiver,
     backend::{
         cache::Cache,
         decrypt::{DecryptBackend, DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend},
@@ -120,6 +119,7 @@ pub use crate::{
     },
     chunker::random_poly,
     commands::{
+        backup::{BackupOpts, ParentOpts},
         check::CheckOpts,
         config::ConfigOpts,
         forget::{ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions},

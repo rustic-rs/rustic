@@ -16,7 +16,6 @@ use crate::{
     },
     backend::{decrypt::DecryptWriteBackend, ReadSource, ReadSourceEntry},
     blob::BlobType,
-    id::Id,
     index::{indexer::Indexer, indexer::SharedIndexer, IndexedBackend},
     repofile::{configfile::ConfigFile, snapshotfile::SnapshotFile},
     Progress, RusticResult,
@@ -25,8 +24,7 @@ use crate::{
 pub struct Archiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     file_archiver: FileArchiver<BE, I>,
     tree_archiver: TreeArchiver<BE, I>,
-    parent_tree: Option<Id>,
-    parent: Parent<I>,
+    parent: Parent,
     indexer: SharedIndexer<BE>,
     be: BE,
     snap: SnapshotFile,
@@ -37,22 +35,18 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         be: BE,
         index: I,
         config: &ConfigFile,
-        parent_tree: Option<Id>,
-        ignore_ctime: bool,
-        ignore_inode: bool,
+        parent: Parent,
         mut snap: SnapshotFile,
     ) -> RusticResult<Self> {
         let indexer = Indexer::new(be.clone()).into_shared();
-        let mut summary = snap.summary.take().unwrap();
+        let mut summary = snap.summary.take().unwrap_or_default();
         summary.backup_start = Local::now();
 
-        let parent = Parent::new(&index, parent_tree, ignore_ctime, ignore_inode);
         let file_archiver = FileArchiver::new(be.clone(), index.clone(), indexer.clone(), config)?;
         let tree_archiver = TreeArchiver::new(be.clone(), index, indexer.clone(), config, summary)?;
         Ok(Self {
             file_archiver,
             tree_archiver,
-            parent_tree,
             parent,
             indexer,
             be,
@@ -62,6 +56,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
     pub fn archive<R>(
         mut self,
+        index: &I,
         src: R,
         backup_path: &Path,
         as_path: Option<&PathBuf>,
@@ -112,7 +107,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
 
         scope(|scope| -> RusticResult<_> {
             // use parent snapshot
-            iter.filter_map(|item| match self.parent.process(item) {
+            iter.filter_map(|item| match self.parent.process(index, item) {
                 Ok(item) => Some(item),
                 Err(err) => {
                     warn!("ignoring error reading parent snapshot: {err:?}");
@@ -134,7 +129,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> Archiver<BE, I> {
         .unwrap()?;
 
         let stats = self.file_archiver.finalize()?;
-        let (id, mut summary) = self.tree_archiver.finalize(self.parent_tree)?;
+        let (id, mut summary) = self.tree_archiver.finalize(self.parent.tree_id())?;
         stats.apply(&mut summary, BlobType::Data);
         self.snap.tree = id;
 

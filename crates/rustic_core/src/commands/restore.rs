@@ -17,9 +17,11 @@ use itertools::Itertools;
 use rayon::ThreadPoolBuilder;
 
 use crate::{
-    error::CommandErrorKind, hash, repository::Indexed, DecryptReadBackend, FileType, Id,
-    IndexedBackend, LocalDestination, Node, NodeType, Open, Progress, ProgressBars, ReadBackend,
-    Repository, RusticResult,
+    error::CommandErrorKind,
+    hash,
+    repository::{IndexedFull, IndexedTree},
+    DecryptReadBackend, FileType, Id, IndexedBackend, LocalDestination, Node, NodeType, Open,
+    Progress, ProgressBars, ReadBackend, Repository, RusticResult,
 };
 
 pub(crate) mod constants {
@@ -65,7 +67,7 @@ pub struct RestoreStats {
 }
 
 impl RestoreOpts {
-    pub(crate) fn restore<P: ProgressBars, S: Indexed>(
+    pub(crate) fn restore<P: ProgressBars, S: IndexedTree>(
         self,
         file_infos: RestoreInfos,
         repo: &Repository<P, S>,
@@ -83,7 +85,7 @@ impl RestoreOpts {
     }
 
     /// collect restore information, scan existing files, create needed dirs and remove superfluous files
-    pub(crate) fn collect_and_prepare<P: ProgressBars, S: Indexed>(
+    pub(crate) fn collect_and_prepare<P: ProgressBars, S: IndexedFull>(
         self,
         repo: &Repository<P, S>,
         mut node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,

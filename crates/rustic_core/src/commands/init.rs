@@ -3,7 +3,7 @@
 use log::info;
 
 use crate::{
-    commands::config::save_config, random_poly, ConfigFile, ConfigOpts, Id, Key, KeyOpts,
+    chunker::random_poly, commands::config::save_config, ConfigFile, ConfigOpts, Id, Key, KeyOpts,
     Repository, RusticResult, WriteBackend,
 };
 

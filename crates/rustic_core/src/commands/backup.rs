@@ -11,10 +11,11 @@ use serde::Deserialize;
 
 use crate::{
     archiver::{parent::Parent, Archiver},
+    backend::dry_run::DryRunBackend,
     repository::{IndexedIds, IndexedTree},
-    DryRunBackend, Id, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, Open,
-    PathList, ProgressBars, Repository, RusticResult, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion, StdinSource,
+    Id, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, Open, PathList,
+    ProgressBars, Repository, RusticResult, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
+    StdinSource,
 };
 
 /// `backup` subcommand

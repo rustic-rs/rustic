@@ -36,7 +36,7 @@ impl Key {
     }
 
     #[must_use]
-    pub fn to_keys(&self) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    pub fn to_keys(self) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
         let mut encrypt = vec![0; 32];
         let mut k = vec![0; 16];
         let mut r = vec![0; 16];

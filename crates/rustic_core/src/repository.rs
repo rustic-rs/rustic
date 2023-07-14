@@ -32,6 +32,7 @@ use crate::{
         backup::BackupOpts,
         check::CheckOpts,
         config::ConfigOpts,
+        copy::CopySnapshot,
         forget::{ForgetGroups, KeepOptions},
         key::KeyOpts,
         repoinfo::{IndexInfos, RepoFileInfos},
@@ -178,7 +179,7 @@ pub fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult<String
 
 #[derive(Debug, Clone)]
 pub struct Repository<P, S> {
-    name: String,
+    pub name: String,
     pub be: HotColdBackend<ChooseBackend>,
     pub be_hot: Option<ChooseBackend>,
     opts: RepositoryOptions,
@@ -514,6 +515,14 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         commands::forget::get_forget_snapshots(self, keep, group_by, filter)
     }
 
+    pub fn relevant_copy_snapshots(
+        &self,
+        filter: impl FnMut(&SnapshotFile) -> bool,
+        snaps: &[SnapshotFile],
+    ) -> RusticResult<Vec<CopySnapshot>> {
+        commands::copy::relevant_snapshots(snaps, self, filter)
+    }
+
     pub fn delete_snapshots(&self, ids: &[Id]) -> RusticResult<()> {
         let p = self.pb.progress_counter("removing snapshots...");
         self.dbe()
@@ -717,5 +726,17 @@ impl<P: ProgressBars, S: IndexedFull> Repository<P, S> {
         dry_run: bool,
     ) -> RusticResult<RestoreInfos> {
         opts.collect_and_prepare(self, node_streamer, dest, dry_run)
+    }
+
+    /// Copy the given `snapshots` to `repo_dest`.
+    /// Note: This command copies snapshots even if they already exist. For already existing snapshots, a
+    /// copy will be created in the destination repository.
+    /// To omit already existing snapshots, use `relevante_copy_snapshots` and filter out the non-relevant ones.
+    pub fn copy<'a, Q: ProgressBars, R: IndexedIds>(
+        &self,
+        repo_dest: &Repository<Q, R>,
+        snapshots: impl IntoIterator<Item = &'a SnapshotFile>,
+    ) -> RusticResult<()> {
+        commands::copy::copy(self, repo_dest, snapshots)
     }
 }

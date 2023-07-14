@@ -823,6 +823,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_setters"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e8ef033054e131169b8f0f9a7af8f5533a9436fadf3c500ed547f730f07090d"
+dependencies = [
+ "darling 0.20.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.23",
+]
+
+[[package]]
 name = "dialoguer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2314,6 +2326,7 @@ dependencies = [
  "crossbeam-channel",
  "derivative",
  "derive_more",
+ "derive_setters",
  "dialoguer",
  "dircmp",
  "directories",
@@ -2381,6 +2394,7 @@ dependencies = [
  "crossbeam-channel",
  "derivative",
  "derive_more",
+ "derive_setters",
  "directories",
  "dirs",
  "displaydoc",

@@ -37,6 +37,7 @@ thiserror = { workspace = true }
 # macros
 derive_more = { workspace = true }
 derivative = { workspace = true }
+derive_setters = { workspace = true }
 
 #logging
 log = { workspace = true }

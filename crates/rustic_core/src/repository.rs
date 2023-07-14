@@ -7,6 +7,7 @@ use std::{
 };
 
 use bytes::Bytes;
+use derive_setters::Setters;
 use log::{debug, error, info};
 
 use nom::{
@@ -53,8 +54,9 @@ use warm_up::{warm_up, warm_up_wait};
 #[serde_as]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[cfg_attr(feature = "merge", derive(merge::Merge))]
-#[derive(Clone, Default, Debug, serde::Deserialize)]
+#[derive(Clone, Default, Debug, serde::Deserialize, Setters)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[setters(into, strip_option)]
 pub struct RepositoryOptions {
     /// Repository to use
     #[cfg_attr(
@@ -496,6 +498,10 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
     pub fn get_snapshots(&self, ids: &[String]) -> RusticResult<Vec<SnapshotFile>> {
         let p = self.pb.progress_counter("getting snapshots...");
         SnapshotFile::from_ids(self.dbe(), ids, &p)
+    }
+
+    pub fn get_all_snapshots(&self) -> RusticResult<Vec<SnapshotFile>> {
+        self.get_matching_snapshots(|_| true)
     }
 
     pub fn get_matching_snapshots(

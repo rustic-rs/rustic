@@ -51,6 +51,7 @@ thiserror = { workspace = true }
 # macros
 derive_more = { workspace = true }
 derivative = { workspace = true }
+derive_setters = { workspace = true }
 
 #logging
 log = { workspace = true }
@@ -160,6 +161,7 @@ anyhow = "1"
 # macros
 derive_more = "0.99"
 derivative = "2"
+derive_setters = "0.1"
 
 #logging
 log = "0.4"

@@ -99,25 +99,22 @@ pub(crate) mod progress;
 pub(crate) mod repofile;
 pub(crate) mod repository;
 
+pub(crate) use crate::crypto::aespoly1305::Key;
 // rustic_core Public API
 pub use crate::{
     backend::{
-        cache::Cache,
-        decrypt::{DecryptBackend, DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend},
-        dry_run::DryRunBackend,
+        decrypt::{DecryptReadBackend, DecryptWriteBackend},
         ignore::{LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions},
         local::LocalDestination,
         node::{Node, NodeType},
         stdin::StdinSource,
-        FileType, ReadBackend, ReadSource, ReadSourceEntry, ReadSourceOpen, WriteBackend,
-        WriteSource, ALL_FILE_TYPES,
+        FileType, ReadBackend, ReadSourceEntry, WriteBackend, ALL_FILE_TYPES,
     },
     blob::{
-        packer::{PackSizer, Packer, Repacker},
+        packer::Packer,
         tree::{merge_trees, NodeStreamer, Tree, TreeStreamerOnce, TreeStreamerOptions},
-        BlobLocation, BlobType, BlobTypeMap, Initialize, Sum,
+        BlobType, BlobTypeMap, Initialize, Sum,
     },
-    chunker::random_poly,
     commands::{
         backup::{BackupOpts, ParentOpts},
         check::CheckOpts,
@@ -129,14 +126,10 @@ pub use crate::{
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
         restore::{FileDirStats, RestoreInfos, RestoreOpts, RestoreStats},
     },
-    crypto::{aespoly1305::Key, hasher::hash},
+    crypto::hasher::hash,
     error::{RusticError, RusticResult},
     id::Id,
-    index::{
-        binarysorted::{IndexCollector, IndexType},
-        indexer::Indexer,
-        IndexBackend, IndexEntry, IndexedBackend, ReadIndex,
-    },
+    index::{indexer::Indexer, IndexBackend, IndexedBackend, ReadIndex},
     progress::{NoProgress, NoProgressBars, Progress, ProgressBars},
     repofile::{
         configfile::ConfigFile,
@@ -148,5 +141,5 @@ pub use crate::{
             SnapshotOptions, StringList,
         },
     },
-    repository::{read_password_from_reader, Open, OpenStatus, Repository, RepositoryOptions},
+    repository::{Open, OpenStatus, Repository, RepositoryOptions},
 };

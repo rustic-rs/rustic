@@ -1,30 +1,13 @@
 pub(crate) mod packer;
 pub(crate) mod tree;
 
-use std::{num::NonZeroU32, ops::Add};
+use std::ops::Add;
 
 use derive_more::Constructor;
 use enum_map::{Enum, EnumMap};
-
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
-
-#[derive(Debug, Hash, PartialEq, Eq, Default, Clone, Copy)]
-pub struct BlobLocation {
-    pub offset: u32,
-    pub length: u32,
-    pub uncompressed_length: Option<NonZeroU32>,
-}
-
-impl BlobLocation {
-    #[must_use]
-    pub fn data_length(&self) -> u64 {
-        self.uncompressed_length
-            .map_or(self.length - 32, |length| length.get())
-            .into()
-    }
-}
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Enum,

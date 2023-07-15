@@ -19,11 +19,14 @@ use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    error::CommandErrorKind, repository::Open, BlobType, BlobTypeMap, DecryptReadBackend,
-    DecryptWriteBackend, FileType, HeaderEntry, Id, IndexBackend, IndexBlob, IndexCollector,
-    IndexFile, IndexPack, IndexType, IndexedBackend, Indexer, Initialize, NodeType, PackSizer,
-    Progress, ProgressBars, ReadBackend, ReadIndex, Repacker, Repository, RusticResult,
-    SnapshotFile, Sum, TreeStreamerOnce,
+    blob::packer::{PackSizer, Repacker},
+    error::CommandErrorKind,
+    index::binarysorted::{IndexCollector, IndexType},
+    repository::Open,
+    BlobType, BlobTypeMap, DecryptReadBackend, DecryptWriteBackend, FileType, HeaderEntry, Id,
+    IndexBackend, IndexBlob, IndexFile, IndexPack, IndexedBackend, Indexer, Initialize, NodeType,
+    Progress, ProgressBars, ReadBackend, ReadIndex, Repository, RusticResult, SnapshotFile, Sum,
+    TreeStreamerOnce,
 };
 
 pub(super) mod constants {

@@ -24,8 +24,11 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     backend::{
-        cache::Cache, cache::CachedBackend, choose::ChooseBackend, decrypt::DecryptBackend,
-        decrypt::DecryptReadBackend, decrypt::DecryptWriteBackend, hotcold::HotColdBackend,
+        cache::Cache,
+        cache::CachedBackend,
+        choose::ChooseBackend,
+        decrypt::{DecryptBackend, DecryptFullBackend, DecryptReadBackend, DecryptWriteBackend},
+        hotcold::HotColdBackend,
         FileType, ReadBackend,
     },
     commands::{
@@ -43,9 +46,9 @@ use crate::{
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
     repofile::RepoFile,
     repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
-    BlobType, DecryptFullBackend, Id, IndexBackend, IndexedBackend, LocalDestination,
-    NoProgressBars, Node, NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult,
-    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
+    BlobType, Id, IndexBackend, IndexedBackend, LocalDestination, NoProgressBars, Node,
+    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile,
+    SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
 mod warm_up;

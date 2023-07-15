@@ -8,12 +8,14 @@ use rayon::prelude::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use zstd::stream::decode_all;
 
 use crate::{
+    backend::cache::Cache,
     hash,
+    index::binarysorted::{IndexCollector, IndexType},
     progress::ProgressBars,
     repository::{Open, Repository},
-    BlobType, Cache, DecryptReadBackend, FileType, Id, IndexBackend, IndexCollector, IndexFile,
-    IndexPack, IndexType, IndexedBackend, NodeType, PackHeader, PackHeaderLength, PackHeaderRef,
-    Progress, ReadBackend, RusticResult, SnapshotFile, TreeStreamerOnce,
+    BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexFile, IndexPack, IndexedBackend,
+    NodeType, PackHeader, PackHeaderLength, PackHeaderRef, Progress, ReadBackend, RusticResult,
+    SnapshotFile, TreeStreamerOnce,
 };
 
 /// `check` subcommand

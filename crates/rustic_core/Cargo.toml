@@ -96,7 +96,7 @@ clap_complete = { workspace = true, optional = true }
 
 merge = { workspace = true, optional = true }
 directories = { workspace = true }
-nom = { workspace = true }
+shell-words = { workspace = true }
 path-dedot = { workspace = true }
 dunce = { workspace = true }
 gethostname = { workspace = true }

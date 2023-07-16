@@ -108,7 +108,7 @@ clap_complete = { workspace = true }
 merge = { workspace = true }
 
 directories = { workspace = true }
-nom = { workspace = true }
+shell-words = { workspace = true }
 dialoguer = "0.10.4"
 bytesize = { workspace = true }
 indicatif = { workspace = true }
@@ -235,7 +235,7 @@ cachedir = "0.3"
 # commands
 merge = "0.1"
 directories = "5"
-nom = "7"
+shell-words = "1"
 indicatif = "0.17"
 path-dedot = "3"
 dunce = "1"

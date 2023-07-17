@@ -33,7 +33,7 @@ warm-up-wait = "10min" # Default: not set
 [repository.options]
 post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
 post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set 
-retry = "true" # Only rest/rclone backend
+retry = "default" # Only rest/rclone backend; Allowed values: "false"/"off", "default" or number of retries
 timeout = "10min" # Only rest/rclone backend
 
 # Snapshot-filter options: These options apply to all commands that use snapshot filters

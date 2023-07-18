@@ -43,6 +43,15 @@ Binaries for the latest development version are available [here](https://github.
 
 See the [Comparison between rustic and restic](docs/comparison-restic.md).
 
+## Contact
+
+Contact          | Where?
+-----------------|-------
+Issue Tracker    | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)
+Discord | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ)](https://discord.gg/WRUWENZnzQ)
+Discussions      | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)
+
+
 ## License
 
 Licensed under either of:

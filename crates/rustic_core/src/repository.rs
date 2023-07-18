@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -44,8 +45,10 @@ use crate::{
     },
     crypto::aespoly1305::Key,
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
-    repofile::RepoFile,
-    repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
+    repofile::{
+        configfile::ConfigFile, keyfile::find_key_in_backend, snapshotfile::SnapshotSummary,
+        RepoFile,
+    },
     BlobType, Id, IndexBackend, IndexedBackend, LocalDestination, NoProgressBars, Node,
     NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile,
     SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
@@ -532,6 +535,8 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         commands::copy::relevant_snapshots(snaps, self, filter)
     }
 
+    // TODO: Maybe only offer a method to remove &[Snapshotfile] and check if they must be kept.
+    // See e.g. the merge command of the CLI
     pub fn delete_snapshots(&self, ids: &[Id]) -> RusticResult<()> {
         let p = self.pb.progress_counter("removing snapshots...");
         self.dbe()
@@ -699,6 +704,24 @@ impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
         dest: &LocalDestination,
     ) -> RusticResult<()> {
         opts.restore(restore_infos, self, node_streamer, dest)
+    }
+
+    pub fn merge_trees(
+        &self,
+        trees: &[Id],
+        cmp: &impl Fn(&Node, &Node) -> Ordering,
+        summary: &mut SnapshotSummary,
+    ) -> RusticResult<Id> {
+        commands::merge::merge_trees(self, trees, cmp, summary)
+    }
+
+    pub fn merge_snapshots(
+        &self,
+        snaps: &[SnapshotFile],
+        cmp: &impl Fn(&Node, &Node) -> Ordering,
+        snap: SnapshotFile,
+    ) -> RusticResult<SnapshotFile> {
+        commands::merge::merge_snapshots(self, snaps, cmp, snap)
     }
 }
 

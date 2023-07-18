@@ -106,13 +106,13 @@ pub use crate::{
         decrypt::{DecryptReadBackend, DecryptWriteBackend},
         ignore::{LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions},
         local::LocalDestination,
-        node::{Node, NodeType},
+        node::{latest_node, Node, NodeType},
         stdin::StdinSource,
         FileType, ReadBackend, ReadSourceEntry, WriteBackend, ALL_FILE_TYPES,
     },
     blob::{
         packer::Packer,
-        tree::{merge_trees, NodeStreamer, Tree, TreeStreamerOnce, TreeStreamerOptions},
+        tree::{NodeStreamer, Tree, TreeStreamerOnce, TreeStreamerOptions},
         BlobType, BlobTypeMap, Initialize, Sum,
     },
     commands::{

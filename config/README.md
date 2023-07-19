@@ -1,6 +1,6 @@
 # Rustic Configuration Specification
 
-Rustic is a backup tool that allows users to define their backup options using a TOML configuration file. The configuration file consists of various sections and attributes that control the behavior of Rustic for different commands and sources.
+`rustic` is a backup tool that allows users to define their backup options using a TOML configuration file. The configuration file consists of various sections and attributes that control the behavior of `rustic` for different commands and sources.
 
 This specification covers all the available sections and attributes in the Rustic configuration file. Users can customize their backup behavior by modifying these attributes according to their needs.
 

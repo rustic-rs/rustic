@@ -7,6 +7,7 @@ pub mod dump;
 pub mod forget;
 pub mod init;
 pub mod key;
+pub mod merge;
 pub mod prune;
 pub mod repoinfo;
 pub mod restore;

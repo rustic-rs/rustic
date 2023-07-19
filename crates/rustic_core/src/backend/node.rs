@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     ffi::{OsStr, OsString},
     fmt::Debug,
     str::FromStr,
@@ -147,6 +148,10 @@ impl Node {
     pub fn name(&self) -> OsString {
         unescape_filename(&self.name).unwrap_or_else(|_| OsString::from_str(&self.name).unwrap())
     }
+}
+
+pub fn latest_node(n1: &Node, n2: &Node) -> Ordering {
+    n1.meta.mtime.cmp(&n2.meta.mtime)
 }
 
 // TODO(Windows): This is not able to handle non-unicode filenames and

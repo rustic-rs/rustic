@@ -396,7 +396,7 @@ impl<P: Progress> Iterator for TreeStreamerOnce<P> {
     }
 }
 
-pub fn merge_trees(
+pub(crate) fn merge_trees(
     be: &impl IndexedBackend,
     trees: &[Id],
     cmp: &impl Fn(&Node, &Node) -> Ordering,

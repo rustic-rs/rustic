@@ -26,7 +26,7 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 |-------------------|--------------------------------------------------------|----------------|---------------|---------------|
 | dry-run           | If true, performs a dry run without making any changes. | false       || RUSTIC_DRY_RUN |
 | log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info" || RUSTIC_LOG_LEVEL |
-| log-file          | Path to the log file.                                 | TODO | "/log/rustic.log" | RUSTIC_LOG_FILE |
+| log-file          | Path to the log file.                                 | No log file | "/log/rustic.log" | RUSTIC_LOG_FILE |
 | no-progress       | If true, disables progress indicators.               | false          || RUSTIC_NO_PROGRESS |
 | progress-interval | The interval at which progress indicators are shown. | "100ms"        || RUSTIC_PROGRESS_INTERVAL |
 | use-profile       | An array of profiles to use.                           | Empty array    || RUSTIC_USE_PROFILE |

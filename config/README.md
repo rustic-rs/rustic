@@ -8,34 +8,34 @@ This specification covers all the available sections and attributes in the Rusti
 
 ### Global Options
 
-| Attribute         | Description                                            | Default Value  | Example Value |
-|-------------------|--------------------------------------------------------|----------------|---------------|
-| use-profile       | An array of profiles to use.                           | Empty array    ||
-| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "debug" ||
-| log-file          | Path to the log file.                                 | TODO | "/log/rustic.log" |
-| no-progress       | If true, disables progress indicators.               | false          ||
-| progress-interval | The interval at which progress indicators are shown. | "100ms"        ||
-| dry-run           | If true, performs a dry run without making any changes. | false       ||
+| Attribute         | Description                                            | Default Value  | Example Value | Environment Variable |
+|-------------------|--------------------------------------------------------|----------------|---------------|---------------|
+| use-profile       | An array of profiles to use.                           | Empty array    || RUSTIC_USE_PROFILE |
+| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "debug" || RUSTIC_LOG_LEVEL |
+| log-file          | Path to the log file.                                 | TODO | "/log/rustic.log" | LOGFILE |
+| no-progress       | If true, disables progress indicators.               | false          || RUSTIC_NO_PROGRESS |
+| progress-interval | The interval at which progress indicators are shown. | "100ms"        || RUSTIC_PROGRESS_INTERVAL |
+| dry-run           | If true, performs a dry run without making any changes. | false       || RUSTIC_DRY_RUN |
 
 ### Repository Options
 
-| Attribute         | Description                                            | Default Value  | Example Value |
-|-------------------|--------------------------------------------------------|----------------|---------------|
-| repository        | The path to the repository. Required.                 | Not set        | "/tmp/rustic" |
-| repo-hot          | The path to the hot repository.                       | Not set        ||
-| password          | The password for the repository.                      | Not set        | "mySecretPassword" |
-| password-file     | Path to a file containing the password for the repository. | Not set     ||
-| password-command  | Command to retrieve the password for the repository.   | Not set        ||
-| no-cache          | If true, disables caching.                            | false          ||
-| cache-dir         | Path to the cache directory.                          | TODO        | Default cache dir, e.g., ~/.cache/rustic |
+| Attribute         | Description                                            | Default Value  | Example Value | Environment Variable |
+|-------------------|--------------------------------------------------------|----------------|---------------|---------------|
+| repository        | The path to the repository. Required.                 | Not set        | "/tmp/rustic" | RUSTIC_REPOSITORY |
+| repo-hot          | The path to the hot repository.                       | Not set        || RUSTIC_REPO_HOT |
+| password          | The password for the repository.                      | Not set        | "mySecretPassword" | RUSTIC_PASSWORD |
+| password-file     | Path to a file containing the password for the repository. | Not set     || RUSTIC_PASSWORD_FILE |
+| password-command  | Command to retrieve the password for the repository.   | Not set        || RUSTIC_PASSWORD_COMMAND |
+| no-cache          | If true, disables caching.                            | false          || RUSTIC_NO_CACHE |
+| cache-dir         | Path to the cache directory.                          | TODO        | Default cache dir, e.g., ~/.cache/rustic | RUSTIC_CACHE_DIR |
 | warm-up           | If true, warms up the repository by file access.      | false          ||
 | warm-up-command   | Command to warm up the repository.                    | Not set        ||
 | warm-up-wait      | The wait time for warming up the repository.          | Not set        ||
 
 ### Repository Options (Additional)
 
-| Attribute             | Description                                            | Default Value  | Example Value |
-|-----------------------|--------------------------------------------------------|----------------|---------------|
+| Attribute         | Description                                            | Default Value  | Example Value |
+|-------------------|--------------------------------------------------------|----------------|---------------|
 | post-create-command   | Command to execute after creating a snapshot in the local backend. | Not set        | "par2create -qq -n1 -r5 %file" |
 | post-delete-command   | Command to execute after deleting a snapshot in the local backend. | Not set        | "sh -c \"rm -f %file*.par2\"" |
 
@@ -51,8 +51,8 @@ This specification covers all the available sections and attributes in the Rusti
 
 ### Backup Options
 
-| Attribute              | Description                                            | Default Value  | Example Value |
-|------------------------|--------------------------------------------------------|----------------|---------------|
+| Attribute         | Description                                            | Default Value  | Example Value |
+|-------------------|--------------------------------------------------------|----------------|---------------|
 | label                  | Label for the backup.                                 | Not set        ||
 | tag                    | Array of tags for the backup.                         | Not set        ||
 | description            | Description for the backup.                           | Not set        ||
@@ -74,15 +74,15 @@ This specification covers all the available sections and attributes in the Rusti
 
 ### Backup Sources
 
-| Attribute              | Description                                            | Default Value  | Example Value |
-|------------------------|--------------------------------------------------------|----------------|---------------|
+| Attribute         | Description                                            | Default Value  | Example Value |
+|-------------------|--------------------------------------------------------|----------------|---------------|
 | source                 | Source directory or file to back up.                  | Not set        ||
 | git-ignore             | If true, use .gitignore rules to exclude files from the backup in the source directory. | true ||
 
 ### Forget Options
 
-| Attribute              | Description                                            | Default Value  | Example Value |
-|------------------------|--------------------------------------------------------|----------------|---------------|
+| Attribute         | Description                                            | Default Value  | Example Value |
+|-------------------|--------------------------------------------------------|----------------|---------------|
 | filter-host            | Array of hosts to filter snapshots.                   | Not set        | ["forgethost"] |
 | keep-daily             | Number of daily backups to keep.                      | Not set        ||
 | keep-hourly            | Number of hourly backups to keep.                     | Not set        ||
@@ -94,8 +94,8 @@ This specification covers all the available sections and attributes in the Rusti
 
 ### Copy Targets
 
-| Attribute              | Description                                            | Default Value  | Example Value |
-|------------------------|--------------------------------------------------------|----------------|---------------|
+| Attribute         | Description                                            | Default Value  | Example Value |
+|-------------------|--------------------------------------------------------|----------------|---------------|
 | repository             | The path or URL to the target repository.             | Not set        ||
 | repo-hot               | The path or URL to the hot target repository.         | Not set        ||
 | password               | The password for the target repository.               | Not set        ||

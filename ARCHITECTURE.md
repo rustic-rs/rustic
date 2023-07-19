@@ -15,6 +15,10 @@ List the core architecture principles that guide the design and development of t
 3. Principle 3: [Description of principle 3]
    ...
 
+## Bird's Eye View
+
+## Entry Points
+
 ## High-Level Architecture
 
 Describe the high-level architecture of the project. This section should provide an overview of the major components and how they interact with each other.
@@ -59,6 +63,8 @@ Describe the architecture and design decisions related to Component 2.
 
 Explain how Component 2 interacts with other components in the system.
 
+## Code Map
+
 ## Data Flow
 
 Illustrate the data flow within the project, from input to processing to output. You can use diagrams or textual explanations as appropriate.
@@ -67,19 +73,25 @@ Illustrate the data flow within the project, from input to processing to output.
 
 List and briefly describe any external services, APIs, or libraries that the project integrates with.
 
-## Deployment
+## Cross-Cutting Concerns
 
-Provide guidelines and best practices for deploying the project. Include information about system requirements, configuration, and deployment processes.
+### Error Handling
 
-## Development Environment Setup
+### Observability
 
-Explain how to set up a local development environment for the project. Include instructions for installing dependencies, running tests, and contributing to the project.
+### Configurability
 
-## Testing Strategy
+### Serialization
+
+### Testing Strategy
 
 Describe the testing approach used in the project. This should cover unit testing, integration testing, and any other relevant testing methodologies.
 
-## Future Improvements
+### Benchmarking Strategy
+
+Describe the benchmarking approach used in the project.
+
+### Future Improvements
 
 Discuss potential future improvements or features that can be added to enhance the project's architecture and functionality.
 

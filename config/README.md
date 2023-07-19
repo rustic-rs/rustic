@@ -17,7 +17,6 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 - You can overwrite values, but for most values, you cannot "unset" them on a higher priority level.
 
 - For some integer values, you cannot even overwrite with the value `0`, e.g. `keep-weekly = 5` in the `[forget]` section of the config file cannot be overwritten by `--keep-weekly 5`.
-This is not relevant for env variables, only for some values available in the `config` and as `CLI` option.
 
 ## Sections and Attributes
 

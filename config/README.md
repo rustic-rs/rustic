@@ -4,6 +4,21 @@ Rustic is a backup tool that allows users to define their backup options using a
 
 This specification covers all the available sections and attributes in the Rustic configuration file. Users can customize their backup behavior by modifying these attributes according to their needs.
 
+## Merge Precedence
+
+The merge precedence for values is:
+
+    Commandline Arguments >> Environment Variables >> Configuration File
+
+Values parsed from the `configuration file` can be overwritten by `environment variables`, which can be overwritten by `commandline arguments` options. Therefore `commandline arguments` have the highest precedence.
+
+**NOTE**: There are the following restrictions:
+
+- You can overwrite values, but for most values, you cannot "unset" them on a higher priority level.
+
+- For some integer values, you cannot even overwrite with the value `0`, e.g. `keep-weekly = 5` in the `[forget]` section of the config file cannot be overwritten by `--keep-weekly 5`.
+This is not relevant for env variables, only for some values available in the `config` and as `CLI` option.
+
 ## Sections and Attributes
 
 ### Global Options

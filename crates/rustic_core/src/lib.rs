@@ -123,6 +123,7 @@ pub use crate::{
         forget::{ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions},
         key::KeyOpts,
         prune::{PruneOpts, PrunePlan, PruneStats},
+        repair::{index::RepairIndexOptions, snapshots::RepairSnapshotsOptions},
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
         restore::{FileDirStats, RestoreInfos, RestoreOpts, RestoreStats},
     },

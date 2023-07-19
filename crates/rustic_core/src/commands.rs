@@ -9,6 +9,7 @@ pub mod init;
 pub mod key;
 pub mod merge;
 pub mod prune;
+pub mod repair;
 pub mod repoinfo;
 pub mod restore;
 pub mod snapshots;

@@ -108,9 +108,11 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 
 ### Copy Targets
 
+**Note**: Copy-targets are simply repositories with the same defaults as within the repository section.
+
 | Attribute         | Description                                            | Default Value  | Example Value |
 |-------------------|--------------------------------------------------------|----------------|---------------|
-| cache-dir              | Path to the cache directory for the target repository. | TODO | Default cache dir, e.g., ~/.cache/rustic |
+| cache-dir              | Path to the cache directory for the target repository. | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ |
 | no-cache               | If true, disables caching for the target repository.  | false          ||
 | password               | The password for the target repository.               | Not set        ||
 | password-file          | Path to a file containing the password for the target repository. | Not set   ||

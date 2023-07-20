@@ -40,6 +40,7 @@ use crate::{
         copy::CopySnapshot,
         forget::{ForgetGroups, KeepOptions},
         key::KeyOpts,
+        repair::{index::RepairIndexOptions, snapshots::RepairSnapshotsOptions},
         repoinfo::{IndexInfos, RepoFileInfos},
         restore::{RestoreInfos, RestoreOpts},
     },
@@ -607,6 +608,10 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
             .stream_all::<F>(&self.pb.progress_hidden())?
             .into_iter())
     }
+
+    pub fn repair_index(&self, opts: &RepairIndexOptions, dry_run: bool) -> RusticResult<()> {
+        opts.repair(self, dry_run)
+    }
 }
 
 pub trait IndexedTree: Open {
@@ -770,5 +775,14 @@ impl<P: ProgressBars, S: IndexedFull> Repository<P, S> {
         snapshots: impl IntoIterator<Item = &'a SnapshotFile>,
     ) -> RusticResult<()> {
         commands::copy::copy(self, repo_dest, snapshots)
+    }
+
+    pub fn repair_snapshots(
+        &self,
+        opts: &RepairSnapshotsOptions,
+        snapshots: Vec<SnapshotFile>,
+        dry_run: bool,
+    ) -> RusticResult<()> {
+        opts.repair(self, snapshots, dry_run)
     }
 }

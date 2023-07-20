@@ -35,7 +35,7 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 
 | Attribute         | Description                                            | Default Value  | Example Value | Environment Variable |
 |-------------------|--------------------------------------------------------|----------------|---------------|---------------|
-| cache-dir         | Path to the cache directory.                          | TODO        | Default cache dir, e.g., ~/.cache/rustic | RUSTIC_CACHE_DIR |
+| cache-dir         | Path to the cache directory.                          | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ | RUSTIC_CACHE_DIR |
 | no-cache          | If true, disables caching.                            | false          || RUSTIC_NO_CACHE |
 | repository        | The path to the repository. Required.                 | Not set        | "/tmp/rustic" | RUSTIC_REPOSITORY |
 | repo-hot          | The path to the hot repository.                       | Not set        || RUSTIC_REPO_HOT |
@@ -99,7 +99,7 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 |-------------------|--------------------------------------------------------|----------------|---------------|
 | filter-host            | Array of hosts to filter snapshots.                   | Not set        | ["forgethost"] |
 | keep-daily             | Number of daily backups to keep.                      | Not set        ||
-| keep-within-daily      | The time duration within which daily backups will be kept. | TODO      | "7 days"     |
+| keep-within-daily      | The time duration within which daily backups will be kept. | Not set | "7 days"     |
 | keep-hourly            | Number of hourly backups to keep.                     | Not set        ||
 | keep-monthly           | Number of monthly backups to keep.                    | Not set        ||
 | keep-weekly            | Number of weekly backups to keep.                     | Not set        ||

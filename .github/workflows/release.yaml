@@ -1,7 +1,13 @@
 on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
   push:
     branches:
       - main
+      - release
     paths-ignore:
       - "**/*.md"
 

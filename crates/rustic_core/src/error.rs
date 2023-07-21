@@ -185,8 +185,6 @@ pub enum CommandErrorKind {
     ErrorCollecting(PathBuf, Box<RusticError>),
     /// error setting length for {0:?}: {1:?}
     ErrorSettingLength(PathBuf, Box<RusticError>),
-    /// did not find id {0} in index
-    IdNotFound(Id),
     /// {0:?}
     FromRayonError(#[from] rayon::ThreadPoolBuildError),
     /// conversion to `u64` failed: `{0:?}`
@@ -274,6 +272,8 @@ pub enum RepositoryErrorKind {
     ReadingPasswordFromPromptFailed(std::io::Error),
     /// Config file already exists. Aborting.
     ConfigFileExists,
+    /// did not find id {0} in index
+    IdNotFound(Id),
 }
 
 /// [`IndexErrorKind`] describes the errors that can be returned by processing Indizes

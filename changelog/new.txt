@@ -6,6 +6,7 @@ Bugs fixed:
 - prune did abort when no time was set for a pack-do-delete. This case is now handled correctly.
 - retrying backend access didn't work for long operations. This has been fixed (and retries are now customizable)
 - The zstd compression library led to data corruption in very unlikely cases. This has been fixed by a dependency update.
+- The glob option did only work with absolute files. This has been fixed.
 
 New features:
 - New global configuration paths are available, located at /etc/rustic/*.toml or %PROGRAMDATA%/rustic/config/*.toml, depending on your platform.

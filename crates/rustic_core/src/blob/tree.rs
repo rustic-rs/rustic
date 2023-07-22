@@ -198,7 +198,7 @@ where
         opts: &TreeStreamerOptions,
         recursive: bool,
     ) -> RusticResult<Self> {
-        let mut override_builder = OverrideBuilder::new("/");
+        let mut override_builder = OverrideBuilder::new("");
 
         for g in &opts.glob {
             _ = override_builder

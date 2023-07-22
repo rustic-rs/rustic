@@ -30,9 +30,7 @@ You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/F
 
 ## Quick start
 
-![rustic init](https://github.com/rustic-rs/rustic/blob/main/docs/screenshots/rustic.png?raw=true)
-
-![rustic restore](https://github.com/rustic-rs/rustic/blob/main/docs/screenshots/rustic-restore.png?raw=true)
+![rustic getting started](https://github.com/rustic-rs/rustic/blob/main/docs/screenshots/gettingstarted.gif?raw=true)
 
 ## Are binaries available?
 

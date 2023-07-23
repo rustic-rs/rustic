@@ -194,14 +194,9 @@ fn diff(
                     NodeType::File if metadata && node1.meta != node2.meta => {
                         println!("U    {path:?}");
                     }
-                    NodeType::Symlink { linktarget } => {
-                        if let NodeType::Symlink {
-                            linktarget: linktarget2,
-                        } = &node2.node_type
-                        {
-                            if *linktarget != *linktarget2 {
-                                println!("U    {path:?}");
-                            }
+                    NodeType::Symlink { .. } => {
+                        if node1.node_type.to_link() != node1.node_type.to_link() {
+                            println!("U    {path:?}");
                         }
                     }
                     _ => {} // no difference to show

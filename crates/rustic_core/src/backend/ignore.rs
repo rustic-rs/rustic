@@ -313,15 +313,7 @@ fn map_entry(
         Node::new_node(name, NodeType::Dir, meta)
     } else if m.is_symlink() {
         let target = read_link(entry.path()).map_err(IgnoreErrorKind::FromIoError)?;
-        let node_type = NodeType::Symlink {
-            linktarget: target
-                .to_str()
-                .ok_or(IgnoreErrorKind::TargetIsNotValidUnicode {
-                    file: entry.path().to_path_buf(),
-                    target: target.clone(),
-                })?
-                .to_string(),
-        };
+        let node_type = NodeType::from_link(&target);
         Node::new_node(name, node_type, meta)
     } else {
         Node::new_node(name, NodeType::File, meta)
@@ -441,15 +433,7 @@ fn map_entry(
         Node::new_node(name, NodeType::Dir, meta)
     } else if m.is_symlink() {
         let target = read_link(entry.path()).map_err(IgnoreErrorKind::FromIoError)?;
-        let node_type = NodeType::Symlink {
-            linktarget: target
-                .to_str()
-                .ok_or_else(|| IgnoreErrorKind::TargetIsNotValidUnicode {
-                    file: entry.path().to_path_buf(),
-                    target: target.clone(),
-                })?
-                .to_string(),
-        };
+        let node_type = NodeType::from_link(&target);
         Node::new_node(name, node_type, meta)
     } else if filetype.is_block_device() {
         let node_type = NodeType::Dev { device: m.rdev() };

@@ -142,5 +142,5 @@ pub use crate::{
             SnapshotOptions, StringList,
         },
     },
-    repository::{Open, OpenStatus, Repository, RepositoryOptions},
+    repository::{IndexedFull, Open, OpenStatus, Repository, RepositoryOptions},
 };

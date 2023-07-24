@@ -46,13 +46,14 @@ use crate::{
     },
     crypto::aespoly1305::Key,
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
+    index::IndexEntry,
     repofile::{
         configfile::ConfigFile, keyfile::find_key_in_backend, snapshotfile::SnapshotSummary,
         RepoFile,
     },
     BlobType, Id, IndexBackend, IndexedBackend, LocalDestination, NoProgressBars, Node,
-    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile,
-    SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
+    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, ReadIndex, RusticResult,
+    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
 mod warm_up;
@@ -502,6 +503,16 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         commands::snapshots::get_snapshot_group(self, ids, group_by, filter)
     }
 
+    pub fn get_snapshot_from_str(
+        &self,
+        id: &str,
+        filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
+    ) -> RusticResult<SnapshotFile> {
+        let p = self.pb.progress_counter("getting snapshot...");
+        let snap = SnapshotFile::from_str(self.dbe(), id, filter, &p)?;
+        Ok(snap)
+    }
+
     pub fn get_snapshots(&self, ids: &[String]) -> RusticResult<Vec<SnapshotFile>> {
         let p = self.pb.progress_counter("getting snapshots...");
         SnapshotFile::from_ids(self.dbe(), ids, &p)
@@ -670,6 +681,16 @@ impl<T, S: Open> Open for IndexedStatus<T, S> {
     }
 }
 
+impl<P, S: IndexedFull> Repository<P, S> {
+    pub fn get_index_entry(&self, tpe: BlobType, id: &Id) -> RusticResult<IndexEntry> {
+        let ie = self
+            .index()
+            .get_id(tpe, id)
+            .ok_or_else(|| RepositoryErrorKind::IdNotFound(*id))?;
+        Ok(ie)
+    }
+}
+
 impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
     pub fn node_from_snapshot_path(
         &self,
@@ -681,6 +702,14 @@ impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
         let p = &self.pb.progress_counter("getting snapshot...");
         let snap = SnapshotFile::from_str(self.dbe(), id, filter, p)?;
 
+        Tree::node_from_path(self.index(), snap.tree, Path::new(path))
+    }
+
+    pub fn node_from_snapshot_and_path(
+        &self,
+        snap: &SnapshotFile,
+        path: &str,
+    ) -> RusticResult<Node> {
         Tree::node_from_path(self.index(), snap.tree, Path::new(path))
     }
 

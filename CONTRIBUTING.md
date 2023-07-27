@@ -6,9 +6,7 @@ We appreciate your help in making this project better.
 
 ## Table of Contents
 
-<!-- TODO?
 - [Code of Conduct](#code-of-conduct)
--->
 - [How to Contribute](#how-to-contribute)
   - [Reporting Bugs](#reporting-bugs)
   - [Issue and Pull Request Labels](#issue-and-pull-request-labels)
@@ -17,16 +15,12 @@ We appreciate your help in making this project better.
   - [Testing](#testing)
   - [Submitting Pull Requests](#submitting-pull-requests)
     - [Rebasing and other workflows](#rebasing-and-other-workflows)
- <!-- TODO?
 - [Development Setup](#development-setup)
--->
 - [License](#license)
 
-<!-- TODO?
 ## Code of Conduct
 
-Please review and abide by the [Code of Conduct](CODE_OF_CONDUCT.md) when contributing to this project.
--->
+Please review and abide by the general Rust Community [Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct) when contributing to this project. In the future, we might create our own Code of Conduct and supplement it at this location.
 
 ## How to Contribute
 
@@ -213,11 +207,9 @@ Some extra tutorials on `git rebase`:
 - [Pro Git book](http://git-scm.com/book)
 - `man git-rebase`
 
-<!-- TODO?
 ## Development Setup
 
-If you want to set up a local development environment, follow the steps outlined in the [README.md](README.md) file.
--->
+If you want to set up a local development environment, follow the steps in the [development guide](docs/development_guide.md) file - which is currently being worked on.
 
 ## License
 

@@ -65,6 +65,8 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 
 ### Backup Options
 
+**Note**: Some options are not source-specific, but if set here, they apply for all sources, although they can be overwritten in the source-specifc configuration.
+
 | Attribute         | Description                                            | Default Value  | Example Value |
 |-------------------|--------------------------------------------------------|----------------|---------------|
 | as-path                | Specifies the path for the backup when the source contains a single path. | Not set (Source-specific option) ||

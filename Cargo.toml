@@ -256,7 +256,7 @@ self_update = { version = "0.36", default-features = false, features = [
 rstest = "0.17"
 quickcheck = "1"
 quickcheck_macros = "1"
-tempfile = "3.6"
+tempfile = "3.7"
 pretty_assertions = "1.4"
 toml = "0.7"
 dircmp = "0.2"

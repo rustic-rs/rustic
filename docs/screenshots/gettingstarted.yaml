@@ -1,0 +1,103 @@
+# gettingstarted.yaml
+# Short example how to use rustic
+# start in the project main dir by: autocast docs/screenshots/gettingstarted.yaml out.cast
+
+settings:
+  title: autocast example
+  environment:
+  prompt: "[rustic]$ "
+
+instructions:
+  # Setup
+  - !Command
+    command: rm -rf /tmp/repo
+    hidden: true
+  - !Command
+    command: alias rustic=target/release/rustic
+    hidden: true
+  - !Command
+    command: mv ~/.config/rustic/rustic.toml rustic-tmp-save.toml
+    hidden: true
+  - !Command
+    command: cp config/simple.toml ~/.config/rustic/rustic.toml
+    hidden: true
+
+  
+  - !Command
+    command: "# Welcome to rustic!"
+  - !Command
+    command: "# rustic is a command-line backup tool which provides encrypted and deduplicated backups to various repositories."
+  - !Marker Initialization
+  - !Command
+    command: "# In this demo, we use a config file to define a local repository:"
+  - !Command
+    command: cat ~/.config/rustic/rustic.toml
+  - !Wait 2s
+  - !Command
+    command: "# First, we need to init the repository as it doesn't exist yet."
+  - !Command
+    command: rustic init
+  - !Marker Backup
+  - !Command
+    command: "# Now, we can start our first backup..."
+  - !Command
+    command: rustic backup src/
+  - !Wait 1s
+  - !Command
+    command: "# This created a snapshot in the repository. You can use the \"snapshots\" command to display snapshots:"
+  - !Command
+    command: rustic snapshots
+  - !Wait 2s
+  - !Command
+    command: "# Let us re-run the backup..."
+  - !Command
+    command: rustic backup src/
+  - !Command
+    command: rustic snapshots
+  - !Wait 2s
+  - !Command
+    command: "# This second backup run realized that there was no change and created a new snapshot with identical content" 
+  - !Command
+    command: "# as the fist backup. This is indicated by the (+1) which shows how many identical backups exist."
+  - !Wait 2s
+  - !Command
+    command: "# Let's add some file and do another backup..."
+  - !Command
+    command: echo "This is a test file" > src/testfile
+  - !Command
+    command: rustic backup src/
+  - !Wait 1s
+  - !Command
+    command: "# This again was very fast as it only needed to process that added file. But still, it generated a full snapshot:"
+  - !Command
+    command: rustic snapshots
+  - !Wait 2s
+  - !Marker Restore
+  - !Command
+    command: "# Now, we remove the added file..."
+  - !Command
+    command: rm src/testfile
+  - !Command
+    command: "# ...but it is still contained in the latest snapshot. Let's restore from this snapshot!"
+  - !Command
+    command: rustic restore latest:src/ src/
+  - !Wait 2s
+  - !Command
+    command: "# Note that rustic checks existing contents and only restores what's needed if your target dir exists!"
+  - !Command
+    command: "# Let's see if the file was restored correctly..."
+  - !Command
+    command: cat src/testfile
+  - !Wait 2s
+  - !Command
+    command: "# Enjoy your backups with rustic!"
+  - !Wait 2s
+
+  # Cleanup
+  - !Command
+    command: mv rustic-tmp-save.toml ~/.config/rustic/rustic.toml
+    hidden: true
+  - !Command
+    command: rm src/testfile
+    hidden: true
+

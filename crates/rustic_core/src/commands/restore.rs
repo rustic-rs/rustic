@@ -5,7 +5,6 @@ use log::{debug, error, info, trace, warn};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
-    io::Read,
     num::NonZeroU32,
     path::{Path, PathBuf},
     sync::Mutex,
@@ -18,10 +17,9 @@ use rayon::ThreadPoolBuilder;
 
 use crate::{
     error::CommandErrorKind,
-    hash,
     repository::{IndexedFull, IndexedTree},
-    DecryptReadBackend, FileType, Id, IndexedBackend, LocalDestination, Node, NodeType, Open,
-    Progress, ProgressBars, ReadBackend, Repository, RusticResult,
+    BlobType, DecryptReadBackend, FileType, Id, LocalDestination, Node, NodeType, Open, Progress,
+    ProgressBars, ReadBackend, Repository, RusticResult,
 };
 
 pub(crate) mod constants {
@@ -167,7 +165,7 @@ impl RestoreOpts {
                     match (
                         exists,
                         restore_infos
-                            .add_file(dest, node, path.clone(), repo.index(), self.verify_existing)
+                            .add_file(dest, node, path.clone(), repo, self.verify_existing)
                             .map_err(|err| {
                                 CommandErrorKind::ErrorCollecting(path.to_path_buf(), Box::new(err))
                             })?,
@@ -502,12 +500,12 @@ enum AddFileResult {
 
 impl RestoreInfos {
     /// Add the file to [`FileInfos`] using `index` to get blob information.
-    fn add_file(
+    fn add_file<P, S: IndexedFull>(
         &mut self,
         dest: &LocalDestination,
         file: &Node,
         name: PathBuf,
-        index: &impl IndexedBackend,
+        repo: &Repository<P, S>,
         ignore_mtime: bool,
     ) -> RusticResult<AddFileResult> {
         let mut open_file = dest.get_matching_file(&name, file.meta.size);
@@ -543,9 +541,7 @@ impl RestoreInfos {
         let mut file_pos = 0;
         let mut has_unmatched = false;
         for id in file.content.iter().flatten() {
-            let ie = index
-                .get_data(id)
-                .ok_or_else(|| CommandErrorKind::IdNotFound(*id))?;
+            let ie = repo.get_index_entry(BlobType::Data, id)?;
             let bl = BlobLocation {
                 offset: ie.offset,
                 length: ie.length,
@@ -553,11 +549,9 @@ impl RestoreInfos {
             };
             let length = bl.data_length();
 
-            let matches = open_file.as_mut().map_or(false, |file| {
-                // Existing file content; check if SHA256 matches
-                let mut vec = vec![0; length as usize];
-                file.read_exact(&mut vec).is_ok() && id == &hash(&vec)
-            });
+            let matches = open_file
+                .as_mut()
+                .map_or(false, |file| id.blob_matches_reader(length as usize, file));
 
             let blob_location = self.r.entry((ie.pack, bl)).or_insert_with(Vec::new);
             blob_location.push(FileLocation {

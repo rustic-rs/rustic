@@ -11,6 +11,7 @@ We appreciate your help in making this project better.
 -->
 - [How to Contribute](#how-to-contribute)
   - [Reporting Bugs](#reporting-bugs)
+  - [Issue and Pull Request Labels](#issue-and-pull-request-labels)
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Code Style and Formatting](#code-style-and-formatting)
   - [Testing](#testing)
@@ -32,6 +33,25 @@ Please review and abide by the [Code of Conduct](CODE_OF_CONDUCT.md) when contri
 ### Reporting Bugs
 
 If you find a bug, please open an [issue on GitHub](https://github.com/rustic-rs/rustic/issues/new/choose) and provide as much detail as possible. Include steps to reproduce the bug and the expected behavior.
+
+### Issue and Pull Request labels
+
+```text
+A - Area
+C - Category
+D - Diagnostic
+E - Call for participation
+F - Feature
+I - Issue e.g. I-crash
+M - Meta
+O - Operating systems
+P - priorities e.g. P-{low, medium, high, critical}
+PG - Project Group
+perf - Performance
+S - Status e.g. S-{blocked, experimental, inactive}
+T - Team relevancy
+WG - Working group
+```
 
 ### Suggesting Enhancements
 
@@ -140,7 +160,7 @@ git rebase -m upstream/master
 `git log --graph --oneline` shows your commit history as graph.
 To make some changes in that graph, you do an **interactive rebase**:
 
-```
+```sh
 git rebase -i -m upstream/master
 ```
 

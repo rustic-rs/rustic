@@ -28,6 +28,10 @@ pub(super) struct ForgetCmd {
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
+    /// Show infos in json format
+    #[clap(long)]
+    json: bool,
+
     #[clap(flatten)]
     config: ForgetOptions,
 
@@ -112,52 +116,24 @@ impl ForgetCmd {
             ForgetGroups(vec![item])
         };
 
-        for ForgetGroup { group, snapshots } in &groups.0 {
-            if !group.is_empty() {
-                println!("snapshots for {group}");
-            }
-            let mut table = table_with_titles([
-                "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
-            ]);
-
-            for ForgetSnapshot {
-                snapshot: sn,
-                keep,
-                reasons,
-            } in snapshots
-            {
-                let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
-                let tags = sn.tags.formatln();
-                let paths = sn.paths.formatln();
-                let action = if *keep { "keep" } else { "remove" };
-                let reason = reasons.join("\n");
-                _ = table.add_row([
-                    &sn.id.to_string(),
-                    &time,
-                    &sn.hostname,
-                    &sn.label,
-                    &tags,
-                    &paths,
-                    action,
-                    &reason,
-                ]);
-            }
-
-            println!();
-            println!("{table}");
-            println!();
+        if self.json {
+            let mut stdout = std::io::stdout();
+            serde_json::to_writer_pretty(&mut stdout, &groups)?;
+        } else {
+            print_groups(&groups);
         }
 
         let forget_snaps = groups.into_forget_ids();
 
-        match (forget_snaps.is_empty(), config.global.dry_run) {
-            (true, _) => println!("nothing to remove"),
-            (false, true) => {
+        match (forget_snaps.is_empty(), config.global.dry_run, self.json) {
+            (true, _, false) => println!("nothing to remove"),
+            (false, true, false) => {
                 println!("would have removed the following snapshots:\n {forget_snaps:?}");
             }
-            (false, false) => {
+            (false, false, _) => {
                 repo.delete_snapshots(&forget_snaps)?;
             }
+            (_, _, true) => {}
         }
 
         if self.config.prune {
@@ -167,5 +143,43 @@ impl ForgetCmd {
         }
 
         Ok(())
+    }
+}
+
+fn print_groups(groups: &ForgetGroups) {
+    for ForgetGroup { group, snapshots } in &groups.0 {
+        if !group.is_empty() {
+            println!("snapshots for {group}");
+        }
+        let mut table = table_with_titles([
+            "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
+        ]);
+
+        for ForgetSnapshot {
+            snapshot: sn,
+            keep,
+            reasons,
+        } in snapshots
+        {
+            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+            let tags = sn.tags.formatln();
+            let paths = sn.paths.formatln();
+            let action = if *keep { "keep" } else { "remove" };
+            let reason = reasons.join("\n");
+            _ = table.add_row([
+                &sn.id.to_string(),
+                &time,
+                &sn.hostname,
+                &sn.label,
+                &tags,
+                &paths,
+                action,
+                &reason,
+            ]);
+        }
+
+        println!();
+        println!("{table}");
+        println!();
     }
 }

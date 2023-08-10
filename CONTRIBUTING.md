@@ -30,6 +30,8 @@ If you find a bug, please open an [issue on GitHub](https://github.com/rustic-rs
 
 ### Issue and Pull Request labels
 
+Our Issues and Pull Request labels follow the official Rust style:
+
 ```text
 A - Area
 C - Category

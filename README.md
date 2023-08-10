@@ -5,6 +5,16 @@
 ![Apache2/MIT licensed][license-image]
 [![Crates.io Downloads][downloads-image]][crate-link]
 
+## Contact
+
+Contact          | Where?
+-----------------|-------
+Issue Tracker    | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)
+Discord | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ)](https://discord.gg/WRUWENZnzQ)
+Discussions      | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)
+
+## About
+
 Rustic is a backup tool that provides fast, encrypted, deduplicated backups written in [Rust](https://www.rust-lang.org/).
 It reads and writes the [restic][1] repo format described in the [design document][2]
 and can be used as a restic replacement in most cases.
@@ -13,7 +23,7 @@ Rustic supports the major operating systems (Linux, MacOs, *BSD), Windows suppor
 
 Note that rustic currently is in a beta release and misses regression tests.
 
-You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/FAQ.md)
+You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/FAQ.md).
 
 ## Features
 
@@ -26,7 +36,7 @@ You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/F
 - Retention policies and cleaning of old backups can be highly customized.
 - Follow-up backups only process changed files, but still create a complete backup snapshot.
 - In-place restore only modifies files which are changed.
-- Can use config files for easy configuration of all every-day commands, see [example config files](config/).
+- Can use config files for easy configuration of all every-day commands, see [example config files](/config/).
 
 ## Quick start
 
@@ -41,14 +51,11 @@ Binaries for the latest development version are available [here](https://github.
 
 See the [Comparison between rustic and restic](docs/comparison-restic.md).
 
-## Contact
+## Contribution
 
-Contact          | Where?
------------------|-------
-Issue Tracker    | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)
-Discord | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ)](https://discord.gg/WRUWENZnzQ)
-Discussions      | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)
+Contributions in form of [issues][4] or PRs are very welcome.
 
+Please make sure, that you read the [contribution guide](./CONTRIBUTING.md).
 
 ## License
 
@@ -58,14 +65,6 @@ Licensed under either of:
 - [MIT license](./LICENSE-MIT)
 
 at your option.
-
-### Contribution
-
-Contributions in form of [issues][4] or PRs are very welcome.
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
-dual licensed as above, without any additional terms or conditions.
 
 [//]: # (badges)
 

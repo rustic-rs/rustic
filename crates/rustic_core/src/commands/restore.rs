@@ -225,17 +225,7 @@ impl RestoreOpts {
                         // process existing node
                         if (node.is_dir() && !dst.file_type().unwrap().is_dir())
                             || (node.is_file() && !dst.metadata().unwrap().is_file())
-                            || {
-                                let this = &node;
-                                matches!(
-                                    this.node_type,
-                                    NodeType::Symlink { linktarget: _ }
-                                        | NodeType::Dev { device: _ }
-                                        | NodeType::Chardev { device: _ }
-                                        | NodeType::Fifo
-                                        | NodeType::Socket
-                                )
-                            }
+                            || node.is_special()
                         {
                             // if types do not match, first remove the existing file
                             process_existing(dst)?;

@@ -137,8 +137,8 @@ fn print_node(node: &Node, path: &Path) {
             .mtime
             .map(|t| t.format("%_d %b %H:%M").to_string())
             .unwrap_or_else(|| "?".to_string()),
-        if let NodeType::Symlink { linktarget } = &node.node_type {
-            ["->", linktarget].join(" ")
+        if let NodeType::Symlink { .. } = &node.node_type {
+            ["->", &node.node_type.to_link().to_string_lossy()].join(" ")
         } else {
             String::new()
         }

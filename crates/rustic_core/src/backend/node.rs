@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     ffi::{OsStr, OsString},
     fmt::Debug,
+    path::Path,
     str::FromStr,
 };
 
@@ -17,9 +18,11 @@ use chrono::{DateTime, Local};
 use derive_more::{Constructor, IsVariant};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_aux::prelude::*;
-use serde_with::base64::{Base64, Standard};
-use serde_with::formats::Padded;
-use serde_with::{DeserializeAs, SerializeAs};
+use serde_with::{
+    base64::{Base64, Standard},
+    formats::Padded,
+    serde_as, DeserializeAs, SerializeAs,
+};
 
 #[cfg(not(windows))]
 use crate::error::NodeErrorKind;
@@ -39,6 +42,7 @@ pub struct Node {
     pub subtree: Option<Id>,
 }
 
+#[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, IsVariant)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum NodeType {
@@ -46,6 +50,9 @@ pub enum NodeType {
     Dir,
     Symlink {
         linktarget: String,
+        #[serde_as(as = "Option<Base64>")]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        linktarget_raw: Option<Vec<u8>>,
     },
     Dev {
         #[serde(default)]
@@ -57,6 +64,60 @@ pub enum NodeType {
     },
     Fifo,
     Socket,
+}
+
+impl NodeType {
+    #[cfg(not(windows))]
+    pub fn from_link(target: &Path) -> Self {
+        let (linktarget, linktarget_raw) = target.to_str().map_or_else(
+            || {
+                (
+                    target.as_os_str().to_string_lossy().to_string(),
+                    Some(target.as_os_str().as_bytes().to_vec()),
+                )
+            },
+            |t| (t.to_string(), None),
+        );
+        Self::Symlink {
+            linktarget,
+            linktarget_raw,
+        }
+    }
+
+    #[cfg(windows)]
+    // Windows doen't support non-unicode link targets, so we assume unicode here.
+    // TODO: Test and check this!
+    pub fn from_link(target: &Path) -> Self {
+        Self::Symlink {
+            linktarget: target.as_os_str().to_string_lossy().to_string(),
+            linktarget_raw: None,
+        }
+    }
+
+    // Must be only called on NodeType::Symlink!
+    #[cfg(not(windows))]
+    pub fn to_link(&self) -> &Path {
+        match self {
+            Self::Symlink {
+                linktarget,
+                linktarget_raw,
+            } => linktarget_raw.as_ref().map_or_else(
+                || Path::new(linktarget),
+                |t| Path::new(OsStr::from_bytes(t)),
+            ),
+            _ => panic!("called method to_link on non-symlink!"),
+        }
+    }
+
+    // Must be only called on NodeType::Symlink!
+    // TODO: Implement non-unicode link targets correctly for windows
+    #[cfg(windows)]
+    pub fn to_link(&self) -> &Path {
+        match self {
+            Self::Symlink { linktarget, .. } => Path::new(linktarget),
+            _ => panic!("called method to_link on non-symlink!"),
+        }
+    }
 }
 
 impl Default for NodeType {
@@ -136,9 +197,9 @@ impl Node {
     pub const fn is_special(&self) -> bool {
         matches!(
             self.node_type,
-            NodeType::Symlink { linktarget: _ }
-                | NodeType::Dev { device: _ }
-                | NodeType::Chardev { device: _ }
+            NodeType::Symlink { .. }
+                | NodeType::Dev { .. }
+                | NodeType::Chardev { .. }
                 | NodeType::Fifo
                 | NodeType::Socket
         )
@@ -355,5 +416,11 @@ mod tests {
     fn unescape_cases(#[case] input: &str, #[case] expected: &[u8]) {
         let expected = OsStr::from_bytes(expected);
         assert_eq!(expected, unescape_filename(input).unwrap());
+    }
+
+    #[quickcheck]
+    fn from_link_to_link_is_identity(bytes: Vec<u8>) -> bool {
+        let path = Path::new(OsStr::from_bytes(&bytes));
+        path == NodeType::from_link(path).to_link()
     }
 }

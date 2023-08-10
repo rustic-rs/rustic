@@ -183,7 +183,7 @@ integer-sqrt = "0.1"
 binrw = "0.11"
 hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["serde_derive"] }
-serde_with = { version = "3.1", features = ["base64"] }
+serde_with = { version = "3.2", features = ["base64"] }
 serde_json = "1"
 serde-aux = "4"
 
@@ -216,7 +216,7 @@ chrono = { version = "0.4", default-features = false, features = [
 ] }
 zstd = "0.12"
 enum-map = "2"
-enum-map-derive = "0.12"
+enum-map-derive = "0.13"
 rhai = { version = "1.15", features = [
     "sync",
     "serde",

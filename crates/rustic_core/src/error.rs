@@ -669,7 +669,7 @@ pub enum LocalErrorKind {
     /// failed to symlink target {linktarget:?} from {filename:?} with {source:?}
     #[cfg(not(any(windows, target_os = "openbsd")))]
     SymlinkingFailed {
-        linktarget: String,
+        linktarget: PathBuf,
         filename: PathBuf,
         #[source]
         source: std::io::Error,

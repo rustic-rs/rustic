@@ -1,11 +1,11 @@
-use std::{fmt, ops::Deref, path::Path};
+use std::{fmt, io::Read, ops::Deref, path::Path};
 
 use binrw::{BinRead, BinWrite};
 use derive_more::{Constructor, Display};
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::IdErrorKind, RusticResult};
+use crate::{error::IdErrorKind, hash, RusticResult};
 
 pub(super) mod constants {
     pub(super) const LEN: usize = 32;
@@ -62,6 +62,12 @@ impl Id {
     #[must_use]
     pub fn is_null(&self) -> bool {
         self == &Self::default()
+    }
+
+    pub fn blob_matches_reader(&self, length: usize, r: &mut impl Read) -> bool {
+        // check if SHA256 matches
+        let mut vec = vec![0; length];
+        r.read_exact(&mut vec).is_ok() && self == &hash(&vec)
     }
 }
 

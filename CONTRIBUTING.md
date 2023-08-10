@@ -209,7 +209,7 @@ Some extra tutorials on `git rebase`:
 
 ## Development Setup
 
-If you want to set up a local development environment, follow the steps in the [development guide](docs/development_guide.md) file - which is currently being worked on.
+If you want to set up a local development environment, follow the steps in the [development guide](/docs/dev/development_guide.md) file - which is currently being worked on.
 
 ## License
 

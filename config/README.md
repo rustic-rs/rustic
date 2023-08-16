@@ -69,31 +69,38 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 
 | Attribute         | Description                                            | Default Value  | Example Value |
 |-------------------|--------------------------------------------------------|----------------|---------------|
-| as-path                | Specifies the path for the backup when the source contains a single path. | Not set (Source-specific option) ||
 | description            | Description for the backup.                           | Not set        ||
 | description-from       | Path to a file containing the description for the backup. | Not set    ||
 | delete-never           | If true, never delete the backup.                     | false          ||
 | delete-after           | Time duration after which the backup will be deleted. | Not set        ||
-| exclude-if-present     | Array of filenames to exclude from the backup if they are present. | Not set (Source-specific option) ||
-| force                  | If true, forces the backup even if no changes are detected. | Not set (Source-specific option) ||
-| glob-file              | Array of glob files specifying additional files to include in the backup. | Not set (Source-specific option) ||
-| group-by               | Grouping strategy for the backup.                     | Not set (Source-specific option) ||
-| host                   | Host name for the backup.                             | Not set (Source-specific option) ||
-| ignore-ctime           | If true, ignores file change time (ctime) for the backup. | Not set (Source-specific option) ||
-| ignore-inode           | If true, ignores file inode for the backup.           | Not set (Source-specific option) ||
-| label                  | Label for the backup.                                 | Not set        ||
-| one-file-system        | If true, only backs up files from the same filesystem as the source. | Not set (Source-specific option) ||
-| parent                 | Parent snapshot ID for the backup.                    | Not set (Source-specific option) ||
-| stdin-filename         | File name to be used when reading from stdin.         | Not set (Source-specific option) ||
-| tag                    | Array of tags for the backup.                         | Not set        ||
-| with-atime             | If true, includes file access time (atime) in the backup. | Not set (Source-specific option) ||
 
 ### Backup Sources
 
 | Attribute         | Description                                            | Default Value  | Example Value |
 |-------------------|--------------------------------------------------------|----------------|---------------|
-| git-ignore             | If true, use .gitignore rules to exclude files from the backup in the source directory. | true ||
-| source                 | Source directory or file to back up.                  | Not set        ||
+| source                 | Source directory or file to back up.                  | Not set        | "/tmp/dir/to_backup/" |
+
+#### Source-specific options
+
+**Note**: The following options can be specified for each source individually in the source-individual section, see below. If they are specified here, they provide default values for all sources but can still be overwritten in the source-individual section.
+
+| Attribute         | Description                                            | Default Value  |
+|-------------------|--------------------------------------------------------|----------------|
+| as-path                | Specifies the path for the backup when the source contains a single path. | Not set |
+| exclude-if-present     | Array of filenames to exclude from the backup if they are present. | Not set |
+| force                  | If true, forces the backup even if no changes are detected. | Not set |
+| git-ignore             | If true, use .gitignore rules to exclude files from the backup in the source directory. | true |
+| glob-file              | Array of glob files specifying additional files to include in the backup. | Not set |
+| group-by               | Grouping strategy for the backup.                     | Not set |
+| host                   | Host name for the backup.                             | Not set |
+| ignore-ctime           | If true, ignores file change time (ctime) for the backup. | Not set |
+| ignore-inode           | If true, ignores file inode for the backup.           | Not set |
+| label                  | Label for the backup.                                 | Not set        |
+| one-file-system        | If true, only backs up files from the same filesystem as the source. | Not set |
+| parent                 | Parent snapshot ID for the backup.                    | Not set |
+| stdin-filename         | File name to be used when reading from stdin.         | Not set |
+| tag                    | Array of tags for the backup.                         | Not set |
+| with-atime             | If true, includes file access time (atime) in the backup. | Not set |
 
 ### Forget Options
 

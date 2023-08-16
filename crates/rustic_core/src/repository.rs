@@ -10,18 +10,8 @@ use std::{
 use bytes::Bytes;
 use derive_setters::Setters;
 use log::{debug, error, info};
-
-use nom::{
-    branch::alt,
-    bytes::complete::{is_not, tag},
-    character::complete::multispace1,
-    error::ParseError,
-    multi::separated_list0,
-    sequence::delimited,
-    IResult,
-};
-
 use serde_with::{serde_as, DisplayFromStr};
+use shell_words::split;
 
 use crate::{
     backend::{
@@ -152,22 +142,6 @@ pub(crate) fn overwrite<T>(left: &mut T, right: T) {
     *left = right;
 }
 
-// parse a command
-pub fn parse_command<'a, E: ParseError<&'a str>>(
-    input: &'a str,
-) -> IResult<&'a str, Vec<&'a str>, E> {
-    separated_list0(
-        // a command is a list
-        multispace1, // separated by one or more spaces
-        alt((
-            // and containing either
-            delimited(tag("\""), is_not("\""), tag("\"")), // strings wrapped in "", or
-            delimited(tag("'"), is_not("'"), tag("'")),    // strigns wrapped in '', or
-            is_not(" \t\r\n"),                             // strings not containing any space
-        )),
-    )(input)
-}
-
 pub fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult<String> {
     let mut password = String::new();
     _ = file
@@ -258,11 +232,9 @@ impl<P, S> Repository<P, S> {
                 Ok(Some(read_password_from_reader(&mut file)?))
             }
             (_, _, Some(command)) => {
-                let commands = parse_command::<()>(command)
-                    .map_err(RepositoryErrorKind::FromNomError)?
-                    .1;
+                let commands = split(command).map_err(RepositoryErrorKind::FromSplitError)?;
                 debug!("commands: {commands:?}");
-                let command = Command::new(commands[0])
+                let command = Command::new(&commands[0])
                     .args(&commands[1..])
                     .stdout(Stdio::piped())
                     .spawn()?;

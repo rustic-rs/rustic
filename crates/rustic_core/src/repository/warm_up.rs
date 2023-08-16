@@ -3,8 +3,8 @@ use std::thread::sleep;
 
 use log::{debug, warn};
 use rayon::ThreadPoolBuilder;
+use shell_words::split;
 
-use super::parse_command;
 use crate::{
     error::RepositoryErrorKind, FileType, Id, Progress, ProgressBars, ReadBackend, Repository,
     RusticResult,
@@ -49,10 +49,8 @@ fn warm_up_command<P: ProgressBars>(
     for pack in packs {
         let actual_command = command.replace("%id", &pack.to_hex());
         debug!("calling {actual_command}...");
-        let commands = parse_command::<()>(&actual_command)
-            .map_err(RepositoryErrorKind::FromNomError)?
-            .1;
-        let status = Command::new(commands[0]).args(&commands[1..]).status()?;
+        let commands = split(&actual_command).map_err(RepositoryErrorKind::FromSplitError)?;
+        let status = Command::new(&commands[0]).args(&commands[1..]).status()?;
         if !status.success() {
             warn!("warm-up command was not successful for pack {pack:?}. {status}");
         }

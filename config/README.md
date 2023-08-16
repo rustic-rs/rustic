@@ -18,6 +18,10 @@ Values parsed from the `configuration file` can be overwritten by `environment v
 
 - For some integer values, you cannot even overwrite with the value `0`, e.g. `keep-weekly = 5` in the `[forget]` section of the config file cannot be overwritten by `--keep-weekly 0`.
 
+## Profiles
+
+Configuration files can be placed in the user's local config directory, e.g. `~/.config/rustic/`. You can use a different config files, e.g. `myconfig.toml` and use the `-P` option to specify the profile name, e.g. `rustic -P myconfig.toml`. Examples for different profiles can be found here in the [/config/](/config) directory.
+
 ## Sections and Attributes
 
 ### Global Options

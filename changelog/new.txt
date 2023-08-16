@@ -4,6 +4,10 @@ Breaking changes:
 
 Bugs fixed:
 - prune did abort when no time was set for a pack-do-delete. This case is now handled correctly.
+- retrying backend access didn't work for long operations. This has been fixed (and retries are now customizable)
+- The zstd compression library led to data corruption in very unlikely cases. This has been fixed by a dependency update.
+- The glob option did only work with absolute files. This has been fixed.
+- Non-unicode link targets are now correctly handled on Unix (after this has been added to the restic repo format).
 
 New features:
 - New global configuration paths are available, located at /etc/rustic/*.toml or %PROGRAMDATA%/rustic/config/*.toml, depending on your platform.
@@ -15,3 +19,4 @@ New features:
 - repoinfo: Added new options --json, --only-files, --only-index
 - Creation of new keys now enforces confirmation of entered key. This helps to prevent mistype of passwords during the initial entry
 - Check: Add check if time is set for packs-to-delete
+- ls: Options --long (-l) and --summary (-s) have been added.

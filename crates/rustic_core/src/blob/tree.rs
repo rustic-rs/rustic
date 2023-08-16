@@ -198,7 +198,7 @@ where
         opts: &TreeStreamerOptions,
         recursive: bool,
     ) -> RusticResult<Self> {
-        let mut override_builder = OverrideBuilder::new("/");
+        let mut override_builder = OverrideBuilder::new("");
 
         for g in &opts.glob {
             _ = override_builder
@@ -396,7 +396,7 @@ impl<P: Progress> Iterator for TreeStreamerOnce<P> {
     }
 }
 
-pub fn merge_trees(
+pub(crate) fn merge_trees(
     be: &impl IndexedBackend,
     trees: &[Id],
     cmp: &impl Fn(&Node, &Node) -> Ordering,

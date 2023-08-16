@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -29,16 +30,20 @@ use crate::{
         copy::CopySnapshot,
         forget::{ForgetGroups, KeepOptions},
         key::KeyOpts,
+        repair::{index::RepairIndexOptions, snapshots::RepairSnapshotsOptions},
         repoinfo::{IndexInfos, RepoFileInfos},
         restore::{RestoreInfos, RestoreOpts},
     },
     crypto::aespoly1305::Key,
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
-    repofile::RepoFile,
-    repofile::{configfile::ConfigFile, keyfile::find_key_in_backend},
+    index::IndexEntry,
+    repofile::{
+        configfile::ConfigFile, keyfile::find_key_in_backend, snapshotfile::SnapshotSummary,
+        RepoFile,
+    },
     BlobType, Id, IndexBackend, IndexedBackend, LocalDestination, NoProgressBars, Node,
-    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile,
-    SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
+    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, ReadIndex, RusticResult,
+    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
 mod warm_up;
@@ -470,6 +475,16 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         commands::snapshots::get_snapshot_group(self, ids, group_by, filter)
     }
 
+    pub fn get_snapshot_from_str(
+        &self,
+        id: &str,
+        filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
+    ) -> RusticResult<SnapshotFile> {
+        let p = self.pb.progress_counter("getting snapshot...");
+        let snap = SnapshotFile::from_str(self.dbe(), id, filter, &p)?;
+        Ok(snap)
+    }
+
     pub fn get_snapshots(&self, ids: &[String]) -> RusticResult<Vec<SnapshotFile>> {
         let p = self.pb.progress_counter("getting snapshots...");
         SnapshotFile::from_ids(self.dbe(), ids, &p)
@@ -504,6 +519,8 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         commands::copy::relevant_snapshots(snaps, self, filter)
     }
 
+    // TODO: Maybe only offer a method to remove &[Snapshotfile] and check if they must be kept.
+    // See e.g. the merge command of the CLI
     pub fn delete_snapshots(&self, ids: &[Id]) -> RusticResult<()> {
         let p = self.pb.progress_counter("removing snapshots...");
         self.dbe()
@@ -574,6 +591,10 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
             .stream_all::<F>(&self.pb.progress_hidden())?
             .into_iter())
     }
+
+    pub fn repair_index(&self, opts: &RepairIndexOptions, dry_run: bool) -> RusticResult<()> {
+        opts.repair(self, dry_run)
+    }
 }
 
 pub trait IndexedTree: Open {
@@ -632,6 +653,16 @@ impl<T, S: Open> Open for IndexedStatus<T, S> {
     }
 }
 
+impl<P, S: IndexedFull> Repository<P, S> {
+    pub fn get_index_entry(&self, tpe: BlobType, id: &Id) -> RusticResult<IndexEntry> {
+        let ie = self
+            .index()
+            .get_id(tpe, id)
+            .ok_or_else(|| RepositoryErrorKind::IdNotFound(*id))?;
+        Ok(ie)
+    }
+}
+
 impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
     pub fn node_from_snapshot_path(
         &self,
@@ -643,6 +674,14 @@ impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
         let p = &self.pb.progress_counter("getting snapshot...");
         let snap = SnapshotFile::from_str(self.dbe(), id, filter, p)?;
 
+        Tree::node_from_path(self.index(), snap.tree, Path::new(path))
+    }
+
+    pub fn node_from_snapshot_and_path(
+        &self,
+        snap: &SnapshotFile,
+        path: &str,
+    ) -> RusticResult<Node> {
         Tree::node_from_path(self.index(), snap.tree, Path::new(path))
     }
 
@@ -671,6 +710,24 @@ impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
         dest: &LocalDestination,
     ) -> RusticResult<()> {
         opts.restore(restore_infos, self, node_streamer, dest)
+    }
+
+    pub fn merge_trees(
+        &self,
+        trees: &[Id],
+        cmp: &impl Fn(&Node, &Node) -> Ordering,
+        summary: &mut SnapshotSummary,
+    ) -> RusticResult<Id> {
+        commands::merge::merge_trees(self, trees, cmp, summary)
+    }
+
+    pub fn merge_snapshots(
+        &self,
+        snaps: &[SnapshotFile],
+        cmp: &impl Fn(&Node, &Node) -> Ordering,
+        snap: SnapshotFile,
+    ) -> RusticResult<SnapshotFile> {
+        commands::merge::merge_snapshots(self, snaps, cmp, snap)
     }
 }
 
@@ -719,5 +776,14 @@ impl<P: ProgressBars, S: IndexedFull> Repository<P, S> {
         snapshots: impl IntoIterator<Item = &'a SnapshotFile>,
     ) -> RusticResult<()> {
         commands::copy::copy(self, repo_dest, snapshots)
+    }
+
+    pub fn repair_snapshots(
+        &self,
+        opts: &RepairSnapshotsOptions,
+        snapshots: Vec<SnapshotFile>,
+        dry_run: bool,
+    ) -> RusticResult<()> {
+        opts.repair(self, snapshots, dry_run)
     }
 }

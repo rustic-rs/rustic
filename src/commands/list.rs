@@ -8,7 +8,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::{bail, Result};
 
-use rustic_core::{FileType, IndexFile};
+use rustic_core::repofile::{FileType, IndexFile};
 
 /// `list` subcommand
 #[derive(clap::Parser, Command, Debug)]

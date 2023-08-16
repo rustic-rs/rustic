@@ -8,23 +8,56 @@ use crate::{
     backend::{decrypt::DecryptWriteBackend, node::Node},
     blob::{packer::Packer, tree::Tree, BlobType},
     error::ArchiverErrorKind,
+    error::RusticResult,
     id::Id,
     index::{indexer::SharedIndexer, IndexedBackend},
     repofile::{configfile::ConfigFile, snapshotfile::SnapshotSummary},
-    RusticResult,
 };
-
-pub(crate) struct TreeArchiver<BE: DecryptWriteBackend, I: IndexedBackend> {
-    tree: Tree,
-    stack: Vec<(PathBuf, Node, ParentResult<Id>, Tree)>,
-    index: I,
-    tree_packer: Packer<BE>,
-    summary: SnapshotSummary,
-}
 
 pub(crate) type TreeItem = TreeType<(ParentResult<()>, u64), ParentResult<Id>>;
 
+/// The `TreeArchiver` is responsible for archiving trees.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend type.
+/// * `I` - The index to read from.
+///
+// TODO: Add documentation
+pub(crate) struct TreeArchiver<BE: DecryptWriteBackend, I: IndexedBackend> {
+    /// The current tree.
+    tree: Tree,
+    /// The stack of trees.
+    stack: Vec<(PathBuf, Node, ParentResult<Id>, Tree)>,
+    /// The index to read from.
+    index: I,
+    /// The packer to write to.
+    tree_packer: Packer<BE>,
+    /// The summary of the snapshot.
+    summary: SnapshotSummary,
+}
+
 impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
+    /// Creates a new `TreeArchiver`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend type.
+    /// * `I` - The index to read from.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to write to.
+    /// * `index` - The index to read from.
+    /// * `indexer` - The indexer to write to.
+    /// * `config` - The config file.
+    /// * `summary` - The summary of the snapshot.
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+    /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
     pub(crate) fn new(
         be: BE,
         index: I,
@@ -48,6 +81,16 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
         })
     }
 
+    /// Adds the given item to the tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to add.
+    ///
+    /// # Errors
+    ///
+    /// * [`ArchiverErrorKind::TreeStackEmpty`] - If the tree stack is empty.
+    // TODO: Add more errors!
     pub(crate) fn add(&mut self, item: TreeItem) -> RusticResult<()> {
         match item {
             TreeType::NewTree((path, node, parent)) => {
@@ -78,6 +121,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
         Ok(())
     }
 
+    /// Adds the given file to the tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path of the file.
+    /// * `node` - The node of the file.
+    /// * `parent` - The parent result of the file.
     fn add_file(&mut self, path: &Path, node: Node, parent: &ParentResult<()>, size: u64) {
         let filename = path.join(node.name());
         match parent {
@@ -99,6 +149,20 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
         self.tree.add(node);
     }
 
+    /// Backups the current tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path of the tree.
+    /// * `parent` - The parent result of the tree.
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+    ///
+    /// # Returns
+    ///
+    /// The id of the tree.
     fn backup_tree(&mut self, path: &Path, parent: &ParentResult<Id>) -> RusticResult<Id> {
         let (chunk, id) = self.tree.serialize()?;
         let dirsize = chunk.len() as u64;
@@ -129,6 +193,23 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
         Ok(id)
     }
 
+    /// Finalizes the tree archiver.
+    ///
+    /// # Arguments
+    ///
+    /// * `parent_tree` - The parent tree.
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the id of the tree and the summary of the snapshot.
+    ///
+    /// # Panics
+    ///
+    /// If the channel of the tree packer is not dropped.
     pub(crate) fn finalize(
         mut self,
         parent_tree: Option<Id>,

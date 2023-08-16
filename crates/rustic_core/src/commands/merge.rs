@@ -5,11 +5,33 @@ use std::cmp::Ordering;
 use chrono::Local;
 
 use crate::{
-    blob::tree, error::CommandErrorKind, repofile::snapshotfile::SnapshotSummary,
-    repository::IndexedTree, BlobType, DecryptWriteBackend, Id, Indexer, Node, Open, Packer,
-    PathList, Progress, ProgressBars, ReadIndex, Repository, RusticResult, SnapshotFile, Tree,
+    backend::{decrypt::DecryptWriteBackend, node::Node},
+    blob::{
+        packer::Packer,
+        tree::{self, Tree},
+        BlobType,
+    },
+    error::CommandErrorKind,
+    error::RusticResult,
+    id::Id,
+    index::{indexer::Indexer, ReadIndex},
+    progress::{Progress, ProgressBars},
+    repofile::{PathList, SnapshotFile, SnapshotSummary},
+    repository::{IndexedTree, Repository},
 };
 
+/// Merges the given snapshots into a new snapshot.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to merge into
+/// * `snapshots` - The snapshots to merge
+/// * `cmp` - The comparison function for the trees
+/// * `snap` - The snapshot to merge into
+///
+/// # Returns
+///
+/// The merged snapshot
 pub(crate) fn merge_snapshots<P: ProgressBars, S: IndexedTree>(
     repo: &Repository<P, S>,
     snapshots: &[SnapshotFile],
@@ -18,7 +40,7 @@ pub(crate) fn merge_snapshots<P: ProgressBars, S: IndexedTree>(
 ) -> RusticResult<SnapshotFile> {
     let now = Local::now();
 
-    let paths = PathList::from_strings(snapshots.iter().flat_map(|snap| snap.paths.iter()), false)?;
+    let paths = PathList::from_strings(snapshots.iter().flat_map(|snap| snap.paths.iter())).merge();
     snap.paths.set_paths(&paths.paths())?;
 
     // set snapshot time to time of latest snapshot to be merged
@@ -40,6 +62,27 @@ pub(crate) fn merge_snapshots<P: ProgressBars, S: IndexedTree>(
     Ok(snap)
 }
 
+/// Merges the given trees into a new tree.
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The type of the indexed tree.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to merge into
+/// * `trees` - The trees to merge
+/// * `cmp` - The comparison function for the trees
+/// * `summary` - The summary to update
+///
+/// # Errors
+///
+/// * [`CommandErrorKind::ConversionToU64Failed`] - If the size of the tree is too large
+///
+/// # Returns
+///
+/// The merged tree
 pub(crate) fn merge_trees<P: ProgressBars, S: IndexedTree>(
     repo: &Repository<P, S>,
     trees: &[Id],

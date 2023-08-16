@@ -12,7 +12,7 @@ use log::{error, info};
 use merge::Merge;
 use serde::Deserialize;
 
-use rustic_core::{CopySnapshot, Id, KeyOpts, Open, Repository, RepositoryOptions};
+use rustic_core::{CopySnapshot, Id, KeyOptions, Repository, RepositoryOptions};
 
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -26,7 +26,7 @@ pub(crate) struct CopyCmd {
     init: bool,
 
     #[clap(flatten, next_help_heading = "Key options (when using --init)")]
-    key_opts: KeyOpts,
+    key_opts: KeyOptions,
 }
 
 #[derive(Default, Clone, Debug, Deserialize, Merge)]

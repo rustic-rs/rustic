@@ -1,5 +1,5 @@
 //! `check` example
-use rustic_core::{CheckOpts, Repository, RepositoryOptions};
+use rustic_core::{CheckOptions, Repository, RepositoryOptions};
 use simplelog::{Config, LevelFilter, SimpleLogger};
 use std::error::Error;
 
@@ -13,8 +13,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .password("test");
     let repo = Repository::new(&repo_opts)?.open()?;
 
-    // Check respository with standard options
-    let opts = CheckOpts::default();
+    // Check respository with standard options but omitting cache checks
+    let opts = CheckOptions::default().trust_cache(true);
     repo.check(opts)?;
     Ok(())
 }

@@ -1,37 +1,39 @@
 //! `backup` subcommand
-
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
+use derive_setters::Setters;
 use log::info;
 
 use std::path::PathBuf;
 
 use path_dedot::ParseDot;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     archiver::{parent::Parent, Archiver},
-    backend::dry_run::DryRunBackend,
-    repository::{IndexedIds, IndexedTree},
-    Id, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, Open, PathList,
-    ProgressBars, Repository, RusticResult, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
-    StdinSource,
+    backend::ignore::{LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions},
+    backend::{dry_run::DryRunBackend, stdin::StdinSource},
+    error::RusticResult,
+    id::Id,
+    progress::ProgressBars,
+    repofile::snapshotfile::{SnapshotGroup, SnapshotGroupCriterion},
+    repofile::{PathList, SnapshotFile},
+    repository::{IndexedIds, IndexedTree, Repository},
 };
 
 /// `backup` subcommand
+#[serde_as]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[cfg_attr(feature = "merge", derive(merge::Merge))]
-#[derive(Clone, Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Setters)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
-// Note: using sources and source within this struct is a hack to support serde(deny_unknown_fields)
-// for deserializing the backup options from TOML
-// Unfortunately we cannot work with nested flattened structures, see
-// https://github.com/serde-rs/serde/issues/1547
-// A drawback is that a wrongly set "source(s) = ..." won't get correct error handling and need to be manually checked, see below.
+#[setters(into)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct ParentOpts {
+#[non_exhaustive]
+/// Options how the backup command uses a parent snapshot.
+pub struct ParentOptions {
     /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,label,paths)
     #[cfg_attr(feature = "clap", clap(long, short = 'g', value_name = "CRITERION",))]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub group_by: Option<SnapshotGroupCriterion>,
 
     /// Snapshot to use as parent
@@ -57,8 +59,24 @@ pub struct ParentOpts {
     pub ignore_inode: bool,
 }
 
-impl ParentOpts {
-    pub fn get_parent<P: ProgressBars, S: IndexedTree>(
+impl ParentOptions {
+    /// Get parent snapshot.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The type of the progress bars.
+    /// * `S` - The type of the indexed tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `repo` - The repository to use
+    /// * `snap` - The snapshot to use
+    /// * `backup_stdin` - Whether the backup is from stdin
+    ///
+    /// # Returns
+    ///
+    /// The parent snapshot id and the parent object or `None` if no parent is used.
+    pub(crate) fn get_parent<P: ProgressBars, S: IndexedTree>(
         &self,
         repo: &Repository<P, S>,
         snap: &SnapshotFile,
@@ -68,7 +86,7 @@ impl ParentOpts {
             (true, _, _) | (false, true, _) => None,
             (false, false, None) => {
                 // get suitable snapshot group from snapshot and opts.group_by. This is used to filter snapshots for the parent detection
-                let group = SnapshotGroup::from_sn(snap, self.group_by.unwrap_or_default());
+                let group = SnapshotGroup::from_snapshot(snap, self.group_by.unwrap_or_default());
                 SnapshotFile::latest(
                     repo.dbe(),
                     |snap| snap.has_group(&group),
@@ -95,9 +113,12 @@ impl ParentOpts {
 
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[cfg_attr(feature = "merge", derive(merge::Merge))]
-#[derive(Clone, Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Setters)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
-pub struct BackupOpts {
+#[setters(into)]
+#[non_exhaustive]
+/// Options for the `backup` command.
+pub struct BackupOptions {
     /// Set filename to be used when backing up from stdin
     #[cfg_attr(
         feature = "clap",
@@ -110,29 +131,62 @@ pub struct BackupOpts {
     #[cfg_attr(feature = "clap", clap(long, value_name = "PATH"))]
     pub as_path: Option<PathBuf>,
 
-    #[cfg_attr(feature = "clap", clap(flatten))]
-    #[serde(flatten)]
-    pub parent_opts: ParentOpts,
+    /// Dry-run mode: Don't write any data or snapshot
+    #[cfg_attr(feature = "clap", clap(long))]
+    #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
+    pub dry_run: bool,
 
     #[cfg_attr(feature = "clap", clap(flatten))]
     #[serde(flatten)]
+    /// Options how to use a parent snapshot
+    pub parent_opts: ParentOptions,
+
+    #[cfg_attr(feature = "clap", clap(flatten))]
+    #[serde(flatten)]
+    /// Options how to save entries from a local source
     pub ignore_save_opts: LocalSourceSaveOptions,
 
     #[cfg_attr(feature = "clap", clap(flatten))]
     #[serde(flatten)]
+    /// Options how to filter from a local source
     pub ignore_filter_opts: LocalSourceFilterOptions,
 }
 
+/// Backup data, create a snapshot.
+///
+/// # Type Parameters
+///
+/// * `P` - The type of the progress bars.
+/// * `S` - The type of the indexed tree.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to use
+/// * `opts` - The backup options
+/// * `source` - The source to backup
+/// * `snap` - The snapshot to backup
+///
+/// # Errors
+///
+/// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
+/// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+/// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
+/// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+/// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the index file could not be serialized.
+/// * [`SnapshotFileErrorKind::OutOfRange`] - If the time is not in the range of `Local::now()`
+///
+/// # Returns
+///
+/// The snapshot pointing to the backup'ed data.
 pub(crate) fn backup<P: ProgressBars, S: IndexedIds>(
     repo: &Repository<P, S>,
-    opts: &BackupOpts,
+    opts: &BackupOptions,
     source: PathList,
     mut snap: SnapshotFile,
-    dry_run: bool,
 ) -> RusticResult<SnapshotFile> {
     let index = repo.index();
 
-    let backup_stdin = source == PathList::from_string("-", false)?;
+    let backup_stdin = source == PathList::from_string("-")?;
     let backup_path = if backup_stdin {
         vec![PathBuf::from(&opts.stdin_filename)]
     } else {
@@ -161,7 +215,7 @@ pub(crate) fn backup<P: ProgressBars, S: IndexedIds>(
         }
     };
 
-    let be = DryRunBackend::new(repo.dbe().clone(), dry_run);
+    let be = DryRunBackend::new(repo.dbe().clone(), opts.dry_run);
     info!("starting to backup {source}...");
     let archiver = Archiver::new(be, index.clone(), repo.config(), parent, snap)?;
     let p = repo.pb.progress_bytes("determining size...");

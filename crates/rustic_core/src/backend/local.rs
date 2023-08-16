@@ -488,12 +488,14 @@ impl LocalDestination {
         let filename = self.path(item);
 
         match &node.node_type {
-            NodeType::Symlink { linktarget } => symlink(linktarget.clone(), filename.clone())
-                .map_err(|err| LocalErrorKind::SymlinkingFailed {
-                    linktarget: linktarget.to_string(),
+            NodeType::Symlink { .. } => {
+                let linktarget = node.node_type.to_link();
+                symlink(linktarget, &filename).map_err(|err| LocalErrorKind::SymlinkingFailed {
+                    linktarget: linktarget.to_path_buf(),
                     filename,
                     source: err,
-                })?,
+                })?;
+            }
             NodeType::Dev { device } => {
                 #[cfg(not(any(
                     target_os = "macos",

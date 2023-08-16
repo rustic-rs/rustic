@@ -120,7 +120,7 @@ impl LocalSource {
             _ = walk_builder.add(path);
         }
 
-        let mut override_builder = OverrideBuilder::new("/");
+        let mut override_builder = OverrideBuilder::new("");
 
         for g in &filter_opts.glob {
             _ = override_builder

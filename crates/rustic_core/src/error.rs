@@ -263,7 +263,7 @@ pub enum RepositoryErrorKind {
     /// error accessing config file
     AccessToConfigFileFailed,
     /// {0:?}
-    FromNomError(nom::Err<()>),
+    FromSplitError(#[from] shell_words::ParseError),
     /// {0:?}
     FromThreadPoolbilderError(rayon::ThreadPoolBuildError),
     /// reading Password failed: `{0:?}`
@@ -431,8 +431,7 @@ pub enum SnapshotFileErrorKind {
     /// collecting IDs failed: {0:?}
     FindingIdsFailed(Vec<String>),
     /// {0:?}
-    #[error(transparent)]
-    FromNomError(#[from] nom::Err<()>),
+    FromSplitError(#[from] shell_words::ParseError),
     /// removing dots from paths failed: `{0:?}`
     RemovingDotsFromPathFailed(std::io::Error),
     /// canonicalizing path failed: `{0:?}`
@@ -609,8 +608,7 @@ pub enum LocalErrorKind {
     /// error building automaton `{0:?}`
     FromAhoCorasick(#[from] aho_corasick::BuildError),
     /// {0:?}
-    #[error(transparent)]
-    FromNomError(#[from] nom::Err<()>),
+    FromSplitError(#[from] shell_words::ParseError),
     /// {0:?}
     #[error(transparent)]
     FromTryIntError(#[from] TryFromIntError),

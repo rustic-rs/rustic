@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use derivative::Derivative;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
@@ -12,16 +12,16 @@ use crate::{
 
 type CheckFunction = fn(&SnapshotFile, &SnapshotFile) -> bool;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ForgetGroups(pub Vec<ForgetGroup>);
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ForgetGroup {
     pub group: SnapshotGroup,
     pub snapshots: Vec<ForgetSnapshot>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ForgetSnapshot {
     pub snapshot: SnapshotFile,
     pub keep: bool,

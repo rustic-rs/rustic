@@ -181,7 +181,7 @@ pubkey = "RWSWSCEJEEacVeCy0va71hlrVtiW8YzMzOyJeso0Bfy/ZXq5OryWi/8T"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # Include the example config files into the distribution archives
-include = ["./config/"]
+include = ["./config/", "./changelog/"]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.1.0"
 # CI backends to support (see 'cargo dist generate-ci')

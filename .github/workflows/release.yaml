@@ -19,6 +19,7 @@ jobs:
     name: Publishing ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
+      fail-fast: true # stop the build as soon as one job fails
       matrix:
         rust: [stable]
         job:

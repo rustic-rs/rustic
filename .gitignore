@@ -4,3 +4,4 @@
 mutants.out
 cargo-test*
 coverage/*lcov
+coverage/lcov.info

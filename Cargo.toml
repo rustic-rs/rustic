@@ -115,12 +115,32 @@ anyhow = "1"
 serde = { version = "1", features = ["serde_derive"] }
 serde_with = { version = "3.4", features = ["base64"] }
 serde_json = "1"
+serde-aux = "4"
+
+# local backend
+walkdir = "2"
+ignore = "0.4"
+cached = {version = "0.44", default-features = false, features = ["proc_macro"]} 
+nix = "0.26"
+filetime = "0.2"
+
+# rest backend
+reqwest = { version = "0.11", default-features = false, features = [
+    "json",
+    "rustls-tls-native-roots",
+    "stream",
+    "blocking",
+] }
+backoff = "0.4"
+url = "2.3.1"
+
+# rclone backend
+semver = "1"
 
 # other dependencies
 aho-corasick = "1.1.2"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
-semver = "1"
 simplelog = "0.12"
 comfy-table = "7.1.0"
 
@@ -157,6 +177,40 @@ pkg-fmt = "tgz"
 [package.metadata.binstall.signing]
 algorithm = "minisign"
 pubkey = "RWSWSCEJEEacVeCy0va71hlrVtiW8YzMzOyJeso0Bfy/ZXq5OryWi/8T"
+
+# Config for 'cargo dist'
+[workspace.metadata.dist]
+# Include the example config files into the distribution archives
+include = ["./config/"]
+# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.1.0"
+# CI backends to support (see 'cargo dist generate-ci')
+ci = ["github"]
+# The installers to generate for each app
+installers = ["shell", "powershell"]
+# Archive formats to generate for each operating system
+unix-archive = ".tar.xz"
+windows-archive = ".zip"
+# Although cargo-dist was built around the "keep trying" approach, it can be
+# it's useful to fail-fast in CI to not waste resources on a failed build
+# that we might need to fix first.
+fail-fast = true
+# Generated checksum
+checksum = "sha512"
+# The path to install app to
+install-path = "~/.rustic/"
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-gnu",
+    "i686-unknown-linux-gnu",
+    "x86_64-unknown-netbsd",
+    "armv7-unknown-linux-gnueabihf",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "aarch64-apple-darwin",
+]
 
 # see: https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.dev]
@@ -206,3 +260,8 @@ codegen-units = 1
 assets = [
   { source = "target/release/rustic", dest = "/usr/bin/rustic", mode = "0755", config = false, doc = false, user = "root", group = "root" },
 ]
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

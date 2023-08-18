@@ -787,3 +787,30 @@ impl<P: ProgressBars, S: IndexedFull> Repository<P, S> {
         opts.repair(self, snapshots, dry_run)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[test]
+    fn test_overwrite() {
+        let mut a = 1;
+        let b = 2;
+        overwrite(&mut a, b);
+        assert_eq!(a, 2);
+    }
+
+    #[rstest]
+    #[case("test", "test")]
+    #[case("test\n", "test")]
+    #[case("test\r", "test")]
+    #[case("test\r\n", "test")]
+    #[case("test\n\n\n", "test")]
+    #[case("test\r\n \r\n \r\n \t", "test")]
+    fn test_read_password_from_reader(#[case] input: &str, #[case] expected: &str) {
+        let mut buf_str = BufReader::new(input.as_bytes());
+        let password = read_password_from_reader(&mut buf_str).unwrap();
+        assert_eq!(password, expected);
+    }
+}

@@ -102,3 +102,14 @@ impl AsRef<Path> for HexId {
         self.as_str().as_ref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_id_from_hex() {
+        _ = Id::from_hex("52f5eb5f59aacb9577a12434aa795e9b").unwrap();
+    }
+}

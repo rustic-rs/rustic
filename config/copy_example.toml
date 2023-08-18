@@ -17,5 +17,5 @@ no-cache = true
 [[copy.targets]]
 repository = "rclone:ovh:backup"
 repo-hot = "clone:ovh:backup-hot"
-password-file =  "/root/key-rustic-ovh"
-cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository 
+password-file = "/root/key-rustic-ovh"
+cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository

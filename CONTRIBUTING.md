@@ -20,13 +20,19 @@ We appreciate your help in making this project better.
 
 ## Code of Conduct
 
-Please review and abide by the general Rust Community [Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct) when contributing to this project. In the future, we might create our own Code of Conduct and supplement it at this location.
+Please review and abide by the general Rust Community
+[Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct) when
+contributing to this project. In the future, we might create our own Code of
+Conduct and supplement it at this location.
 
 ## How to Contribute
 
 ### Reporting Bugs
 
-If you find a bug, please open an [issue on GitHub](https://github.com/rustic-rs/rustic/issues/new/choose) and provide as much detail as possible. Include steps to reproduce the bug and the expected behavior.
+If you find a bug, please open an
+[issue on GitHub](https://github.com/rustic-rs/rustic/issues/new/choose) and
+provide as much detail as possible. Include steps to reproduce the bug and the
+expected behavior.
 
 ### Issue and Pull Request labels
 
@@ -51,11 +57,15 @@ WG - Working group
 
 ### Suggesting Enhancements
 
-If you have an idea for an enhancement or a new feature, we'd love to hear it! Open an [issue on GitHub](https://github.com/rustic-rs/rustic/issues/new/choose) and describe your suggestion in detail.
+If you have an idea for an enhancement or a new feature, we'd love to hear it!
+Open an [issue on GitHub](https://github.com/rustic-rs/rustic/issues/new/choose)
+and describe your suggestion in detail.
 
 ### Code Style and Formatting
 
-We follow the Rust community's best practices for code style and formatting. Before submitting code changes, please ensure your code adheres to these guidelines:
+We follow the Rust community's best practices for code style and formatting.
+Before submitting code changes, please ensure your code adheres to these
+guidelines:
 
 - Use `rustfmt` to format your code. You can run it with the following command:
 
@@ -63,13 +73,16 @@ We follow the Rust community's best practices for code style and formatting. Bef
   cargo fmt --all
   ```
 
-- Write clear and concise code with meaningful, self-describing variable and function names. This tells the reader **what** the code does.
+- Write clear and concise code with meaningful, self-describing variable and
+  function names. This tells the reader **what** the code does.
 
-- Write clear and consise comments to tell the reader **why** you chose to implement it that way and **which** problem it solves.
+- Write clear and consise comments to tell the reader **why** you chose to
+  implement it that way and **which** problem it solves.
 
 ### Testing
 
-We value code quality and maintainability. If you are adding new features or making changes, please include relevant unit tests. Run the test suite with:
+We value code quality and maintainability. If you are adding new features or
+making changes, please include relevant unit tests. Run the test suite with:
 
 ```bash
 cargo test --workspace
@@ -101,32 +114,40 @@ To contribute code changes, follow these steps:
    git push origin feature/your-feature-name
    ```
 
-5. **Open** a Pull Request (PR) to our repository. Please include a detailed description of the changes and reference any related issues.
+5. **Open** a Pull Request (PR) to our repository. Please include a detailed
+   description of the changes and reference any related issues.
 
 #### `Release early and often!` also applies to pull requests
 
-Consider drafting a Pull request early in the development process, so we can follow your progress and can give early feedback.
+Consider drafting a Pull request early in the development process, so we can
+follow your progress and can give early feedback.
 
-Once your PR is submitted, it will be reviewed by the maintainers. We may suggest changes or ask for clarifications before merging.
+Once your PR is submitted, it will be reviewed by the maintainers. We may
+suggest changes or ask for clarifications before merging.
 
 #### IMPORTANT NOTE
 
-Please don't force push commits in your branch, in order to keep commit history and make it easier for us to see changes between reviews.
+Please don't force push commits in your branch, in order to keep commit history
+and make it easier for us to see changes between reviews.
 
-Make sure to Allow edits of maintainers (under the text box) in the PR so people can actually collaborate on things or fix smaller issues themselves.
+Make sure to Allow edits of maintainers (under the text box) in the PR so people
+can actually collaborate on things or fix smaller issues themselves.
 
 #### Rebasing and other workflows
 
-(taken from: [openage on rebasing](https://github.com/SFTtech/openage/blob/master/doc/contributing.md#rebasing))
+(taken from:
+[openage on rebasing](https://github.com/SFTtech/openage/blob/master/doc/contributing.md#rebasing))
 
 **Rebasing** is 'moving' your commits to a different parent commit.
 
-In other words: _Cut off_ your branch from its tree, and _attach it_ somewhere else.
+In other words: *Cut off* your branch from its tree, and *attach it* somewhere
+else.
 
 There's two main applications:
 
-- If you based your work on a older master (so old that stuff can't be automatically merged),
-  you can rebase to move your commits to the current [upstream](https://help.github.com/articles/fork-a-repo/) master:
+- If you based your work on a older master (so old that stuff can't be
+  automatically merged), you can rebase to move your commits to the current
+  [upstream](https://help.github.com/articles/fork-a-repo/) master:
 
 ```bash
 # update the upstream remote to receive new commits
@@ -142,8 +163,9 @@ git branch my-awesome-feature-backup
 git rebase -m upstream/master
 ```
 
-- If you want to fix an older commit of yours, or merge several commits into a single one (**squash** them), rebase interactively.
-  We _**don't**_ want to have a commit history like this:
+- If you want to fix an older commit of yours, or merge several commits into a
+  single one (**squash** them), rebase interactively. We ***don't*** want to
+  have a commit history like this:
 
   - `add stuff`
   - `fix typo in stuff`
@@ -153,17 +175,18 @@ git rebase -m upstream/master
 
 ##### `rebase` in practice
 
-`git log --graph --oneline` shows your commit history as graph.
-To make some changes in that graph, you do an **interactive rebase**:
+`git log --graph --oneline` shows your commit history as graph. To make some
+changes in that graph, you do an **interactive rebase**:
 
 ```sh
 git rebase -i -m upstream/master
 ```
 
-With this command, your new "base" is `upstream/master` and you can
-then change any of your branch's commits.
+With this command, your new "base" is `upstream/master` and you can then change
+any of your branch's commits.
 
-`-i` will open an interactive editor where you can choose actions for each individual commit:
+`-i` will open an interactive editor where you can choose actions for each
+individual commit:
 
 - re-order commits
 - drop commits by deleting their line
@@ -175,10 +198,13 @@ Just follow the messages on screen.
 
 ##### Changing commits with `amend` and `fixup`
 
-There's also `git commit --amend` which is a "mini-rebase" that modifies just the last commit with your current changes by `git add`.
-It just skips the creation of a new commit and instead melds the changes into the last one you made.
+There's also `git commit --amend` which is a "mini-rebase" that modifies just
+the last commit with your current changes by `git add`. It just skips the
+creation of a new commit and instead melds the changes into the last one you
+made.
 
-If you want to update a single commit in the range `[upstream/master, current HEAD]` which is not the last commit:
+If you want to update a single commit in the range
+`[upstream/master, current HEAD]` which is not the last commit:
 
 - `edit stuff you wanna change in some previous commit`
 - `git add changed_stuff`
@@ -187,15 +213,19 @@ If you want to update a single commit in the range `[upstream/master, current HE
 
 ##### Pushing changes
 
-After you have rebased stuff (["rewritten history"](https://www.youtube.com/watch?v=9lXuZHkOoH8)) that had already been pushed,
-git will not accept your pushes because they're not simple fast-forwards:
+After you have rebased stuff
+(["rewritten history"](https://www.youtube.com/watch?v=9lXuZHkOoH8)) that had
+already been pushed, git will not accept your pushes because they're not simple
+fast-forwards:
 
-- The commit contents and the parent commit have changed as you updated the commit, therefore the commit hash changed, too.
-  - If somebody used those commits, they will keep a copy
-    and have a hard time updating to your updated version (because they "use" the old hashes).
+- The commit contents and the parent commit have changed as you updated the
+  commit, therefore the commit hash changed, too.
+  - If somebody used those commits, they will keep a copy and have a hard time
+    updating to your updated version (because they "use" the old hashes).
   - Update your pull request branch with your re-written history!
 
-- **force push** is the standard way of overwriting your development work with the fixed and mergeable version of your contribution!
+- **force push** is the standard way of overwriting your development work with
+  the fixed and mergeable version of your contribution!
   - Why? You changed the commits, so you want the old ones to be deleted!
 
   You can use any of:
@@ -211,11 +241,14 @@ Some extra tutorials on `git rebase`:
 
 ## Development Setup
 
-If you want to set up a local development environment, follow the steps in the [development guide](/docs/dev/development_guide.md) file - which is currently being worked on.
+If you want to set up a local development environment, follow the steps in the
+[development guide](/docs/dev/development_guide.md) file - which is currently
+being worked on.
 
 ## License
 
-By contributing to `rustic` or any crates contained in this repository, you agree that your contributions will be licensed under:
+By contributing to `rustic` or any crates contained in this repository, you
+agree that your contributions will be licensed under:
 
 - [Apache License, Version 2.0](./LICENSE-APACHE)
 - [MIT license](./LICENSE-MIT).

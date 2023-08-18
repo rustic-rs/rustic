@@ -1,4 +1,4 @@
-name: Lint Markdown
+name: Lint Markdown / Toml
 
 on:
   push:

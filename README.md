@@ -1,7 +1,6 @@
 # rustic - fast, encrypted, deduplicated backups powered by Rust
 
-[![crate][crate-image]][crate-link]
-[![Docs][docs-image]][docs-link]
+[![crate][crate-image]][crate-link] [![Docs][docs-image]][docs-link]
 ![Apache2/MIT licensed][license-image]
 [![Crates.io Downloads][downloads-image]][crate-link]
 
@@ -15,28 +14,36 @@
 
 ## About
 
-Rustic is a backup tool that provides fast, encrypted, deduplicated backups written in [Rust](https://www.rust-lang.org/).
-It reads and writes the [restic][1] repo format described in the [design document][2]
-and can be used as a restic replacement in most cases.
+Rustic is a backup tool that provides fast, encrypted, deduplicated backups
+written in [Rust](https://www.rust-lang.org/). It reads and writes the
+[restic][1] repo format described in the [design document][2] and can be used as
+a restic replacement in most cases.
 
-Rustic supports the major operating systems (Linux, MacOs, *BSD), Windows support is experimental.
+Rustic supports the major operating systems (Linux, MacOs, *BSD), Windows
+support is experimental.
 
 Note that rustic currently is in a beta release and misses regression tests.
 
-You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/FAQ.md).
+You can ask questions in the [Discussions][3] or have a look at the
+[FAQ](docs/FAQ.md).
 
 ## Features
 
 - Backup data is deduplicated and encrypted.
 - Backup storage can be local or cloud storages, including cold storages.
-- Allows multiple clients to concurrently access a backup repository using lock-free operations.
+- Allows multiple clients to concurrently access a backup repository using
+  lock-free operations.
 - Backups by default are append-only on the repository.
-- The operations are robustly designed and can be safely aborted and efficiently resumed.
-- Snapshot organization is possible by hostname, backup paths, label and tags. Also a rich set of metadata is saved with each snapshot.
+- The operations are robustly designed and can be safely aborted and efficiently
+  resumed.
+- Snapshot organization is possible by hostname, backup paths, label and tags.
+  Also a rich set of metadata is saved with each snapshot.
 - Retention policies and cleaning of old backups can be highly customized.
-- Follow-up backups only process changed files, but still create a complete backup snapshot.
+- Follow-up backups only process changed files, but still create a complete
+  backup snapshot.
 - In-place restore only modifies files which are changed.
-- Can use config files for easy configuration of all every-day commands, see [example config files](/config/).
+- Can use config files for easy configuration of all every-day commands, see
+  [example config files](/config/).
 
 ## Quick start
 
@@ -45,7 +52,8 @@ You can ask questions in the [Discussions][3] or have a look at the [FAQ](docs/F
 ## Are binaries available?
 
 Sure. Check out the [releases](https://github.com/rustic-rs/rustic/releases).
-Binaries for the latest development version are available [here](https://github.com/rustic-rs/rustic-beta).
+Binaries for the latest development version are available
+[here](https://github.com/rustic-rs/rustic-beta).
 
 ## What is the difference between rustic and restic?
 

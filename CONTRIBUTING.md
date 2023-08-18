@@ -73,6 +73,14 @@ guidelines:
   cargo fmt --all
   ```
 
+- Use `dprint` to format text in markdown, toml, and json. You can install it
+  with `cargo install dprint` and run it with the following command in the
+  repository root:
+
+  ```bash
+  dprint fmt
+  ```
+
 - Write clear and concise code with meaningful, self-describing variable and
   function names. This tells the reader **what** the code does.
 

@@ -9,13 +9,21 @@
     "toml": {
         "lineWidth": 80
     },
+    "json": {
+        "lineWidth": 80,
+        "indentWidth": 4
+    },
     "includes": [
         "**/*.{md}",
-        "**/*.{toml}"
+        "**/*.{toml}",
+        "**/*.{json}"
     ],
-    "excludes": [],
+    "excludes": [
+        "target/**/*"
+    ],
     "plugins": [
         "https://plugins.dprint.dev/markdown-0.15.2.wasm",
-        "https://plugins.dprint.dev/toml-0.5.4.wasm"
+        "https://plugins.dprint.dev/toml-0.5.4.wasm",
+        "https://plugins.dprint.dev/json-0.17.4.wasm"
     ]
 }

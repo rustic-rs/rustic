@@ -7,11 +7,11 @@
 
 ## Contact
 
-Contact          | Where?
------------------|-------
-Issue Tracker    | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)
-Discord | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ)](https://discord.gg/WRUWENZnzQ)
-Discussions      | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)
+| Contact       | Where?                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------- |
+| Issue Tracker | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)                            |
+| Discord       | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ)](https://discord.gg/WRUWENZnzQ) |
+| Discussions   | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)                  |
 
 ## About
 
@@ -67,16 +67,13 @@ Licensed under either of:
 at your option.
 
 [//]: # (badges)
-
 [crate-image]: https://img.shields.io/crates/v/rustic-rs.svg
 [crate-link]: https://crates.io/crates/rustic-rs
 [docs-image]: https://docs.rs/rustic-rs/badge.svg
 [docs-link]: https://docs.rs/rustic-rs/
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
 [downloads-image]: https://img.shields.io/crates/d/rustic-rs.svg
-
 [//]: # (general links)
-
 [1]: https://github.com/restic/restic
 [2]: https://github.com/restic/restic/blob/master/doc/design.rst
 [3]: https://github.com/rustic-rs/rustic/discussions

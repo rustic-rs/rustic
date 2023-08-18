@@ -121,7 +121,7 @@ Make sure to Allow edits of maintainers (under the text box) in the PR so people
 
 **Rebasing** is 'moving' your commits to a different parent commit.
 
-In other words: *Cut off* your branch from its tree, and *attach it* somewhere else.
+In other words: _Cut off_ your branch from its tree, and _attach it_ somewhere else.
 
 There's two main applications:
 
@@ -143,7 +143,7 @@ git rebase -m upstream/master
 ```
 
 - If you want to fix an older commit of yours, or merge several commits into a single one (**squash** them), rebase interactively.
-  We ***don't*** want to have a commit history like this:
+  We _**don't**_ want to have a commit history like this:
 
   - `add stuff`
   - `fix typo in stuff`

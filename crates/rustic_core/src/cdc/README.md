@@ -1,6 +1,6 @@
 # cdc
 
-A library for performing *Content-Defined Chunking* (CDC) on data streams. Implemented using generic iterators, very easy to use.
+A library for performing _Content-Defined Chunking_ (CDC) on data streams. Implemented using generic iterators, very easy to use.
 
 - [API Documentation](https://docs.rs/cdc/)
 

@@ -531,3 +531,70 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         self.packer.finalize()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repofile::configfile::DEFAULT_GROW_FACTOR;
+
+    #[test]
+    fn test_pack_sizer() {
+        let config = ConfigFile::default();
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 0);
+        assert_eq!(pack_sizer.pack_size(), DEFAULT_GROW_FACTOR * 1024 * 1024);
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024);
+        // TODO!
+        // probably related to:
+        // 32 * sqrt(reposize in bytes) = 1 MB * sqrt(reposize in GB)
+        //          left: `33587200`,      right: `33554432`
+        assert_eq!(pack_sizer.pack_size(), DEFAULT_GROW_FACTOR * 1024 * 1024);
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024 * 1024 * 2);
+        assert_eq!(
+            pack_sizer.pack_size(),
+            DEFAULT_GROW_FACTOR * 1024 * 1024 * 2
+        );
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024 * 1024 * 3);
+        assert_eq!(
+            pack_sizer.pack_size(),
+            DEFAULT_GROW_FACTOR * 1024 * 1024 * 2
+        );
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024 * 1024 * 4);
+        assert_eq!(
+            pack_sizer.pack_size(),
+            DEFAULT_GROW_FACTOR * 1024 * 1024 * 2
+        );
+    }
+
+    // TODO: Are these reasonable tests?
+    #[test]
+    fn test_pack_sizer_size_ok() {
+        let config = ConfigFile::default();
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 0);
+        assert!(pack_sizer.size_ok(0));
+        assert!(pack_sizer.size_ok(1024 * 1024));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 2));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 3));
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024);
+        assert!(pack_sizer.size_ok(0));
+        assert!(pack_sizer.size_ok(1024 * 1024));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 2));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 3));
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024 * 1024 * 2);
+        assert!(pack_sizer.size_ok(0));
+        assert!(pack_sizer.size_ok(1024 * 1024));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 2));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 3));
+
+        let pack_sizer = PackSizer::from_config(&config, BlobType::Data, 1024 * 1024 * 1024 * 3);
+        assert!(pack_sizer.size_ok(0));
+        assert!(pack_sizer.size_ok(1024 * 1024));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 2));
+        assert!(pack_sizer.size_ok(1024 * 1024 * 1024 * 3));
+    }
+}

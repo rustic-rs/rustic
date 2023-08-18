@@ -518,3 +518,50 @@ pub(crate) fn merge_nodes(
     }
     Ok(node)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_merge_nodes() {
+        // TODO: This test is not complete
+        // TODO! implement and initialize `MockBackend` for testing
+
+        let mut summary = SnapshotSummary::default();
+        let save = |tree: Tree| -> RusticResult<(Id, u64)> {
+            let (chunk, id) = tree.serialize()?;
+            Ok((id, chunk.len() as u64))
+        };
+        let cmp = |n1: &Node, n2: &Node| n1.name().cmp(&n2.name());
+
+        let mut nodes = Vec::new();
+        nodes.push(Node::new_node(
+            OsStr::new("a"),
+            NodeType::Dir,
+            Metadata::default(),
+        ));
+        nodes.push(Node::new_node(
+            OsStr::new("b"),
+            NodeType::Dir,
+            Metadata::default(),
+        ));
+        nodes.push(Node::new_node(
+            OsStr::new("c"),
+            NodeType::Dir,
+            Metadata::default(),
+        ));
+        nodes.push(Node::new_node(
+            OsStr::new("d"),
+            NodeType::Dir,
+            Metadata::default(),
+        ));
+
+        let node = merge_nodes(&be, nodes, &cmp, &save, &mut summary).unwrap();
+        assert_eq!(node.name(), OsStr::new("d"));
+        // assert_eq!(node.subtree.unwrap(), Id::from([0; 32]));
+        assert_eq!(summary.dirs_changed, 1);
+        assert_eq!(summary.total_dirs_processed, 1);
+        assert_eq!(summary.total_dirsize_processed, 0);
+    }
+}

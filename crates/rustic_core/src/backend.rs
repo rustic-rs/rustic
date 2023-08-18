@@ -5,6 +5,7 @@ pub(crate) mod dry_run;
 pub(crate) mod hotcold;
 pub(crate) mod ignore;
 pub(crate) mod local;
+pub(crate) mod mock;
 pub(crate) mod node;
 pub(crate) mod rclone;
 pub(crate) mod rest;

@@ -5,6 +5,8 @@ use crate::{
     RusticResult,
 };
 
+pub(crate) use constants::DEFAULT_GROW_FACTOR;
+
 pub(super) mod constants {
 
     pub(super) const KB: u32 = 1024;
@@ -14,7 +16,7 @@ pub(super) mod constants {
     pub(super) const DEFAULT_DATA_SIZE: u32 = 32 * MB;
     // the default factor used for repo-size dependent pack size.
     // 32 * sqrt(reposize in bytes) = 1 MB * sqrt(reposize in GB)
-    pub(super) const DEFAULT_GROW_FACTOR: u32 = 32;
+    pub(crate) const DEFAULT_GROW_FACTOR: u32 = 32;
     pub(super) const DEFAULT_SIZE_LIMIT: u32 = u32::MAX;
 }
 

@@ -5,6 +5,7 @@ use crate::{
     RusticResult,
 };
 
+#[derive(Clone, Debug, Default)]
 pub(crate) struct MockBackend;
 
 impl MockBackend {
@@ -59,17 +60,5 @@ impl WriteBackend for MockBackend {
 
     fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> RusticResult<()> {
         todo!()
-    }
-}
-
-impl Clone for MockBackend {
-    fn clone(&self) -> Self {
-        Self
-    }
-}
-
-impl Default for MockBackend {
-    fn default() -> Self {
-        Self
     }
 }

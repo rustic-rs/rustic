@@ -521,12 +521,24 @@ pub(crate) fn merge_nodes(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use crate::{
+        backend::{decrypt::DecryptBackend, dry_run::DryRunBackend, mock::MockBackend},
+        crypto::aespoly1305::Key,
+        index::binarysorted::{Index, IndexType},
+        IndexBackend, NoProgress,
+    };
+
     use super::*;
 
     #[test]
     fn test_merge_nodes() {
         // TODO: This test is not complete
-        // TODO! implement and initialize `MockBackend` for testing
+        let mbe = MockBackend::new();
+        let dbe = DecryptBackend::new(&mbe, Key::new());
+        let dry_be = DryRunBackend::new(dbe, true);
+        let ibe = IndexBackend::new(&dry_be, &NoProgress).unwrap();
 
         let mut summary = SnapshotSummary::default();
         let save = |tree: Tree| -> RusticResult<(Id, u64)> {
@@ -557,7 +569,7 @@ mod tests {
             Metadata::default(),
         ));
 
-        let node = merge_nodes(&be, nodes, &cmp, &save, &mut summary).unwrap();
+        let node = merge_nodes(&ibe, nodes, &cmp, &save, &mut summary).unwrap();
         assert_eq!(node.name(), OsStr::new("d"));
         // assert_eq!(node.subtree.unwrap(), Id::from([0; 32]));
         assert_eq!(summary.dirs_changed, 1);

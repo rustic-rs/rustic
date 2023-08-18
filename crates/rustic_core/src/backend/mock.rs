@@ -1,5 +1,3 @@
-// Implement MockBackend
-
 use crate::{
     backend::{FileType, Id, ReadBackend, WriteBackend},
     RusticResult,
@@ -9,6 +7,7 @@ use crate::{
 pub(crate) struct MockBackend;
 
 impl MockBackend {
+    #[allow(unused)]
     pub(crate) fn new() -> Self {
         Self
     }
@@ -19,46 +18,47 @@ impl ReadBackend for MockBackend {
         "mock".to_string()
     }
 
-    fn set_option(&mut self, option: &str, value: &str) -> RusticResult<()> {
-        todo!()
+    fn set_option(&mut self, _option: &str, _value: &str) -> RusticResult<()> {
+        Ok(())
     }
 
-    fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
-        todo!()
+    fn list_with_size(&self, _tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
+        let id = Id::random();
+        Ok(vec![(id, 0)])
     }
 
-    fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<bytes::Bytes> {
-        todo!()
+    fn read_full(&self, _tpe: FileType, _id: &Id) -> RusticResult<bytes::Bytes> {
+        Ok("mock".as_bytes().into())
     }
 
     fn read_partial(
         &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        offset: u32,
-        length: u32,
+        _tpe: FileType,
+        _id: &Id,
+        _cacheable: bool,
+        _offset: u32,
+        _length: u32,
     ) -> RusticResult<bytes::Bytes> {
-        todo!()
+        Ok("mock".as_bytes().into())
     }
 }
 
 impl WriteBackend for MockBackend {
     fn create(&self) -> RusticResult<()> {
-        todo!()
+        Ok(())
     }
 
     fn write_bytes(
         &self,
-        tpe: FileType,
-        id: &Id,
-        cacheable: bool,
-        buf: bytes::Bytes,
+        _tpe: FileType,
+        _id: &Id,
+        _cacheable: bool,
+        _buf: bytes::Bytes,
     ) -> RusticResult<()> {
-        todo!()
+        Ok(())
     }
 
-    fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> RusticResult<()> {
-        todo!()
+    fn remove(&self, _tpe: FileType, _id: &Id, _cacheable: bool) -> RusticResult<()> {
+        Ok(())
     }
 }

@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn all_index_types() {
+    fn test_all_index_types() {
         for it in [IndexType::OnlyTrees, IndexType::FullTrees, IndexType::Full] {
             let index = index(it);
 
@@ -357,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn only_trees() {
+    fn test_only_trees() {
         let index = index(IndexType::OnlyTrees);
 
         let id = parse("fac5e908151e565267570108127b96e6bae22bcdda1d3d867f63ed1555fc8aef");
@@ -374,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn full_trees() {
+    fn test_full_trees() {
         let index = index(IndexType::FullTrees);
 
         let id = parse("fac5e908151e565267570108127b96e6bae22bcdda1d3d867f63ed1555fc8aef");
@@ -391,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn full() {
+    fn test_full() {
         let index = index(IndexType::Full);
 
         let id = parse("fac5e908151e565267570108127b96e6bae22bcdda1d3d867f63ed1555fc8aef");

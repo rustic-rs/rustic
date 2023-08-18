@@ -11,7 +11,7 @@ fn get_config_file_path() -> PathBuf {
 }
 /// Ensure `full.toml` parses as a valid config file
 #[test]
-fn parse_full_toml_example() -> Result<()> {
+fn test_parse_full_toml_example() -> Result<()> {
     let output = std::process::Command::new("cargo")
         .args(["locate-project", "--workspace", "--message-format", "plain"])
         .output()?;

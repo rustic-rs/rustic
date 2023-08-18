@@ -80,7 +80,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn encrypt_decrypt_hello() {
+    fn test_encrypt_decrypt_hello() {
         let key = Key::default();
         let data: Vec<u8> = b"Hello!".to_vec();
         let enc = key.encrypt_data(&data).unwrap();
@@ -89,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn encrypt_decrypt_empty() {
+    fn test_encrypt_decrypt_empty() {
         let key = Key::default();
         let data = Vec::<u8>::new();
         let enc = key.encrypt_data(&data).unwrap();
@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn decrypt_empty() {
+    fn test_decrypt_empty() {
         let key = Key::default();
         let data = Vec::<u8>::new();
         let res = key.decrypt_data(&data);

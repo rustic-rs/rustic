@@ -247,7 +247,7 @@ mod tests {
     use std::io::{repeat, Cursor};
 
     #[test]
-    fn chunk_empty() {
+    fn test_chunk_empty() {
         let empty: Vec<u8> = vec![];
         let mut reader = Cursor::new(empty);
 
@@ -259,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn chunk_empty_wrong_hint() {
+    fn test_chunk_empty_wrong_hint() {
         let empty: Vec<u8> = vec![];
         let mut reader = Cursor::new(empty);
 
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn chunk_zeros() {
+    fn test_chunk_zeros() {
         let mut reader = repeat(0u8);
 
         let poly = random_poly().unwrap();

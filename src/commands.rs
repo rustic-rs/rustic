@@ -197,7 +197,7 @@ fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOpti
 }
 
 #[test]
-fn verify_cli() {
+fn test_verify_cli() {
     use crate::commands::EntryPoint;
     use clap::CommandFactory;
 

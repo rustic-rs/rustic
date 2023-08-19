@@ -182,7 +182,9 @@ integer-sqrt = "0.1"
 # serialization
 binrw = "0.11"
 hex = { version = "0.4", features = ["serde"] }
-serde = { version = "1", features = ["serde_derive"] }
+# pin serde to a version before packaging precompiled binaries for serde_derive
+# Discussion/Issue: https://github.com/serde-rs/serde/issues/2538
+serde = { version = "=1.0.171", features = ["serde_derive"] }
 serde_with = { version = "3.2", features = ["base64"] }
 serde_json = "1"
 serde-aux = "4"
@@ -190,7 +192,9 @@ serde-aux = "4"
 # local backend
 walkdir = "2"
 ignore = "0.4"
-cached = {version = "0.44", default-features = false, features = ["proc_macro"]} 
+cached = { version = "0.44", default-features = false, features = [
+    "proc_macro",
+] }
 nix = "0.26"
 filetime = "0.2"
 aho-corasick = "1"

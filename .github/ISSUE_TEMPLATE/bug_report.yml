@@ -168,6 +168,57 @@ body:
                             I have verified the issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta).
                       required: true
 
+      - type: dropdown
+        id: user-friendliness
+        attributes:
+              label: |
+                    How would you rate the ease of use of rustic?
+              description: |
+                    Consider a scale from -2 (Very difficult) to +2 (Very easy).
+              options:
+                    - "-2 - Very Difficult"
+                    - "-1 - Difficult"
+                    - "0 - Neutral"
+                    - "+1 - Easy"
+                    - "+2 - Very Easy"
+              default: 3
+        validations:
+              required: true
+
+      - type: dropdown
+        id: clarity-of-information
+        attributes:
+              label: |
+                    Was the information and feedback provided by rustic clear and understandable?
+              description: |
+                    Consider a scale from -2 (Very unclear) to +2 (Very clear).
+              options:
+                    - "-2 - Very Unclear"
+                    - "-1 - Somewhat Unclear"
+                    - "0 - Neutral"
+                    - "+1 - Clear"
+                    - "+2 - Very Clear"
+              default: 3
+        validations:
+              required: true
+
+      - type: dropdown
+        id: satisfaction
+        attributes:
+              label: |
+                    Overall, how satisfied are you with rustic?
+              description: |
+                    Consider a scale from -2 (I'm mad as hell, and I can't take it anymore) to +2 (I can't go back to any other backup solution anymore).
+              options:
+                    - "-2 - Very Dissatisfied"
+                    - "-1 - Dissatisfied "
+                    - "0 - Neutral"
+                    - "+1 - Satisfied"
+                    - "+2 - Very Satisfied"
+              default: 3
+        validations:
+              required: true
+
       - type: markdown
         attributes:
               value: |

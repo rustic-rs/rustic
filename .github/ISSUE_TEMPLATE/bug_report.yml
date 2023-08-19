@@ -14,12 +14,12 @@ body:
               value: |
                     ### Please note that this is only for reporting bugs in **rustic** itself. 
 
-                    ### If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.**
+                    ### If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.
 
       - type: checkboxes
         id: product-scope
         attributes:
-              label: Which part(s) of the **rustic** ecosystem are we talking about?
+              label: Which part(s) of the rustic ecosystem are we talking about?
               description: You may select more than one.
               options:
                     - label: rustic
@@ -60,7 +60,7 @@ body:
       - type: textarea
         id: code-sample
         attributes:
-              label: If it's a bug in `rustic_core` or anything code related, please provide a reproducible example for the bug below.
+              label: If it's a bug in rustic_core or anything code related, please provide a reproducible example for the bug below.
               description: A short code snippet that can be used to reproduce the bug. Do NOT paste screenshots of code!
               render: Rust
         validations:
@@ -84,7 +84,7 @@ body:
       - type: dropdown
         id: install-type
         attributes:
-              label: Where did you get **rustic** from?
+              label: Where did you get rustic from?
               multiple: false
               options:
                     - Built from source
@@ -98,7 +98,7 @@ body:
         attributes:
               label: Other install type
               description: "Where else did you get **rustic** from?"
-              placeholder: "Example: I installed it with `cargo binstall rustic`"
+              placeholder: "Example: I installed it with `cargo binstall rustic`."
         validations:
               required: false
 
@@ -109,14 +109,14 @@ body:
               description: |
                     Which kernel version/OS build are you running on? Please be as specific as possible.
 
-                    - *nix: run `uname -a` in the terminal
-                    - Windows: press `Win + R`, enter `System` and copy `OS Build` from Windows specifications (on Win11)
-                    - MacOS: run `uname -av` in the terminal
+                        - *nix: run `uname -a` in the terminal
+                        - Windows: press `Win + R`, enter `System` and copy `OS Build` from Windows specifications (on Win11)
+                        - MacOS: run `uname -av` in the terminal
 
-                    examples:
-                    - **Operating System**: Windows 10
-                    - **Kernel Version**: Linux MyPC 5.15.90.1-microsoft-standard-WSL2 #1 SMP Fri Jan 27 02:56:13 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
-                    - **OS build**: Windows 11 Pro 22H2 Build 22621.2134
+                        examples:
+                        - **Operating System**: Windows 10
+                        - **Kernel Version**: Linux MyPC 5.15.90.1-microsoft-standard-WSL2 #1 SMP Fri Jan 27 02:56:13 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
+                        - **OS build**: Windows 11 Pro 22H2 Build 22621.2134
               value: |
                     - **Operating System**:
                     - **Kernel Version**:
@@ -131,10 +131,10 @@ body:
               description: |
                     Which version of `rustic` are you running? Please be as specific as possible.
 
-                    Please run `rustic --version` and copy the output here.
+                        Please run `rustic --version` and copy the output here.
 
-                    example:
-                    **rustic**: rustic v0.5.4
+                        example:
+                        **rustic**: rustic v0.5.4
               value: |
                     **rustic**:
         validations:
@@ -165,7 +165,7 @@ body:
                             I have searched the [issue list (incl. closed issues](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue) and am not opening a duplicate issue.
                       required: true
                     - label: |
-                            I have verified the issue still exists in [`rustic (beta)` (built from the main branch)](https://github.com/rustic-rs/rustic-beta).
+                            I have verified the issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta).
                       required: true
 
       - type: markdown

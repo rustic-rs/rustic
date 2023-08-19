@@ -5,16 +5,16 @@ body:
       - type: markdown
         attributes:
               value: |
-                    ### Thank you for taking the time to report a bug in **rustic**!
+                    ## Thank you for taking the time to report a bug in **rustic**!
 
                     Please fill out the following template to help us reproduce the issue and fix it as soon as possible.
 
       - type: markdown
         attributes:
               value: |
-                    ## Please note that this is only for reporting bugs in **rustic** itself. 
+                    ### Please note that this is only for reporting bugs in **rustic** itself. 
 
-                    ## If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.**
+                    ### If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.**
 
       - type: checkboxes
         id: product-scope

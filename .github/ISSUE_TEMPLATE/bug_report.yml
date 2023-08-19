@@ -5,19 +5,21 @@ body:
       - type: markdown
         attributes:
               value: |
-                    ### Thank you for taking the time to report a bug in `rustic`!
+                    ### Thank you for taking the time to report a bug in **rustic**!
 
                     Please fill out the following template to help us reproduce the issue and fix it as soon as possible.
 
       - type: markdown
         attributes:
               value: |
-                    **Please note that this is only for reporting bugs in `rustic` itself. If you have a question about how to use `rustic`, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.**
+                    **Please note that this is only for reporting bugs in **rustic** itself. 
+
+                    If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.**
 
       - type: checkboxes
         id: product-scope
         attributes:
-              label: Which part(s) of the `rustic`` ecosystem are we talking about?
+              label: Which part(s) of the **rustic** ecosystem are we talking about?
               description: You may select more than one.
               options:
                     - label: rustic
@@ -46,7 +48,7 @@ body:
         validations:
               required: false
 
-      - type: input
+      - type: textarea
         id: bug-prevalence
         attributes:
               label: Bug prevalence
@@ -82,7 +84,7 @@ body:
       - type: dropdown
         id: install-type
         attributes:
-              label: Where did you get `rustic` from?
+              label: Where did you get **rustic** from?
               multiple: false
               options:
                     - Built from source
@@ -95,24 +97,8 @@ body:
         id: install-type-other
         attributes:
               label: Other install type
-              description: "Where else did you get `rustic` from?"
+              description: "Where else did you get **rustic** from?"
               placeholder: "Example: I installed it with `cargo binstall rustic`"
-        validations:
-              required: true
-
-      - type: textarea
-        id: operating-system
-        attributes:
-              label: Operating System
-              description: |
-                    Which operating system are you running on? Please be as specific as possible.
-
-                    examples:
-                      - Windows 10
-                      - MacOSX 10.15
-                      - Debian 10
-              value: |
-                    **Operating System**:
         validations:
               required: false
 
@@ -128,13 +114,15 @@ body:
                     - MacOS: run `uname -av` in the terminal
 
                     examples:
+                    - **Operating System**: Windows 10
                     - **Kernel Version**: Linux MyPC 5.15.90.1-microsoft-standard-WSL2 #1 SMP Fri Jan 27 02:56:13 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
                     - **OS build**: Windows 11 Pro 22H2 Build 22621.2134
               value: |
+                    - **Operating System**:
                     - **Kernel Version**:
                     - **OS build**:
         validations:
-              required: false
+              required: true
 
       - type: textarea
         id: rustic-version
@@ -150,7 +138,7 @@ body:
               value: |
                     **rustic**:
         validations:
-              required: false
+              required: true
 
       - type: textarea
         id: additional-context
@@ -170,13 +158,17 @@ body:
               description: |
                     Please check the following:
               options:
-                    - label: I have searched the [discussions](https://github.com/rustic-rs/rustic/discussions) and it wasn't discussed before.
+                    - label: |
+                            I have searched the [discussions](https://github.com/rustic-rs/rustic/discussions) and it wasn't discussed before.
                       required: true
-                    - label: I have searched the [issue list (incl. closed issues](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue) and am not opening a duplicate issue.
+                    - label: |
+                            I have searched the [issue list (incl. closed issues](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue) and am not opening a duplicate issue.
                       required: true
-                    - label: I have verified the issue still exists in [`rustic (beta)` (built from the main branch)](https://github.com/rustic-rs/rustic-beta).
+                    - label: |
+                            I have verified the issue still exists in [`rustic (beta)` (built from the main branch)](https://github.com/rustic-rs/rustic-beta).
                       required: true
 
       - type: markdown
         attributes:
-              value: "Thanks for the report! We'll look into it as soon as possible."
+              value: |
+                    ## Thanks for the report! We'll look into it as soon as possible.

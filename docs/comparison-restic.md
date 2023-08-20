@@ -1,4 +1,4 @@
-# Comparison rustic vs. restic
+# Comparison between `rustic` and `restic`
 
 Improvements implemented in rustic:
 

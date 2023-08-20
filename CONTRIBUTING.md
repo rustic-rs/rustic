@@ -74,8 +74,8 @@ guidelines:
   ```
 
 - Use `dprint` to format text in markdown, toml, and json. You can install it
-  with `cargo install dprint` and run it with the following command in the
-  repository root:
+  with `cargo install dprint`/`scoop install dprint` and run it with the
+  following command in the repository root:
 
   ```bash
   dprint fmt
@@ -96,7 +96,24 @@ making changes, please include relevant unit tests. Run the test suite with:
 cargo test --workspace
 ```
 
-Make sure all tests pass before submitting your changes.
+or check the [development guide](/docs/dev/development_guide.md#testing) for
+more information which tools we provide for making developing `rustic` easier.
+
+Make sure all tests pass before submitting your changes. PRs containing tests
+have a much higher probability of getting merged (fast).
+
+We expect PRs especially ones that introduce new features to contain tests for
+the new code.
+
+Besides that, we welcome PRs which increase the general test coverage of the
+project. You can check the
+[testing guide](/docs/dev/testing_guide.md#code-coverage) for more information.
+
+We appreciate tests in every form: be it *unit*, *doc* or *integration* tests
+(chose depending on your use case).
+
+If you want to implement some *fuzzing* or *benchmarking*, that is also highly
+appreciated.
 
 ### Submitting Pull Requests
 
@@ -110,9 +127,10 @@ To contribute code changes, follow these steps:
    git checkout -b feature/your-feature-name
    ```
 
-3. **Commit** your changes:
+3. **Check** and **Commit** your changes:
 
    ```bash
+   just pre-commit
    git commit -m "Add your meaningful commit message here"
    ```
 
@@ -133,7 +151,7 @@ follow your progress and can give early feedback.
 Once your PR is submitted, it will be reviewed by the maintainers. We may
 suggest changes or ask for clarifications before merging.
 
-#### IMPORTANT NOTE
+##### IMPORTANT NOTE
 
 Please don't force push commits in your branch, in order to keep commit history
 and make it easier for us to see changes between reviews.
@@ -153,9 +171,9 @@ else.
 
 There's two main applications:
 
-- If you based your work on a older master (so old that stuff can't be
+- If you based your work on a older main (so old that stuff can't be
   automatically merged), you can rebase to move your commits to the current
-  [upstream](https://help.github.com/articles/fork-a-repo/) master:
+  [upstream](https://help.github.com/articles/fork-a-repo/) main:
 
 ```bash
 # update the upstream remote to receive new commits
@@ -167,8 +185,8 @@ git checkout my-awesome-feature
 # make backup (you never know, you know?)
 git branch my-awesome-feature-backup
 
-# rebase: put your commits on top of upstream's master
-git rebase -m upstream/master
+# rebase: put your commits on top of upstream's main
+git rebase -m upstream/main
 ```
 
 - If you want to fix an older commit of yours, or merge several commits into a
@@ -187,10 +205,10 @@ git rebase -m upstream/master
 changes in that graph, you do an **interactive rebase**:
 
 ```sh
-git rebase -i -m upstream/master
+git rebase -i -m upstream/main
 ```
 
-With this command, your new "base" is `upstream/master` and you can then change
+With this command, your new "base" is `upstream/main` and you can then change
 any of your branch's commits.
 
 `-i` will open an interactive editor where you can choose actions for each
@@ -212,12 +230,12 @@ creation of a new commit and instead melds the changes into the last one you
 made.
 
 If you want to update a single commit in the range
-`[upstream/master, current HEAD]` which is not the last commit:
+`[upstream/main, current HEAD]` which is not the last commit:
 
 - `edit stuff you wanna change in some previous commit`
 - `git add changed_stuff`
 - `git commit --fixup $hash_of_commit_to_be_fixed`
-- `git rebase --autosquash -i -m upstream/master`
+- `git rebase --autosquash -i -m upstream/main`
 
 ##### Pushing changes
 

@@ -4,13 +4,16 @@ on:
       - main
     paths-ignore:
       - "**/*.md"
-      - "docs/**"
+      - "docs/**/*"
+      - "assets/**/*"
   push:
     branches:
       - main
       - release/*
     paths-ignore:
       - "**/*.md"
+      - "docs/**/*"
+      - "assets/**/*"
 
 name: Build release binaries
 

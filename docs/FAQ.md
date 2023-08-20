@@ -1,5 +1,30 @@
 # Frequently asked questions
 
+<!-- TOC -->
+
+- [Can I use rustic with my existing restic repositories?](#can-i-use-rustic-with-my-existing-restic-repositories)
+- [What are the differences between rustic and restic?](#what-are-the-differences-between-rustic-and-restic)
+- [Why is rustic written in Rust](#why-is-rustic-written-in-rust)
+- [How does rustic work with cold storages like AWS Glacier?](#how-does-rustic-work-with-cold-storages-like-aws-glacier)
+- [How does the lock-free prune work?](#how-does-the-lock-free-prune-work)
+- [You said "rustic uses less resources than restic" but I'm observing the opposite](#you-said-rustic-uses-less-resources-than-restic-but-im-observing-the-opposite)
+- [How to install shell completions](#how-to-install-shell-completions)
+  - [Bash](#bash)
+  - [Fish](#fish)
+  - [Powershell](#powershell)
+    - [Linux](#linux)
+    - [Windows](#windows)
+    - [macOs](#macos)
+  - [Zsh](#zsh)
+
+<!-- /TOC -->
+
+## Can I use rustic with my existing restic repositories?
+
+Yes, you can. Rustic uses the same repository format as restic, so you can use
+rustic and restic on the same repository. The only thing you have to take care
+of is that you don't run prune with restic and rustic at the same time.
+
 ## What are the differences between rustic and restic?
 
 - Written in Rust instead of golang
@@ -76,6 +101,26 @@ rustic completions bash > /etc/bash_completion.d/rustic.bash
 
 ```sh
 rustic completions fish > $HOME/.config/fish/completions/rustic.fish
+```
+
+### Powershell
+
+#### Linux
+
+```sh
+rustic completions powershell >> ~/.config/powershell/Microsoft.PowerShell_profile.ps1.
+```
+
+#### Windows
+
+```sh
+rustic completions powershell >> $HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1.
+```
+
+#### macOs
+
+```sh
+rustic completions powershell >> ~/.config/powershell/Microsoft.PowerShell_profile.ps1
 ```
 
 ### Zsh

@@ -124,7 +124,7 @@ body:
         validations:
               required: true
 
-      - type: textarea
+      - type: input
         id: rustic-version
         attributes:
               label: "`rustic` version"

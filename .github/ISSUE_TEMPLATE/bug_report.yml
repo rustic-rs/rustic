@@ -237,4 +237,6 @@ body:
       - type: markdown
         attributes:
               value: |
-                    ## Thanks for the report! We'll look into it as soon as possible.
+                    ## Thank you for the report!
+
+                    ### We'll look into it as soon as possible.

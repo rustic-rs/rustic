@@ -209,15 +209,6 @@ body:
         validations:
               required: true
 
-      - type: markdown
-        attributes:
-              value: |
-                    Please make sure, you have searched/tried the following resources before submitting this issue:
-
-                    * search [discussions](https://github.com/rustic-rs/rustic/discussions)
-                    * search [issue list (incl. closed issues)](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue)
-                    * verify issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta)
-
       - type: checkboxes
         id: checklist-confirmation
         attributes:
@@ -227,12 +218,21 @@ body:
               options:
                     - label: "I have verified that I am using the latest stable version of rustic."
                       required: true
-                    - label: "I have searched the discussions (see link above) and it wasn't discussed before."
+                    - label: "I have searched the discussions (see link below) and it wasn't discussed before."
                       required: true
-                    - label: "I have searched the issue list (see link above) and am not opening a duplicate issue."
+                    - label: "I have searched the issue list (see link below) and am not opening a duplicate issue."
                       required: true
-                    - label: "I have verified the issue still exists in rustic_beta (see link above)."
+                    - label: "I have verified the issue still exists in rustic_beta (see link below)."
                       required: true
+
+      - type: markdown
+        attributes:
+              value: |
+                    Please make sure, you have searched/tried the following resources before submitting this issue:
+
+                    * search [discussions](https://github.com/rustic-rs/rustic/discussions)
+                    * search [issue list (incl. closed issues)](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue)
+                    * verify issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta)
 
       - type: markdown
         attributes:

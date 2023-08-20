@@ -158,7 +158,7 @@ body:
               description: |
                     Please check the following:
               options:
-                    - label: "I have searched the [discussions](https://github.com/rustic-rs/rustic/discussions) and it wasn't discussed before."
+                    - label: "I have searched the <a href='https://github.com/rustic-rs/rustic/discussions'>discussions</a> and it wasn't discussed before."
                       required: true
                     - label: "I have searched the [issue list (incl. closed issues](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue) and am not opening a duplicate issue."
                       required: true

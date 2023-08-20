@@ -18,13 +18,13 @@ categories = { workspace = true }
 documentation = "https://docs.rs/rustic-rs"
 edition = { workspace = true }
 homepage = { workspace = true }
-include = ["src/**/*", "LICENSE-*", "README.md"]
+include = ["src/**/*", "LICENSE-*", "README.md", "config/**/*"]
 keywords = { workspace = true }
 license = { workspace = true }
 readme = "README.md"
 repository = { workspace = true }
 resolver = "2"
-rust-version = "1.65.0"
+rust-version = "1.67.1"
 description = { workspace = true }
 
 [workspace]

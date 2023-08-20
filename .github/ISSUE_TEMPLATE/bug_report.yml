@@ -162,7 +162,7 @@ body:
                       required: true
                     - label: "I have searched the [issue list (incl. closed issues](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue) and am not opening a duplicate issue."
                       required: true
-                    - label: "I have verified the issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta).""
+                    - label: "I have verified the issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta)."
                       required: true
 
       - type: dropdown

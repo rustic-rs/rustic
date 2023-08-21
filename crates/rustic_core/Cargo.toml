@@ -2,16 +2,24 @@
 name = "rustic_core"
 version = "0.6.0"
 authors = ["Alexander Weiss"]
+categories = [
+  "Algorithms",
+  "Command line utilities",
+  "Compression",
+  "Cryptography",
+  "Data structures",
+  "Filesystem",
+]
 edition = { workspace = true }
 homepage = { workspace = true }
-include = ["src/**/*", "LICENSE-*", "README.md"]
+include = ["src/**/*", "LICENSE-*", "README.md", "examples/**/*"]
 keywords = ["backup", "restic", "deduplication", "encryption", "library"]
 license = { workspace = true }
 publish = false # Don't publish until we fix/stabilize public api!!!
 readme = "README.md"
 resolver = "2"
+rust-version = "1.66.1"
 description = { workspace = true }
-# categories = []
 
 [lib]
 path = "src/lib.rs"

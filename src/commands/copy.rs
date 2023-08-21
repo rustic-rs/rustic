@@ -1,206 +1,131 @@
-use std::collections::BTreeSet;
+//! `copy` subcommand
 
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{
+    commands::open_repository, helpers::table_with_titles, status_err, Application, RUSTIC_APP,
+};
+use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
-use clap::{AppSettings, Parser};
-use log::*;
-use rayon::prelude::*;
+use log::{error, info};
 
-use super::{progress_counter, table_with_titles, RusticConfig};
-use crate::backend::DecryptWriteBackend;
-use crate::blob::{BlobType, NodeType, Packer, TreeStreamerOnce};
-use crate::index::{IndexBackend, IndexedBackend, Indexer, ReadIndex};
-use crate::repofile::{Id, SnapshotFile, SnapshotFilter};
-use crate::repository::{OpenRepository, Repository, RepositoryOptions};
+use merge::Merge;
+use serde::Deserialize;
 
-#[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-pub(super) struct Opts {
-    /// Don't copy any snapshot, only show what would be done
-    #[clap(long, short = 'n')]
-    dry_run: bool,
+use rustic_core::{CopySnapshot, Id, KeyOpts, Open, Repository, RepositoryOptions};
 
-    #[clap(
-        flatten,
-        help_heading = "SNAPSHOT FILTER OPTIONS (if no snapshot is given)"
-    )]
-    filter: SnapshotFilter,
-
-    /// Snapshots to copy. If none is given, use filter to filter from all
-    /// snapshots.
+/// `copy` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(crate) struct CopyCmd {
+    /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
     #[clap(value_name = "ID")]
     ids: Vec<String>,
+
+    /// Initialize non-existing target repositories
+    #[clap(long)]
+    init: bool,
+
+    #[clap(flatten, next_help_heading = "Key options (when using --init)")]
+    key_opts: KeyOpts,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
-    config_file.merge_into("snapshot-filter", &mut opts.filter)?;
-
-    let target_opts: Vec<RepositoryOptions> = config_file.get("copy.targets")?;
-    if target_opts.is_empty() {
-        bail!("no [[copy.targets]] section in config file found!");
-    }
-
-    let be = &repo.dbe;
-    let mut snapshots = match opts.ids.is_empty() {
-        true => SnapshotFile::all_from_backend(be, &opts.filter)?,
-        false => SnapshotFile::from_ids(be, &opts.ids)?,
-    };
-    // sort for nicer output
-    snapshots.sort_unstable();
-
-    let be = &repo.dbe;
-    let index = IndexBackend::new(be, progress_counter(""))?;
-
-    let poly = repo.config.poly()?;
-
-    for target_opt in target_opts {
-        let repo_dest = Repository::new(target_opt)?.open()?;
-        info!("copying to target {}...", repo_dest.name);
-        if poly != repo_dest.config.poly()? {
-            bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
-        }
-        copy(&snapshots, index.clone(), repo_dest, &opts)?;
-    }
-    Ok(())
+#[derive(Default, Clone, Debug, Deserialize, Merge)]
+pub struct Targets {
+    #[merge(strategy = merge::vec::overwrite_empty)]
+    targets: Vec<RepositoryOptions>,
 }
 
-fn copy(
-    snapshots: &[SnapshotFile],
-    index: impl IndexedBackend,
-    repo_dest: OpenRepository,
-    opts: &Opts,
-) -> Result<()> {
-    let be_dest = &repo_dest.dbe;
-
-    let snapshots = relevant_snapshots(snapshots, &repo_dest, &opts.filter)?;
-    match (snapshots.len(), opts.dry_run) {
-        (count, true) => {
-            info!("would have copied {count} snapshots");
-            return Ok(());
-        }
-        (0, false) => {
-            info!("no snapshot to copy.");
-            return Ok(());
-        }
-        _ => {} // continue
+impl Runnable for CopyCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
     }
+}
 
-    let snap_trees: Vec<_> = snapshots.iter().map(|sn| sn.tree).collect();
+impl CopyCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
 
-    let index_dest = IndexBackend::new(be_dest, progress_counter(""))?;
-    let indexer = Indexer::new(be_dest.clone()).into_shared();
+        if config.copy.targets.is_empty() {
+            status_err!("no [[copy.targets]] section in config file found!");
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        }
 
-    let data_packer = Packer::new(
-        be_dest.clone(),
-        BlobType::Data,
-        indexer.clone(),
-        &repo_dest.config,
-        index.total_size(BlobType::Data),
-    )?;
-    let tree_packer = Packer::new(
-        be_dest.clone(),
-        BlobType::Tree,
-        indexer.clone(),
-        &repo_dest.config,
-        index.total_size(BlobType::Tree),
-    )?;
+        let repo = open_repository(&config)?.to_indexed()?;
+        let mut snapshots = if self.ids.is_empty() {
+            repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
+        } else {
+            repo.get_snapshots(&self.ids)?
+        };
+        // sort for nicer output
+        snapshots.sort_unstable();
 
-    let p = progress_counter("copying blobs in snapshots...");
+        let poly = repo.config().poly()?;
+        for target_opt in &config.copy.targets {
+            let repo_dest = Repository::new(target_opt)?;
 
-    snap_trees.par_iter().try_for_each(|id| -> Result<_> {
-        trace!("copy tree blob {id}");
-        if !index_dest.has_tree(id) {
-            let data = index.get_tree(id).unwrap().read_data(index.be())?;
-            tree_packer.add(&data, id)?;
+            let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
+                if config.global.dry_run {
+                    error!(
+                        "cannot initialize target {} in dry-run mode!",
+                        repo_dest.name
+                    );
+                    continue;
+                }
+                let mut config_dest = repo.config().clone();
+                config_dest.id = Id::random();
+                let pass = repo_dest.password()?.unwrap();
+                repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
+            } else {
+                repo_dest.open()?
+            };
+
+            info!("copying to target {}...", repo_dest.name);
+            if poly != repo_dest.config().poly()? {
+                bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
+            }
+
+            let snaps = repo_dest.relevant_copy_snapshots(
+                |sn| !self.ids.is_empty() || config.snapshot_filter.matches(sn),
+                &snapshots,
+            )?;
+
+            let mut table =
+                table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);
+            for CopySnapshot { relevant, sn } in snaps.iter() {
+                let tags = sn.tags.formatln();
+                let paths = sn.paths.formatln();
+                let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+                _ = table.add_row([
+                    &sn.id.to_string(),
+                    &time,
+                    &sn.hostname,
+                    &sn.label,
+                    &tags,
+                    &paths,
+                    &(if *relevant { "to copy" } else { "existing" }).to_string(),
+                ]);
+            }
+            println!("{table}");
+
+            let count = snaps.iter().filter(|sn| sn.relevant).count();
+            if count > 0 {
+                if config.global.dry_run {
+                    info!("would have copied {count} snapshots.");
+                } else {
+                    repo.copy(
+                        &repo_dest.to_indexed_ids()?,
+                        snaps
+                            .iter()
+                            .filter_map(|CopySnapshot { relevant, sn }| relevant.then_some(sn)),
+                    )?;
+                }
+            } else {
+                info!("nothing to copy.");
+            }
         }
         Ok(())
-    })?;
-
-    let tree_streamer = TreeStreamerOnce::new(index.clone(), snap_trees, p)?;
-    tree_streamer
-        .par_bridge()
-        .try_for_each(|item| -> Result<_> {
-            let (_, tree) = item?;
-            tree.nodes().par_iter().try_for_each(|node| {
-                match node.node_type() {
-                    NodeType::File => {
-                        node.content().par_iter().try_for_each(|id| -> Result<_> {
-                            trace!("copy data blob {id}");
-                            if !index_dest.has_data(id) {
-                                let data = index.get_data(id).unwrap().read_data(index.be())?;
-                                data_packer.add(&data, id)?;
-                            }
-                            Ok(())
-                        })?;
-                    }
-
-                    NodeType::Dir => {
-                        let id = node.subtree().unwrap();
-                        trace!("copy tree blob {id}");
-                        if !index_dest.has_tree(&id) {
-                            let data = index.get_tree(&id).unwrap().read_data(index.be())?;
-                            tree_packer.add(&data, &id)?;
-                        }
-                    }
-
-                    _ => {} // nothing to copy
-                }
-                Ok(())
-            })
-        })?;
-
-    data_packer.finalize()?;
-    tree_packer.finalize()?;
-    indexer.write().unwrap().finalize()?;
-
-    let p = progress_counter("saving snapshots...");
-    be_dest.save_list(snapshots.iter(), p)?;
-    Ok(())
-}
-
-fn relevant_snapshots(
-    snaps: &[SnapshotFile],
-    dest_repo: &OpenRepository,
-    filter: &SnapshotFilter,
-) -> Result<Vec<SnapshotFile>> {
-    // save snapshots in destination in BTreeSet, as we want to efficiently search within to filter out already exising snapshots before copying.
-    let snapshots_dest: BTreeSet<_> = SnapshotFile::all_from_backend(&dest_repo.dbe, filter)?
-        .into_iter()
-        .map(remove_ids)
-        .collect();
-    let mut table = table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);
-    let snaps = snaps
-        .iter()
-        .cloned()
-        .map(|sn| (sn.id, remove_ids(sn)))
-        .filter_map(|(id, sn)| {
-            let relevant = !snapshots_dest.contains(&sn);
-            let tags = sn.tags.formatln();
-            let paths = sn.paths.formatln();
-            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
-            table.add_row([
-                &id.to_string(),
-                &time,
-                &sn.hostname,
-                &sn.label,
-                &tags,
-                &paths,
-                &(if relevant { "to copy" } else { "existing" }).to_string(),
-            ]);
-            relevant.then_some(sn)
-        })
-        .collect();
-    println!("{table}");
-
-    Ok(snaps)
-}
-
-// remove ids which are not saved by the copy command (and not compared when checking if snapshots already exist in the copy target)
-fn remove_ids(mut sn: SnapshotFile) -> SnapshotFile {
-    sn.id = Id::default();
-    sn.parent = None;
-    sn
+    }
 }

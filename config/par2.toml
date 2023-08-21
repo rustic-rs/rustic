@@ -1,0 +1,15 @@
+# This is an example how to use the post-create-command and post-delete-command hooks to add
+# error correction files using par2create to a local repository.
+# The commands can use the variable %file, %type and %id which are replaced by the filename, the
+# file type and the file id before calling the command.
+[repository]
+repository = "/tmp/repo"
+password = "test"
+
+[repository.options]
+# after saving a file in the repo, this command is called
+post-create-command = "par2create -qq -n1 -r5 %file"
+
+# after removing a file from the repo, this command is called.
+# Note that we want to use a "*" in the rm command, hence we have to call sh to resolve the wildcard!
+post-delete-command = "sh -c \"rm -f %file*.par2\""

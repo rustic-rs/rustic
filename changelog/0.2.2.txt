@@ -3,7 +3,7 @@ Changes in version 0.2.2
 - added rclone backend and made reading/writing remote repos with higher latency working
 - new command config; added possibility to customize compression level
 - added possibility to customize pack sizes. Also changed the standard settings for pack size.
-- fixed errornous caching of data pack files
+- fixed erroneous caching of data pack files
 - check: new option --trust-cache
 - improved speed of packer
 - prune: new options --instant-delete, --repack-uncompressed, --fast-repack

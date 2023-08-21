@@ -10,7 +10,7 @@ New features:
 - rest/rclone backend: Retry operations if they failing
 - restore: Use existing files to speed up restore (also makes restore resumable)
 - restore: Added --delete option to delete existing files not in snapshot
-- restore/prune: Added warm-up possibilites for hot/cold repo
+- restore/prune: Added warm-up possibilities for hot/cold repo
 - prune: Remove unneeded packs from cache
 - prune: Added repacking of packs which are too small or too large
 - self-update: New command to update rustic

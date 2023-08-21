@@ -1,107 +1,155 @@
+//! `repoinfo` subcommand
+
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{
+    commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
+};
+
+use abscissa_core::{Command, Runnable, Shutdown};
+use serde::Serialize;
+
+use crate::helpers::table_right_from;
 use anyhow::Result;
-use clap::Parser;
-use derive_more::Add;
-use log::*;
+use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos, Repository};
 
-use super::{bytes, progress_counter, table_right_from};
-use crate::backend::{DecryptReadBackend, ReadBackend, ALL_FILE_TYPES};
-use crate::blob::{BlobType, BlobTypeMap, Sum};
-use crate::index::IndexEntry;
-use crate::repofile::{IndexFile, IndexPack};
-use crate::repository::OpenRepository;
+/// `repoinfo` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(crate) struct RepoInfoCmd {
+    /// Only scan repository files (doesn't need repository password)
+    #[clap(long)]
+    only_files: bool,
 
-#[derive(Parser)]
-pub(super) struct Opts;
+    /// Only scan index
+    #[clap(long)]
+    only_index: bool,
 
-pub(super) fn execute(repo: OpenRepository, _opts: Opts) -> Result<()> {
-    fileinfo("repository files", &repo.be)?;
-    if let Some(hot_be) = &repo.be_hot {
-        fileinfo("hot repository files", hot_be)?;
+    /// Show infos in json format
+    #[clap(long)]
+    json: bool,
+}
+
+impl Runnable for RepoInfoCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
     }
+}
 
-    #[derive(Default, Clone, Copy, Add)]
-    struct Info {
-        count: u64,
-        size: u64,
-        data_size: u64,
-        pack_count: u64,
-        total_pack_size: u64,
-        min_pack_size: u64,
-        max_pack_size: u64,
-    }
+#[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
+#[derive(Serialize)]
+struct Infos {
+    files: Option<RepoFileInfos>,
+    index: Option<IndexInfos>,
+}
 
-    impl Info {
-        fn add(&mut self, ie: IndexEntry) {
-            self.count += 1;
-            self.size += u64::from(*ie.length());
-            self.data_size += u64::from(ie.data_length());
+impl RepoInfoCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+
+        let infos = Infos {
+            files: (!self.only_index)
+                .then(|| {
+                    let po = config.global.progress_options;
+                    let repo = Repository::new_with_progress(&config.repository, po)?;
+                    repo.infos_files()
+                })
+                .transpose()?,
+            index: (!self.only_files)
+                .then(|| -> Result<_> {
+                    let repo = open_repository(&config)?;
+                    Ok(repo.infos_index()?)
+                })
+                .transpose()?,
+        };
+
+        if self.json {
+            let mut stdout = std::io::stdout();
+            serde_json::to_writer_pretty(&mut stdout, &infos)?;
+            return Ok(());
         }
 
-        fn add_pack(&mut self, ip: &IndexPack) {
-            self.pack_count += 1;
-            let size = u64::from(ip.pack_size());
-            self.total_pack_size += size;
-            self.min_pack_size = self.min_pack_size.min(size);
-            self.max_pack_size = self.max_pack_size.max(size);
-        }
-    }
-
-    let mut info = BlobTypeMap::<Info>::default();
-    info[BlobType::Tree].min_pack_size = u64::MAX;
-    info[BlobType::Data].min_pack_size = u64::MAX;
-    let mut info_delete = BlobTypeMap::<Info>::default();
-
-    let p = progress_counter("scanning index...");
-    for index in repo.dbe.stream_all::<IndexFile>(p.clone())? {
-        let index = index?.1;
-        for pack in &index.packs {
-            info[pack.blob_type()].add_pack(pack);
-
-            for blob in &pack.blobs {
-                let ie = IndexEntry::from_index_blob(blob, pack.id);
-                info[pack.blob_type()].add(ie);
+        if let Some(file_info) = infos.files {
+            print_file_info("repository files", file_info.repo);
+            if let Some(info) = file_info.repo_hot {
+                print_file_info("hot repository files", info);
             }
         }
 
-        for pack in &index.packs_to_delete {
-            for blob in &pack.blobs {
-                let ie = IndexEntry::from_index_blob(blob, pack.id);
-                info_delete[pack.blob_type()].add(ie);
-            }
+        if let Some(index_info) = infos.index {
+            print_index_info(index_info);
         }
+        Ok(())
     }
-    p.finish_with_message("done");
+}
 
+pub fn print_file_info(text: &str, info: Vec<RepoFileInfo>) {
+    let mut table = table_right_from(1, ["File type", "Count", "Total Size"]);
+    let mut total_count = 0;
+    let mut total_size = 0;
+    for row in info {
+        _ = table.add_row([
+            format!("{:?}", row.tpe),
+            row.count.to_string(),
+            bytes_size_to_string(row.size),
+        ]);
+        total_count += row.count;
+        total_size += row.size;
+    }
+    println!("{text}");
+    _ = table.add_row([
+        "Total".to_string(),
+        total_count.to_string(),
+        bytes_size_to_string(total_size),
+    ]);
+
+    println!();
+    println!("{table}");
+    println!();
+}
+
+pub fn print_index_info(index_info: IndexInfos) {
     let mut table = table_right_from(
         1,
         ["Blob type", "Count", "Total Size", "Total Size in Packs"],
     );
 
-    for (blob_type, info) in &info {
-        table.add_row([
-            format!("{blob_type:?}"),
-            info.count.to_string(),
-            bytes(info.data_size),
-            bytes(info.size),
-        ]);
-    }
+    let mut total_count = 0;
+    let mut total_data_size = 0;
+    let mut total_size = 0;
 
-    for (blob_type, info_delete) in &info_delete {
-        if info_delete.count > 0 {
-            table.add_row([
-                format!("{blob_type:?} to delete"),
-                info_delete.count.to_string(),
-                bytes(info_delete.data_size),
-                bytes(info_delete.size),
+    for blobs in &index_info.blobs {
+        _ = table.add_row([
+            format!("{:?}", blobs.blob_type),
+            blobs.count.to_string(),
+            bytes_size_to_string(blobs.data_size),
+            bytes_size_to_string(blobs.size),
+        ]);
+        total_count += blobs.count;
+        total_data_size += blobs.data_size;
+        total_size += blobs.size;
+    }
+    for blobs in &index_info.blobs_delete {
+        if blobs.count > 0 {
+            _ = table.add_row([
+                format!("{:?} to delete", blobs.blob_type),
+                blobs.count.to_string(),
+                bytes_size_to_string(blobs.data_size),
+                bytes_size_to_string(blobs.size),
             ]);
+            total_count += blobs.count;
+            total_data_size += blobs.data_size;
+            total_size += blobs.size;
         }
     }
-    let total = info.sum() + info_delete.sum();
-    table.add_row([
+
+    _ = table.add_row([
         "Total".to_string(),
-        total.count.to_string(),
-        bytes(total.data_size),
-        bytes(total.size),
+        total_count.to_string(),
+        bytes_size_to_string(total_data_size),
+        bytes_size_to_string(total_size),
     ]);
 
     println!();
@@ -112,43 +160,24 @@ pub(super) fn execute(repo: OpenRepository, _opts: Opts) -> Result<()> {
         ["Blob type", "Pack Count", "Minimum Size", "Maximum Size"],
     );
 
-    for (blob_type, info) in info {
-        table.add_row([
-            format!("{blob_type:?} packs"),
-            info.pack_count.to_string(),
-            bytes(info.min_pack_size),
-            bytes(info.max_pack_size),
+    for packs in index_info.packs {
+        _ = table.add_row([
+            format!("{:?} packs", packs.blob_type),
+            packs.count.to_string(),
+            packs.min_size.map_or("-".to_string(), bytes_size_to_string),
+            packs.max_size.map_or("-".to_string(), bytes_size_to_string),
         ]);
     }
-    println!();
-    println!("{table}");
-
-    Ok(())
-}
-
-fn fileinfo(text: &str, be: &impl ReadBackend) -> Result<()> {
-    info!("scanning files...");
-
-    let mut table = table_right_from(1, ["File type", "Count", "Total Size"]);
-    let mut total_count = 0;
-    let mut total_size = 0;
-    for tpe in ALL_FILE_TYPES {
-        let list = be.list_with_size(tpe)?;
-        let count = list.len();
-        let size = list.iter().map(|f| u64::from(f.1)).sum();
-        table.add_row([format!("{tpe:?}"), count.to_string(), bytes(size)]);
-        total_count += count;
-        total_size += size;
+    for packs in index_info.packs_delete {
+        if packs.count > 0 {
+            _ = table.add_row([
+                format!("{:?} packs to delete", packs.blob_type),
+                packs.count.to_string(),
+                packs.min_size.map_or("-".to_string(), bytes_size_to_string),
+                packs.max_size.map_or("-".to_string(), bytes_size_to_string),
+            ]);
+        }
     }
-    println!("{text}");
-    table.add_row([
-        "Total".to_string(),
-        total_count.to_string(),
-        bytes(total_size),
-    ]);
-
     println!();
     println!("{table}");
-    println!();
-    Ok(())
 }

@@ -1,0 +1,21 @@
+# This is an example how to configure the copy command to copy snapshots from one repository to another
+# The targets of the copy command cannot be specified on the command line, but must be in a config file like this.
+# If the config file is named "copy_example.toml", run "rustic -P copy_example copy" to copy all snapshots.
+# See "rustic copy --help" for options how to select or filter snapshots to copy.
+
+# [repository] specified the source repository
+[repository]
+repository = "/tmp/repo"
+password = "test"
+
+# you can specify multiple targets
+[[copy.targets]]
+repository = "/tmp/repo2"
+password = "test"
+no-cache = true
+
+[[copy.targets]]
+repository = "rclone:ovh:backup"
+repo-hot = "clone:ovh:backup-hot"
+password-file = "/root/key-rustic-ovh"
+cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository

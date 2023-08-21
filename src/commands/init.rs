@@ -1,78 +1,72 @@
+//! `init` subcommand
+
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use abscissa_core::{status_err, Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
-use bytes::Bytes;
-use clap::Parser;
-use rpassword::prompt_password;
 
-use super::config::ConfigOpts;
-use super::key::KeyOpts;
-use crate::backend::{DecryptBackend, DecryptWriteBackend, FileType, WriteBackend};
-use crate::chunker;
-use crate::crypto::{hash, Key};
-use crate::id::Id;
-use crate::repofile::{ConfigFile, KeyFile};
+use crate::{Application, RUSTIC_APP};
 
-#[derive(Parser)]
-pub(super) struct Opts {
-    #[clap(flatten, help_heading = "KEY OPTIONS")]
+use dialoguer::Password;
+
+use rustic_core::{ConfigOpts, KeyOpts, Repository};
+
+/// `init` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(crate) struct InitCmd {
+    #[clap(flatten, next_help_heading = "Key options")]
     key_opts: KeyOpts,
 
-    #[clap(flatten, help_heading = "CONFIG OPTIONS")]
+    #[clap(flatten, next_help_heading = "Config options")]
     config_opts: ConfigOpts,
 }
 
-pub(super) fn execute(
-    be: &impl WriteBackend,
-    hot_be: &Option<impl WriteBackend>,
-    opts: Opts,
-    password: Option<String>,
-    config_ids: Vec<Id>,
+impl Runnable for InitCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
+    }
+}
+
+impl InitCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+
+        let po = config.global.progress_options;
+        let repo = Repository::new_with_progress(&config.repository, po)?;
+
+        // Note: This is again checked in repo.init_with_password(), however we want to inform
+        // users before they are prompted to enter a password
+        if repo.config_id()?.is_some() {
+            bail!("Config file already exists. Aborting.");
+        }
+        init(repo, &self.key_opts, &self.config_opts)
+    }
+}
+
+pub(crate) fn init<P, S>(
+    repo: Repository<P, S>,
+    key_opts: &KeyOpts,
+    config_opts: &ConfigOpts,
 ) -> Result<()> {
-    if !config_ids.is_empty() {
-        bail!("Config file already exists. Aborting.");
-    }
+    let pass = repo.password()?.unwrap_or_else(|| {
+        match Password::new()
+            .with_prompt("enter password for new key")
+            .allow_empty_password(true)
+            .with_confirmation("confirm password", "passwords do not match")
+            .interact()
+        {
+            Ok(it) => it,
+            Err(err) => {
+                status_err!("{}", err);
+                RUSTIC_APP.shutdown(Shutdown::Crash);
+            }
+        }
+    });
 
-    // Create config first to allow catching errors from here without writing anything
-    let repo_id = Id::random();
-    let chunker_poly = chunker::random_poly()?;
-    let version = match opts.config_opts.set_version {
-        None => 2,
-        Some(_) => 1, // will be changed later
-    };
-    let mut config = ConfigFile::new(version, repo_id, chunker_poly);
-    opts.config_opts.apply(&mut config)?;
-
-    // generate key
-    let key = Key::new();
-
-    let pass = match password {
-        Some(pass) => pass,
-        None => prompt_password("enter password for new key: ")?,
-    };
-
-    let key_opts = opts.key_opts;
-    let keyfile = KeyFile::generate(
-        key.clone(),
-        &pass,
-        key_opts.hostname,
-        key_opts.username,
-        key_opts.with_created,
-    )?;
-    let data: Bytes = serde_json::to_vec(&keyfile)?.into();
-    let id = hash(&data);
-    be.create()?;
-    be.write_bytes(FileType::Key, &id, false, data)?;
-    println!("key {id} successfully added.");
-
-    // save config
-    let dbe = DecryptBackend::new(be, key.clone());
-    dbe.save_file(&config)?;
-
-    if let Some(hot_be) = hot_be {
-        let dbe = DecryptBackend::new(hot_be, key);
-        config.is_hot = Some(true);
-        dbe.save_file(&config)?;
-    }
-    println!("repository {repo_id} successfully created.");
+    let _ = repo.init_with_password(&pass, key_opts, config_opts)?;
 
     Ok(())
 }

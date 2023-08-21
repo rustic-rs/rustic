@@ -1,0 +1,15 @@
+pub mod backup;
+pub mod cat;
+pub mod check;
+pub mod config;
+pub mod copy;
+pub mod dump;
+pub mod forget;
+pub mod init;
+pub mod key;
+pub mod merge;
+pub mod prune;
+pub mod repair;
+pub mod repoinfo;
+pub mod restore;
+pub mod snapshots;

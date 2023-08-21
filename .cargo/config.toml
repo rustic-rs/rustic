@@ -1,0 +1,11 @@
+# [build]
+# rustflags = "-C target-cpu=native -D warnings"
+# incremental = true
+
+# TODO: Introduced for `cargo public-api` test,
+# remove when it is working on sparse registry
+[registries.crates-io]
+protocol = "git"
+
+[alias]
+xtask = "run --package xtask --"

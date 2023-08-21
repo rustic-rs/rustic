@@ -1,73 +1,85 @@
-use std::fs::File;
-use std::io::BufReader;
+//! `key` subcommand
 
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+
+use std::path::PathBuf;
+
+use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use clap::{AppSettings, Parser, Subcommand};
-use rpassword::{prompt_password, read_password_from_bufread};
+use dialoguer::Password;
+use log::info;
 
-use crate::backend::{FileType, WriteBackend};
-use crate::crypto::{hash, Key};
-use crate::repofile::KeyFile;
-use crate::repository::OpenRepository;
+use rustic_core::{KeyOpts, Repository, RepositoryOptions};
 
-#[derive(Parser)]
-pub(super) struct Opts {
+/// `key` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(super) struct KeyCmd {
     #[clap(subcommand)]
-    command: Command,
+    cmd: KeySubCmd,
 }
 
-#[derive(Subcommand)]
-enum Command {
-    Add(AddOpts),
+#[derive(clap::Subcommand, Debug, Runnable)]
+enum KeySubCmd {
+    /// Add a new key to the repository
+    Add(AddCmd),
 }
 
-#[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-pub(crate) struct AddOpts {
+#[derive(clap::Parser, Debug)]
+pub(crate) struct AddCmd {
     /// File from which to read the new password
     #[clap(long)]
-    pub(crate) new_password_file: Option<String>,
+    pub(crate) new_password_file: Option<PathBuf>,
 
     #[clap(flatten)]
-    pub key_opts: KeyOpts,
+    pub(crate) key_opts: KeyOpts,
 }
 
-#[derive(Parser)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
-pub(crate) struct KeyOpts {
-    /// Set 'hostname' in public key information
-    #[clap(long)]
-    pub(crate) hostname: Option<String>,
-
-    /// Set 'username' in public key information
-    #[clap(long)]
-    pub(crate) username: Option<String>,
-
-    /// Add 'created' date in public key information
-    #[clap(long)]
-    pub(crate) with_created: bool,
-}
-
-pub(super) fn execute(repo: OpenRepository, opts: Opts) -> Result<()> {
-    match opts.command {
-        Command::Add(opt) => add_key(&repo.dbe, repo.key, opt),
+impl Runnable for KeyCmd {
+    fn run(&self) {
+        self.cmd.run();
     }
 }
 
-fn add_key(be: &impl WriteBackend, key: Key, opts: AddOpts) -> Result<()> {
-    let pass = match opts.new_password_file {
-        Some(file) => {
-            let mut file = BufReader::new(File::open(file)?);
-            read_password_from_bufread(&mut file)?
-        }
-        None => prompt_password("enter password for new key: ")?,
-    };
-    let ko = opts.key_opts;
-    let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
-    let data = serde_json::to_vec(&keyfile)?;
-    let id = hash(&data);
-    be.write_bytes(FileType::Key, &id, false, data.into())?;
+impl Runnable for AddCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
+    }
+}
 
-    println!("key {id} successfully added.");
-    Ok(())
+impl AddCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+
+        let repo = open_repository(&config)?;
+
+        // create new "artificial" repo using the given password options
+        let repo_opts = RepositoryOptions {
+            password_file: self.new_password_file.clone(),
+            repository: Some(String::new()), // fake repository to make Repository::new() not bail
+            ..Default::default()
+        };
+        let repo_newpass = Repository::new(&repo_opts)?;
+
+        let pass = repo_newpass
+            .password()
+            .map_err(|err| err.into())
+            .transpose()
+            .unwrap_or_else(|| -> Result<_> {
+                Ok(Password::new()
+                    .with_prompt("enter password for new key")
+                    .allow_empty_password(true)
+                    .with_confirmation("confirm password", "passwords do not match")
+                    .interact()?)
+            })?;
+
+        let id = repo.add_key(&pass, &self.key_opts)?;
+        info!("key {id} successfully added.");
+
+        Ok(())
+    }
 }

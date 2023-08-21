@@ -1,26 +1,24 @@
-use std::io::Read;
+//! `diff` subcommand
+
+/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
+/// accessors along with logging macros. Customize as you see fit.
+use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+
+use abscissa_core::{Command, Runnable, Shutdown};
+
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
-use clap::Parser;
+use anyhow::{bail, Context, Result};
 
-use super::{progress_counter, RusticConfig};
-use crate::backend::{LocalDestination, LocalSource, LocalSourceOptions};
-use crate::blob::{Node, NodeStreamer, NodeType, Tree};
-use crate::commands::helpers::progress_spinner;
-use crate::crypto::hash;
-use crate::index::{IndexBackend, ReadIndex};
-use crate::repofile::{SnapshotFile, SnapshotFilter};
-use crate::repository::OpenRepository;
+use rustic_core::{
+    BlobType, IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, Node, NodeType, ReadSourceEntry, Repository, RusticResult,
+    TreeStreamerOptions,
+};
 
-#[derive(Parser)]
-pub(super) struct Opts {
-    #[clap(flatten)]
-    ignore_opts: LocalSourceOptions,
-
-    #[clap(flatten, help_heading = "SNAPSHOT FILTER OPTIONS (when using latest)")]
-    filter: SnapshotFilter,
-
+/// `diff` subcommand
+#[derive(clap::Parser, Command, Debug)]
+pub(crate) struct DiffCmd {
     /// Reference snapshot/path
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
     snap1: String,
@@ -36,76 +34,91 @@ pub(super) struct Opts {
     /// don't check for different file contents
     #[clap(long)]
     no_content: bool,
+
+    #[clap(flatten)]
+    ignore_opts: LocalSourceFilterOptions,
 }
 
-pub(super) fn execute(
-    repo: OpenRepository,
-    mut opts: Opts,
-    config_file: RusticConfig,
-) -> Result<()> {
-    let be = &repo.dbe;
-    let (id1, path1) = arg_to_snap_path(&opts.snap1, "");
-    let (id2, path2) = arg_to_snap_path(&opts.snap2, path1);
+impl Runnable for DiffCmd {
+    fn run(&self) {
+        if let Err(err) = self.inner_run() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
+    }
+}
 
-    match (id1, id2) {
-        (Some(id1), Some(id2)) => {
-            // diff between two snapshots
-            let p = progress_spinner("getting snapshots...");
-            let snaps = SnapshotFile::from_ids(be, &[id1.to_string(), id2.to_string()])?;
-            p.finish();
+impl DiffCmd {
+    fn inner_run(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
 
-            let snap1 = &snaps[0];
-            let snap2 = &snaps[1];
+        let repo = open_repository(&config)?.to_indexed()?;
 
-            let index = IndexBackend::new(be, progress_counter(""))?;
-            let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
-            let node2 = Tree::node_from_path(&index, snap2.tree, Path::new(path2))?;
+        let (id1, path1) = arg_to_snap_path(&self.snap1, "");
+        let (id2, path2) = arg_to_snap_path(&self.snap2, path1);
 
-            diff(
-                NodeStreamer::new(index.clone(), &node1)?,
-                NodeStreamer::new(index, &node2)?,
-                opts.no_content,
-                |_path, node1, node2| Ok(node1.content() == node2.content()),
-                opts.metadata,
-            )
-        }
-        (Some(id1), None) => {
-            // diff between snapshot and local path
-            config_file.merge_into("snapshot-filter", &mut opts.filter)?;
+        _ = match (id1, id2) {
+            (Some(id1), Some(id2)) => {
+                // diff between two snapshots
+                let snaps = repo.get_snapshots(&[id1.to_string(), id2.to_string()])?;
 
-            let p = progress_spinner("getting snapshot...");
-            let snap1 = SnapshotFile::from_str(be, id1, |sn| sn.matches(&opts.filter), p.clone())?;
-            p.finish();
+                let snap1 = &snaps[0];
+                let snap2 = &snaps[1];
 
-            let index = IndexBackend::new(be, progress_counter(""))?;
-            let node1 = Tree::node_from_path(&index, snap1.tree, Path::new(path1))?;
-            let local = LocalDestination::new(path2, false, !node1.is_dir())?;
-            let path2 = PathBuf::from(path2);
-            let is_dir = path2
-                .metadata()
-                .with_context(|| format!("Error accessing {path2:?}"))?
-                .is_dir();
-            let src = LocalSource::new(opts.ignore_opts, path2.clone())?.map(|item| {
-                let (path, node) = item?;
-                let path = if is_dir {
-                    // remove given path prefix for dirs as local path
-                    path.strip_prefix(&path2)?.to_path_buf()
-                } else {
-                    // ensure that we really get the filename if local path is a file
-                    path2.file_name().unwrap().into()
-                };
-                Ok((path, node))
-            });
+                let node1 = repo.node_from_snapshot_and_path(snap1, path1)?;
+                let node2 = repo.node_from_snapshot_and_path(snap2, path2)?;
 
-            diff(
-                NodeStreamer::new(index.clone(), &node1)?,
-                src,
-                opts.no_content,
-                |path, node1, _node2| identical_content_local(&local, &index, path, node1),
-                opts.metadata,
-            )
-        }
-        (None, _) => bail!("cannot use local path as first argument"),
+                diff(
+                    repo.ls(&node1, &TreeStreamerOptions::default(), true)?,
+                    repo.ls(&node2, &TreeStreamerOptions::default(), true)?,
+                    self.no_content,
+                    |_path, node1, node2| Ok(node1.content == node2.content),
+                    self.metadata,
+                )
+            }
+            (Some(id1), None) => {
+                // diff between snapshot and local path
+                let snap1 =
+                    repo.get_snapshot_from_str(id1, |sn| config.snapshot_filter.matches(sn))?;
+
+                let node1 = repo.node_from_snapshot_and_path(&snap1, path1)?;
+                let local = LocalDestination::new(path2, false, !node1.is_dir())?;
+                let path2 = PathBuf::from(path2);
+                let is_dir = path2
+                    .metadata()
+                    .with_context(|| format!("Error accessing {path2:?}"))?
+                    .is_dir();
+                let src = LocalSource::new(
+                    LocalSourceSaveOptions::default(),
+                    &self.ignore_opts,
+                    &[&path2],
+                )?
+                .map(|item| -> RusticResult<_> {
+                    let ReadSourceEntry { path, node, .. } = item?;
+                    let path = if is_dir {
+                        // remove given path prefix for dirs as local path
+                        path.strip_prefix(&path2).unwrap().to_path_buf()
+                    } else {
+                        // ensure that we really get the filename if local path is a file
+                        path2.file_name().unwrap().into()
+                    };
+                    Ok((path, node))
+                });
+
+                diff(
+                    repo.ls(&node1, &TreeStreamerOptions::default(), true)?,
+                    src,
+                    self.no_content,
+                    |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
+                    self.metadata,
+                )
+            }
+            (None, _) => {
+                bail!("cannot use local path as first argument");
+            }
+        };
+
+        Ok(())
     }
 }
 
@@ -122,36 +135,27 @@ fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>
     }
 }
 
-fn identical_content_local(
+fn identical_content_local<P, S: IndexedFull>(
     local: &LocalDestination,
-    index: &impl ReadIndex,
+    repo: &Repository<P, S>,
     path: &Path,
     node: &Node,
 ) -> Result<bool> {
-    let mut open_file = match local.get_matching_file(path, *node.meta().size()) {
-        Some(file) => file,
-        None => return Ok(false),
-    };
+    let Some(mut open_file) = local.get_matching_file(path, node.meta.size) else { return Ok(false) };
 
-    for id in node.content() {
-        let ie = index
-            .get_data(id)
-            .ok_or_else(|| anyhow!("did not find id {} in index", id))?;
+    for id in node.content.iter().flatten() {
+        let ie = repo.get_index_entry(BlobType::Data, id)?;
         let length = ie.data_length();
-
-        // check if SHA256 matches
-        let mut vec = vec![0; length as usize];
-        if open_file.read_exact(&mut vec).is_ok() && id == &hash(&vec) {
-            continue;
+        if !id.blob_matches_reader(length as usize, &mut open_file) {
+            return Ok(false);
         }
-        return Ok(false);
     }
     Ok(true)
 }
 
 fn diff(
-    mut tree_streamer1: impl Iterator<Item = Result<(PathBuf, Node)>>,
-    mut tree_streamer2: impl Iterator<Item = Result<(PathBuf, Node)>>,
+    mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
     no_content: bool,
     file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
     metadata: bool,
@@ -182,22 +186,17 @@ fn diff(
                 let path = &i1.0;
                 let node1 = &i1.1;
                 let node2 = &i2.1;
-                match node1.node_type() {
-                    tpe if tpe != node2.node_type() => println!("T    {path:?}"), // type was changed
+                match &node1.node_type {
+                    tpe if tpe != &node2.node_type => println!("T    {path:?}"), // type was changed
                     NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
                         println!("M    {path:?}");
                     }
-                    NodeType::File if metadata && node1.meta() != node2.meta() => {
+                    NodeType::File if metadata && node1.meta != node2.meta => {
                         println!("U    {path:?}");
                     }
-                    NodeType::Symlink { linktarget } => {
-                        if let NodeType::Symlink {
-                            linktarget: linktarget2,
-                        } = node2.node_type()
-                        {
-                            if *linktarget != *linktarget2 {
-                                println!("U    {path:?}");
-                            }
+                    NodeType::Symlink { .. } => {
+                        if node1.node_type.to_link() != node1.node_type.to_link() {
+                            println!("U    {path:?}");
                         }
                     }
                     _ => {} // no difference to show

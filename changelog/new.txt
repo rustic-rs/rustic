@@ -1,0 +1,23 @@
+Changes in version x.x.x:
+
+Breaking changes:
+
+Bugs fixed:
+- prune did abort when no time was set for a pack-do-delete. This case is now handled correctly.
+- retrying backend access didn't work for long operations. This has been fixed (and retries are now customizable)
+- The zstd compression library led to data corruption in very unlikely cases. This has been fixed by a dependency update.
+- The glob option did only work with absolute files. This has been fixed.
+- Non-unicode link targets are now correctly handled on Unix (after this has been added to the restic repo format).
+
+New features:
+- New global configuration paths are available, located at /etc/rustic/*.toml or %PROGRAMDATA%/rustic/config/*.toml, depending on your platform.
+- REST backend: Now allows to use custom TLS root certificates.
+- restore: The restore algorithm has been improved and should now be faster for remote repositories.
+- restore: Files are now allocated just before being first processed. This allows easier resumed restores.
+- New option: `no-require-git` for backup - if enabled, a git repository is not required to apply `git-ignore` rule.
+- fix: wait for password-command to successfully exit, allowing to input something into the command, and read password from stdout.
+- repoinfo: Added new options --json, --only-files, --only-index
+- Creation of new keys now enforces confirmation of entered key. This helps to prevent mistype of passwords during the initial entry
+- Check: Add check if time is set for packs-to-delete
+- ls: Options --long (-l) and --summary (-s) have been added.
+- forget: Option --json has been added.

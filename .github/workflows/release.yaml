@@ -1,5 +1,16 @@
 on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   push:
+    branches:
+      - main
+      - release/*
+    paths-ignore:
+      - "**/*.md"
 
 name: Build release binaries
 
@@ -11,6 +22,12 @@ jobs:
       matrix:
         rust: [stable]
         job:
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-msvc
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
           - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin
@@ -53,6 +70,12 @@ jobs:
             architecture: x86_64
             binary-postfix: ""
             use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: armv7-unknown-linux-gnueabihf
+            architecture: armv7
+            binary-postfix: ""
+            use-cross: true
 
     steps:
       - name: Checkout repository
@@ -74,7 +97,7 @@ jobs:
               sudo apt-get install -y musl-tools
           fi
       - uses: Swatinem/rust-cache@v2
-        with: 
+        with:
           key: ${{ matrix.job.target }}
       - name: Set Version
         shell: bash
@@ -171,7 +194,7 @@ jobs:
         #          profile: minimal
         #          override: true
         #      - uses: Swatinem/rust-cache@v2
-        #        with: 
+        #        with:
         #          key: ${{ matrix.job.target }}
         #      - uses: actions-rs/cargo@v1
         #        with:

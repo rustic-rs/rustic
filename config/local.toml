@@ -5,7 +5,7 @@
 #
 [repository]
 repository = "/backup/rustic"
-password-file =  "/root/key-rustic"
+password-file = "/root/key-rustic"
 no-cache = true # no cache needed for local repository
 
 [forget]

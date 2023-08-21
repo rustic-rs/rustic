@@ -131,6 +131,9 @@ jobs:
   remove-build-label:
     name: Remove build label
     needs: create-artifact
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     if: always()
     steps:

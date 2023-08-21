@@ -1,16 +1,18 @@
 on:
-  push:
+  pull_request:
+    types: [labeled]
     branches:
       - main
-      - release/*
     paths-ignore:
       - "**/*.md"
+      - "docs/**"
 
 name: Build release binaries
 
 jobs:
   publish:
     name: Publishing ${{ matrix.job.target }}
+    if: ${{ github.event.label.name == 'S-build' }}
     runs-on: ${{ matrix.job.os }}
     strategy:
       matrix:
@@ -134,63 +136,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-beta:
-    name: Publishing beta-builds
+  remove-build-label:
+    name: Remove build label
     needs: publish
-    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
-      - name: Releasing beta builds
-        shell: bash
-        run: |
-          # set up some directories
-          WORKING_DIR=$(mktemp -d)
-          DEST_DIR=beta
-
-          # set up the github deploy key
-          mkdir -p ~/.ssh
-          echo "${{ secrets.BETA_RELEASE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # set up git
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}"
-          ssh-keyscan -H github.com > ~/.ssh/known_hosts
-          GIT_SSH='ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=~/.ssh/known_hosts'
-
-          # clone the repo into our working directory
-          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/rustic-beta.git $WORKING_DIR
-
-          # ensure destination directory exists
-          mkdir -p $WORKING_DIR/$DEST_DIR
-
-          # do the copy
-          for i in binary-*; do cp -a $i/* $WORKING_DIR/$DEST_DIR; done
-
-          # create the commit
-          cd $WORKING_DIR
-          git add .
-          git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
-          GIT_SSH_COMMAND=$GIT_SSH git pull --rebase
-          GIT_SSH_COMMAND=$GIT_SSH git push
-
-          #  publish-cargo:
-          #    name: Publishing to Cargo
-          #    runs-on: ubuntu-latest
-          #    steps:
-          #      - name: Checkout repository
-          #        uses: actions/checkout@v3
-          #      - uses: actions-rs/toolchain@v1
-        #        with:
-        #          toolchain: stable
-        #          profile: minimal
-        #          override: true
-        #      - uses: Swatinem/rust-cache@v2
-        #        with:
-        #          key: ${{ matrix.job.target }}
-        #      - uses: actions-rs/cargo@v1
-        #        with:
-        #          command: publish
-        #          args: --token ${{ secrets.CARGO_API_KEY }}
+      - name: Remove label
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'S-build'
+            })

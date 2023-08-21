@@ -3,6 +3,11 @@
 Everyone who has contributed to the `rustic` project is listed here. By adding
 your name to this list, you agree to the license terms of this project.
 
+You agree, that your contributions will be licensed under:
+
+- [Apache License, Version 2.0](./LICENSE-APACHE) and
+- [MIT license](./LICENSE-MIT)
+
 | Name/Alias      | Contact (Email or GitHub) | Agreement to License |
 | --------------- | ------------------------- | -------------------- |
 | Alexander Weiss | @aawsome                  | Yes                  |

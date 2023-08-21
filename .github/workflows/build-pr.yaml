@@ -132,6 +132,7 @@ jobs:
     name: Remove build label
     needs: create-artifact
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Remove label
         env:

@@ -1,6 +1,6 @@
-#[build]
-#rustflags = "-C target-cpu=native -D warnings"
-#incremental = true
+# [build]
+# rustflags = "-C target-cpu=native -D warnings"
+# incremental = true
 
 # TODO: Introduced for `cargo public-api` test,
 # remove when it is working on sparse registry

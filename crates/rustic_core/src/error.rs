@@ -185,8 +185,6 @@ pub enum CommandErrorKind {
     ErrorCollecting(PathBuf, Box<RusticError>),
     /// error setting length for {0:?}: {1:?}
     ErrorSettingLength(PathBuf, Box<RusticError>),
-    /// did not find id {0} in index
-    IdNotFound(Id),
     /// {0:?}
     FromRayonError(#[from] rayon::ThreadPoolBuildError),
     /// conversion to `u64` failed: `{0:?}`
@@ -265,7 +263,7 @@ pub enum RepositoryErrorKind {
     /// error accessing config file
     AccessToConfigFileFailed,
     /// {0:?}
-    FromNomError(nom::Err<()>),
+    FromSplitError(#[from] shell_words::ParseError),
     /// {0:?}
     FromThreadPoolbilderError(rayon::ThreadPoolBuildError),
     /// reading Password failed: `{0:?}`
@@ -274,6 +272,8 @@ pub enum RepositoryErrorKind {
     ReadingPasswordFromPromptFailed(std::io::Error),
     /// Config file already exists. Aborting.
     ConfigFileExists,
+    /// did not find id {0} in index
+    IdNotFound(Id),
 }
 
 /// [`IndexErrorKind`] describes the errors that can be returned by processing Indizes
@@ -431,8 +431,7 @@ pub enum SnapshotFileErrorKind {
     /// collecting IDs failed: {0:?}
     FindingIdsFailed(Vec<String>),
     /// {0:?}
-    #[error(transparent)]
-    FromNomError(#[from] nom::Err<()>),
+    FromSplitError(#[from] shell_words::ParseError),
     /// removing dots from paths failed: `{0:?}`
     RemovingDotsFromPathFailed(std::io::Error),
     /// canonicalizing path failed: `{0:?}`
@@ -609,8 +608,7 @@ pub enum LocalErrorKind {
     /// error building automaton `{0:?}`
     FromAhoCorasick(#[from] aho_corasick::BuildError),
     /// {0:?}
-    #[error(transparent)]
-    FromNomError(#[from] nom::Err<()>),
+    FromSplitError(#[from] shell_words::ParseError),
     /// {0:?}
     #[error(transparent)]
     FromTryIntError(#[from] TryFromIntError),
@@ -669,7 +667,7 @@ pub enum LocalErrorKind {
     /// failed to symlink target {linktarget:?} from {filename:?} with {source:?}
     #[cfg(not(any(windows, target_os = "openbsd")))]
     SymlinkingFailed {
-        linktarget: String,
+        linktarget: PathBuf,
         filename: PathBuf,
         #[source]
         source: std::io::Error,

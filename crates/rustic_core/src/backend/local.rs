@@ -16,6 +16,7 @@ use log::{debug, trace, warn};
 use nix::sys::stat::{mknod, Mode, SFlag};
 #[cfg(not(windows))]
 use nix::unistd::{fchownat, FchownatFlags, Gid, Group, Uid, User};
+use shell_words::split;
 use walkdir::WalkDir;
 
 #[cfg(not(windows))]
@@ -29,7 +30,6 @@ use crate::{
         FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES,
     },
     error::LocalErrorKind,
-    repository::parse_command,
     RusticResult,
 };
 
@@ -67,10 +67,8 @@ impl LocalBackend {
         let replace_with = &[filename.to_str().unwrap(), tpe.into(), id.as_str()];
         let actual_command = ac.replace_all(command, replace_with);
         debug!("calling {actual_command}...");
-        let commands = parse_command::<()>(&actual_command)
-            .map_err(LocalErrorKind::FromNomError)?
-            .1;
-        let status = Command::new(commands[0])
+        let commands = split(&actual_command).map_err(LocalErrorKind::FromSplitError)?;
+        let status = Command::new(&commands[0])
             .args(&commands[1..])
             .status()
             .map_err(LocalErrorKind::CommandExecutionFailed)?;
@@ -488,12 +486,14 @@ impl LocalDestination {
         let filename = self.path(item);
 
         match &node.node_type {
-            NodeType::Symlink { linktarget } => symlink(linktarget.clone(), filename.clone())
-                .map_err(|err| LocalErrorKind::SymlinkingFailed {
-                    linktarget: linktarget.to_string(),
+            NodeType::Symlink { .. } => {
+                let linktarget = node.node_type.to_link();
+                symlink(linktarget, &filename).map_err(|err| LocalErrorKind::SymlinkingFailed {
+                    linktarget: linktarget.to_path_buf(),
                     filename,
                     source: err,
-                })?,
+                })?;
+            }
             NodeType::Dev { device } => {
                 #[cfg(not(any(
                     target_os = "macos",

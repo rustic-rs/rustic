@@ -1,17 +1,25 @@
 [package]
-publish = false                                                           # Don't publish until we fix/stabilize public api!!!
 name = "rustic_core"
 version = "0.6.0"
-edition = { workspace = true }
-resolver = "2"
-description = { workspace = true }
 authors = ["Alexander Weiss"]
-license = { workspace = true }
+categories = [
+  "Algorithms",
+  "Command line utilities",
+  "Compression",
+  "Cryptography",
+  "Data structures",
+  "Filesystem",
+]
+edition = { workspace = true }
 homepage = { workspace = true }
-readme = "README.md"
+include = ["src/**/*", "LICENSE-*", "README.md", "examples/**/*"]
 keywords = ["backup", "restic", "deduplication", "encryption", "library"]
-include = ["src/**/*", "LICENSE-*", "README.md"]
-# categories = []
+license = { workspace = true }
+publish = false # Don't publish until we fix/stabilize public api!!!
+readme = "README.md"
+resolver = "2"
+rust-version = "1.66.1"
+description = { workspace = true }
 
 [lib]
 path = "src/lib.rs"
@@ -35,19 +43,19 @@ displaydoc = { workspace = true }
 thiserror = { workspace = true }
 
 # macros
-derive_more = { workspace = true }
 derivative = { workspace = true }
+derive_more = { workspace = true }
 derive_setters = { workspace = true }
 
-#logging
+# logging
 log = { workspace = true }
 
 # parallelize
 crossbeam-channel = { workspace = true }
-rayon = { workspace = true }
 pariter = { workspace = true }
+rayon = { workspace = true }
 
-#crypto
+# crypto
 aes256ctr_poly1305aes = { workspace = true }
 rand = { workspace = true }
 scrypt = { workspace = true }
@@ -59,50 +67,50 @@ integer-sqrt = { workspace = true }
 binrw = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true }
-serde_with = { workspace = true }
-serde_json = { workspace = true }
 serde-aux = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
 
 # other dependencies
 bytes = { workspace = true }
 chrono = { workspace = true }
-zstd = { workspace = true }
 enum-map = { workspace = true }
 enum-map-derive = { workspace = true }
+zstd = { workspace = true }
 
 # local backend
-walkdir = { workspace = true }
-ignore = { workspace = true }
-cached = { workspace = true }
-nix = { workspace = true }
-filetime = { workspace = true }
 aho-corasick = { workspace = true }
+cached = { workspace = true }
+filetime = { workspace = true }
+ignore = { workspace = true }
+nix = { workspace = true }
+walkdir = { workspace = true }
 
 # rest backend
-reqwest = { workspace = true }
 backoff = { workspace = true }
+reqwest = { workspace = true }
 url = { workspace = true }
 
 # rclone backend
 semver = { workspace = true }
 
 # cache
-dirs = { workspace = true }
 cachedir = { workspace = true }
+dirs = { workspace = true }
 
 # cli
 clap = { workspace = true, optional = true }
 clap_complete = { workspace = true, optional = true }
 
-merge = { workspace = true, optional = true }
+bytesize = { workspace = true }
 directories = { workspace = true }
-nom = { workspace = true }
-path-dedot = { workspace = true }
 dunce = { workspace = true }
 gethostname = { workspace = true }
-bytesize = { workspace = true }
-itertools = { workspace = true }
 humantime = { workspace = true }
+itertools = { workspace = true }
+merge = { workspace = true, optional = true }
+path-dedot = { workspace = true }
+shell-words = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }
@@ -115,14 +123,14 @@ sha2 = "0.10"
 xattr = "1"
 
 [dev-dependencies]
-rustup-toolchain = "0.1.4"
-rustdoc-json = "0.8.5"
-public-api = "0.31.2"
-rstest = { workspace = true }
 expect-test = "1.4.1"
+pretty_assertions = { workspace = true }
+public-api = "0.31.3"
 quickcheck = { workspace = true }
 quickcheck_macros = { workspace = true }
-pretty_assertions = { workspace = true }
+rstest = { workspace = true }
+rustdoc-json = "0.8.7"
+rustup-toolchain = "0.1.4"
 simplelog = { workspace = true }
 
 [profile.dev]
@@ -135,7 +143,7 @@ codegen-units = 4
 
 [profile.release]
 opt-level = 3
-debug = false            # true for profiling
+debug = false # true for profiling
 rpath = false
 lto = "fat"
 debug-assertions = false
@@ -152,7 +160,7 @@ codegen-units = 4
 
 [profile.bench]
 opt-level = 3
-debug = true             # true for profiling
+debug = true # true for profiling
 rpath = false
 lto = true
 debug-assertions = false

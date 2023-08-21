@@ -10,18 +10,8 @@ use std::{
 use bytes::Bytes;
 use derive_setters::Setters;
 use log::{debug, error, info};
-
-use nom::{
-    branch::alt,
-    bytes::complete::{is_not, tag},
-    character::complete::multispace1,
-    error::ParseError,
-    multi::separated_list0,
-    sequence::delimited,
-    IResult,
-};
-
 use serde_with::{serde_as, DisplayFromStr};
+use shell_words::split;
 
 use crate::{
     backend::{
@@ -46,13 +36,14 @@ use crate::{
     },
     crypto::aespoly1305::Key,
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
+    index::IndexEntry,
     repofile::{
         configfile::ConfigFile, keyfile::find_key_in_backend, snapshotfile::SnapshotSummary,
         RepoFile,
     },
     BlobType, Id, IndexBackend, IndexedBackend, LocalDestination, NoProgressBars, Node,
-    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, RusticResult, SnapshotFile,
-    SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
+    NodeStreamer, PathList, ProgressBars, PruneOpts, PrunePlan, ReadIndex, RusticResult,
+    SnapshotFile, SnapshotGroup, SnapshotGroupCriterion, Tree, TreeStreamerOptions,
 };
 
 mod warm_up;
@@ -151,22 +142,6 @@ pub(crate) fn overwrite<T>(left: &mut T, right: T) {
     *left = right;
 }
 
-// parse a command
-pub fn parse_command<'a, E: ParseError<&'a str>>(
-    input: &'a str,
-) -> IResult<&'a str, Vec<&'a str>, E> {
-    separated_list0(
-        // a command is a list
-        multispace1, // separated by one or more spaces
-        alt((
-            // and containing either
-            delimited(tag("\""), is_not("\""), tag("\"")), // strings wrapped in "", or
-            delimited(tag("'"), is_not("'"), tag("'")),    // strigns wrapped in '', or
-            is_not(" \t\r\n"),                             // strings not containing any space
-        )),
-    )(input)
-}
-
 pub fn read_password_from_reader(file: &mut impl BufRead) -> RusticResult<String> {
     let mut password = String::new();
     _ = file
@@ -257,11 +232,9 @@ impl<P, S> Repository<P, S> {
                 Ok(Some(read_password_from_reader(&mut file)?))
             }
             (_, _, Some(command)) => {
-                let commands = parse_command::<()>(command)
-                    .map_err(RepositoryErrorKind::FromNomError)?
-                    .1;
+                let commands = split(command).map_err(RepositoryErrorKind::FromSplitError)?;
                 debug!("commands: {commands:?}");
-                let command = Command::new(commands[0])
+                let command = Command::new(&commands[0])
                     .args(&commands[1..])
                     .stdout(Stdio::piped())
                     .spawn()?;
@@ -502,6 +475,16 @@ impl<P: ProgressBars, S: Open> Repository<P, S> {
         commands::snapshots::get_snapshot_group(self, ids, group_by, filter)
     }
 
+    pub fn get_snapshot_from_str(
+        &self,
+        id: &str,
+        filter: impl FnMut(&SnapshotFile) -> bool + Send + Sync,
+    ) -> RusticResult<SnapshotFile> {
+        let p = self.pb.progress_counter("getting snapshot...");
+        let snap = SnapshotFile::from_str(self.dbe(), id, filter, &p)?;
+        Ok(snap)
+    }
+
     pub fn get_snapshots(&self, ids: &[String]) -> RusticResult<Vec<SnapshotFile>> {
         let p = self.pb.progress_counter("getting snapshots...");
         SnapshotFile::from_ids(self.dbe(), ids, &p)
@@ -670,6 +653,16 @@ impl<T, S: Open> Open for IndexedStatus<T, S> {
     }
 }
 
+impl<P, S: IndexedFull> Repository<P, S> {
+    pub fn get_index_entry(&self, tpe: BlobType, id: &Id) -> RusticResult<IndexEntry> {
+        let ie = self
+            .index()
+            .get_id(tpe, id)
+            .ok_or_else(|| RepositoryErrorKind::IdNotFound(*id))?;
+        Ok(ie)
+    }
+}
+
 impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
     pub fn node_from_snapshot_path(
         &self,
@@ -681,6 +674,14 @@ impl<P: ProgressBars, S: IndexedTree> Repository<P, S> {
         let p = &self.pb.progress_counter("getting snapshot...");
         let snap = SnapshotFile::from_str(self.dbe(), id, filter, p)?;
 
+        Tree::node_from_path(self.index(), snap.tree, Path::new(path))
+    }
+
+    pub fn node_from_snapshot_and_path(
+        &self,
+        snap: &SnapshotFile,
+        path: &str,
+    ) -> RusticResult<Node> {
         Tree::node_from_path(self.index(), snap.tree, Path::new(path))
     }
 

@@ -11,19 +11,16 @@ use dunce::canonicalize;
 use gethostname::gethostname;
 use itertools::Itertools;
 use log::info;
-
 use path_dedot::ParseDot;
-
 use serde::{Deserialize, Serialize};
-
 use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr};
+use shell_words::split;
 
 use crate::{
     backend::{decrypt::DecryptReadBackend, FileType},
     error::SnapshotFileErrorKind,
     id::Id,
     repofile::RepoFile,
-    repository::parse_command,
     Progress, RusticError, RusticResult,
 };
 
@@ -682,9 +679,7 @@ impl PathList {
     }
 
     pub fn from_string(sources: &str, sanitize: bool) -> RusticResult<Self> {
-        let sources = parse_command::<()>(sources)
-            .map_err(SnapshotFileErrorKind::FromNomError)?
-            .1;
+        let sources = split(sources).map_err(SnapshotFileErrorKind::FromSplitError)?;
         Self::from_strings(sources, sanitize)
     }
 

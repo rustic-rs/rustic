@@ -88,6 +88,7 @@ body:
               multiple: false
               options:
                     - Built from source
+                    - Github Releases
                     - Binary from Package-management System
                     - Other (Please specify below)
               default: 0

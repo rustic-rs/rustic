@@ -2,8 +2,9 @@
 
 ## Supported Versions
 
-As long as `rustic` is not yet released, the latest commit on the `main` branch
-is supported for security updates.
+0.Y.Z versions are only supported for the last minor (`Y`) version.
+
+When `rustic` reaches 1.0.0, we will reiterate on this security policy.
 
 ## Reporting a Vulnerability
 

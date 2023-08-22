@@ -136,7 +136,9 @@ jobs:
       issues: write
       pull-requests: write
     runs-on: ubuntu-latest
-    if: always()
+    if: |
+      always() &&
+      !contains(needs.*.result, 'skipped')
     steps:
       - name: Remove label
         env:

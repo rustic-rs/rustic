@@ -239,8 +239,14 @@ pretty_assertions = "1.4"
 toml = "0.7"
 dircmp = "0.2"
 
-# see: https://nnethercote.github.io/perf-book/build-configuration.html
+# cargo-binstall support
+# https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ repo }-v{ version }-{ target }{ archive-suffix }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tar.gz"
 
+# see: https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.dev]
 opt-level = 0
 debug = true

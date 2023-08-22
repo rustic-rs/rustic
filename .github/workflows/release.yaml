@@ -28,55 +28,54 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          # No matrix for debugging
-          # - os: macos-latest
-          #   os-name: macos
-          #   target: x86_64-apple-darwin
-          #   architecture: x86_64
-          #   binary-postfix: ""
-          #   use-cross: false
-          # - os: macos-latest
-          #   os-name: macos
-          #   target: aarch64-apple-darwin
-          #   architecture: arm64
-          #   binary-postfix: ""
-          #   use-cross: true
-          # - os: ubuntu-latest
-          #   os-name: linux
-          #   target: x86_64-unknown-linux-gnu
-          #   architecture: x86_64
-          #   binary-postfix: ""
-          #   use-cross: false
-          # - os: ubuntu-latest
-          #   os-name: linux
-          #   target: x86_64-unknown-linux-musl
-          #   architecture: x86_64
-          #   binary-postfix: ""
-          #   use-cross: false
-          # - os: ubuntu-latest
-          #   os-name: linux
-          #   target: aarch64-unknown-linux-gnu
-          #   architecture: arm64
-          #   binary-postfix: ""
-          #   use-cross: true
-          # - os: ubuntu-latest
-          #   os-name: linux
-          #   target: i686-unknown-linux-gnu
-          #   architecture: i686
-          #   binary-postfix: ""
-          #   use-cross: true
-          # - os: ubuntu-latest
-          #   os-name: netbsd
-          #   target: x86_64-unknown-netbsd
-          #   architecture: x86_64
-          #   binary-postfix: ""
-          #   use-cross: true
-          # - os: ubuntu-latest
-          #   os-name: linux
-          #   target: armv7-unknown-linux-gnueabihf
-          #   architecture: armv7
-          #   binary-postfix: ""
-          #   use-cross: true
+          - os: macos-latest
+            os-name: macos
+            target: x86_64-apple-darwin
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
+          - os: macos-latest
+            os-name: macos
+            target: aarch64-apple-darwin
+            architecture: arm64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: x86_64-unknown-linux-gnu
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
+          - os: ubuntu-latest
+            os-name: linux
+            target: x86_64-unknown-linux-musl
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
+          - os: ubuntu-latest
+            os-name: linux
+            target: aarch64-unknown-linux-gnu
+            architecture: arm64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: i686-unknown-linux-gnu
+            architecture: i686
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: netbsd
+            target: x86_64-unknown-netbsd
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: armv7-unknown-linux-gnueabihf
+            architecture: armv7
+            binary-postfix: ""
+            use-cross: true
 
     steps:
       - name: Checkout repository

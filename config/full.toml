@@ -1,11 +1,11 @@
-# Full rustic config file containing all options which are available through the config file. 
+# Full rustic config file containing all options which are available through the config file.
 #
 # This file should be placed in the user's local config dir (~/.config/rustic/)
-# If you save it under NAME.toml, use "rustic -P NAME" to access this profile. 
+# If you save it under NAME.toml, use "rustic -P NAME" to access this profile.
 #
 # Note that most options can be overwritten by the corresponding command line option.
 
-# Global options: These options are used for all commands. 
+# Global options: These options are used for all commands.
 [global]
 use-profile = []
 log-level = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
@@ -14,7 +14,7 @@ no-progress = false
 progress-interval = "100ms"
 dry-run = false
 
-# Repository options: These options define which backend to use and which password to use. 
+# Repository options: These options define which backend to use and which password to use.
 [repository]
 repository = "/repo/rustic" # Must be set
 repo-hot = "/my/hot/repo" # Default: not set
@@ -32,7 +32,7 @@ warm-up-wait = "10min" # Default: not set
 # Additional repository options - depending on backend. These can be only set in the config file.
 [repository.options]
 post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
-post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set 
+post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set
 retry = "default" # Only rest/rclone backend; Allowed values: "false"/"off", "default" or number of retries
 timeout = "10min" # Only rest/rclone backend
 
@@ -44,7 +44,7 @@ filter-tags = ["tag1,tag2", "tag3"] # Default: no tags filger
 filter-paths = ["path1", "path2,path3"] # Default: no paths filter
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 
-# Backup options: These options are used for all sources when calling the backup command. 
+# Backup options: These options are used for all sources when calling the backup command.
 # They can be overwritten by source-specific options (see below) or command line options.
 [backup]
 label = "label" # Default: not set
@@ -120,7 +120,10 @@ filter-paths = ["path1", "path2,path3"] # Default: no paths filter
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 # The retention options follow. All of these are not set by default.
 keep-tags = ["tag1", "tag2,tag3"]
-keep-ids = ["123abc", "11122233"] # Keep all snapshots whose ID starts with any of these strings
+keep-ids = [
+  "123abc",
+  "11122233",
+] # Keep all snapshots whose ID starts with any of these strings
 keep-last = 0
 keep-daily = 3
 keep-weekly = 0

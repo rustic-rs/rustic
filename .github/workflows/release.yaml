@@ -91,11 +91,15 @@ jobs:
           target: ${{ matrix.job.target }}
       - name: install compiler
         shell: bash
+        if: ${{ matrix.job.target }} == x86_64-unknown-linux-musl
         run: |
-          if [[ ${{ matrix.job.target }} == x86_64-unknown-linux-musl ]]; then
-              sudo apt update
-              sudo apt-get install -y musl-tools
-          fi
+          sudo apt update
+          sudo apt-get install -y musl-tools
+      - name: install cargo-auditable for non-cross builds
+        shell: bash
+        if: ${{ matrix.job.use_cross != true}}
+        run: |
+          cargo install cargo-auditable cargo-audit
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.job.target }}
@@ -104,12 +108,20 @@ jobs:
         run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
         uses: actions-rs/cargo@v1
+        if: ${{ matrix.job.use-cross == true }}
         with:
           command: build
           use-cross: ${{ matrix.job.use-cross }}
           toolchain: ${{ matrix.rust }}
           args: --release --target ${{ matrix.job.target }}
-
+      - name: Cargo auditable build
+        uses: actions-rs/cargo@v1
+        if: ${{ matrix.job.use-cross == false }}
+        with:
+          command: auditable build
+          use-cross: ${{ matrix.job.use-cross }}
+          toolchain: ${{ matrix.rust }}
+          args: --release --target ${{ matrix.job.target }}
       - name: Packaging final binary
         if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
@@ -118,7 +130,7 @@ jobs:
 
           ########## create tar.gz ##########
           RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }}
+          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }} config/
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then

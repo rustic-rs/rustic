@@ -26,56 +26,57 @@ jobs:
             os-name: windows
             target: x86_64-pc-windows-msvc
             architecture: x86_64
-            binary-postfix: ""
+            binary-postfix: ".exe"
             use-cross: false
-          - os: macos-latest
-            os-name: macos
-            target: x86_64-apple-darwin
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: false
-          - os: macos-latest
-            os-name: macos
-            target: aarch64-apple-darwin
-            architecture: arm64
-            binary-postfix: ""
-            use-cross: true
-          - os: ubuntu-latest
-            os-name: linux
-            target: x86_64-unknown-linux-gnu
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: false
-          - os: ubuntu-latest
-            os-name: linux
-            target: x86_64-unknown-linux-musl
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: false
-          - os: ubuntu-latest
-            os-name: linux
-            target: aarch64-unknown-linux-gnu
-            architecture: arm64
-            binary-postfix: ""
-            use-cross: true
-          - os: ubuntu-latest
-            os-name: linux
-            target: i686-unknown-linux-gnu
-            architecture: i686
-            binary-postfix: ""
-            use-cross: true
-          - os: ubuntu-latest
-            os-name: netbsd
-            target: x86_64-unknown-netbsd
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: true
-          - os: ubuntu-latest
-            os-name: linux
-            target: armv7-unknown-linux-gnueabihf
-            architecture: armv7
-            binary-postfix: ""
-            use-cross: true
+          # No matrix for debugging
+          # - os: macos-latest
+          #   os-name: macos
+          #   target: x86_64-apple-darwin
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: false
+          # - os: macos-latest
+          #   os-name: macos
+          #   target: aarch64-apple-darwin
+          #   architecture: arm64
+          #   binary-postfix: ""
+          #   use-cross: true
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: x86_64-unknown-linux-gnu
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: false
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: x86_64-unknown-linux-musl
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: false
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: aarch64-unknown-linux-gnu
+          #   architecture: arm64
+          #   binary-postfix: ""
+          #   use-cross: true
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: i686-unknown-linux-gnu
+          #   architecture: i686
+          #   binary-postfix: ""
+          #   use-cross: true
+          # - os: ubuntu-latest
+          #   os-name: netbsd
+          #   target: x86_64-unknown-netbsd
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: true
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: armv7-unknown-linux-gnueabihf
+          #   architecture: armv7
+          #   binary-postfix: ""
+          #   use-cross: true
 
     steps:
       - name: Checkout repository
@@ -91,10 +92,11 @@ jobs:
           target: ${{ matrix.job.target }}
       - name: install compiler
         shell: bash
-        if: ${{ matrix.job.target }} == x86_64-unknown-linux-musl
         run: |
-          sudo apt update
-          sudo apt-get install -y musl-tools
+          if [[ ${{ matrix.job.target }} == x86_64-unknown-linux-musl ]]; then
+              sudo apt update
+              sudo apt-get install -y musl-tools
+          fi
       - name: install cargo-auditable for non-cross builds
         shell: bash
         if: ${{ matrix.job.use_cross != true}}
@@ -118,37 +120,40 @@ jobs:
         uses: actions-rs/cargo@v1
         if: ${{ matrix.job.use-cross == false }}
         with:
-          command: auditable build
+          command: auditable
           use-cross: ${{ matrix.job.use-cross }}
           toolchain: ${{ matrix.rust }}
-          args: --release --target ${{ matrix.job.target }}
+          args: build --release --target ${{ matrix.job.target }}
       - name: Packaging final binary
-        if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
+        id: package-binary
         run: |
+          cp -a config target/${{ matrix.job.target }}/release/config
           cd target/${{ matrix.job.target }}/release
 
           ########## create tar.gz ##########
-          RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }} config/
+          RELEASE_NAME=rustic-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.job.target}}.tar.gz 
+          tar czvf $RELEASE_NAME rustic${{ matrix.job.binary-postfix }} config/
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then
-            certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
+            certutil -hashfile $RELEASE_NAME sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
           else
-            shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+            shasum -a 256 $RELEASE_NAME > $RELEASE_NAME.sha256
           fi
+
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Storing binary as artefact
         uses: actions/upload-artifact@v3
         with:
           name: binary-${{ matrix.job.target}}
-          path: target/${{ matrix.job.target }}/release/rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
+          path: target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
       - name: Releasing release versions
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            target/${{ matrix.job.target }}/release/rustic-*.tar.gz
+            target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

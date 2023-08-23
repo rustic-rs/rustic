@@ -304,7 +304,7 @@ impl<P, S> Repository<P, S> {
             }
         }
 
-        let key = find_key_in_backend(&self.be, &password, None).map_err(|err| {
+        let key = find_key_in_backend(&self.be, password, None).map_err(|err| {
             match err.into_inner() {
                 RusticErrorKind::KeyFile(KeyFileErrorKind::NoSuitableKeyFound) => {
                     RepositoryErrorKind::IncorrectPassword.into()

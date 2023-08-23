@@ -41,7 +41,7 @@ use crate::{
 use abscissa_core::{config::Override, Command, Configurable, FrameworkError, Runnable, Shutdown};
 use anyhow::{anyhow, Result};
 use dialoguer::Password;
-use rustic_core::{OpenStatus, Repository};
+use rustic_core::{OpenStatus, Repository, RusticPassword};
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
@@ -181,10 +181,14 @@ fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOpti
         }
         None => {
             for _ in 0..constants::MAX_PASSWORD_RETRIES {
-                let pass = Password::new()
-                    .with_prompt("enter repository password")
-                    .allow_empty_password(true)
-                    .interact()?;
+                let pass = RusticPassword::new(
+                    Password::new()
+                        .with_prompt("enter repository password")
+                        .allow_empty_password(true)
+                        .interact()?,
+                )
+                .into();
+
                 match repo.clone().open_with_password(&pass) {
                     Ok(repo) => return Ok(repo),
                     // TODO: fail if error != Password incorrect

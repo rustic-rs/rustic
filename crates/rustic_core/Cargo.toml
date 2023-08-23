@@ -112,6 +112,9 @@ merge = { workspace = true, optional = true }
 path-dedot = { workspace = true }
 shell-words = { workspace = true }
 
+# passwords
+secrecy = { workspace = true }
+
 [target.'cfg(not(windows))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }
 
@@ -143,7 +146,7 @@ codegen-units = 4
 
 [profile.release]
 opt-level = 3
-debug = false # true for profiling
+debug = false            # true for profiling
 rpath = false
 lto = "fat"
 debug-assertions = false
@@ -160,7 +163,7 @@ codegen-units = 4
 
 [profile.bench]
 opt-level = 3
-debug = true # true for profiling
+debug = true             # true for profiling
 rpath = false
 lto = true
 debug-assertions = false

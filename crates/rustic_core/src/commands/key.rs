@@ -1,7 +1,7 @@
 //! `key` subcommand
 use crate::{
-    error::CommandErrorKind, hash, FileType, Id, Key, KeyFile, Open, Repository, RusticResult,
-    WriteBackend,
+    crypto::SecretPassword, error::CommandErrorKind, hash, FileType, Id, Key, KeyFile, Open,
+    Repository, RusticResult, WriteBackend,
 };
 
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
@@ -24,7 +24,7 @@ impl KeyOpts {
     pub(crate) fn add_key<P, S: Open>(
         &self,
         repo: &Repository<P, S>,
-        pass: &str,
+        pass: &SecretPassword,
     ) -> RusticResult<Id> {
         let key = repo.key();
         self.add(repo, pass, *key)
@@ -33,16 +33,21 @@ impl KeyOpts {
     pub(crate) fn init_key<P, S>(
         &self,
         repo: &Repository<P, S>,
-        pass: &str,
+        pass: &SecretPassword,
     ) -> RusticResult<(Key, Id)> {
         // generate key
         let key = Key::new();
         Ok((key, self.add(repo, pass, key)?))
     }
 
-    fn add<P, S>(&self, repo: &Repository<P, S>, pass: &str, key: Key) -> RusticResult<Id> {
+    fn add<P, S>(
+        &self,
+        repo: &Repository<P, S>,
+        pass: &SecretPassword,
+        key: Key,
+    ) -> RusticResult<Id> {
         let ko = self.clone();
-        let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;
+        let keyfile = KeyFile::generate(key, pass, ko.hostname, ko.username, ko.with_created)?;
 
         let data = serde_json::to_vec(&keyfile).map_err(CommandErrorKind::FromJsonError)?;
         let id = hash(&data);

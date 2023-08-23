@@ -3,13 +3,13 @@
 use log::info;
 
 use crate::{
-    chunker::random_poly, commands::config::save_config, ConfigFile, ConfigOpts, Id, Key, KeyOpts,
-    Repository, RusticResult, WriteBackend,
+    chunker::random_poly, commands::config::save_config, crypto::SecretPassword, ConfigFile,
+    ConfigOpts, Id, Key, KeyOpts, Repository, RusticResult, WriteBackend,
 };
 
 pub(crate) fn init<P, S>(
     repo: &Repository<P, S>,
-    pass: &str,
+    pass: &SecretPassword,
     key_opts: &KeyOpts,
     config_opts: &ConfigOpts,
 ) -> RusticResult<(Key, ConfigFile)> {
@@ -27,7 +27,7 @@ pub(crate) fn init<P, S>(
 
 pub(crate) fn init_with_config<P, S>(
     repo: &Repository<P, S>,
-    pass: &str,
+    pass: &SecretPassword,
     key_opts: &KeyOpts,
     config: &ConfigFile,
 ) -> RusticResult<Key> {

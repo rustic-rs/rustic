@@ -34,7 +34,7 @@ use crate::{
         repoinfo::{IndexInfos, RepoFileInfos},
         restore::{RestoreInfos, RestoreOpts},
     },
-    crypto::aespoly1305::Key,
+    crypto::{aespoly1305::Key, RusticPassword, SecretPassword},
     error::{KeyFileErrorKind, RepositoryErrorKind, RusticErrorKind},
     index::IndexEntry,
     repofile::{
@@ -72,7 +72,6 @@ pub struct RepositoryOptions {
 
     /// Password of the repository - WARNING: Using --password can reveal the password in the process list!
     #[cfg_attr(feature = "clap", clap(long, global = true, env = "RUSTIC_PASSWORD"))]
-    // TODO: use `secrecy` library
     pub password: Option<String>,
 
     /// File to read the password from
@@ -218,18 +217,20 @@ impl<P> Repository<P, ()> {
     }
 }
 impl<P, S> Repository<P, S> {
-    pub fn password(&self) -> RusticResult<Option<String>> {
+    pub fn password(&self) -> RusticResult<Option<SecretPassword>> {
         match (
             &self.opts.password,
             &self.opts.password_file,
             &self.opts.password_command,
         ) {
-            (Some(pwd), _, _) => Ok(Some(pwd.clone())),
+            (Some(pwd), _, _) => Ok(Some(RusticPassword::new(pwd.clone()).into())),
             (_, Some(file), _) => {
                 let mut file = BufReader::new(
                     File::open(file).map_err(RepositoryErrorKind::OpeningPasswordFileFailed)?,
                 );
-                Ok(Some(read_password_from_reader(&mut file)?))
+                Ok(Some(
+                    RusticPassword::new(read_password_from_reader(&mut file)?).into(),
+                ))
             }
             (_, _, Some(command)) => {
                 let commands = split(command).map_err(RepositoryErrorKind::FromSplitError)?;
@@ -253,7 +254,7 @@ impl<P, S> Repository<P, S> {
 
                 let mut pwd = BufReader::new(&*output.stdout);
                 Ok(Some(match read_password_from_reader(&mut pwd) {
-                    Ok(val) => val,
+                    Ok(val) => RusticPassword::new(val).into(),
                     Err(_) => {
                         return Err(RepositoryErrorKind::ReadingPasswordFromCommandFailed.into())
                     }
@@ -283,7 +284,10 @@ impl<P, S> Repository<P, S> {
         self.open_with_password(&password)
     }
 
-    pub fn open_with_password(self, password: &str) -> RusticResult<Repository<P, OpenStatus>> {
+    pub fn open_with_password(
+        self,
+        password: &SecretPassword,
+    ) -> RusticResult<Repository<P, OpenStatus>> {
         let config_id = self
             .config_id()?
             .ok_or(RepositoryErrorKind::NoRepositoryConfigFound(
@@ -327,7 +331,7 @@ impl<P, S> Repository<P, S> {
 
     pub fn init_with_password(
         self,
-        pass: &str,
+        pass: &SecretPassword,
         key_opts: &KeyOpts,
         config_opts: &ConfigOpts,
     ) -> RusticResult<Repository<P, OpenStatus>> {
@@ -340,7 +344,7 @@ impl<P, S> Repository<P, S> {
 
     pub fn init_with_config(
         self,
-        pass: &str,
+        pass: &SecretPassword,
         key_opts: &KeyOpts,
         config: ConfigFile,
     ) -> RusticResult<Repository<P, OpenStatus>> {
@@ -456,7 +460,7 @@ impl<P, S: Open> Repository<P, S> {
         commands::cat::cat_file(self, tpe, id)
     }
 
-    pub fn add_key(&self, pass: &str, opts: &KeyOpts) -> RusticResult<Id> {
+    pub fn add_key(&self, pass: &SecretPassword, opts: &KeyOpts) -> RusticResult<Id> {
         opts.add_key(self, pass)
     }
 

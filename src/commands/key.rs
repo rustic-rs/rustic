@@ -11,7 +11,7 @@ use anyhow::Result;
 use dialoguer::Password;
 use log::info;
 
-use rustic_core::{KeyOpts, Repository, RepositoryOptions};
+use rustic_core::{KeyOpts, Repository, RepositoryOptions, RusticPassword};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -70,11 +70,14 @@ impl AddCmd {
             .map_err(|err| err.into())
             .transpose()
             .unwrap_or_else(|| -> Result<_> {
-                Ok(Password::new()
-                    .with_prompt("enter password for new key")
-                    .allow_empty_password(true)
-                    .with_confirmation("confirm password", "passwords do not match")
-                    .interact()?)
+                Ok(RusticPassword::new(
+                    Password::new()
+                        .with_prompt("enter password for new key")
+                        .allow_empty_password(true)
+                        .with_confirmation("confirm password", "passwords do not match")
+                        .interact()?,
+                )
+                .into())
             })?;
 
         let id = repo.add_key(&pass, &self.key_opts)?;

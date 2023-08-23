@@ -3,6 +3,7 @@ use aes256ctr_poly1305aes::{
     Aes256CtrPoly1305Aes,
 };
 use rand::{thread_rng, RngCore};
+use secrecy::{CloneableSecret, DebugSecret, Secret, Zeroize};
 
 use crate::{crypto::CryptoKey, error::CryptoErrorKind, RusticResult};
 
@@ -11,6 +12,19 @@ pub(crate) type AeadKey = aead::Key<Aes256CtrPoly1305Aes>;
 
 #[derive(Clone, Default, Debug, Copy)]
 pub struct Key(AeadKey);
+
+impl Zeroize for Key {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl DebugSecret for Key {}
+impl CloneableSecret for Key {}
+
+/// Our Secret Key
+#[allow(dead_code)]
+pub type SecretKey = Secret<Key>;
 
 impl Key {
     #[must_use]

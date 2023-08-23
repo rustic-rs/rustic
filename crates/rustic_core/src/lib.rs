@@ -100,6 +100,7 @@ pub(crate) mod repofile;
 pub(crate) mod repository;
 
 pub(crate) use crate::crypto::aespoly1305::Key;
+
 // rustic_core Public API
 pub use crate::{
     backend::{
@@ -127,7 +128,7 @@ pub use crate::{
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
         restore::{FileDirStats, RestoreInfos, RestoreOpts, RestoreStats},
     },
-    crypto::hasher::hash,
+    crypto::{hasher::hash, RusticPassword, SecretPassword},
     error::{RusticError, RusticResult},
     id::Id,
     index::{indexer::Indexer, IndexBackend, IndexedBackend, ReadIndex},

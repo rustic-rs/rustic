@@ -1,12 +1,13 @@
 use chrono::{DateTime, Local};
 use rand::{thread_rng, RngCore};
 use scrypt::Params;
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 
 use crate::{
     backend::{FileType, ReadBackend},
-    crypto::{aespoly1305::Key, CryptoKey},
+    crypto::{aespoly1305::Key, CryptoKey, SecretPassword},
     error::KeyFileErrorKind,
     id::Id,
     RusticResult,
@@ -38,13 +39,18 @@ pub struct KeyFile {
 
 impl KeyFile {
     /// Generate a Key using the key derivation function from [`KeyFile`] and a given password
-    pub fn kdf_key(&self, passwd: &impl AsRef<[u8]>) -> RusticResult<Key> {
+    pub fn kdf_key(&self, passwd: &SecretPassword) -> RusticResult<Key> {
         let params = Params::new(log_2(self.n)?, self.r, self.p, Params::RECOMMENDED_LEN)
             .map_err(KeyFileErrorKind::InvalidSCryptParameters)?;
 
         let mut key = [0; 64];
-        scrypt::scrypt(passwd.as_ref(), &self.salt, &params, &mut key)
-            .map_err(KeyFileErrorKind::OutputLengthInvalid)?;
+        scrypt::scrypt(
+            passwd.expose_secret().as_bytes(),
+            &self.salt,
+            &params,
+            &mut key,
+        )
+        .map_err(KeyFileErrorKind::OutputLengthInvalid)?;
 
         Ok(Key::from_slice(&key))
     }
@@ -60,14 +66,14 @@ impl KeyFile {
 
     /// Extract a key from the data of the [`KeyFile`] using the key
     /// from the derivation function in combination with the given password.
-    pub fn key_from_password(&self, passwd: &impl AsRef<[u8]>) -> RusticResult<Key> {
+    pub fn key_from_password(&self, passwd: &SecretPassword) -> RusticResult<Key> {
         self.key_from_data(&self.kdf_key(passwd)?)
     }
 
     /// Generate a new [`KeyFile`] from a given key and password.
     pub fn generate(
         key: Key,
-        passwd: &impl AsRef<[u8]>,
+        passwd: &SecretPassword,
         hostname: Option<String>,
         username: Option<String>,
         with_created: bool,
@@ -78,7 +84,7 @@ impl KeyFile {
         thread_rng().fill_bytes(&mut salt);
 
         let mut key = [0; 64];
-        scrypt::scrypt(passwd.as_ref(), &salt, &params, &mut key)
+        scrypt::scrypt(passwd.expose_secret().as_bytes(), &salt, &params, &mut key)
             .map_err(KeyFileErrorKind::OutputLengthInvalid)?;
 
         let key = Key::from_slice(&key);
@@ -152,7 +158,7 @@ impl MasterKey {
 pub(crate) fn key_from_backend<B: ReadBackend>(
     be: &B,
     id: &Id,
-    passwd: &impl AsRef<[u8]>,
+    passwd: &SecretPassword,
 ) -> RusticResult<Key> {
     KeyFile::from_backend(be, id)?.key_from_password(passwd)
 }
@@ -162,7 +168,7 @@ pub(crate) fn key_from_backend<B: ReadBackend>(
 /// This is recommended for a large number of keys.
 pub(crate) fn find_key_in_backend<B: ReadBackend>(
     be: &B,
-    passwd: &impl AsRef<[u8]>,
+    passwd: &SecretPassword,
     hint: Option<&Id>,
 ) -> RusticResult<Key> {
     if let Some(id) = hint {

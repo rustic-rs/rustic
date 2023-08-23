@@ -9,7 +9,7 @@ use crate::{Application, RUSTIC_APP};
 
 use dialoguer::Password;
 
-use rustic_core::{ConfigOpts, KeyOpts, Repository};
+use rustic_core::{ConfigOpts, KeyOpts, Repository, RusticPassword};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -58,7 +58,7 @@ pub(crate) fn init<P, S>(
             .with_confirmation("confirm password", "passwords do not match")
             .interact()
         {
-            Ok(it) => it,
+            Ok(it) => RusticPassword::new(it).into(),
             Err(err) => {
                 status_err!("{}", err);
                 RUSTIC_APP.shutdown(Shutdown::Crash);

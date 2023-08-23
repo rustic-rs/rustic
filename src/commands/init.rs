@@ -58,7 +58,7 @@ pub(crate) fn init<P, S>(
             .with_confirmation("confirm password", "passwords do not match")
             .interact()
         {
-            Ok(it) => RusticPassword::new(it).into(),
+            Ok(it) => RusticPassword::new(&it).into(),
             Err(err) => {
                 status_err!("{}", err);
                 RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -66,7 +66,7 @@ pub(crate) fn init<P, S>(
         }
     });
 
-    let _ = repo.init_with_password(&pass, key_opts, config_opts)?;
+    let _ = repo.init_with_password(pass, key_opts, config_opts)?;
 
     Ok(())
 }

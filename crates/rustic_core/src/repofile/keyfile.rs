@@ -73,7 +73,7 @@ impl KeyFile {
     /// Generate a new [`KeyFile`] from a given key and password.
     pub fn generate(
         key: Key,
-        passwd: &SecretPassword,
+        passwd: SecretPassword,
         hostname: Option<String>,
         username: Option<String>,
         with_created: bool,

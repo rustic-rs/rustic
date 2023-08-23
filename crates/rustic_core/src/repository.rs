@@ -216,6 +216,7 @@ impl<P> Repository<P, ()> {
         })
     }
 }
+
 impl<P, S> Repository<P, S> {
     pub fn password(&self) -> RusticResult<Option<SecretPassword>> {
         match (
@@ -223,13 +224,13 @@ impl<P, S> Repository<P, S> {
             &self.opts.password_file,
             &self.opts.password_command,
         ) {
-            (Some(pwd), _, _) => Ok(Some(RusticPassword::new(pwd.clone()).into())),
+            (Some(pwd), _, _) => Ok(Some(RusticPassword::new(pwd).into())),
             (_, Some(file), _) => {
                 let mut file = BufReader::new(
                     File::open(file).map_err(RepositoryErrorKind::OpeningPasswordFileFailed)?,
                 );
                 Ok(Some(
-                    RusticPassword::new(read_password_from_reader(&mut file)?).into(),
+                    RusticPassword::new(&read_password_from_reader(&mut file)?).into(),
                 ))
             }
             (_, _, Some(command)) => {
@@ -254,7 +255,7 @@ impl<P, S> Repository<P, S> {
 
                 let mut pwd = BufReader::new(&*output.stdout);
                 Ok(Some(match read_password_from_reader(&mut pwd) {
-                    Ok(val) => RusticPassword::new(val).into(),
+                    Ok(val) => RusticPassword::new(&val).into(),
                     Err(_) => {
                         return Err(RepositoryErrorKind::ReadingPasswordFromCommandFailed.into())
                     }
@@ -326,12 +327,12 @@ impl<P, S> Repository<P, S> {
         let password = self
             .password()?
             .ok_or(RepositoryErrorKind::NoPasswordGiven)?;
-        self.init_with_password(&password, key_opts, config_opts)
+        self.init_with_password(password, key_opts, config_opts)
     }
 
     pub fn init_with_password(
         self,
-        pass: &SecretPassword,
+        pass: SecretPassword,
         key_opts: &KeyOpts,
         config_opts: &ConfigOpts,
     ) -> RusticResult<Repository<P, OpenStatus>> {
@@ -344,7 +345,7 @@ impl<P, S> Repository<P, S> {
 
     pub fn init_with_config(
         self,
-        pass: &SecretPassword,
+        pass: SecretPassword,
         key_opts: &KeyOpts,
         config: ConfigFile,
     ) -> RusticResult<Repository<P, OpenStatus>> {
@@ -460,7 +461,7 @@ impl<P, S: Open> Repository<P, S> {
         commands::cat::cat_file(self, tpe, id)
     }
 
-    pub fn add_key(&self, pass: &SecretPassword, opts: &KeyOpts) -> RusticResult<Id> {
+    pub fn add_key(&self, pass: SecretPassword, opts: &KeyOpts) -> RusticResult<Id> {
         opts.add_key(self, pass)
     }
 

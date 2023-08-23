@@ -1,5 +1,5 @@
 //! `key` example
-use rustic_core::{KeyOpts, Repository, RepositoryOptions};
+use rustic_core::{KeyOpts, Repository, RepositoryOptions, RusticPassword};
 use simplelog::{Config, LevelFilter, SimpleLogger};
 use std::error::Error;
 
@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Add a new key with the given password
     let key_opts = KeyOpts::default();
-    repo.add_key("new_password", &key_opts)?;
+    let pass = RusticPassword::new("new_password").into();
+    repo.add_key(pass, &key_opts)?;
     Ok(())
 }

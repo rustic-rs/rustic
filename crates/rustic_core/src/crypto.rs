@@ -21,8 +21,8 @@ impl std::ops::Deref for RusticPassword {
 }
 
 impl RusticPassword {
-    pub fn new(password: String) -> Self {
-        Self(password)
+    pub fn new(password: &str) -> Self {
+        Self(password.to_string())
     }
 }
 

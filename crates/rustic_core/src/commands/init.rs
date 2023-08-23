@@ -9,7 +9,7 @@ use crate::{
 
 pub(crate) fn init<P, S>(
     repo: &Repository<P, S>,
-    pass: &SecretPassword,
+    pass: SecretPassword,
     key_opts: &KeyOpts,
     config_opts: &ConfigOpts,
 ) -> RusticResult<(Key, ConfigFile)> {
@@ -27,7 +27,7 @@ pub(crate) fn init<P, S>(
 
 pub(crate) fn init_with_config<P, S>(
     repo: &Repository<P, S>,
-    pass: &SecretPassword,
+    pass: SecretPassword,
     key_opts: &KeyOpts,
     config: &ConfigFile,
 ) -> RusticResult<Key> {

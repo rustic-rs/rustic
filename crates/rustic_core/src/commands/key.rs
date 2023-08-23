@@ -24,7 +24,7 @@ impl KeyOpts {
     pub(crate) fn add_key<P, S: Open>(
         &self,
         repo: &Repository<P, S>,
-        pass: &SecretPassword,
+        pass: SecretPassword,
     ) -> RusticResult<Id> {
         let key = repo.key();
         self.add(repo, pass, *key)
@@ -33,7 +33,7 @@ impl KeyOpts {
     pub(crate) fn init_key<P, S>(
         &self,
         repo: &Repository<P, S>,
-        pass: &SecretPassword,
+        pass: SecretPassword,
     ) -> RusticResult<(Key, Id)> {
         // generate key
         let key = Key::new();
@@ -43,7 +43,7 @@ impl KeyOpts {
     fn add<P, S>(
         &self,
         repo: &Repository<P, S>,
-        pass: &SecretPassword,
+        pass: SecretPassword,
         key: Key,
     ) -> RusticResult<Id> {
         let ko = self.clone();

@@ -71,7 +71,7 @@ impl AddCmd {
             .transpose()
             .unwrap_or_else(|| -> Result<_> {
                 Ok(RusticPassword::new(
-                    Password::new()
+                    &Password::new()
                         .with_prompt("enter password for new key")
                         .allow_empty_password(true)
                         .with_confirmation("confirm password", "passwords do not match")
@@ -80,7 +80,7 @@ impl AddCmd {
                 .into())
             })?;
 
-        let id = repo.add_key(&pass, &self.key_opts)?;
+        let id = repo.add_key(pass, &self.key_opts)?;
         info!("key {id} successfully added.");
 
         Ok(())

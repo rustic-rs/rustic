@@ -182,7 +182,7 @@ fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOpti
         None => {
             for _ in 0..constants::MAX_PASSWORD_RETRIES {
                 let pass = RusticPassword::new(
-                    Password::new()
+                    &Password::new()
                         .with_prompt("enter repository password")
                         .allow_empty_password(true)
                         .interact()?,

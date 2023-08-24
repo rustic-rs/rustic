@@ -75,28 +75,38 @@ You can ask questions in the [Discussions][3] or have a look at the
 
 ## Installation
 
+### From binaries
+
+```bash
+cargo binstall rustic-rs
+```
+
+#### Windows
+
+```bash
+scoop install rustic
+```
+
+Or you can check out the
+[releases](https://github.com/rustic-rs/rustic/releases).
+
+Binaries for the latest development version are available
+[here](https://github.com/rustic-rs/rustic-beta).
+
 ### From source
 
 **Beware**: This installs the latest development version, which might be
 unstable.
 
-````bash
 ```bash
 cargo install --git https://github.com/rustic-rs/rustic.git rustic-rs
-````
+```
 
 ### crates.io
 
 ```bash
 cargo install rustic-rs
 ```
-
-### From binaries
-
-Check out the [releases](https://github.com/rustic-rs/rustic/releases).
-
-Binaries for the latest development version are available
-[here](https://github.com/rustic-rs/rustic-beta/releases).
 
 ## Differences to `restic`?
 

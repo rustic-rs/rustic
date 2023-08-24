@@ -77,11 +77,15 @@ You can ask questions in the [Discussions][3] or have a look at the
 
 ### From binaries
 
+##### [cargo-binstall](https://crates.io/crates/cargo-binstall)
+
 ```bash
 cargo binstall rustic-rs
 ```
 
 #### Windows
+
+##### [Scoop](https://scoop.sh/)
 
 ```bash
 scoop install rustic

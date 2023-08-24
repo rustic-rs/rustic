@@ -131,7 +131,14 @@ jobs:
           cd target/${{ matrix.job.target }}/release
 
           ########## create tar.gz ##########
-          RELEASE_NAME=rustic-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.job.target}}.tar.gz 
+
+          # accounting for main branch and therefore beta builds
+          if [[ ${{ github.ref_name }} == main ]]; then
+              RELEASE_NAME=RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz 
+          else    
+              RELEASE_NAME=rustic-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.job.target}}.tar.gz 
+          fi
+
           tar czvf $RELEASE_NAME rustic${{ matrix.job.binary-postfix }} config/
 
           ########## create sha256 ##########

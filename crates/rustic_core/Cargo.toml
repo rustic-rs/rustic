@@ -125,7 +125,7 @@ xattr = "1"
 [dev-dependencies]
 expect-test = "1.4.1"
 pretty_assertions = { workspace = true }
-public-api = "0.31.3"
+public-api = "0.32.0"
 quickcheck = { workspace = true }
 quickcheck_macros = { workspace = true }
 rstest = { workspace = true }

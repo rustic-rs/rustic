@@ -141,7 +141,9 @@ fn identical_content_local<P, S: IndexedFull>(
     path: &Path,
     node: &Node,
 ) -> Result<bool> {
-    let Some(mut open_file) = local.get_matching_file(path, node.meta.size) else { return Ok(false) };
+    let Some(mut open_file) = local.get_matching_file(path, node.meta.size) else {
+        return Ok(false);
+    };
 
     for id in node.content.iter().flatten() {
         let ie = repo.get_index_entry(BlobType::Data, id)?;

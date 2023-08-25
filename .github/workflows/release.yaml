@@ -133,8 +133,10 @@ jobs:
           ########## create tar.gz ##########
 
           # accounting for main branch and therefore beta builds
-          if [[ ${{ github.ref_name }} == main ]]; then
-              RELEASE_NAME=rustic-beta-${{ matrix.job.target}}.tar.gz 
+          if [[ ${{ github.ref }} == refs/heads/main ]]; then
+              RELEASE_NAME=rustic-beta-${{ matrix.job.target}}.tar.gz
+          elif [[ ${{ github.ref }} == refs/tags/* ]]; then
+              RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
           else    
               RELEASE_NAME=rustic-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.job.target}}.tar.gz 
           fi

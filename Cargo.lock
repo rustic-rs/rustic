@@ -116,9 +116,9 @@ dependencies = [
 
 [[package]]
 name = "aho-corasick"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6748e8def348ed4d14996fa801f4122cd763fff530258cdc03f64b25f89d3a5a"
+checksum = "0c378d78423fdad8089616f827526ee33c19f2fddbd5de1629152c9593ba4783"
 dependencies = [
  "memchr",
 ]
@@ -2128,7 +2128,7 @@ version = "1.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0ab3ca65655bb1e41f2a8c8cd662eb4fb035e67c3f78da1d61dffe89d07300f"
 dependencies = [
- "aho-corasick 1.0.4",
+ "aho-corasick 1.0.5",
  "memchr",
  "regex-syntax 0.7.2",
 ]
@@ -2307,7 +2307,7 @@ version = "0.5.4-dev"
 dependencies = [
  "abscissa_core",
  "aes256ctr_poly1305aes",
- "aho-corasick 1.0.4",
+ "aho-corasick 1.0.5",
  "anyhow",
  "binrw",
  "bytes",
@@ -2375,7 +2375,7 @@ name = "rustic_core"
 version = "0.6.0"
 dependencies = [
  "aes256ctr_poly1305aes",
- "aho-corasick 1.0.4",
+ "aho-corasick 1.0.5",
  "backoff",
  "binrw",
  "bytes",
@@ -2438,7 +2438,7 @@ dependencies = [
 name = "rustic_testing"
 version = "0.1.0"
 dependencies = [
- "aho-corasick 1.0.4",
+ "aho-corasick 1.0.5",
  "once_cell",
  "tempfile",
 ]

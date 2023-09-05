@@ -8,22 +8,33 @@ use crate::{
     repofile::indexfile::{IndexBlob, IndexPack},
 };
 
+/// A sorted entry in the index.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct SortedEntry {
+    /// The ID of the entry.
     id: Id,
+    /// The index of the pack containing the entry.
     pack_idx: usize,
+    /// The offset of the entry in the pack.
     offset: u32,
+    /// The length of the entry in the pack.
     length: u32,
+    /// The uncompressed length of the entry.
     uncompressed_length: Option<NonZeroU32>,
 }
 
+/// `IndexType` determines which information is stored in the index.
 #[derive(Debug, Clone, Copy)]
 pub enum IndexType {
+    /// Index everything.
     Full,
-    FullTrees,
+    /// Index only Ids for data blobs (+ full information for tree blobs)
+    DataIds,
+    /// Index only trees.
     OnlyTrees,
 }
 
+// TODO: add documentation!
 #[derive(Debug)]
 pub(crate) enum EntriesVariants {
     None,
@@ -72,7 +83,7 @@ impl IndexCollector {
         collector.0[BlobType::Tree].entries = EntriesVariants::FullEntries(Vec::new());
         collector.0[BlobType::Data].entries = match tpe {
             IndexType::OnlyTrees => EntriesVariants::None,
-            IndexType::FullTrees => EntriesVariants::Ids(Vec::new()),
+            IndexType::DataIds => EntriesVariants::Ids(Vec::new()),
             IndexType::Full => EntriesVariants::FullEntries(Vec::new()),
         };
 
@@ -318,13 +329,22 @@ mod tests {
         collector.into_index()
     }
 
+    /// Parses a hex string into an ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `s` - The hex string to parse.
+    ///
+    /// # Panics
+    ///
+    /// If the string is not a valid hexadecimal string.
     fn parse(s: &str) -> Id {
         Id::from_hex(s).unwrap()
     }
 
     #[test]
     fn all_index_types() {
-        for it in [IndexType::OnlyTrees, IndexType::FullTrees, IndexType::Full] {
+        for it in [IndexType::OnlyTrees, IndexType::DataIds, IndexType::Full] {
             let index = index(it);
 
             let id = parse("0000000000000000000000000000000000000000000000000000000000000000");
@@ -375,7 +395,7 @@ mod tests {
 
     #[test]
     fn full_trees() {
-        let index = index(IndexType::FullTrees);
+        let index = index(IndexType::DataIds);
 
         let id = parse("fac5e908151e565267570108127b96e6bae22bcdda1d3d867f63ed1555fc8aef");
         assert!(index.has(BlobType::Data, &id));

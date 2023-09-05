@@ -10,15 +10,14 @@ use log::debug;
 
 use anyhow::Result;
 
-use rustic_core::{PruneOpts, PruneStats, Sum};
+use rustic_core::{PruneOptions, PruneStats};
 
 /// `prune` subcommand
 #[allow(clippy::struct_excessive_bools)]
 #[derive(clap::Parser, Command, Debug, Clone)]
-#[group(id = "prune_opts")]
 pub(crate) struct PruneCmd {
     #[clap(flatten)]
-    pub(crate) opts: PruneOpts,
+    pub(crate) opts: PruneOptions,
 }
 
 impl Runnable for PruneCmd {
@@ -51,8 +50,8 @@ impl PruneCmd {
 #[allow(clippy::cast_precision_loss)]
 fn print_stats(stats: &PruneStats) {
     let pack_stat = &stats.packs;
-    let blob_stat = stats.blobs.sum();
-    let size_stat = stats.size.sum();
+    let blob_stat = stats.blobs_sum();
+    let size_stat = stats.size_sum();
 
     debug!(
         "used:   {:>10} blobs, {:>10}",

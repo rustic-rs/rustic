@@ -27,20 +27,62 @@ use crate::backend::node::NodeType;
 use crate::{
     backend::{
         node::{ExtendedAttribute, Metadata, Node},
-        FileType, Id, ReadBackend, WriteBackend, ALL_FILE_TYPES,
+        FileType, ReadBackend, WriteBackend, ALL_FILE_TYPES,
     },
-    error::LocalErrorKind,
-    RusticResult,
+    error::{LocalErrorKind, RusticResult},
+    id::Id,
 };
 
+/// Local backend, used when backing up.
+///
+/// This backend is used when backing up to a local directory.
+/// It will create a directory structure like this:
+///
+/// ```text
+/// <path>/
+/// ├── config
+/// ├── data
+/// │   ├── 00
+/// │   │   └── <id>
+/// │   ├── 01
+/// │   │   └── <id>
+/// │   └── ...
+/// ├── index
+/// │   └── <id>
+/// ├── keys
+/// │   └── <id>
+/// ├── snapshots
+/// │   └── <id>
+/// └── ...
+/// ```
+///
+/// The `data` directory will contain all data files, split into 256 subdirectories.
+/// The `config` directory will contain the config file.
+/// The `index` directory will contain the index file.
+/// The `keys` directory will contain the keys file.
+/// The `snapshots` directory will contain the snapshots file.
+/// All other directories will contain the pack files.
 #[derive(Clone, Debug)]
 pub struct LocalBackend {
+    /// The base path of the backend.
     path: PathBuf,
+    /// The command to call after a file was created.
     post_create_command: Option<String>,
+    /// The command to call after a file was deleted.
     post_delete_command: Option<String>,
 }
 
 impl LocalBackend {
+    /// Create a new [`LocalBackend`]
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The base path of the backend
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    // TODO: We should use `impl Into<Path/PathBuf>` here. we even use it in the body!
     pub fn new(path: &str) -> RusticResult<Self> {
         let path = path.into();
         fs::create_dir_all(&path).map_err(LocalErrorKind::DirectoryCreationFailed)?;
@@ -51,20 +93,54 @@ impl LocalBackend {
         })
     }
 
+    /// Path to the given file type and id.
+    ///
+    /// If the file type is `FileType::Pack`, the id will be used to determine the subdirectory.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Returns
+    ///
+    /// The path to the file.
     fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
         let hex_id = id.to_hex();
         match tpe {
             FileType::Config => self.path.join("config"),
             FileType::Pack => self.path.join("data").join(&hex_id[0..2]).join(hex_id),
-            _ => self.path.join(tpe.to_string()).join(hex_id),
+            _ => self.path.join(tpe.dirname()).join(hex_id),
         }
     }
 
+    /// Call the given command.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `filename` - The path to the file.
+    /// * `command` - The command to call.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::FromAhoCorasick`] - If the patterns could not be compiled.
+    /// * [`LocalErrorKind::FromNomError`] - If the command could not be parsed.
+    /// * [`LocalErrorKind::CommandExecutionFailed`] - If the command could not be executed.
+    /// * [`LocalErrorKind::CommandNotSuccessful`] - If the command was not successful.
+    ///
+    /// # Notes
+    ///
+    /// The following placeholders are supported:
+    /// * `%file` - The path to the file.
+    /// * `%type` - The type of the file.
+    /// * `%id` - The id of the file.
     fn call_command(tpe: FileType, id: &Id, filename: &Path, command: &str) -> RusticResult<()> {
         let id = id.to_hex();
         let patterns = &["%file", "%type", "%id"];
         let ac = AhoCorasick::new(patterns).map_err(LocalErrorKind::FromAhoCorasick)?;
-        let replace_with = &[filename.to_str().unwrap(), tpe.into(), id.as_str()];
+        let replace_with = &[filename.to_str().unwrap(), tpe.dirname(), id.as_str()];
         let actual_command = ac.replace_all(command, replace_with);
         debug!("calling {actual_command}...");
         let commands = split(&actual_command).map_err(LocalErrorKind::FromSplitError)?;
@@ -86,12 +162,27 @@ impl LocalBackend {
 }
 
 impl ReadBackend for LocalBackend {
+    /// Returns the location of the backend.
+    ///
+    /// This is `local:<path>`.
     fn location(&self) -> String {
         let mut location = "local:".to_string();
         location.push_str(&self.path.to_string_lossy());
         location
     }
 
+    /// Sets an option of the backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `option` - The option to set.
+    /// * `value` - The value to set the option to.
+    ///
+    /// # Notes
+    ///
+    /// The following options are supported:
+    /// * `post-create-command` - The command to call after a file was created.
+    /// * `post-delete-command` - The command to call after a file was deleted.
     fn set_option(&mut self, option: &str, value: &str) -> RusticResult<()> {
         match option {
             "post-create-command" => {
@@ -107,6 +198,19 @@ impl ReadBackend for LocalBackend {
         Ok(())
     }
 
+    /// Lists all files of the given type.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the files to list.
+    ///
+    /// # Errors
+    ///
+    /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
+    ///
+    /// # Notes
+    ///
+    /// If the file type is `FileType::Config`, this will return a list with a single default id.
     fn list(&self, tpe: FileType) -> RusticResult<Vec<Id>> {
         trace!("listing tpe: {tpe:?}");
         if tpe == FileType::Config {
@@ -117,7 +221,7 @@ impl ReadBackend for LocalBackend {
             });
         }
 
-        let walker = WalkDir::new(self.path.join(tpe.to_string()))
+        let walker = WalkDir::new(self.path.join(tpe.dirname()))
             .into_iter()
             .filter_map(walkdir::Result::ok)
             .filter(|e| e.file_type().is_file())
@@ -126,9 +230,21 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
+    /// Lists all files with their size of the given type.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the files to list.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::QueryingMetadataFailed`] - If the metadata of the file could not be queried.
+    /// * [`LocalErrorKind::FromTryIntError`] - If the length of the file could not be converted to u32.
+    /// * [`LocalErrorKind::QueryingWalkDirMetadataFailed`] - If the metadata of the file could not be queried.
+    /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
         trace!("listing tpe: {tpe:?}");
-        let path = self.path.join(tpe.to_string());
+        let path = self.path.join(tpe.dirname());
 
         if tpe == FileType::Config {
             return Ok(if path.exists() {
@@ -164,6 +280,16 @@ impl ReadBackend for LocalBackend {
         Ok(walker.collect())
     }
 
+    /// Reads full data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::ReadingContentsOfFileFailed`] - If the file could not be read.
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         trace!("reading tpe: {tpe:?}, id: {id}");
         Ok(fs::read(self.path(tpe, id))
@@ -171,6 +297,22 @@ impl ReadBackend for LocalBackend {
             .into())
     }
 
+    /// Reads partial data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    /// * `offset` - The offset to read from.
+    /// * `length` - The length to read.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::OpeningFileFailed`] - If the file could not be opened.
+    /// * [`LocalErrorKind::CouldNotSeekToPositionInFile`] - If the file could not be seeked to the given position.
+    /// * [`LocalErrorKind::FromTryIntError`] - If the length of the file could not be converted to u32.
+    /// * [`LocalErrorKind::ReadingExactLengthOfFileFailed`] - If the length of the file could not be read.
     fn read_partial(
         &self,
         tpe: FileType,
@@ -196,11 +338,16 @@ impl ReadBackend for LocalBackend {
 }
 
 impl WriteBackend for LocalBackend {
+    /// Create a repository on the backend.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
     fn create(&self) -> RusticResult<()> {
         trace!("creating repo at {:?}", self.path);
 
         for tpe in ALL_FILE_TYPES {
-            fs::create_dir_all(self.path.join(tpe.to_string()))
+            fs::create_dir_all(self.path.join(tpe.dirname()))
                 .map_err(LocalErrorKind::DirectoryCreationFailed)?;
         }
         for i in 0u8..=255 {
@@ -210,6 +357,22 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
+    /// Write the given bytes to the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    /// * `buf` - The bytes to write.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::OpeningFileFailed`] - If the file could not be opened.
+    /// * [`LocalErrorKind::FromTryIntError`] - If the length of the bytes could not be converted to u64.
+    /// * [`LocalErrorKind::SettingFileLengthFailed`] - If the length of the file could not be set.
+    /// * [`LocalErrorKind::CouldNotWriteToBuffer`] - If the bytes could not be written to the file.
+    /// * [`LocalErrorKind::SyncingOfOsMetadataFailed`] - If the metadata of the file could not be synced.
     fn write_bytes(
         &self,
         tpe: FileType,
@@ -242,6 +405,17 @@ impl WriteBackend for LocalBackend {
         Ok(())
     }
 
+    /// Remove the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::FileRemovalFailed`] - If the file could not be removed.
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> RusticResult<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
@@ -256,12 +430,27 @@ impl WriteBackend for LocalBackend {
 }
 
 #[derive(Clone, Debug)]
+/// Local destination, used when restoring.
 pub struct LocalDestination {
+    /// The base path of the destination.
     path: PathBuf,
+    /// Whether we expect a single file as destination.
     is_file: bool,
 }
 
 impl LocalDestination {
+    /// Create a new [`LocalDestination`]
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The base path of the destination
+    /// * `create` - If `create` is true, create the base path if it doesn't exist.
+    /// * `expect_file` - Whether we expect a single file as destination.
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    // TODO: We should use `impl Into<Path/PathBuf>` here. we even use it in the body!
     pub fn new(path: &str, create: bool, expect_file: bool) -> RusticResult<Self> {
         let is_dir = path.ends_with('/');
         let path: PathBuf = path.into();
@@ -280,6 +469,20 @@ impl LocalDestination {
         Ok(Self { path, is_file })
     }
 
+    /// Path to the given item (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to get the path for
+    ///
+    /// # Returns
+    ///
+    /// The path to the item.
+    ///
+    /// # Notes
+    ///
+    /// * If the destination is a file, this will return the base path.
+    /// * If the destination is a directory, this will return the base path joined with the item.
     pub(crate) fn path(&self, item: impl AsRef<Path>) -> PathBuf {
         if self.is_file {
             self.path.clone()
@@ -288,20 +491,72 @@ impl LocalDestination {
         }
     }
 
+    /// Remove the given directory (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `dirname` - The directory to remove
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::DirectoryRemovalFailed`] - If the directory could not be removed.
+    ///
+    /// # Notes
+    ///
+    /// This will remove the directory recursively.
     pub fn remove_dir(&self, dirname: impl AsRef<Path>) -> RusticResult<()> {
         Ok(fs::remove_dir_all(dirname).map_err(LocalErrorKind::DirectoryRemovalFailed)?)
     }
 
+    /// Remove the given file (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `filename` - The file to remove
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::FileRemovalFailed`] - If the file could not be removed.
+    ///
+    /// # Notes
+    ///
+    /// This will remove the file.
+    ///
+    /// * If the file is a symlink, the symlink will be removed, not the file it points to.
+    /// * If the file is a directory or device, this will fail.
     pub fn remove_file(&self, filename: impl AsRef<Path>) -> RusticResult<()> {
         Ok(fs::remove_file(filename).map_err(LocalErrorKind::FileRemovalFailed)?)
     }
 
+    /// Create the given directory (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The directory to create
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    ///
+    /// # Notes
+    ///
+    /// This will create the directory structure recursively.
     pub fn create_dir(&self, item: impl AsRef<Path>) -> RusticResult<()> {
         let dirname = self.path.join(item);
         fs::create_dir_all(dirname).map_err(LocalErrorKind::DirectoryCreationFailed)?;
         Ok(())
     }
 
+    /// Set changed and modified times for `item` (relative to the base path) utilizing the file metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the times for
+    /// * `meta` - The metadata to get the times from
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::SettingTimeMetadataFailed`] - If the times could not be set
     pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) -> RusticResult<()> {
         let filename = self.path(item);
         if let Some(mtime) = meta.mtime {
@@ -319,6 +574,16 @@ impl LocalDestination {
 
     #[cfg(windows)]
     // TODO: Windows support
+    /// Set user/group for `item` (relative to the base path) utilizing the file metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the user/group for
+    /// * `meta` - The metadata to get the user/group from
+    ///
+    /// # Errors
+    ///
+    /// If the user/group could not be set.
     pub fn set_user_group(&self, _item: impl AsRef<Path>, _meta: &Metadata) -> RusticResult<()> {
         // https://learn.microsoft.com/en-us/windows/win32/fileio/file-security-and-access-rights
         // https://microsoft.github.io/windows-docs-rs/doc/windows/Win32/Security/struct.SECURITY_ATTRIBUTES.html
@@ -327,6 +592,16 @@ impl LocalDestination {
     }
 
     #[cfg(not(windows))]
+    /// Set user/group for `item` (relative to the base path) utilizing the file metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the user/group for
+    /// * `meta` - The metadata to get the user/group from
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::FromErrnoError`] - If the user/group could not be set.
     pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) -> RusticResult<()> {
         let filename = self.path(item);
 
@@ -351,11 +626,31 @@ impl LocalDestination {
 
     #[cfg(windows)]
     // TODO: Windows support
+    /// Set uid/gid for `item` (relative to the base path) utilizing the file metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the uid/gid for
+    /// * `meta` - The metadata to get the uid/gid from
+    ///
+    /// # Errors
+    ///
+    /// If the uid/gid could not be set.
     pub fn set_uid_gid(&self, _item: impl AsRef<Path>, _meta: &Metadata) -> RusticResult<()> {
         Ok(())
     }
 
     #[cfg(not(windows))]
+    /// Set uid/gid for `item` (relative to the base path) utilizing the file metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the uid/gid for
+    /// * `meta` - The metadata to get the uid/gid from
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::FromErrnoError`] - If the uid/gid could not be set.
     pub fn set_uid_gid(&self, item: impl AsRef<Path>, meta: &Metadata) -> RusticResult<()> {
         let filename = self.path(item);
 
@@ -369,13 +664,33 @@ impl LocalDestination {
 
     #[cfg(windows)]
     // TODO: Windows support
+    /// Set permissions for `item` (relative to the base path) from `node`
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the permissions for
+    /// * `node` - The node to get the permissions from
+    ///
+    /// # Errors        
+    ///
+    /// If the permissions could not be set.
     pub fn set_permission(&self, _item: impl AsRef<Path>, _node: &Node) -> RusticResult<()> {
         Ok(())
     }
 
     #[cfg(not(windows))]
+    /// Set permissions for `item` (relative to the base path) from `node`
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the permissions for
+    /// * `node` - The node to get the permissions from
+    ///
+    /// # Errors        
+    ///
+    /// * [`LocalErrorKind::SettingFilePermissionsFailed`] - If the permissions could not be set.
     pub fn set_permission(&self, item: impl AsRef<Path>, node: &Node) -> RusticResult<()> {
-        if node.node_type.is_symlink() {
+        if node.is_symlink() {
             return Ok(());
         }
 
@@ -392,6 +707,16 @@ impl LocalDestination {
     #[cfg(any(windows, target_os = "openbsd"))]
     // TODO: Windows support
     // TODO: openbsd support
+    /// Set extended attributes for `item` (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the extended attributes for
+    /// * `extended_attributes` - The extended attributes to set
+    ///
+    /// # Errors
+    ///
+    /// If the extended attributes could not be set.
     pub fn set_extended_attributes(
         &self,
         _item: impl AsRef<Path>,
@@ -401,6 +726,18 @@ impl LocalDestination {
     }
 
     #[cfg(not(any(windows, target_os = "openbsd")))]
+    /// Set extended attributes for `item` (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the extended attributes for
+    /// * `extended_attributes` - The extended attributes to set
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::ListingXattrsFailed`] - If listing the extended attributes failed.
+    /// * [`LocalErrorKind::GettingXattrFailed`] - If getting an extended attribute failed.
+    /// * [`LocalErrorKind::SettingXattrFailed`] - If setting an extended attribute failed.
     pub fn set_extended_attributes(
         &self,
         item: impl AsRef<Path>,
@@ -457,7 +794,24 @@ impl LocalDestination {
         Ok(())
     }
 
-    // set_length sets the length of the given file. If it doesn't exist, create a new (empty) one with given length
+    /// Set length of `item` (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to set the length for
+    /// * `size` - The size to set the length to
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::FileDoesNotHaveParent`] - If the file does not have a parent.
+    /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    /// * [`LocalErrorKind::OpeningFileFailed`] - If the file could not be opened.
+    /// * [`LocalErrorKind::SettingFileLengthFailed`] - If the length of the file could not be set.
+    ///
+    /// # Notes
+    ///
+    /// If the file exists, truncate it to the given length. (TODO: check if this is correct)
+    /// If it doesn't exist, create a new (empty) one with given length.
     pub fn set_length(&self, item: impl AsRef<Path>, size: u64) -> RusticResult<()> {
         let filename = self.path(item);
         let dir = filename
@@ -477,11 +831,24 @@ impl LocalDestination {
 
     #[cfg(windows)]
     // TODO: Windows support
+    /// Create a special file (relative to the base path)
     pub fn create_special(&self, _item: impl AsRef<Path>, _node: &Node) -> RusticResult<()> {
         Ok(())
     }
 
     #[cfg(not(windows))]
+    /// Create a special file (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to create
+    /// * `node` - The node to get the type from
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::SymlinkingFailed`] - If the symlink could not be created.
+    /// * [`LocalErrorKind::FromTryIntError`] - If the device could not be converted to the correct type.
+    /// * [`LocalErrorKind::FromErrnoError`] - If the device could not be created.
     pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> RusticResult<()> {
         let filename = self.path(item);
 
@@ -535,6 +902,20 @@ impl LocalDestination {
         Ok(())
     }
 
+    /// Read the given item (relative to the base path)
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to read
+    /// * `offset` - The offset to read from
+    /// * `length` - The length to read
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::OpeningFileFailed`] - If the file could not be opened.
+    /// * [`LocalErrorKind::CouldNotSeekToPositionInFile`] - If the file could not be seeked to the given position.
+    /// * [`LocalErrorKind::FromTryIntError`] - If the length of the file could not be converted to u32.
+    /// * [`LocalErrorKind::ReadingExactLengthOfFileFailed`] - If the length of the file could not be read.
     pub fn read_at(&self, item: impl AsRef<Path>, offset: u64, length: u64) -> RusticResult<Bytes> {
         let filename = self.path(item);
         let mut file = File::open(filename).map_err(LocalErrorKind::OpeningFileFailed)?;
@@ -547,6 +928,17 @@ impl LocalDestination {
         Ok(vec.into())
     }
 
+    /// Check if a matching file exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to check
+    /// * `size` - The size to check
+    ///
+    /// # Returns
+    ///
+    /// If a file exists and size matches, this returns a `File` open for reading.
+    /// In all other cases, returns `None`
     pub fn get_matching_file(&self, item: impl AsRef<Path>, size: u64) -> Option<File> {
         let filename = self.path(item);
         fs::symlink_metadata(&filename).map_or_else(
@@ -561,6 +953,23 @@ impl LocalDestination {
         )
     }
 
+    /// Write `data` to given item (relative to the base path) at `offset`
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to write to
+    /// * `offset` - The offset to write at
+    /// * `data` - The data to write
+    ///
+    /// # Errors
+    ///
+    /// * [`LocalErrorKind::OpeningFileFailed`] - If the file could not be opened.
+    /// * [`LocalErrorKind::CouldNotSeekToPositionInFile`] - If the file could not be seeked to the given position.
+    /// * [`LocalErrorKind::CouldNotWriteToBuffer`] - If the bytes could not be written to the file.
+    ///
+    /// # Notes
+    ///
+    /// This will create the file if it doesn't exist.
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) -> RusticResult<()> {
         let filename = self.path(item);
         let mut file = fs::OpenOptions::new()

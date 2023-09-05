@@ -13,31 +13,51 @@ use rand::{
 };
 
 use crate::{
-    backend::{rest::RestBackend, FileType, Id, ReadBackend, WriteBackend},
+    backend::{rest::RestBackend, FileType, ReadBackend, WriteBackend},
     error::{ProviderErrorKind, RusticResult},
+    id::Id,
 };
 
+pub(super) mod constants {
+    /// The string to search for in the rclone output.
+    pub(super) const SEARCHSTRING: &str = "Serving restic REST API on ";
+}
+
+/// `ChildToKill` is a wrapper around a `Child` process that kills the child when it is dropped.
 #[derive(Debug)]
 struct ChildToKill(Child);
 
 impl Drop for ChildToKill {
+    /// Kill the child process.
     fn drop(&mut self) {
         debug!("killing rclone.");
         self.0.kill().unwrap();
     }
 }
 
-pub(super) mod constants {
-    pub(super) const SEARCHSTRING: &str = "Serving restic REST API on ";
-}
-
+/// `RcloneBackend` is a backend that uses rclone to access a remote backend.
 #[derive(Clone, Debug)]
 pub struct RcloneBackend {
+    /// The REST backend.
     rest: RestBackend,
+    /// The url of the backend.
     url: String,
+    /// The child data contains the child process and is used to kill the child process when the backend is dropped.
     _child_data: Arc<ChildToKill>,
 }
 
+/// Get the rclone version.
+///
+/// # Errors
+///
+/// * [`ProviderErrorKind::FromIoError`] - If the rclone version could not be determined.
+/// * [`ProviderErrorKind::FromUtf8Error`] - If the rclone version could not be determined.
+/// * [`ProviderErrorKind::NoOutputForRcloneVersion`] - If the rclone version could not be determined.
+/// * [`ProviderErrorKind::FromParseIntError`] - If the rclone version could not be determined.
+///
+/// # Returns
+///
+/// The rclone version as a tuple of (major, minor, patch).
 fn rclone_version() -> RusticResult<(i32, i32, i32)> {
     let rclone_version_output = Command::new("rclone")
         .arg("version")
@@ -65,6 +85,20 @@ fn rclone_version() -> RusticResult<(i32, i32, i32)> {
 }
 
 impl RcloneBackend {
+    /// Create a new [`RcloneBackend`] from a given url.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The url to create the [`RcloneBackend`] from.
+    ///
+    /// # Errors
+    ///
+    /// * [`ProviderErrorKind::FromIoError`] - If the rclone version could not be determined.
+    /// * [`ProviderErrorKind::NoStdOutForRclone`] - If the rclone version could not be determined.
+    /// * [`ProviderErrorKind::RCloneExitWithBadStatus`] - If rclone exited with a bad status.
+    /// * [`ProviderErrorKind::UrlNotStartingWithHttp`] - If the URL does not start with `http`.
+    /// * [`RestErrorKind::UrlParsingFailed`] - If the URL could not be parsed.
+    /// * [`RestErrorKind::BuildingClientFailed`] - If the client could not be built.
     pub fn new(url: &str) -> RusticResult<Self> {
         match rclone_version() {
             Ok((major, minor, patch)) => {
@@ -74,6 +108,8 @@ impl RcloneBackend {
                     .then(patch.cmp(&2))
                     .is_lt()
                 {
+                    // TODO: This should be an error, and explicitly agreed to with a flag passed to `rustic`,
+                    // check #812 for details
                     // for rclone < 1.52.2 setting user/password via env variable doesn't work. This means
                     // we are setting up an rclone without authentication which is a security issue!
                     // (however, it still works, so we give a warning)
@@ -154,24 +190,75 @@ impl RcloneBackend {
 }
 
 impl ReadBackend for RcloneBackend {
+    /// Returns the location of the backend.
     fn location(&self) -> String {
         let mut location = "rclone:".to_string();
         location.push_str(&self.url);
         location
     }
 
+    /// Sets an option of the backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `option` - The option to set.
+    /// * `value` - The value to set the option to.
+    ///
+    /// # Errors
+    ///
+    /// If the option is not supported.
     fn set_option(&mut self, option: &str, value: &str) -> RusticResult<()> {
         self.rest.set_option(option, value)
     }
 
+    /// Returns the size of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    ///
+    /// # Errors
+    ///
+    /// If the size could not be determined.
     fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
         self.rest.list_with_size(tpe)
     }
 
+    /// Reads full data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// # Returns
+    ///
+    /// The data read.
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         self.rest.read_full(tpe, id)
     }
 
+    /// Reads partial data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the data should be cached.
+    /// * `offset` - The offset to read from.
+    /// * `length` - The length to read.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// # Returns
+    ///
+    /// The data read.
     fn read_partial(
         &self,
         tpe: FileType,
@@ -185,14 +272,42 @@ impl ReadBackend for RcloneBackend {
 }
 
 impl WriteBackend for RcloneBackend {
+    /// Creates a new file.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn create(&self) -> RusticResult<()> {
         self.rest.create()
     }
 
+    /// Writes bytes to the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the data should be cached.
+    /// * `buf` - The data to write.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> RusticResult<()> {
         self.rest.write_bytes(tpe, id, cacheable, buf)
     }
 
+    /// Removes the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> RusticResult<()> {
         self.rest.remove(tpe, id, cacheable)
     }

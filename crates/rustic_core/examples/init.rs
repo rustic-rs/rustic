@@ -1,5 +1,5 @@
 //! `init` example
-use rustic_core::{ConfigOpts, KeyOpts, Repository, RepositoryOptions};
+use rustic_core::{ConfigOptions, KeyOptions, Repository, RepositoryOptions};
 use simplelog::{Config, LevelFilter, SimpleLogger};
 use std::error::Error;
 
@@ -11,8 +11,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let repo_opts = RepositoryOptions::default()
         .repository("/tmp/repo")
         .password("test");
-    let key_opts = KeyOpts::default();
-    let config_opts = ConfigOpts::default();
+    let key_opts = KeyOptions::default();
+    let config_opts = ConfigOptions::default();
     let _repo = Repository::new(&repo_opts)?.init(&key_opts, &config_opts)?;
 
     // -> use _repo for any operation on an open repository

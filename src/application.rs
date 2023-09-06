@@ -1,4 +1,5 @@
 //! Rustic Abscissa Application
+use std::env;
 use std::fs::File;
 use std::str::FromStr;
 
@@ -91,6 +92,11 @@ impl Application for RusticApp {
     fn after_config(&mut self, config: Self::Cfg) -> Result<(), FrameworkError> {
         // Configure components
         self.state.components_mut().after_config(&config)?;
+
+        // set all given environment variables
+        for (env, value) in config.global.env.iter() {
+            env::set_var(env, value);
+        }
 
         // start logger
         let level_filter = match &config.global.log_level {

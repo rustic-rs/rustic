@@ -96,8 +96,9 @@ making changes, please include relevant unit tests. Run the test suite with:
 cargo test --workspace
 ```
 
-or check the [development guide](https://rustic.cli.rs/docs/development/intro.html) for
-more information which tools we provide for making developing `rustic` easier.
+or check the
+[development guide](https://rustic.cli.rs/docs/development/intro.html) for more
+information which tools we provide for making developing `rustic` easier.
 
 Make sure all tests pass before submitting your changes. PRs containing tests
 have a much higher probability of getting merged (fast).
@@ -107,7 +108,8 @@ the new code.
 
 Besides that, we welcome PRs which increase the general test coverage of the
 project. You can check the
-[testing guide](https://rustic.cli.rs/docs/development/testing.html#code-coverage) for more information.
+[testing guide](https://rustic.cli.rs/docs/development/testing.html#code-coverage)
+for more information.
 
 We appreciate tests in every form: be it *unit*, *doc* or *integration* tests
 (chose depending on your use case).
@@ -268,8 +270,8 @@ Some extra tutorials on `git rebase`:
 ## Development Setup
 
 If you want to set up a local development environment, follow the steps in the
-[development guide](https://rustic.cli.rs/docs/development/intro.html) file - which is currently
-being worked on.
+[development guide](https://rustic.cli.rs/docs/development/intro.html) file -
+which is currently being worked on.
 
 ## License
 

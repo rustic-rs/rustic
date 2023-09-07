@@ -71,7 +71,9 @@ You can ask questions in the [Discussions][3] or have a look at the
 
 ## Getting started
 
-Please check our [documentation](https://rustic.cli.rs/docs/getting_started.html) for more information on how to get started.
+Please check our
+[documentation](https://rustic.cli.rs/docs/getting_started.html) for more
+information on how to get started.
 
 ## Installation
 

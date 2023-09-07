@@ -1,7 +1,7 @@
 use crate::error::RhaiErrorKinds;
 
 use log::warn;
-use rustic_core::{SnapshotFile, StringList};
+use rustic_core::{repofile::SnapshotFile, StringList};
 use std::{error::Error, str::FromStr};
 
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};

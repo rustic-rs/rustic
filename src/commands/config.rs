@@ -8,13 +8,13 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::Result;
 
-use rustic_core::ConfigOpts;
+use rustic_core::ConfigOptions;
 
 /// `config` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct ConfigCmd {
     #[clap(flatten)]
-    config_opts: ConfigOpts,
+    config_opts: ConfigOptions,
 }
 
 impl Runnable for ConfigCmd {

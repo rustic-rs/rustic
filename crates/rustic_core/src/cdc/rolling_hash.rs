@@ -1,35 +1,77 @@
 use crate::cdc::polynom::{Polynom, Polynom64};
 
+/// A rolling hash implementataion for 64 bit polynoms.
 pub(crate) trait RollingHash64 {
+    /// Resets the rolling hash.
     fn reset(&mut self);
+
+    /// Attempt to prefill the window
+    ///
+    /// # Arguments
+    ///
+    /// * `iter` - The iterator to read from.
     fn prefill_window<I>(&mut self, iter: &mut I) -> usize
     where
         I: Iterator<Item = u8>;
+
+    /// Combines a reset with a prefill in an optimized way.
+    ///
+    /// # Arguments
+    ///
+    /// * `iter` - The iterator to read from.
     fn reset_and_prefill_window<I>(&mut self, iter: &mut I) -> usize
     where
         I: Iterator<Item = u8>;
+
+    /// Slides the window by byte.
+    ///
+    /// # Arguments
+    ///
+    /// * `byte` - The byte to slide in.
     fn slide(&mut self, byte: u8);
+
+    /// Returns the current hash as a `Polynom64`.
     fn get_hash(&self) -> &Polynom64;
 }
 
+/// A rolling hash implementataion for 64 bit polynoms from Rabin.
 #[derive(Clone)]
 pub(crate) struct Rabin64 {
     // Configuration
+    /// Window size.
     pub(crate) window_size: usize, // The size of the data window used in the hash calculation.
+    /// Window size mask.
     pub(crate) window_size_mask: usize, // = window_size - 1, supposing that it is an exponent of 2.
 
     // Precalculations
+    /// The number of bits to shift the polynom to the left.
     pub(crate) polynom_shift: i32,
+
+    /// Precalculated out table.
     pub(crate) out_table: [Polynom64; 256],
+    /// Precalculated mod table.
     pub(crate) mod_table: [Polynom64; 256],
 
     // Current state
+    /// The data window.
     pub(crate) window_data: Vec<u8>,
+    /// The current window index.
     pub(crate) window_index: usize,
+    /// The current hash.
     pub(crate) hash: Polynom64,
 }
 
 impl Rabin64 {
+    /// Calculates the out table
+    ///
+    /// # Arguments
+    ///
+    /// * `window_size` - The window size.
+    /// * `mod_polynom` - The modulo polynom.
+    ///
+    /// # Returns
+    ///
+    /// An array of 256 `Polynom64` values.
     fn calculate_out_table(window_size: usize, mod_polynom: Polynom64) -> [Polynom64; 256] {
         let mut out_table = [0; 256];
         for (b, elem) in out_table.iter_mut().enumerate() {
@@ -44,6 +86,15 @@ impl Rabin64 {
         out_table
     }
 
+    /// Calculates the mod table
+    ///
+    /// # Arguments
+    ///
+    /// * `mod_polynom` - The modulo polynom.
+    ///
+    /// # Returns
+    ///
+    /// An array of 256 `Polynom64` values.
     fn calculate_mod_table(mod_polynom: Polynom64) -> [Polynom64; 256] {
         let mut mod_table = [0; 256];
         let k = mod_polynom.degree();
@@ -55,6 +106,12 @@ impl Rabin64 {
         mod_table
     }
 
+    /// Creates a new `Rabin64` with the given window size and modulo polynom.
+    ///
+    /// # Arguments
+    ///
+    /// * `window_size_nb_bits` - The number of bits of the window size.
+    /// * `mod_polynom` - The modulo polynom.
     pub(crate) fn new_with_polynom(window_size_nb_bits: u32, mod_polynom: Polynom64) -> Self {
         let window_size = 1 << window_size_nb_bits;
 

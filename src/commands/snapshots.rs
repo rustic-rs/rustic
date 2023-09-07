@@ -14,7 +14,10 @@ use comfy_table::Cell;
 use humantime::format_duration;
 use itertools::Itertools;
 
-use rustic_core::{DeleteOption, SnapshotFile, SnapshotGroupCriterion};
+use rustic_core::{
+    repofile::{DeleteOption, SnapshotFile},
+    SnapshotGroupCriterion,
+};
 
 /// `snapshot` subcommand
 #[derive(clap::Parser, Command, Debug)]

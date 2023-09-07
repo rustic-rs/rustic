@@ -18,16 +18,26 @@ use crate::{
 };
 
 mod consts {
+    /// Default number of retries
     pub(super) const DEFAULT_RETRY: usize = 5;
 }
 
 // trait CheckError to add user-defined method check_error on Response
 pub(crate) trait CheckError {
+    /// Check reqwest Response for error and treat errors as permanent or transient
     fn check_error(self) -> Result<Response, Error<reqwest::Error>>;
 }
 
 impl CheckError for Response {
-    // Check reqwest Response for error and treat errors as permanent or transient
+    /// Check reqwest Response for error and treat errors as permanent or transient
+    ///
+    /// # Errors
+    ///
+    /// If the response is an error, it will return an error of type Error<reqwest::Error>
+    ///
+    /// # Returns
+    ///
+    /// The response if it is not an error
     fn check_error(self) -> Result<Response, Error<reqwest::Error>> {
         match self.error_for_status() {
             Ok(t) => Ok(t),
@@ -41,10 +51,14 @@ impl CheckError for Response {
     }
 }
 
+/// A backoff implementation that limits the number of retries
 #[derive(Clone, Debug)]
 struct LimitRetryBackoff {
+    /// The maximum number of retries
     max_retries: usize,
+    /// The current number of retries
     retries: usize,
+    /// The exponential backoff
     exp: ExponentialBackoff,
 }
 
@@ -61,6 +75,11 @@ impl Default for LimitRetryBackoff {
 }
 
 impl Backoff for LimitRetryBackoff {
+    /// Returns the next backoff duration.
+    ///
+    /// # Notes
+    ///
+    /// If the number of retries exceeds the maximum number of retries, it returns None.
     fn next_backoff(&mut self) -> Option<Duration> {
         self.retries += 1;
         if self.retries > self.max_retries {
@@ -70,24 +89,45 @@ impl Backoff for LimitRetryBackoff {
         }
     }
 
+    /// Resets the backoff to the initial state.
     fn reset(&mut self) {
         self.retries = 0;
         self.exp.reset();
     }
 }
 
+/// A backend implementation that uses REST to access the backend.
 #[derive(Clone, Debug)]
 pub struct RestBackend {
+    /// The url of the backend.
     url: Url,
+    /// The client to use.
     client: Client,
+    /// The backoff implementation to use.
     backoff: LimitRetryBackoff,
 }
 
+/// Notify function for backoff in case of error
+///
+/// # Arguments
+///
+/// * `err` - The error that occurred
+/// * `duration` - The duration of the backoff
 fn notify(err: reqwest::Error, duration: Duration) {
     warn!("Error {err} at {duration:?}, retrying");
 }
 
 impl RestBackend {
+    /// Create a new [`RestBackend`] from a given url.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The url to create the [`RestBackend`] from.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::UrlParsingFailed`] - If the url could not be parsed.
+    /// * [`RestErrorKind::BuildingClientFailed`] - If the client could not be built.
     pub fn new(url: &str) -> RusticResult<Self> {
         let url = if url.ends_with('/') {
             Url::parse(url).map_err(RestErrorKind::UrlParsingFailed)?
@@ -114,12 +154,22 @@ impl RestBackend {
         })
     }
 
+    /// Returns the url for a given type and id.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// If the url could not be created.
     fn url(&self, tpe: FileType, id: &Id) -> RusticResult<Url> {
         let id_path = if tpe == FileType::Config {
             "config".to_string()
         } else {
             let hex_id = id.to_hex();
-            let mut path = tpe.to_string();
+            let mut path = tpe.dirname().to_string();
             path.push('/');
             path.push_str(&hex_id);
             path
@@ -132,6 +182,7 @@ impl RestBackend {
 }
 
 impl ReadBackend for RestBackend {
+    /// Returns the location of the backend.
     fn location(&self) -> String {
         let mut location = "rest:".to_string();
         let mut url = self.url.clone();
@@ -142,6 +193,22 @@ impl ReadBackend for RestBackend {
         location
     }
 
+    /// Sets an option of the backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `option` - The option to set.
+    /// * `value` - The value to set the option to.
+    ///
+    /// # Errors
+    ///
+    /// If the option is not supported.
+    ///
+    /// # Notes
+    ///
+    /// Currently supported options:
+    /// * `retry` - The number of retries to use for transient errors. Default is 5. Set to 0 to disable retries.
+    /// * `timeout` - The timeout to use for requests. Default is 10 minutes. Format is described in [humantime](https://docs.rs/humantime/2.1.0/humantime/fn.parse_duration.html).
     fn set_option(&mut self, option: &str, value: &str) -> RusticResult<()> {
         if option == "retry" {
             let max_retries = match value {
@@ -164,6 +231,25 @@ impl ReadBackend for RestBackend {
         Ok(())
     }
 
+    /// Returns a list of all files of a given type with their size.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the files to list.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::JoiningUrlFailed`] - If the url could not be created.
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
+    ///
+    /// # Notes
+    ///
+    /// The returned list is sorted by id.
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples containing the id and size of the files.
     fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
         trace!("listing tpe: {tpe:?}");
         let url = if tpe == FileType::Config {
@@ -171,7 +257,7 @@ impl ReadBackend for RestBackend {
                 .join("config")
                 .map_err(RestErrorKind::JoiningUrlFailed)?
         } else {
-            let mut path = tpe.to_string();
+            let mut path = tpe.dirname().to_string();
             path.push('/');
             self.url
                 .join(&path)
@@ -221,6 +307,17 @@ impl ReadBackend for RestBackend {
         }
     }
 
+    /// Returns the content of a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// * [`reqwest::Error`] - If the request failed.
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         trace!("reading tpe: {tpe:?}, id: {id}");
         let url = self.url(tpe, id)?;
@@ -239,6 +336,19 @@ impl ReadBackend for RestBackend {
         .map_err(RestErrorKind::BackoffError)?)
     }
 
+    /// Returns a part of the content of a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    /// * `offset` - The offset to read from.
+    /// * `length` - The length to read.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn read_partial(
         &self,
         tpe: FileType,
@@ -269,6 +379,11 @@ impl ReadBackend for RestBackend {
 }
 
 impl WriteBackend for RestBackend {
+    /// Creates a new file.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn create(&self) -> RusticResult<()> {
         let url = self
             .url
@@ -285,6 +400,19 @@ impl WriteBackend for RestBackend {
         .map_err(RestErrorKind::BackoffError)?)
     }
 
+    /// Writes bytes to the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    /// * `buf` - The bytes to write.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    // TODO: If the file is not cacheable, the bytes could be written to a temporary file and then moved to the final location.
     fn write_bytes(
         &self,
         tpe: FileType,
@@ -306,6 +434,17 @@ impl WriteBackend for RestBackend {
         .map_err(RestErrorKind::BackoffError)?)
     }
 
+    /// Removes the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    ///
+    /// # Errors
+    ///
+    /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> RusticResult<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         let url = self.url(tpe, id)?;

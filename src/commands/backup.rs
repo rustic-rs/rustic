@@ -10,17 +10,15 @@ use crate::{
     {status_err, Application, RUSTIC_APP},
 };
 use abscissa_core::{Command, Runnable, Shutdown};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use log::{debug, info, warn};
-
-use chrono::Local;
 
 use merge::Merge;
 use serde::Deserialize;
 
 use rustic_core::{
-    BackupOpts, LocalSourceFilterOptions, LocalSourceSaveOptions, ParentOpts, PathList,
-    SnapshotFile, SnapshotOptions,
+    BackupOptions, LocalSourceFilterOptions, LocalSourceSaveOptions, ParentOptions, PathList,
+    SnapshotOptions,
 };
 
 /// `backup` subcommand
@@ -60,7 +58,7 @@ pub struct BackupCmd {
 
     #[clap(flatten, next_help_heading = "Options for parent processing")]
     #[serde(flatten)]
-    parent_opts: ParentOpts,
+    parent_opts: ParentOptions,
 
     #[clap(flatten, next_help_heading = "Exclude options")]
     #[serde(flatten)]
@@ -98,13 +96,6 @@ impl Runnable for BackupCmd {
 
 impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
-        let time = Local::now();
-
-        let command: String = std::env::args_os()
-            .map(|s| s.to_string_lossy().to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
-
         let config = RUSTIC_APP.config();
 
         let repo = open_repository(&config)?.to_indexed_ids()?;
@@ -123,13 +114,18 @@ impl BackupCmd {
 
         let config_sources: Vec<_> = config_opts
             .iter()
-            .filter_map(|opt| match PathList::from_string(&opt.source, true) {
+            .map(|opt| -> Result<_> {
+                Ok(PathList::from_string(&opt.source)?
+                    .sanitize()
+                    .with_context(|| {
+                        format!("error sanitizing source=\"{}\" in config file", opt.source)
+                    })?
+                    .merge())
+            })
+            .filter_map(|p| match p {
                 Ok(paths) => Some(paths),
                 Err(err) => {
-                    warn!(
-                        "error sanitizing source=\"{}\" in config file: {err}",
-                        opt.source
-                    );
+                    warn!("{err}");
                     None
                 }
             })
@@ -137,7 +133,7 @@ impl BackupCmd {
 
         let sources = match (self.cli_sources.is_empty(), config_opts.is_empty()) {
             (false, _) => {
-                let item = PathList::from_strings(&self.cli_sources, true)?;
+                let item = PathList::from_strings(&self.cli_sources).sanitize()?;
                 vec![item]
             }
             (true, false) => {
@@ -174,15 +170,14 @@ impl BackupCmd {
             // merge "backup" section from config file, if given
             opts.merge(config.backup.clone());
 
-            let snap = SnapshotFile::new_from_options(&opts.snap_opts, time, command.clone())?;
-            let backup_opts = BackupOpts {
-                stdin_filename: opts.stdin_filename,
-                as_path: opts.as_path,
-                parent_opts: opts.parent_opts,
-                ignore_save_opts: opts.ignore_save_opts,
-                ignore_filter_opts: opts.ignore_filter_opts,
-            };
-            let snap = repo.backup(&backup_opts, source.clone(), snap, config.global.dry_run)?;
+            let backup_opts = BackupOptions::default()
+                .stdin_filename(opts.stdin_filename)
+                .as_path(opts.as_path)
+                .parent_opts(opts.parent_opts)
+                .ignore_save_opts(opts.ignore_save_opts)
+                .ignore_filter_opts(opts.ignore_filter_opts)
+                .dry_run(config.global.dry_run);
+            let snap = repo.backup(&backup_opts, source.clone(), opts.snap_opts.to_snapshot()?)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();

@@ -9,10 +9,17 @@ use crate::{
 /// Iterator which ensures that all subdirectories are visited and closed.
 /// The resulting Iterator yielss a `TreeType` which either contains the original
 /// item, a new tree to be inserted or a pseudo item which indicates that a tree is finished.
-
+///
+/// # Type Parameters
+///
+/// * `T` - The type of the current item.
+/// * `I` - The type of the original Iterator.
 pub(crate) struct TreeIterator<T, I> {
+    /// The original Iterator.
     iter: I,
+    /// The current path.
     path: PathBuf,
+    /// The current item.
     item: Option<T>,
 }
 
@@ -30,10 +37,22 @@ where
     }
 }
 
+/// `TreeType` is the type returned by the `TreeIterator`.
+///
+/// It either contains the original item, a new tree to be inserted
+/// or a pseudo item which indicates that a tree is finished.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of the original item.
+/// * `U` - The type of the new tree.
 #[derive(Debug)]
 pub(crate) enum TreeType<T, U> {
+    /// New tree to be inserted.
     NewTree((PathBuf, Node, U)),
+    /// A pseudo item which indicates that a tree is finished.
     EndTree,
+    /// Original item.
     Other((PathBuf, Node, T)),
 }
 

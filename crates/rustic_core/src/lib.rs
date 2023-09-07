@@ -1,5 +1,5 @@
 /*!
-A library for deduplicated and encrypted backups, inspired by [`restic`](https://restic.net/).
+A library for deduplicated and encrypted backups, using repositories as specified in the [`restic repository design`](https://github.com/restic/restic/blob/master/doc/design.rst).
 
 # Overview
 
@@ -7,9 +7,51 @@ This section gives a brief overview of the primary types in this crate:
 
 TODO
 
-# Examples
+# Example - initialize a repository, backup to it and get snapshots
 
-TODO
+```
+    use rustic_core::{BackupOptions, ConfigOptions, KeyOptions, PathList, Repository, RepositoryOptions, SnapshotOptions};
+
+    // Initialize the repository in a temporary dir
+    let repo_dir = tempfile::tempdir().unwrap();
+    let repo_opts = RepositoryOptions::default()
+        .repository(repo_dir.path().to_str().unwrap())
+        .password("test");
+    let key_opts = KeyOptions::default();
+    let config_opts = ConfigOptions::default();
+    let _repo = Repository::new(&repo_opts).unwrap().init(&key_opts, &config_opts).unwrap();
+
+    // We could have used _repo directly, but open the repository again to show how to open it...
+    let repo = Repository::new(&repo_opts).unwrap().open().unwrap();
+
+    // Get all snapshots from the repository
+    let snaps = repo.get_all_snapshots().unwrap();
+    // Should be zero, as the repository has just been initialized
+    assert_eq!(snaps.len(), 0);
+
+    // Turn repository state to indexed (for backup):
+    let repo = repo.to_indexed_ids().unwrap();
+
+    // Pre-define the snapshot-to-backup
+    let snap = SnapshotOptions::default()
+        .add_tags("tag1,tag2").unwrap()
+        .to_snapshot().unwrap();
+
+    // Specify backup options and source
+    let backup_opts = BackupOptions::default();
+    let source = PathList::from_string("src").unwrap().sanitize().unwrap();
+
+    // run the backup and return the snapshot pointing to the backup'ed data.
+    let snap = repo.backup(&backup_opts, source, snap).unwrap();
+    // assert_eq!(&snap.paths, ["src"]);
+
+    // Get all snapshots from the repository
+    let snaps = repo.get_all_snapshots().unwrap();
+    // Should now be 1, we just created a snapshot
+    assert_eq!(snaps.len(), 1);
+
+    assert_eq!(snaps[0], snap);
+```
 
 # Lower level APIs
 
@@ -33,19 +75,19 @@ This crate exposes a few features for controlling dependency usage.
 #![allow(dead_code)]
 #![forbid(unsafe_code)]
 #![warn(
-    // unreachable_pub, // frequently check
-    // TODO: Activate and create better docs
-    // missing_docs,
-    rust_2018_idioms,
-    trivial_casts,
-    unused_lifetimes,
-    unused_qualifications,
+    // TODO: frequently check
+    // unreachable_pub,
     // TODO: Activate if you're feeling like fixing stuff 
     // clippy::pedantic,
     // clippy::correctness,
     // clippy::suspicious,
     // clippy::complexity,
     // clippy::perf,
+    missing_docs,
+    rust_2018_idioms,
+    trivial_casts,
+    unused_lifetimes,
+    unused_qualifications,
     clippy::nursery,
     bad_style,
     dead_code,
@@ -96,51 +138,37 @@ pub(crate) mod error;
 pub(crate) mod id;
 pub(crate) mod index;
 pub(crate) mod progress;
-pub(crate) mod repofile;
+/// Structs which are saved in JSON or binary format in the repository
+pub mod repofile;
 pub(crate) mod repository;
 
-pub(crate) use crate::crypto::aespoly1305::Key;
 // rustic_core Public API
 pub use crate::{
     backend::{
-        decrypt::{DecryptReadBackend, DecryptWriteBackend},
+        decrypt::{compression_level_range, max_compression_level},
         ignore::{LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions},
         local::LocalDestination,
-        node::{latest_node, Node, NodeType},
-        stdin::StdinSource,
-        FileType, ReadBackend, ReadSourceEntry, WriteBackend, ALL_FILE_TYPES,
+        node::last_modified_node,
+        ReadSourceEntry,
     },
-    blob::{
-        packer::Packer,
-        tree::{NodeStreamer, Tree, TreeStreamerOnce, TreeStreamerOptions},
-        BlobType, BlobTypeMap, Initialize, Sum,
-    },
+    blob::tree::TreeStreamerOptions as LsOptions,
     commands::{
-        backup::{BackupOpts, ParentOpts},
-        check::CheckOpts,
-        config::ConfigOpts,
+        backup::{BackupOptions, ParentOptions},
+        check::CheckOptions,
+        config::ConfigOptions,
         copy::CopySnapshot,
         forget::{ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions},
-        key::KeyOpts,
-        prune::{PruneOpts, PrunePlan, PruneStats},
+        key::KeyOptions,
+        prune::{PruneOptions, PrunePlan, PruneStats},
         repair::{index::RepairIndexOptions, snapshots::RepairSnapshotsOptions},
         repoinfo::{BlobInfo, IndexInfos, PackInfo, RepoFileInfo, RepoFileInfos},
-        restore::{FileDirStats, RestoreInfos, RestoreOpts, RestoreStats},
+        restore::{FileDirStats, RestoreOptions, RestorePlan, RestoreStats},
     },
-    crypto::hasher::hash,
     error::{RusticError, RusticResult},
-    id::Id,
-    index::{indexer::Indexer, IndexBackend, IndexedBackend, ReadIndex},
+    id::{HexId, Id},
     progress::{NoProgress, NoProgressBars, Progress, ProgressBars},
-    repofile::{
-        configfile::ConfigFile,
-        indexfile::{IndexBlob, IndexFile, IndexPack},
-        keyfile::KeyFile,
-        packfile::{HeaderEntry, PackHeader, PackHeaderLength, PackHeaderRef},
-        snapshotfile::{
-            DeleteOption, PathList, SnapshotFile, SnapshotGroup, SnapshotGroupCriterion,
-            SnapshotOptions, StringList,
-        },
+    repofile::snapshotfile::{
+        PathList, SnapshotGroup, SnapshotGroupCriterion, SnapshotOptions, StringList,
     },
-    repository::{IndexedFull, Open, OpenStatus, Repository, RepositoryOptions},
+    repository::{IndexedFull, OpenStatus, Repository, RepositoryOptions},
 };

@@ -13,31 +13,66 @@ use walkdir::WalkDir;
 use crate::{
     backend::{FileType, ReadBackend, WriteBackend},
     error::CacheBackendErrorKind,
+    error::RusticResult,
     id::Id,
-    RusticResult,
 };
 
+/// Backend that caches data.
+///
+/// This backend caches data in a directory.
+/// It can be used to cache data from a remote backend.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend to cache.
 #[derive(Clone, Debug)]
 pub struct CachedBackend<BE: WriteBackend> {
+    /// The backend to cache.
     be: BE,
+    /// The cache.
     cache: Option<Cache>,
 }
 
 impl<BE: WriteBackend> CachedBackend<BE> {
+    /// Create a new [`CachedBackend`] from a given backend.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend to cache.
     pub fn new(be: BE, cache: Option<Cache>) -> Self {
         Self { be, cache }
     }
 }
 
 impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
+    /// Returns the location of the backend as a String.
     fn location(&self) -> String {
         self.be.location()
     }
 
+    /// Sets an option of the backend.
+    ///
+    ///  # Arguments
+    ///
+    /// * `option` - The option to set.
+    /// * `value` - The value to set the option to.
     fn set_option(&mut self, option: &str, value: &str) -> RusticResult<()> {
         self.be.set_option(option, value)
     }
 
+    /// Lists all files with their size of the given type.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the files to list.
+    ///
+    /// # Errors
+    ///
+    /// If the backend does not support listing files.
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples containing the id and size of the files.
     fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
         let list = self.be.list_with_size(tpe)?;
 
@@ -50,6 +85,20 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
         Ok(list)
     }
 
+    /// Reads full data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be read.
+    ///
+    /// # Returns
+    ///
+    /// The data read.
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         match (&self.cache, tpe.is_cacheable()) {
             (None, _) | (Some(_), false) => self.be.read_full(tpe, id),
@@ -67,6 +116,23 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
         }
     }
 
+    /// Reads partial data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    /// * `offset` - The offset to read from.
+    /// * `length` - The length to read.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be read.
+    ///
+    /// # Returns
+    ///
+    /// The data read.
     fn read_partial(
         &self,
         tpe: FileType,
@@ -105,10 +171,21 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
 }
 
 impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
+    /// Creates the backend.
     fn create(&self) -> RusticResult<()> {
         self.be.create()
     }
 
+    /// Writes the given data to the given file.
+    ///
+    /// If the file is cacheable, it will also be written to the cache.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `cacheable` - Whether the file is cacheable.
+    /// * `buf` - The data to write.
     fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> RusticResult<()> {
         if let Some(cache) = &self.cache {
             if cacheable || tpe.is_cacheable() {
@@ -118,6 +195,14 @@ impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
         self.be.write_bytes(tpe, id, cacheable, buf)
     }
 
+    /// Removes the given file.
+    ///
+    /// If the file is cacheable, it will also be removed from the cache.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
     fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> RusticResult<()> {
         if let Some(cache) = &self.cache {
             if cacheable || tpe.is_cacheable() {
@@ -128,12 +213,27 @@ impl<BE: WriteBackend> WriteBackend for CachedBackend<BE> {
     }
 }
 
+/// Backend that caches data in a directory.
 #[derive(Clone, Debug)]
 pub struct Cache {
+    /// The path to the cache.
     path: PathBuf,
 }
 
 impl Cache {
+    /// Creates a new [`Cache`] with the given id.
+    ///
+    /// If no path is given, the cache will be created in the default cache directory.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The id of the cache.
+    /// * `path` - The path to the cache.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::NoCacheDirectory`] - If no path is given and the default cache directory could not be determined.
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the cache directory could not be created.
     pub fn new(id: Id, path: Option<PathBuf>) -> RusticResult<Self> {
         let mut path = path.unwrap_or({
             let mut dir = cache_dir().ok_or_else(|| CacheBackendErrorKind::NoCacheDirectory)?;
@@ -152,28 +252,51 @@ impl Cache {
     /// # Panics
     ///
     /// Panics if the path is not valid unicode.
+    // TODO: Does this need to panic? Result?
     #[must_use]
     pub fn location(&self) -> &str {
         self.path.to_str().unwrap()
     }
 
+    /// Returns the path to the directory of the given type.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the directory.
+    /// * `id` - The id of the directory.
     #[must_use]
     pub fn dir(&self, tpe: FileType, id: &Id) -> PathBuf {
         let hex_id = id.to_hex();
-        self.path.join(tpe.to_string()).join(&hex_id[0..2])
+        self.path.join(tpe.dirname()).join(&hex_id[0..2])
     }
 
+    /// Returns the path to the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
     #[must_use]
     pub fn path(&self, tpe: FileType, id: &Id) -> PathBuf {
         let hex_id = id.to_hex();
         self.path
-            .join(tpe.to_string())
+            .join(tpe.dirname())
             .join(&hex_id[0..2])
             .join(hex_id)
     }
 
+    /// Lists all files with their size of the given type.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the files to list.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the cache directory could not be read.
+    /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     pub fn list_with_size(&self, tpe: FileType) -> RusticResult<HashMap<Id, u32>> {
-        let path = self.path.join(tpe.to_string());
+        let path = self.path.join(tpe.dirname());
 
         let walker = WalkDir::new(path)
             .into_iter()
@@ -200,6 +323,16 @@ impl Cache {
         Ok(walker.collect())
     }
 
+    /// Removes all files from the cache that are not in the given list.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the files.
+    /// * `list` - The list of files.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the cache directory could not be read.
     pub fn remove_not_in_list(&self, tpe: FileType, list: &Vec<(Id, u32)>) -> RusticResult<()> {
         let mut list_cache = self.list_with_size(tpe)?;
         // remove present files from the cache list
@@ -218,6 +351,16 @@ impl Cache {
         Ok(())
     }
 
+    /// Reads full data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be read.
     pub fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         trace!("cache reading tpe: {:?}, id: {}", &tpe, &id);
         let data = fs::read(self.path(tpe, id)).map_err(CacheBackendErrorKind::FromIoError)?;
@@ -225,6 +368,18 @@ impl Cache {
         Ok(data.into())
     }
 
+    /// Reads partial data of the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `offset` - The offset to read from.
+    /// * `length` - The length to read.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be read.
     pub fn read_partial(
         &self,
         tpe: FileType,
@@ -250,6 +405,17 @@ impl Cache {
         Ok(vec.into())
     }
 
+    /// Writes the given data to the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    /// * `buf` - The data to write.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be written.
     pub fn write_bytes(&self, tpe: FileType, id: &Id, buf: Bytes) -> RusticResult<()> {
         trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         fs::create_dir_all(self.dir(tpe, id)).map_err(CacheBackendErrorKind::FromIoError)?;
@@ -264,6 +430,16 @@ impl Cache {
         Ok(())
     }
 
+    /// Removes the given file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tpe` - The type of the file.
+    /// * `id` - The id of the file.
+    ///
+    /// # Errors
+    ///
+    /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be removed.
     pub fn remove(&self, tpe: FileType, id: &Id) -> RusticResult<()> {
         trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);

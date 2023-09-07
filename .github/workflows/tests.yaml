@@ -5,14 +5,12 @@ on:
     paths-ignore:
       - "**/*.md"
       - "docs/**/*"
-      - "assets/**/*"
   push:
     branches:
       - main
     paths-ignore:
       - "**/*.md"
       - "docs/**/*"
-      - "assets/**/*"
 
 name: Tests
 

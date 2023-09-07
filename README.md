@@ -114,13 +114,14 @@ cargo install rustic-rs
 ## Differences to `restic`?
 
 We have collected some improvements of `rustic` over `restic`
-[here](docs/comparison-restic.md).
+[here](https://rustic.cli.rs/docs/comparison-restic.html).
 
 ## Contributing
 
 Contributions in form of [issues][4] or PRs are very welcome.
 
-Please make sure, that you read the [contribution guide](./CONTRIBUTING.md).
+Please make sure, that you read the
+[contribution guide](https://rustic.cli.rs/docs/contributing-to-rustic.html).
 
 ## Minimum Rust version policy
 

@@ -27,7 +27,7 @@ jobs:
             os-name: windows
             target: x86_64-pc-windows-msvc
             architecture: x86_64
-            binary-postfix: ""
+            binary-postfix: ".exe"
             use-cross: false
           - os: macos-latest
             os-name: macos
@@ -97,6 +97,11 @@ jobs:
               sudo apt update
               sudo apt-get install -y musl-tools
           fi
+      - name: install cargo-auditable for non-cross builds
+        shell: bash
+        if: ${{ matrix.job.use_cross != true}}
+        run: |
+          cargo install cargo-auditable cargo-audit
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.job.target }}
@@ -105,39 +110,59 @@ jobs:
         run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
         uses: actions-rs/cargo@v1
+        if: ${{ matrix.job.use-cross == true }}
         with:
           command: build
           use-cross: ${{ matrix.job.use-cross }}
           toolchain: ${{ matrix.rust }}
           args: --release --target ${{ matrix.job.target }}
-
+      - name: Cargo auditable build
+        uses: actions-rs/cargo@v1
+        if: ${{ matrix.job.use-cross == false }}
+        with:
+          command: auditable
+          use-cross: ${{ matrix.job.use-cross }}
+          toolchain: ${{ matrix.rust }}
+          args: build --release --target ${{ matrix.job.target }}
       - name: Packaging final binary
-        if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
+        id: package-binary
         run: |
+          cp -a config target/${{ matrix.job.target }}/release/config
           cd target/${{ matrix.job.target }}/release
 
           ########## create tar.gz ##########
-          RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }}
+
+          # accounting for main branch and therefore beta builds
+          if [[ ${{ github.ref }} = refs/heads/main ]]; then
+              RELEASE_NAME=rustic-beta-${{ matrix.job.target}}.tar.gz
+          elif [[ ${{ github.ref }} = refs/tags/* ]]; then
+              RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
+          else    
+              RELEASE_NAME=rustic-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.job.target}}.tar.gz 
+          fi
+
+          tar czvf $RELEASE_NAME rustic${{ matrix.job.binary-postfix }} config/
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then
-            certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
+            certutil -hashfile $RELEASE_NAME sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
           else
-            shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+            shasum -a 256 $RELEASE_NAME > $RELEASE_NAME.sha256
           fi
+
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Storing binary as artefact
         uses: actions/upload-artifact@v3
         with:
           name: binary-${{ matrix.job.target}}
-          path: target/${{ matrix.job.target }}/release/rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
+          path: target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
       - name: Releasing release versions
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            target/${{ matrix.job.target }}/release/rustic-*.tar.gz
+            target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -231,8 +231,9 @@ body:
               value: |
                     Please make sure, you have searched/tried the following resources before submitting this issue:
 
-                    * search [discussions](https://github.com/rustic-rs/rustic/discussions)
-                    * search [issue list (incl. closed issues)](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue)
+                    * search our [documentation](https://rustic.cli.rs/docs/)
+                    * search our [discussions](https://github.com/rustic-rs/rustic/discussions)
+                    * search the [issue list (incl. closed issues)](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue)
                     * verify issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta)
 
       - type: markdown

@@ -23,4 +23,5 @@ contributions will be licensed under:
       rights).
 - [ ] I have added tests to cover my changes.
 - [ ] All new and existing tests passed.
-- [ ] I have updated the documentation accordingly.
+- [ ] I have updated the internal and
+      [external documentation](https://github.com/rustic-rs/docs) accordingly.

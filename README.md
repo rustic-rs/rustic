@@ -61,7 +61,7 @@ The `rustic` project is split into multiple crates:
 ## Contact
 
 You can ask questions in the [Discussions][3] or have a look at the
-[FAQ](docs/FAQ.md).
+[FAQ](https://rustic.cli.rs/docs/FAQ.html).
 
 | Contact       | Where?                                                                                                   |
 | ------------- | -------------------------------------------------------------------------------------------------------- |
@@ -69,9 +69,9 @@ You can ask questions in the [Discussions][3] or have a look at the
 | Discord       | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ?style=flat-square)](https://discord.gg/WRUWENZnzQ) |
 | Discussions   | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)                                    |
 
-## Quick start
+## Getting started
 
-![rustic getting started](https://github.com/rustic-rs/rustic/blob/main/docs/screenshots/gettingstarted.gif?raw=true)
+Please check our [documentation](https://rustic.cli.rs/docs/getting_started.html) for more information on how to get started.
 
 ## Installation
 

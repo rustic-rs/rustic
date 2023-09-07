@@ -8,6 +8,8 @@ use std::{
 };
 
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
+use derivative::Derivative;
+use derive_setters::Setters;
 use ignore::overrides::{Override, OverrideBuilder};
 use ignore::Match;
 
@@ -16,25 +18,33 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::{
     backend::{node::Metadata, node::Node, node::NodeType},
     crypto::hasher::hash,
+    error::RusticResult,
     error::TreeErrorKind,
     id::Id,
     index::IndexedBackend,
+    progress::Progress,
     repofile::snapshotfile::SnapshotSummary,
-    Progress, RusticResult,
 };
 
 pub(super) mod constants {
+    /// The maximum number of trees that are loaded in parallel
     pub(super) const MAX_TREE_LOADER: usize = 4;
 }
 
 pub(crate) type TreeStreamItem = RusticResult<(PathBuf, Tree)>;
+type NodeStreamItem = RusticResult<(PathBuf, Node)>;
 
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
+/// A [`Tree`] is a list of [`Node`]s
 pub struct Tree {
     #[serde(deserialize_with = "deserialize_null_default")]
+    /// The nodes contained in the tree.
+    ///
+    /// This is usually sorted by `Node.name()`, i.e. by the node name as `OsString`
     pub nodes: Vec<Node>,
 }
 
+/// Deserializes `Option<T>` as `T::default()` if the value is `null`
 pub(crate) fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     T: Default + Deserialize<'de>,
@@ -45,23 +55,49 @@ where
 }
 
 impl Tree {
+    /// Creates a new `Tree` with no nodes.
     #[must_use]
-    pub const fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self { nodes: Vec::new() }
     }
 
-    pub fn add(&mut self, node: Node) {
+    /// Adds a node to the tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `node` - The node to add.
+    pub(crate) fn add(&mut self, node: Node) {
         self.nodes.push(node);
     }
 
-    pub fn serialize(&self) -> RusticResult<(Vec<u8>, Id)> {
+    /// Serializes the tree.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the serialized tree as `Vec<u8>` and the tree's ID
+    pub(crate) fn serialize(&self) -> RusticResult<(Vec<u8>, Id)> {
         let mut chunk = serde_json::to_vec(&self).map_err(TreeErrorKind::SerializingTreeFailed)?;
         chunk.push(b'\n'); // for whatever reason, restic adds a newline, so to be compatible...
         let id = hash(&chunk);
         Ok((chunk, id))
     }
 
-    pub fn from_backend(be: &impl IndexedBackend, id: Id) -> RusticResult<Self> {
+    /// Deserializes a tree from the backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `id` - The ID of the tree to deserialize.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::BlobIdNotFound`] - If the tree ID is not found in the backend.
+    /// * [`TreeErrorKind::DeserializingTreeFailed`] - If deserialization fails.
+    ///
+    /// # Returns
+    ///
+    /// The deserialized tree.
+    pub(crate) fn from_backend(be: &impl IndexedBackend, id: Id) -> RusticResult<Self> {
         let data = be
             .get_tree(&id)
             .ok_or_else(|| TreeErrorKind::BlobIdNotFound(id))?
@@ -70,7 +106,24 @@ impl Tree {
         Ok(serde_json::from_slice(&data).map_err(TreeErrorKind::DeserializingTreeFailed)?)
     }
 
-    pub fn node_from_path(be: &impl IndexedBackend, id: Id, path: &Path) -> RusticResult<Node> {
+    /// Creates a new node from a path.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `id` - The ID of the tree to deserialize.
+    /// * `path` - The path to create the node from.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::NotADirectory`] - If the path is not a directory.
+    /// * [`TreeErrorKind::PathNotFound`] - If the path is not found.
+    /// * [`TreeErrorKind::PathIsNotUtf8Conform`] - If the path is not UTF-8 conform.
+    pub(crate) fn node_from_path(
+        be: &impl IndexedBackend,
+        id: Id,
+        path: &Path,
+    ) -> RusticResult<Node> {
         let mut node = Node::new_node(OsStr::new(""), NodeType::Dir, Metadata::default());
         node.subtree = Some(id);
 
@@ -92,6 +145,16 @@ impl Tree {
     }
 }
 
+/// Converts a [`Component`] to an [`OsString`].
+///
+/// # Arguments
+///
+/// * `p` - The component to convert.
+///
+/// # Errors
+///
+/// * [`TreeErrorKind::ContainsCurrentOrParentDirectory`] - If the component is a current or parent directory.
+/// * [`TreeErrorKind::PathIsNotUtf8Conform`] - If the component is not UTF-8 conform.
 pub(crate) fn comp_to_osstr(p: Component<'_>) -> RusticResult<Option<OsString>> {
     let s = match p {
         Component::RootDir => None,
@@ -119,32 +182,40 @@ impl IntoIterator for Tree {
 }
 
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Default, Clone, Debug)]
+#[derive(Derivative, Clone, Debug, Setters)]
+#[derivative(Default)]
+#[setters(into)]
+/// Options for listing the `Nodes` of a `Tree`
 pub struct TreeStreamerOptions {
     /// Glob pattern to exclude/include (can be specified multiple times)
     #[cfg_attr(feature = "clap", clap(long, help_heading = "Exclude options"))]
-    glob: Vec<String>,
+    pub glob: Vec<String>,
 
     /// Same as --glob pattern but ignores the casing of filenames
     #[cfg_attr(
         feature = "clap",
         clap(long, value_name = "GLOB", help_heading = "Exclude options")
     )]
-    iglob: Vec<String>,
+    pub iglob: Vec<String>,
 
     /// Read glob patterns to exclude/include from this file (can be specified multiple times)
     #[cfg_attr(
         feature = "clap",
         clap(long, value_name = "FILE", help_heading = "Exclude options")
     )]
-    glob_file: Vec<String>,
+    pub glob_file: Vec<String>,
 
     /// Same as --glob-file ignores the casing of filenames in patterns
     #[cfg_attr(
         feature = "clap",
         clap(long, value_name = "FILE", help_heading = "Exclude options")
     )]
-    iglob_file: Vec<String>,
+    pub iglob_file: Vec<String>,
+
+    /// recursively list the dir
+    #[cfg_attr(feature = "clap", clap(long))]
+    #[derivative(Default(value = "true"))]
+    pub recursive: bool,
 }
 
 /// [`NodeStreamer`] recursively streams all nodes of a given tree including all subtrees in-order
@@ -153,11 +224,17 @@ pub struct NodeStreamer<BE>
 where
     BE: IndexedBackend,
 {
+    /// The open iterators for subtrees
     open_iterators: Vec<std::vec::IntoIter<Node>>,
+    /// Inner iterator for the current subtree nodes
     inner: std::vec::IntoIter<Node>,
+    /// The current path
     path: PathBuf,
+    /// The backend to read from
     be: BE,
+    /// The glob overrides
     overrides: Option<Override>,
+    /// Whether to stream recursively
     recursive: bool,
 }
 
@@ -165,10 +242,35 @@ impl<BE> NodeStreamer<BE>
 where
     BE: IndexedBackend,
 {
+    /// Creates a new `NodeStreamer`.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `node` - The node to start from.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::BlobIdNotFound`] - If the tree ID is not found in the backend.
+    /// * [`TreeErrorKind::DeserializingTreeFailed`] - If deserialization fails.
+    #[allow(unused)]
     pub fn new(be: BE, node: &Node) -> RusticResult<Self> {
         Self::new_streamer(be, node, None, true)
     }
 
+    /// Creates a new `NodeStreamer`.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `node` - The node to start from.
+    /// * `overrides` - The glob overrides.
+    /// * `recursive` - Whether to stream recursively.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::BlobIdNotFound`] - If the tree ID is not found in the backend.
+    /// * [`TreeErrorKind::DeserializingTreeFailed`] - If deserialization fails.
     fn new_streamer(
         be: BE,
         node: &Node,
@@ -191,13 +293,20 @@ where
             recursive,
         })
     }
-
-    pub fn new_with_glob(
-        be: BE,
-        node: &Node,
-        opts: &TreeStreamerOptions,
-        recursive: bool,
-    ) -> RusticResult<Self> {
+    /// Creates a new `NodeStreamer` with glob patterns.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `node` - The node to start from.
+    /// * `opts` - The options for the streamer.
+    /// * `recursive` - Whether to stream recursively.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::BuildingNodeStreamerFailed`] - If building the streamer fails.
+    /// * [`TreeErrorKind::ReadingFileStringFromGlobsFailed`] - If reading a glob file fails.
+    pub fn new_with_glob(be: BE, node: &Node, opts: &TreeStreamerOptions) -> RusticResult<Self> {
         let mut override_builder = OverrideBuilder::new("");
 
         for g in &opts.glob {
@@ -240,11 +349,9 @@ where
             .build()
             .map_err(TreeErrorKind::BuildingNodeStreamerFailed)?;
 
-        Self::new_streamer(be, node, Some(overrides), recursive)
+        Self::new_streamer(be, node, Some(overrides), opts.recursive)
     }
 }
-
-type NodeStreamItem = RusticResult<(PathBuf, Node)>;
 
 // TODO: This is not parallel at the moment...
 impl<BE> Iterator for NodeStreamer<BE>
@@ -292,18 +399,43 @@ where
 }
 
 /// [`TreeStreamerOnce`] recursively visits all trees and subtrees, but each tree ID only once
-
+///
+/// # Type Parameters
+///
+/// * `P` - The progress indicator
 #[derive(Debug)]
 pub struct TreeStreamerOnce<P> {
+    /// The visited tree IDs
     visited: HashSet<Id>,
+    /// The queue to send tree IDs to
     queue_in: Option<Sender<(PathBuf, Id, usize)>>,
+    /// The queue to receive trees from
     queue_out: Receiver<RusticResult<(PathBuf, Tree, usize)>>,
+    /// The progress indicator
     p: P,
+    /// The number of trees that are not yet finished
     counter: Vec<usize>,
+    /// The number of finished trees
     finished_ids: usize,
 }
 
 impl<P: Progress> TreeStreamerOnce<P> {
+    /// Creates a new `TreeStreamerOnce`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The type of the backend.
+    /// * `P` - The type of the progress indicator.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `ids` - The IDs of the trees to visit.
+    /// * `p` - The progress indicator.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::SendingCrossbeamMessageFailed`] - If sending the message fails.
     pub fn new<BE: IndexedBackend>(be: BE, ids: Vec<Id>, p: P) -> RusticResult<Self> {
         p.set_length(ids.len() as u64);
 
@@ -343,6 +475,21 @@ impl<P: Progress> TreeStreamerOnce<P> {
         Ok(streamer)
     }
 
+    /// Adds a tree ID to the queue.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path of the tree.
+    /// * `id` - The ID of the tree.
+    /// * `count` - The index of the tree.
+    ///
+    /// # Returns
+    ///
+    /// Whether the tree ID was added to the queue.
+    ///
+    /// # Errors
+    ///
+    /// * [`TreeErrorKind::SendingCrossbeamMessageFailed`] - If sending the message fails.
     fn add_pending(&mut self, path: PathBuf, id: Id, count: usize) -> RusticResult<bool> {
         if self.visited.insert(id) {
             self.queue_in
@@ -396,6 +543,19 @@ impl<P: Progress> Iterator for TreeStreamerOnce<P> {
     }
 }
 
+/// Merge trees from a list of trees
+///
+/// # Arguments
+///
+/// * `be` - The backend to read from.
+/// * `trees` - The IDs of the trees to merge.
+/// * `cmp` - The comparison function for the nodes.
+/// * `save` - The function to save the tree.
+/// * `summary` - The summary of the snapshot.
+///
+/// # Errors
+///
+// TODO: * [`TreeErrorKind::MergingTreesFailed`] - If merging the trees fails.
 pub(crate) fn merge_trees(
     be: &impl IndexedBackend,
     trees: &[Id],
@@ -493,6 +653,19 @@ pub(crate) fn merge_trees(
     Ok(id)
 }
 
+/// Merge nodes from a list of nodes
+///
+/// # Arguments
+///
+/// * `be` - The backend to read from.
+/// * `nodes` - The nodes to merge.
+/// * `cmp` - The comparison function for the nodes.
+/// * `save` - The function to save the tree.
+/// * `summary` - The summary of the snapshot.
+///
+/// # Errors
+///
+// TODO: add errors
 pub(crate) fn merge_nodes(
     be: &impl IndexedBackend,
     nodes: Vec<Node>,

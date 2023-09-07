@@ -19,11 +19,19 @@ use crate::{
     chunker::ChunkIter,
     crypto::hasher::hash,
     error::ArchiverErrorKind,
+    error::RusticResult,
     index::{indexer::SharedIndexer, IndexedBackend},
+    progress::Progress,
     repofile::configfile::ConfigFile,
-    Progress, RusticResult,
 };
 
+/// The `FileArchiver` is responsible for archiving files.
+/// It will read the file, chunk it, and write the chunks to the backend.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend type.
+/// * `I` - The index to read from.
 #[derive(Clone)]
 pub(crate) struct FileArchiver<BE: DecryptWriteBackend, I: IndexedBackend> {
     index: I,
@@ -32,6 +40,25 @@ pub(crate) struct FileArchiver<BE: DecryptWriteBackend, I: IndexedBackend> {
 }
 
 impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
+    /// Creates a new `FileArchiver`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend type.
+    /// * `I` - The index to read from.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to write to.
+    /// * `index` - The index to read from.
+    /// * `indexer` - The indexer to write to.
+    /// * `config` - The config file.
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+    /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
     pub(crate) fn new(
         be: BE,
         index: I,
@@ -55,6 +82,24 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         })
     }
 
+    /// Processes the given item.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `O` - The type of the tree item.
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The item to process.
+    /// * `p` - The progress tracker.
+    ///
+    /// # Errors
+    ///
+    /// If the item could not be processed.
+    ///
+    /// # Returns
+    ///
+    /// The processed item.
     pub(crate) fn process<O: ReadSourceOpen>(
         &self,
         item: ItemWithParent<Option<O>>,
@@ -114,6 +159,15 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         Ok((node, filesize))
     }
 
+    /// Finalizes the archiver.
+    ///
+    /// # Returns
+    ///
+    /// The statistics of the archiver.
+    ///
+    /// # Panics
+    ///
+    /// If the channel could not be dropped
     pub(crate) fn finalize(self) -> RusticResult<PackerStats> {
         self.data_packer.finalize()
     }

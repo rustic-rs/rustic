@@ -8,7 +8,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::Result;
 
-use rustic_core::{BlobType, FileType};
+use rustic_core::repofile::{BlobType, FileType};
 
 /// `cat` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -64,10 +64,10 @@ impl CatCmd {
             CatSubCmd::Config => repo.cat_file(FileType::Config, "")?,
             CatSubCmd::Index(opt) => repo.cat_file(FileType::Index, &opt.id)?,
             CatSubCmd::Snapshot(opt) => repo.cat_file(FileType::Snapshot, &opt.id)?,
-            // special treatment for cating blobs: read the index and use it to locate the blob
+            // special treatment for 'cat'ing blobs: read the index and use it to locate the blob
             CatSubCmd::TreeBlob(opt) => repo.to_indexed()?.cat_blob(BlobType::Tree, &opt.id)?,
             CatSubCmd::DataBlob(opt) => repo.to_indexed()?.cat_blob(BlobType::Data, &opt.id)?,
-            // special treatment for cating a tree within a snapshot
+            // special treatment for 'cat'ing a tree within a snapshot
             CatSubCmd::Tree(opt) => repo
                 .to_indexed()?
                 .cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?,

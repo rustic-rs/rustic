@@ -2,13 +2,30 @@ use bytes::Bytes;
 
 use crate::{backend::FileType, backend::ReadBackend, backend::WriteBackend, id::Id, RusticResult};
 
+/// A hot/cold backend implementation.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend to use.
 #[derive(Clone, Debug)]
 pub struct HotColdBackend<BE: WriteBackend> {
+    /// The backend to use.
     be: BE,
+    /// The backend to use for hot files.
     hot_be: Option<BE>,
 }
 
 impl<BE: WriteBackend> HotColdBackend<BE> {
+    /// Creates a new `HotColdBackend`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend to use.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to use.
+    /// * `hot_be` - The backend to use for hot files.
     pub fn new(be: BE, hot_be: Option<BE>) -> Self {
         Self { be, hot_be }
     }

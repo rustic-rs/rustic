@@ -15,7 +15,7 @@ use std::os::unix::ffi::OsStrExt;
 use crate::RusticResult;
 
 use chrono::{DateTime, Local};
-use derive_more::{Constructor, IsVariant};
+use derive_more::Constructor;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_aux::prelude::*;
 use serde_with::{
@@ -30,44 +30,83 @@ use crate::error::NodeErrorKind;
 use crate::id::Id;
 
 #[derive(Default, Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Constructor)]
+/// A node within the tree hierarchy
 pub struct Node {
+    /// Name of the node: filename or dirname.
+    ///
+    /// # Warning
+    ///
+    /// This contains an escaped variant of the name in order to handle non-unicode filenames.
+    /// Don't access this field directly, use the [`Node::name()`] method instead!
     pub name: String,
     #[serde(flatten)]
+    /// Information about node type
     pub node_type: NodeType,
     #[serde(flatten)]
+    /// Node Metadata
     pub meta: Metadata,
     #[serde(default, deserialize_with = "deserialize_default_from_null")]
+    /// Contents of the Node
+    ///
+    /// # Note
+    ///
+    /// This should be only set for regular files.
     pub content: Option<Vec<Id>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Subtree of the Node.
+    ///
+    /// # Note
+    ///
+    /// This should be only set for directories. (TODO: Check if this is correct)
     pub subtree: Option<Id>,
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, IsVariant)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "lowercase")]
+/// Types a [`Node`] can have with type-specific additional information
 pub enum NodeType {
+    /// Node is a regular file
     File,
+    /// Node is a directory
     Dir,
+    /// Node is a symlink
     Symlink {
+        /// The target of the symlink
+        ///
+        /// # Warning
+        ///
+        /// This contains the target only if it is a valid unicode target.
+        /// Dont't access this field directly, use the [`NodeType::to_link()`] method instead!
         linktarget: String,
         #[serde_as(as = "Option<Base64>")]
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// The raw link target saved as bytes.
+        ///
+        /// This is only filled (and mandatory) if the link target is non-unicode.
         linktarget_raw: Option<Vec<u8>>,
     },
+    /// Node is a block device file
     Dev {
         #[serde(default)]
+        /// Device id
         device: u64,
     },
+    /// Node is a char device file
     Chardev {
         #[serde(default)]
+        /// Device id
         device: u64,
     },
+    /// Node is a fifo
     Fifo,
+    /// Node is a socket
     Socket,
 }
 
 impl NodeType {
     #[cfg(not(windows))]
+    /// Get a [`NodeType`] from a linktarget path
     pub fn from_link(target: &Path) -> Self {
         let (linktarget, linktarget_raw) = target.to_str().map_or_else(
             || {
@@ -87,6 +126,7 @@ impl NodeType {
     #[cfg(windows)]
     // Windows doen't support non-unicode link targets, so we assume unicode here.
     // TODO: Test and check this!
+    /// Get a [`NodeType`] from a linktarget path
     pub fn from_link(target: &Path) -> Self {
         Self::Symlink {
             linktarget: target.as_os_str().to_string_lossy().to_string(),
@@ -95,6 +135,7 @@ impl NodeType {
     }
 
     // Must be only called on NodeType::Symlink!
+    /// Get the link path from a `NodeType::Symlink`.
     #[cfg(not(windows))]
     pub fn to_link(&self) -> &Path {
         match self {
@@ -109,7 +150,16 @@ impl NodeType {
         }
     }
 
-    // Must be only called on NodeType::Symlink!
+    /// Convert a `NodeType::Symlink` to a `Path`.
+    ///
+    /// # Warning
+    ///
+    /// Must be only called on `NodeType::Symlink`!
+    ///
+    /// # Panics
+    ///
+    /// * If called on a non-symlink node
+    /// * If the link target is not valid unicode
     // TODO: Implement non-unicode link targets correctly for windows
     #[cfg(windows)]
     pub fn to_link(&self) -> &Path {
@@ -126,29 +176,58 @@ impl Default for NodeType {
     }
 }
 
+/// Metadata of a [`Node`]
 #[serde_with::apply(
     Option => #[serde(default, skip_serializing_if = "Option::is_none")],
     u64 => #[serde(default, skip_serializing_if = "is_default")],
 )]
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Metadata {
+    /// Unix file mode
     pub mode: Option<u32>,
+    /// Unix mtime (last modification time)
     pub mtime: Option<DateTime<Local>>,
+    /// Unix atime (last access time)
     pub atime: Option<DateTime<Local>>,
+    /// Unix ctime (last status change time)
     pub ctime: Option<DateTime<Local>>,
+    /// Unix uid (user id)
     pub uid: Option<u32>,
+    /// Unix gid (group id)
     pub gid: Option<u32>,
+    /// Unix user name
     pub user: Option<String>,
+    /// Unix group name
     pub group: Option<String>,
+    /// Unix inode number
     pub inode: u64,
+    /// Unix device id
     pub device_id: u64,
+    /// Size of the node
     pub size: u64,
+    /// Number of hardlinks to this node
     pub links: u64,
+    /// Extended attributes of the node
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extended_attributes: Vec<ExtendedAttribute>,
 }
 
 // Deserialize a Base64-encoded value into Vec<u8>.
+//
+// # Arguments
+//
+// * `deserializer` - The deserializer to use.
+//
+// # Errors
+//
+// If the value is not a valid Base64-encoded value.
+//
+// # Returns
+//
+// The deserialized value.
+//
+// # Note
+//
 // Handles '"value" = null' by first deserializing into a Option.
 fn deserialize_value<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
 where
@@ -158,9 +237,12 @@ where
     Ok(value.unwrap_or_default())
 }
 
+/// Extended attribute of a [`Node`]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExtendedAttribute {
+    /// Name of the extended attribute
     pub(crate) name: String,
+    /// Value of the extended attribute
     #[serde(
         serialize_with = "Base64::<Standard,Padded>::serialize_as",
         deserialize_with = "deserialize_value"
@@ -173,8 +255,19 @@ pub(crate) fn is_default<T: Default + PartialEq>(t: &T) -> bool {
 }
 
 impl Node {
+    /// Create a new [`Node`] with the given name, type and metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Name of the node
+    /// * `node_type` - Type of the node
+    /// * `meta` - Metadata of the node
+    ///
+    /// # Returns
+    ///
+    /// The created [`Node`]
     #[must_use]
-    pub fn new_node(name: &OsStr, node_type: NodeType, meta: Metadata) -> Self {
+    pub(crate) fn new_node(name: &OsStr, node_type: NodeType, meta: Metadata) -> Self {
         Self {
             name: escape_filename(name),
             node_type,
@@ -184,16 +277,25 @@ impl Node {
         }
     }
     #[must_use]
+    /// Evaluates if this node is a directory
     pub const fn is_dir(&self) -> bool {
         matches!(self.node_type, NodeType::Dir)
     }
 
     #[must_use]
+    /// Evaluates if this node is a symlink
+    pub const fn is_symlink(&self) -> bool {
+        matches!(self.node_type, NodeType::Symlink { .. })
+    }
+
+    #[must_use]
+    /// Evaluates if this node is a regular file
     pub const fn is_file(&self) -> bool {
         matches!(self.node_type, NodeType::File)
     }
 
     #[must_use]
+    /// Evaluates if this node is a special file
     pub const fn is_special(&self) -> bool {
         matches!(
             self.node_type,
@@ -206,27 +308,54 @@ impl Node {
     }
 
     #[must_use]
+    /// Get the node name as `OsString`, handling name ecaping
+    ///
+    /// # Panics
+    ///
+    /// If the name is not valid unicode
     pub fn name(&self) -> OsString {
         unescape_filename(&self.name).unwrap_or_else(|_| OsString::from_str(&self.name).unwrap())
     }
 }
 
-pub fn latest_node(n1: &Node, n2: &Node) -> Ordering {
+/// An ordering function returning the latest node by mtime
+///
+/// # Arguments
+///
+/// * `n1` - First node
+/// * `n2` - Second node
+///
+/// # Returns
+///
+/// The ordering of the two nodes
+pub fn last_modified_node(n1: &Node, n2: &Node) -> Ordering {
     n1.meta.mtime.cmp(&n2.meta.mtime)
 }
 
+// TODO: Should be probably called `_lossy`
 // TODO(Windows): This is not able to handle non-unicode filenames and
 // doesn't treat filenames which need and escape (like `\`, `"`, ...) correctly
 #[cfg(windows)]
 fn escape_filename(name: &OsStr) -> String {
     name.to_string_lossy().to_string()
 }
+
+/// Unescape a filename
+///
+/// # Arguments
+///
+/// * `s` - The escaped filename
 #[cfg(windows)]
 fn unescape_filename(s: &str) -> Result<OsString, core::convert::Infallible> {
     OsString::from_str(s)
 }
 
 #[cfg(not(windows))]
+/// Escape a filename
+///
+/// # Arguments
+///
+/// * `name` - The filename to escape
 // This escapes the filename in a way that *should* be compatible to golangs
 // stconv.Quote, see https://pkg.go.dev/strconv#Quote
 // However, so far there was no specification what Quote really does, so this
@@ -280,6 +409,11 @@ fn escape_filename(name: &OsStr) -> String {
 }
 
 #[cfg(not(windows))]
+/// Unescape a filename
+///
+/// # Arguments
+///
+/// * `s` - The escaped filename
 // inspired by the enquote crate
 fn unescape_filename(s: &str) -> RusticResult<OsString> {
     let mut chars = s.chars();

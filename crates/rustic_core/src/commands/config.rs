@@ -1,14 +1,45 @@
 //! `config` subcommand
 use bytesize::ByteSize;
+use derive_setters::Setters;
 
 use crate::{
-    backend::decrypt::DecryptBackend, error::CommandErrorKind, ConfigFile, DecryptWriteBackend,
-    Key, Open, Repository, RusticResult,
+    backend::decrypt::{DecryptBackend, DecryptWriteBackend},
+    crypto::aespoly1305::Key,
+    error::CommandErrorKind,
+    error::RusticResult,
+    repofile::ConfigFile,
+    repository::{Open, Repository},
 };
 
+/// Apply the [`ConfigOptions`] to a given [`ConfigFile`]
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The state the repository is in.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to apply the config to
+/// * `opts` - The options to apply
+///
+/// # Errors
+///
+/// * [`CommandErrorKind::VersionNotSupported`] - If the version is not supported
+/// * [`CommandErrorKind::CannotDowngrade`] - If the version is lower than the current version
+/// * [`CommandErrorKind::NoCompressionV1Repo`] - If compression is set for a v1 repo
+/// * [`CommandErrorKind::CompressionLevelNotSupported`] - If the compression level is not supported
+/// * [`CommandErrorKind::SizeTooLarge`] - If the size is too large
+/// * [`CommandErrorKind::MinPackSizeTolerateWrong`] - If the min packsize tolerance percent is wrong
+/// * [`CommandErrorKind::MaxPackSizeTolerateWrong`] - If the max packsize tolerance percent is wrong
+/// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the file could not be serialized to json.
+///
+/// # Returns
+///
+/// Whether the config was changed
 pub(crate) fn apply_config<P, S: Open>(
     repo: &Repository<P, S>,
-    opts: &ConfigOpts,
+    opts: &ConfigOptions,
 ) -> RusticResult<bool> {
     let mut new_config = repo.config().clone();
     opts.apply(&mut new_config)?;
@@ -20,6 +51,22 @@ pub(crate) fn apply_config<P, S: Open>(
     }
 }
 
+/// Save a [`ConfigFile`] to the repository
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The state the repository is in.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to save the config to
+/// * `new_config` - The config to save
+/// * `key` - The key to encrypt the config with
+///
+/// # Errors
+///
+/// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the file could not be serialized to json.
 pub(crate) fn save_config<P, S>(
     repo: &Repository<P, S>,
     mut new_config: ConfigFile,
@@ -44,8 +91,10 @@ pub(crate) fn save_config<P, S>(
 }
 
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ConfigOpts {
+#[derive(Debug, Clone, Copy, Default, Setters)]
+#[setters(into)]
+/// Options for the `config` command, used to set repository-wide options
+pub struct ConfigOptions {
     /// Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https://facebook.github.io/zstd/>.
     /// Note that 0 equals to no compression
     #[cfg_attr(feature = "clap", clap(long, value_name = "LEVEL"))]
@@ -57,55 +106,70 @@ pub struct ConfigOpts {
 
     /// Set default packsize for tree packs. rustic tries to always produce packs greater than this value.
     /// Note that for large repos, this value is grown by the grown factor.
-    /// Defaults to 4 MiB if not set.
+    /// Defaults to `4 MiB` if not set.
     #[cfg_attr(feature = "clap", clap(long, value_name = "SIZE"))]
     pub set_treepack_size: Option<ByteSize>,
 
     /// Set upper limit for default packsize for tree packs.
     /// Note that packs actually can get up to some MiBs larger.
-    /// If not set, pack sizes can grow up to approximately 4 GiB.
+    /// If not set, pack sizes can grow up to approximately `4 GiB`.
     #[cfg_attr(feature = "clap", clap(long, value_name = "SIZE"))]
     pub set_treepack_size_limit: Option<ByteSize>,
 
     /// Set grow factor for tree packs. The default packsize grows by the square root of the total size of all
     /// tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total
     /// treesize in GiB.
-    /// Defaults to 32 (= 1MB per square root of total treesize in GiB) if not set.
+    /// Defaults to `32` (= 1MB per square root of total treesize in GiB) if not set.
     #[cfg_attr(feature = "clap", clap(long, value_name = "FACTOR"))]
     pub set_treepack_growfactor: Option<u32>,
 
     /// Set default packsize for data packs. rustic tries to always produce packs greater than this value.
     /// Note that for large repos, this value is grown by the grown factor.
-    /// Defaults to 32 MiB if not set.
+    /// Defaults to `32 MiB` if not set.
     #[cfg_attr(feature = "clap", clap(long, value_name = "SIZE"))]
     pub set_datapack_size: Option<ByteSize>,
 
     /// Set grow factor for data packs. The default packsize grows by the square root of the total size of all
     /// data packs multiplied with this factor. This means 32 kiB times this factor per square root of total
     /// datasize in GiB.
-    /// Defaults to 32 (= 1MB per square root of total datasize in GiB) if not set.
+    /// Defaults to `32` (= 1MB per square root of total datasize in GiB) if not set.
     #[cfg_attr(feature = "clap", clap(long, value_name = "FACTOR"))]
     pub set_datapack_growfactor: Option<u32>,
 
     /// Set upper limit for default packsize for tree packs.
     /// Note that packs actually can get up to some MiBs larger.
-    /// If not set, pack sizes can grow up to approximately 4 GiB.
+    /// If not set, pack sizes can grow up to approximately `4 GiB`.
     #[cfg_attr(feature = "clap", clap(long, value_name = "SIZE"))]
     pub set_datapack_size_limit: Option<ByteSize>,
 
     /// Set minimum tolerated packsize in percent of the targeted packsize.
-    /// Defaults to 30 if not set.
+    /// Defaults to `30` if not set.
     #[cfg_attr(feature = "clap", clap(long, value_name = "PERCENT"))]
     pub set_min_packsize_tolerate_percent: Option<u32>,
 
     /// Set maximum tolerated packsize in percent of the targeted packsize
-    /// A value of 0 means packs larger than the targeted packsize are always
+    /// A value of `0` means packs larger than the targeted packsize are always
     /// tolerated. Default if not set: larger packfiles are always tolerated.
     #[cfg_attr(feature = "clap", clap(long, value_name = "PERCENT"))]
     pub set_max_packsize_tolerate_percent: Option<u32>,
 }
 
-impl ConfigOpts {
+impl ConfigOptions {
+    /// Apply the [`ConfigOptions`] to a given [`ConfigFile`]
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The config to apply the options to
+    ///
+    /// # Errors
+    ///
+    /// * [`CommandErrorKind::VersionNotSupported`] - If the version is not supported
+    /// * [`CommandErrorKind::CannotDowngrade`] - If the version is lower than the current version
+    /// * [`CommandErrorKind::NoCompressionV1Repo`] - If compression is set for a v1 repo
+    /// * [`CommandErrorKind::CompressionLevelNotSupported`] - If the compression level is not supported
+    /// * [`CommandErrorKind::SizeTooLarge`] - If the size is too large
+    /// * [`CommandErrorKind::MinPackSizeTolerateWrong`] - If the min packsize tolerate percent is wrong
+    /// * [`CommandErrorKind::MaxPackSizeTolerateWrong`] - If the max packsize tolerate percent is wrong
     pub fn apply(&self, config: &mut ConfigFile) -> RusticResult<()> {
         if let Some(version) = self.set_version {
             let range = 1..=2;

@@ -6,13 +6,13 @@ use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use rustic_core::CheckOpts;
+use rustic_core::CheckOptions;
 
 /// `check` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct CheckCmd {
     #[clap(flatten)]
-    opts: CheckOpts,
+    opts: CheckOptions,
 }
 
 impl Runnable for CheckCmd {

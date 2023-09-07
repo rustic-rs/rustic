@@ -4,17 +4,39 @@ use log::trace;
 use rayon::prelude::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
 use crate::{
-    repository::{IndexedFull, IndexedIds, IndexedTree},
-    BlobType, DecryptWriteBackend, IndexedBackend, Indexer, NodeType, Open, Packer, ProgressBars,
-    ReadIndex, Repository, RusticResult, SnapshotFile, TreeStreamerOnce,
+    backend::{decrypt::DecryptWriteBackend, node::NodeType},
+    blob::{packer::Packer, tree::TreeStreamerOnce, BlobType},
+    error::RusticResult,
+    index::{indexer::Indexer, IndexedBackend, ReadIndex},
+    progress::ProgressBars,
+    repofile::SnapshotFile,
+    repository::{IndexedFull, IndexedIds, IndexedTree, Open, Repository},
 };
 
+/// This struct enhances `[SnapshotFile]` with the attribute `relevant`
+/// which indicates if the snapshot is relevant for copying.
 #[derive(Debug)]
 pub struct CopySnapshot {
-    pub relevant: bool,
+    /// The snapshot
     pub sn: SnapshotFile,
+    /// Whether it is relevant
+    pub relevant: bool,
 }
 
+/// Copy the given snapshots to the destination repository.
+///
+/// # Type Parameters
+///
+/// * `Q` - The progress bar type.
+/// * `R` - The type of the indexed tree.
+/// * `P` - The progress bar type.
+/// * `S` - The type of the indexed tree.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to copy from
+/// * `repo_dest` - The repository to copy to
+/// * `snapshots` - The snapshots to copy
 pub(crate) fn copy<'a, Q, R: IndexedFull, P: ProgressBars, S: IndexedIds>(
     repo: &Repository<Q, R>,
     repo_dest: &Repository<P, S>,
@@ -105,6 +127,23 @@ pub(crate) fn copy<'a, Q, R: IndexedFull, P: ProgressBars, S: IndexedIds>(
     Ok(())
 }
 
+/// Filter out relevant snapshots from the given list of snapshots.
+///
+/// # Type Parameters
+///
+/// * `F` - The type of the filter.
+/// * `P` - The progress bar type.
+/// * `S` - The state of the repository.
+///
+/// # Arguments
+///
+/// * `snaps` - The snapshots to filter
+/// * `dest_repo` - The destination repository
+/// * `filter` - The filter to apply to the snapshots
+///
+/// # Returns
+///
+/// A list of snapshots with the attribute `relevant` set to `true` if the snapshot is relevant for copying.
 pub(crate) fn relevant_snapshots<F, P: ProgressBars, S: Open>(
     snaps: &[SnapshotFile],
     dest_repo: &Repository<P, S>,

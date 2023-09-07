@@ -11,7 +11,7 @@ use anyhow::Result;
 use dialoguer::Password;
 use log::info;
 
-use rustic_core::{KeyOpts, Repository, RepositoryOptions};
+use rustic_core::{KeyOptions, Repository, RepositoryOptions};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -33,7 +33,7 @@ pub(crate) struct AddCmd {
     pub(crate) new_password_file: Option<PathBuf>,
 
     #[clap(flatten)]
-    pub(crate) key_opts: KeyOpts,
+    pub(crate) key_opts: KeyOptions,
 }
 
 impl Runnable for KeyCmd {

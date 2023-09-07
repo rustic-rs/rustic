@@ -10,7 +10,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use log::info;
 
-use rustic_core::{LocalDestination, RestoreOpts, TreeStreamerOptions};
+use rustic_core::{LocalDestination, LsOptions, RestoreOptions};
 
 use crate::filtering::SnapshotFilter;
 
@@ -27,10 +27,10 @@ pub(crate) struct RestoreCmd {
     dest: String,
 
     #[clap(flatten)]
-    opts: RestoreOpts,
+    opts: RestoreOptions,
 
     #[clap(flatten)]
-    streamer_opts: TreeStreamerOptions,
+    ls_opts: LsOptions,
 
     #[clap(
         flatten,
@@ -55,7 +55,11 @@ impl RestoreCmd {
 
         let node =
             repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
-        let ls = repo.ls(&node, &self.streamer_opts, true)?;
+
+        // for restore, always recurse into tree
+        let mut ls_opts = self.ls_opts.clone();
+        ls_opts.recursive = true;
+        let ls = repo.ls(&node, &ls_opts)?;
 
         let dest = LocalDestination::new(&self.dest, true, !node.is_dir())?;
 

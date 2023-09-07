@@ -1,10 +1,30 @@
 //! `smapshot` subcommand
 
 use crate::{
-    repository::Open, ProgressBars, Repository, RusticResult, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion,
+    error::RusticResult,
+    progress::ProgressBars,
+    repofile::snapshotfile::{SnapshotGroup, SnapshotGroupCriterion},
+    repofile::SnapshotFile,
+    repository::{Open, Repository},
 };
 
+/// Get the snapshots from the repository.
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The state the repository is in.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to get the snapshots from.
+/// * `ids` - The ids of the snapshots to get.
+/// * `group_by` - The criterion to group the snapshots by.
+/// * `filter` - The filter to apply to the snapshots.
+///
+/// # Returns
+///
+/// The snapshots grouped by the given criterion.
 pub(crate) fn get_snapshot_group<P: ProgressBars, S: Open>(
     repo: &Repository<P, S>,
     ids: &[String],

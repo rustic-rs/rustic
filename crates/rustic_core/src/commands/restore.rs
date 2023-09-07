@@ -1,5 +1,6 @@
 //! `restore` subcommand
 
+use derive_setters::Setters;
 use log::{debug, error, info, trace, warn};
 
 use std::{
@@ -16,23 +17,39 @@ use itertools::Itertools;
 use rayon::ThreadPoolBuilder;
 
 use crate::{
+    backend::{
+        decrypt::DecryptReadBackend,
+        local::LocalDestination,
+        node::{Node, NodeType},
+        FileType, ReadBackend,
+    },
+    blob::BlobType,
     error::CommandErrorKind,
-    repository::{IndexedFull, IndexedTree},
-    BlobType, DecryptReadBackend, FileType, Id, LocalDestination, Node, NodeType, Open, Progress,
-    ProgressBars, ReadBackend, Repository, RusticResult,
+    error::RusticResult,
+    id::Id,
+    progress::{Progress, ProgressBars},
+    repository::{IndexedFull, IndexedTree, Open, Repository},
 };
 
 pub(crate) mod constants {
+    /// The maximum number of reader threads to use for restoring.
     pub(crate) const MAX_READER_THREADS_NUM: usize = 20;
 }
 
-/// `restore` subcommand
+type RestoreInfo = BTreeMap<(Id, BlobLocation), Vec<FileLocation>>;
+type Filenames = Vec<PathBuf>;
+
 #[allow(clippy::struct_excessive_bools)]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Debug, Copy, Clone, Default)]
-pub struct RestoreOpts {
+#[derive(Debug, Copy, Clone, Default, Setters)]
+#[setters(into)]
+/// Options for the `restore` command
+pub struct RestoreOptions {
     /// Remove all files/dirs in destination which are not contained in snapshot.
-    /// WARNING: Use with care, maybe first try this with --dry-run?
+    ///
+    /// # Warning
+    ///
+    /// Use with care, maybe first try this with --dry-run?
     #[cfg_attr(feature = "clap", clap(long))]
     pub delete: bool,
 
@@ -50,24 +67,50 @@ pub struct RestoreOpts {
 }
 
 #[derive(Default, Debug, Clone, Copy)]
+/// Statistics for files or directories
 pub struct FileDirStats {
+    /// Number of files or directories to restore
     pub restore: u64,
+    /// Number of files or directories which are unchanged (determined by date, but not verified)
     pub unchanged: u64,
+    /// Number of files or directories which are verified and unchanged
     pub verified: u64,
+    /// Number of files or directories which are modified
     pub modify: u64,
+    /// Number of additional entries
     pub additional: u64,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
+/// Restore statistics
 pub struct RestoreStats {
+    /// file statistics
     pub files: FileDirStats,
+    /// directory statistics
     pub dirs: FileDirStats,
 }
 
-impl RestoreOpts {
+impl RestoreOptions {
+    /// Restore the repository to the given destination.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The progress bar type.
+    /// * `S` - The type of the indexed tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_infos` - The restore information.
+    /// * `repo` - The repository to restore.
+    /// * `node_streamer` - The node streamer to use.
+    /// * `dest` - The destination to restore to.
+    ///
+    /// # Errors
+    ///
+    /// If the restore failed.
     pub(crate) fn restore<P: ProgressBars, S: IndexedTree>(
         self,
-        file_infos: RestoreInfos,
+        file_infos: RestorePlan,
         repo: &Repository<P, S>,
         node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
         dest: &LocalDestination,
@@ -82,19 +125,36 @@ impl RestoreOpts {
         Ok(())
     }
 
-    /// collect restore information, scan existing files, create needed dirs and remove superfluous files
+    /// Collect restore information, scan existing files, create needed dirs and remove superfluous files
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The progress bar type.
+    /// * `S` - The type of the indexed tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `repo` - The repository to restore.
+    /// * `node_streamer` - The node streamer to use.
+    /// * `dest` - The destination to restore to.
+    /// * `dry_run` - If true, don't actually restore anything, but only print out what would be done.
+    ///
+    /// # Errors
+    ///
+    /// * [`CommandErrorKind::ErrorCreating`] - If a directory could not be created.
+    /// * [`CommandErrorKind::ErrorCollecting`] - If the restore information could not be collected.
     pub(crate) fn collect_and_prepare<P: ProgressBars, S: IndexedFull>(
         self,
         repo: &Repository<P, S>,
         mut node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
         dest: &LocalDestination,
         dry_run: bool,
-    ) -> RusticResult<RestoreInfos> {
+    ) -> RusticResult<RestorePlan> {
         let p = repo.pb.progress_spinner("collecting file information...");
         let dest_path = dest.path("");
 
         let mut stats = RestoreStats::default();
-        let mut restore_infos = RestoreInfos::default();
+        let mut restore_infos = RestorePlan::default();
         let mut additional_existing = false;
         let mut removed_dir = None;
 
@@ -256,6 +316,16 @@ impl RestoreOpts {
         Ok(restore_infos)
     }
 
+    /// Restore the metadata of the files and directories.
+    ///
+    /// # Arguments
+    ///
+    /// * `node_streamer` - The node streamer to use.
+    /// * `dest` - The destination to restore to.
+    ///
+    /// # Errors
+    ///
+    /// If the restore failed.
     fn restore_metadata(
         self,
         mut node_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
@@ -288,6 +358,18 @@ impl RestoreOpts {
         Ok(())
     }
 
+    /// Set the metadata of the given file or directory.
+    ///
+    /// # Arguments
+    ///
+    /// * `dest` - The destination to restore to.
+    /// * `path` - The path of the file or directory.
+    /// * `node` - The node information of the file or directory.
+    ///
+    /// # Errors
+    ///
+    /// If the metadata could not be set.
+    // TODO: Return a result here, introduce errors and get rid of logging.
     fn set_metadata(self, dest: &LocalDestination, path: &PathBuf, node: &Node) {
         debug!("setting metadata for {:?}", path);
         dest.create_special(path, node)
@@ -312,12 +394,28 @@ impl RestoreOpts {
 
 /// [`restore_contents`] restores all files contents as described by `file_infos`
 /// using the [`DecryptReadBackend`] `be` and writing them into the [`LocalBackend`] `dest`.
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The state the repository is in.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to restore.
+/// * `dest` - The destination to restore to.
+/// * `file_infos` - The restore information.
+///
+/// # Errors
+///
+/// * [`CommandErrorKind::ErrorSettingLength`] - If the length of a file could not be set.
+/// * [`CommandErrorKind::FromRayonError`] - If the restore failed.
 fn restore_contents<P: ProgressBars, S: Open>(
     repo: &Repository<P, S>,
     dest: &LocalDestination,
-    file_infos: RestoreInfos,
+    file_infos: RestorePlan,
 ) -> RusticResult<()> {
-    let RestoreInfos {
+    let RestorePlan {
         names: filenames,
         file_lengths,
         r: restore_info,
@@ -440,31 +538,42 @@ fn restore_contents<P: ProgressBars, S: Open>(
     Ok(())
 }
 
-/// struct that contains information of file contents grouped by
+/// Information about what will be restored.
+///
+/// Struct that contains information of file contents grouped by
 /// 1) pack ID,
 /// 2) blob within this pack
 /// 3) the actual files and position of this blob within those
+/// 4) Statistical information
 #[derive(Debug, Default)]
-pub struct RestoreInfos {
+pub struct RestorePlan {
+    /// The names of the files to restore
     names: Filenames,
+    /// The length of the files to restore
     file_lengths: Vec<u64>,
+    /// The restore information
     r: RestoreInfo,
+    /// The total restore size
     pub restore_size: u64,
+    /// The total size of matched content, i.e. content with needs no restore.
     pub matched_size: u64,
+    /// Statistics about the restore.
     pub stats: RestoreStats,
 }
 
-type RestoreInfo = BTreeMap<(Id, BlobLocation), Vec<FileLocation>>;
-type Filenames = Vec<PathBuf>;
-
+/// `BlobLocation` contains information about a blob within a pack
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct BlobLocation {
+    /// The offset of the blob within the pack
     offset: u32,
+    /// The length of the blob
     length: u32,
+    /// The uncompressed length of the blob
     uncompressed_length: Option<NonZeroU32>,
 }
 
 impl BlobLocation {
+    /// Get the length of the data contained in this blob
     fn data_length(&self) -> u64 {
         self.uncompressed_length
             .map_or(
@@ -475,21 +584,46 @@ impl BlobLocation {
     }
 }
 
+/// `FileLocation` contains information about a file within a blob
 #[derive(Debug)]
 struct FileLocation {
+    // TODO: The index of the file within ... ?
     file_idx: usize,
+    /// The start of the file within the blob
     file_start: u64,
-    matches: bool, //indicates that the file exists and these contents are already correct
+    /// Whether the file matches the blob
+    ///
+    /// This indicates that the file exists and these contents are already correct.
+    matches: bool,
 }
 
+/// `AddFileResult` indicates the result of adding a file to [`FileInfos`]
+// TODO: Add documentation!
 enum AddFileResult {
     Existing,
     Verified,
     Modify,
 }
 
-impl RestoreInfos {
+impl RestorePlan {
     /// Add the file to [`FileInfos`] using `index` to get blob information.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The progress bar type.
+    /// * `S` - The type of the indexed tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `dest` - The destination to restore to.
+    /// * `file` - The file to add.
+    /// * `name` - The name of the file.
+    /// * `repo` - The repository to restore.
+    /// * `ignore_mtime` - If true, ignore the modification time of the file.
+    ///
+    /// # Errors
+    ///
+    /// If the file could not be added.
     fn add_file<P, S: IndexedFull>(
         &mut self,
         dest: &LocalDestination,
@@ -500,7 +634,7 @@ impl RestoreInfos {
     ) -> RusticResult<AddFileResult> {
         let mut open_file = dest.get_matching_file(&name, file.meta.size);
 
-        // Empty files which exists with correct size should always return Ok(Existsing)!
+        // Empty files which exists with correct size should always return Ok(Existing)!
         if file.meta.size == 0 {
             if let Some(meta) = open_file.as_ref().map(|f| f.metadata()).transpose()? {
                 if meta.len() == 0 {
@@ -569,6 +703,9 @@ impl RestoreInfos {
         }
     }
 
+    /// Get a list of all pack files needed to perform the restore
+    ///
+    /// This can be used e.g. to warm-up those pack files before doing the atual restore.
     pub fn to_packs(&self) -> Vec<Id> {
         self.r
             .iter()

@@ -1,17 +1,22 @@
-// The irreductible polynom to be used in the fingerprint function.
+/// The irreductible polynom to be used in the fingerprint function.
 pub(crate) trait Polynom {
+    /// The degree of the polynom.
     fn degree(&self) -> i32;
+
+    /// Returns the modulo of the polynom.
     fn modulo(self, m: Self) -> Self;
 }
 
+/// A 64 bit polynom.
 pub(crate) type Polynom64 = u64;
 
 impl Polynom for Polynom64 {
-    // The degree of the polynom.
+    /// The degree of the polynom.
     fn degree(&self) -> i32 {
         63 - self.leading_zeros() as i32
     }
 
+    /// Returns the modulo of the polynom.
     fn modulo(self, m: Self) -> Self {
         let mut p = self;
         while p.degree() >= m.degree() {

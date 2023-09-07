@@ -1,36 +1,59 @@
 //! `repair snapshots` subcommand
+use derive_setters::Setters;
 use log::{info, warn};
 
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    repository::{IndexedFull, IndexedTree},
-    BlobType, DecryptWriteBackend, FileType, Id, IndexedBackend, Indexer, NodeType, Open, Packer,
-    ProgressBars, ReadIndex, Repository, RusticResult, SnapshotFile, StringList, Tree,
+    backend::{decrypt::DecryptWriteBackend, node::NodeType, FileType},
+    blob::{packer::Packer, tree::Tree, BlobType},
+    error::RusticResult,
+    id::Id,
+    index::{indexer::Indexer, IndexedBackend, ReadIndex},
+    progress::ProgressBars,
+    repofile::{SnapshotFile, StringList},
+    repository::{IndexedFull, IndexedTree, Repository},
 };
 
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Default, Debug)]
+#[derive(Debug, Setters)]
+#[setters(into)]
+/// Options for the `repair snapshots` command
 pub struct RepairSnapshotsOptions {
-    /// Also remove defect snapshots - WARNING: This can result in data loss!
+    /// Also remove defect snapshots
+    ///
+    /// # Warning
+    ///
+    /// This can result in data loss!
     #[cfg_attr(feature = "clap", clap(long))]
-    delete: bool,
+    pub delete: bool,
 
     /// Append this suffix to repaired directory or file name
     #[cfg_attr(
         feature = "clap",
         clap(long, value_name = "SUFFIX", default_value = ".repaired")
     )]
-    suffix: String,
+    pub suffix: String,
 
     /// Tag list to set on repaired snapshots (can be specified multiple times)
     #[cfg_attr(
         feature = "clap",
         clap(long, value_name = "TAG[,TAG,..]", default_value = "repaired")
     )]
-    tag: Vec<StringList>,
+    pub tag: Vec<StringList>,
 }
 
+impl Default for RepairSnapshotsOptions {
+    fn default() -> Self {
+        Self {
+            delete: true,
+            suffix: ".repaired".to_string(),
+            tag: vec![StringList(vec!["repaired".to_string()])],
+        }
+    }
+}
+
+// TODO: add documentation
 #[derive(Clone, Copy)]
 enum Changed {
     This,
@@ -39,6 +62,18 @@ enum Changed {
 }
 
 impl RepairSnapshotsOptions {
+    /// Runs the `repair snapshots` command
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The progress bar type
+    /// * `S` - The type of the indexed tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `repo` - The repository to repair
+    /// * `snapshots` - The snapshots to repair
+    /// * `dry_run` - Whether to actually modify the repository or just print what would be done
     pub(crate) fn repair<P: ProgressBars, S: IndexedFull>(
         &self,
         repo: &Repository<P, S>,
@@ -118,6 +153,24 @@ impl RepairSnapshotsOptions {
         Ok(())
     }
 
+    /// Repairs a tree
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The type of the backend.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to use
+    /// * `packer` - The packer to use
+    /// * `id` - The id of the tree to repair
+    /// * `replaced` - A map of already replaced trees
+    /// * `seen` - A set of already seen trees
+    /// * `dry_run` - Whether to actually modify the repository or just print what would be done
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the change status and the id of the repaired tree
     fn repair_tree<BE: DecryptWriteBackend>(
         &self,
         be: &impl IndexedBackend,

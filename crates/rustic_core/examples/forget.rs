@@ -15,9 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Check respository with standard options
     let group_by = SnapshotGroupCriterion::default();
-    let mut keep = KeepOptions::default();
-    keep.keep_daily = 5;
-    keep.keep_weekly = 10;
+    let keep = KeepOptions::default().keep_daily(5).keep_weekly(10);
     let snaps = repo.get_forget_snapshots(&keep, group_by, |_| true)?;
     println!("{snaps:?}");
     // to remove the snapshots-to-forget, uncomment this line:

@@ -14,6 +14,7 @@ use cached::proc_macro::cached;
 #[cfg(not(windows))]
 use chrono::TimeZone;
 use chrono::{DateTime, Local, Utc};
+use derive_setters::Setters;
 use ignore::{overrides::OverrideBuilder, DirEntry, Walk, WalkBuilder};
 use log::warn;
 #[cfg(not(windows))]
@@ -27,88 +28,111 @@ use crate::{
         node::{Metadata, Node, NodeType},
         ReadSource, ReadSourceEntry, ReadSourceOpen,
     },
-    error::IgnoreErrorKind,
-    RusticResult,
+    error::{IgnoreErrorKind, RusticResult},
 };
 
 // Walk doesn't implement Debug
 #[allow(missing_debug_implementations)]
+/// A [`LocalSource`] is a source from local paths which is used to be read from (i.e. to backup it).
 pub struct LocalSource {
+    /// The walk builder.
     builder: WalkBuilder,
+    /// The walk iterator.
     walker: Walk,
+    /// The save options to use.
     save_opts: LocalSourceSaveOptions,
 }
 
 #[serde_as]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[cfg_attr(feature = "merge", derive(merge::Merge))]
-#[derive(serde::Deserialize, Default, Clone, Copy, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Default, Clone, Copy, Debug, Setters)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[setters(into)]
+/// [`LocalSourceSaveOptions`] describes how entries from a local source will be saved in the repository.
 pub struct LocalSourceSaveOptions {
     /// Save access time for files and directories
     #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
-    with_atime: bool,
+    pub with_atime: bool,
 
     /// Don't save device ID for files and directories
     #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
-    ignore_devid: bool,
+    pub ignore_devid: bool,
 }
 
 #[serde_as]
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[cfg_attr(feature = "merge", derive(merge::Merge))]
-#[derive(serde::Deserialize, Default, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Default, Clone, Debug, Setters)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[setters(into)]
+/// [`LocalSourceFilterOptions`] allow to filter a local source by various criteria.
 pub struct LocalSourceFilterOptions {
     /// Glob pattern to exclude/include (can be specified multiple times)
     #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
-    glob: Vec<String>,
+    pub glob: Vec<String>,
 
     /// Same as --glob pattern but ignores the casing of filenames
     #[cfg_attr(feature = "clap", clap(long, value_name = "GLOB"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
-    iglob: Vec<String>,
+    pub iglob: Vec<String>,
 
     /// Read glob patterns to exclude/include from this file (can be specified multiple times)
     #[cfg_attr(feature = "clap", clap(long, value_name = "FILE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
-    glob_file: Vec<String>,
+    pub glob_file: Vec<String>,
 
     /// Same as --glob-file ignores the casing of filenames in patterns
     #[cfg_attr(feature = "clap", clap(long, value_name = "FILE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
-    iglob_file: Vec<String>,
+    pub iglob_file: Vec<String>,
 
     /// Ignore files based on .gitignore files
     #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
-    git_ignore: bool,
+    pub git_ignore: bool,
 
     /// Do not require a git repository to apply git-ignore rule
     #[cfg_attr(feature = "clap", clap(long))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
-    no_require_git: bool,
+    pub no_require_git: bool,
 
     /// Exclude contents of directories containing this filename (can be specified multiple times)
     #[cfg_attr(feature = "clap", clap(long, value_name = "FILE"))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::vec::overwrite_empty))]
-    exclude_if_present: Vec<String>,
+    pub exclude_if_present: Vec<String>,
 
     /// Exclude other file systems, don't cross filesystem boundaries and subvolumes
     #[cfg_attr(feature = "clap", clap(long, short = 'x'))]
     #[cfg_attr(feature = "merge", merge(strategy = merge::bool::overwrite_false))]
-    one_file_system: bool,
+    pub one_file_system: bool,
 
-    /// Maximum size of files to be backuped. Larger files will be excluded.
+    /// Maximum size of files to be backed up. Larger files will be excluded.
     #[cfg_attr(feature = "clap", clap(long, value_name = "SIZE"))]
     #[serde_as(as = "Option<DisplayFromStr>")]
-    exclude_larger_than: Option<ByteSize>,
+    pub exclude_larger_than: Option<ByteSize>,
 }
 
 impl LocalSource {
+    /// Create a local source from [`LocalSourceSaveOptions`], [`LocalSourceFilterOptions`] and backup path(s).
+    ///
+    /// # Arguments
+    ///
+    /// * `save_opts` - The [`LocalSourceSaveOptions`] to use.
+    /// * `filter_opts` - The [`LocalSourceFilterOptions`] to use.
+    /// * `backup_paths` - The backup path(s) to use.
+    ///
+    /// # Returns
+    ///
+    /// The created local source.
+    ///
+    /// # Errors
+    ///
+    /// * [`IgnoreErrorKind::GenericError`] - If the a glob pattern could not be added to the override builder.
+    /// * [`IgnoreErrorKind::FromIoError`] - If a glob file could not be read.
     pub fn new(
         save_opts: LocalSourceSaveOptions,
         filter_opts: &LocalSourceFilterOptions,
@@ -201,11 +225,21 @@ impl LocalSource {
 }
 
 #[derive(Debug)]
+/// Describes an open file from the local backend.
 pub struct OpenFile(PathBuf);
 
 impl ReadSourceOpen for OpenFile {
     type Reader = File;
 
+    /// Open the file from the local backend.
+    ///
+    /// # Returns
+    ///
+    /// The read handle to the file from the local backend.
+    ///
+    /// # Errors
+    ///
+    /// * [`IgnoreErrorKind::UnableToOpenFile`] - If the file could not be opened.
     fn open(self) -> RusticResult<Self::Reader> {
         let path = self.0;
         File::open(path).map_err(|err| IgnoreErrorKind::UnableToOpenFile(err).into())
@@ -216,6 +250,15 @@ impl ReadSource for LocalSource {
     type Open = OpenFile;
     type Iter = Self;
 
+    /// Get the size of the local source.
+    ///
+    /// # Returns
+    ///
+    /// The size of the local source or `None` if the size could not be determined.
+    ///
+    /// # Errors
+    ///
+    /// If the size could not be determined.
     fn size(&self) -> RusticResult<Option<u64>> {
         let mut size = 0;
         for entry in self.builder.build() {
@@ -228,6 +271,11 @@ impl ReadSource for LocalSource {
         Ok(Some(size))
     }
 
+    /// Iterate over the entries of the local source.
+    ///
+    /// # Returns
+    ///
+    /// An iterator over the entries of the local source.
     fn entries(self) -> Self::Iter {
         self
     }
@@ -255,6 +303,18 @@ impl Iterator for LocalSource {
     }
 }
 
+/// Maps a [`DirEntry`] to a [`ReadSourceEntry`].
+///
+/// # Arguments
+///
+/// * `entry` - The [`DirEntry`] to map.
+/// * `with_atime` - Whether to save access time for files and directories.
+/// * `ignore_devid` - Whether to save device ID for files and directories.
+///
+/// # Errors
+///
+/// * [`IgnoreErrorKind::GenericError`] - If metadata could not be read.
+/// * [`IgnoreErrorKind::FromIoError`] - If path of the entry could not be read.
 #[cfg(windows)]
 fn map_entry(
     entry: DirEntry,
@@ -324,6 +384,15 @@ fn map_entry(
     Ok(ReadSourceEntry { path, node, open })
 }
 
+/// Get the user name for the given uid.
+///
+/// # Arguments
+///
+/// * `uid` - The uid to get the user name for.
+///
+/// # Returns
+///
+/// The user name for the given uid or `None` if the user could not be found.
 #[cfg(not(windows))]
 #[cached]
 fn get_user_by_uid(uid: u32) -> Option<String> {
@@ -337,6 +406,15 @@ fn get_user_by_uid(uid: u32) -> Option<String> {
     }
 }
 
+/// Get the group name for the given gid.
+///
+/// # Arguments
+///
+/// * `gid` - The gid to get the group name for.
+///
+/// # Returns
+///
+/// The group name for the given gid or `None` if the group could not be found.
 #[cfg(not(windows))]
 #[cached]
 fn get_group_by_gid(gid: u32) -> Option<String> {
@@ -350,6 +428,18 @@ fn get_group_by_gid(gid: u32) -> Option<String> {
     }
 }
 
+/// Maps a [`DirEntry`] to a [`ReadSourceEntry`].
+///
+/// # Arguments
+///
+/// * `entry` - The [`DirEntry`] to map.
+/// * `with_atime` - Whether to save access time for files and directories.
+/// * `ignore_devid` - Whether to save device ID for files and directories.
+///
+/// # Errors
+///
+/// * [`IgnoreErrorKind::GenericError`] - If metadata could not be read.
+/// * [`IgnoreErrorKind::FromIoError`] - If the xattr of the entry could not be read.
 #[cfg(not(windows))]
 // map_entry: turn entry into (Path, Node)
 fn map_entry(

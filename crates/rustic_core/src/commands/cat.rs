@@ -3,12 +3,39 @@ use std::path::Path;
 use bytes::Bytes;
 
 use crate::{
+    backend::{decrypt::DecryptReadBackend, FileType, ReadBackend},
+    blob::{tree::Tree, BlobType},
     error::CommandErrorKind,
+    error::RusticResult,
+    id::Id,
+    index::IndexedBackend,
+    progress::ProgressBars,
+    repofile::SnapshotFile,
     repository::{IndexedFull, IndexedTree, Open, Repository},
-    BlobType, DecryptReadBackend, FileType, Id, IndexedBackend, ProgressBars, ReadBackend,
-    RusticResult, SnapshotFile, Tree,
 };
 
+/// Prints the contents of a file.
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The state the repository is in.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to read from.
+/// * `tpe` - The type of the file.
+/// * `id` - The id of the file.
+///
+/// # Errors
+///
+/// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
+/// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
+/// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
+///
+/// # Returns
+///
+/// The data read.
 pub(crate) fn cat_file<P, S: Open>(
     repo: &Repository<P, S>,
     tpe: FileType,
@@ -19,6 +46,22 @@ pub(crate) fn cat_file<P, S: Open>(
     Ok(data)
 }
 
+// TODO: Add documentation!
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The type of the indexed tree.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to read from.
+/// * `tpe` - The type of the file.
+/// * `id` - The id of the file.
+///
+/// # Errors
+///
+/// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
 pub(crate) fn cat_blob<P, S: IndexedFull>(
     repo: &Repository<P, S>,
     tpe: BlobType,
@@ -30,6 +73,26 @@ pub(crate) fn cat_blob<P, S: IndexedFull>(
     Ok(data)
 }
 
+/// Prints the contents of a tree.
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The type of the indexed tree.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to read from.
+/// * `snap` - The snapshot to read from.
+/// * `sn_filter` - The filter to apply to the snapshot.
+///
+/// # Errors
+///
+/// * [`CommandErrorKind::PathIsNoDir`] - If the path is not a directory.
+///
+/// # Returns
+///
+/// The data read.
 pub(crate) fn cat_tree<P: ProgressBars, S: IndexedTree>(
     repo: &Repository<P, S>,
     snap: &str,

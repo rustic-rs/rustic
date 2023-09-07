@@ -1,5 +1,5 @@
 //! `ls` example
-use rustic_core::{Repository, RepositoryOptions, TreeStreamerOptions};
+use rustic_core::{LsOptions, Repository, RepositoryOptions};
 use simplelog::{Config, LevelFilter, SimpleLogger};
 use std::error::Error;
 
@@ -17,9 +17,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let node = repo.node_from_snapshot_path("latest", |_| true)?;
 
     // recursively list the snapshot contents using no additional filtering
-    let recursive = true;
-    let streamer_opts = TreeStreamerOptions::default();
-    for item in repo.ls(&node, &streamer_opts, recursive)? {
+    let ls_opts = LsOptions::default();
+    for item in repo.ls(&node, &ls_opts)? {
         let (path, _) = item?;
         println!("{path:?} ");
     }

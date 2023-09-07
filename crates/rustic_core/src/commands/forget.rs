@@ -2,33 +2,47 @@
 
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use derivative::Derivative;
+use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    repository::Open, Id, ProgressBars, Repository, RusticResult, SnapshotFile, SnapshotGroup,
-    SnapshotGroupCriterion, StringList,
+    error::RusticResult,
+    id::Id,
+    progress::ProgressBars,
+    repofile::snapshotfile::{SnapshotGroup, SnapshotGroupCriterion},
+    repofile::{SnapshotFile, StringList},
+    repository::{Open, Repository},
 };
 
 type CheckFunction = fn(&SnapshotFile, &SnapshotFile) -> bool;
 
 #[derive(Debug, Serialize)]
+/// A newtype for `[Vec<ForgetGroup>]`
 pub struct ForgetGroups(pub Vec<ForgetGroup>);
 
 #[derive(Debug, Serialize)]
+/// All snapshots of a group with group and forget information
 pub struct ForgetGroup {
+    /// The group
     pub group: SnapshotGroup,
+    /// The list of snapshots within this group
     pub snapshots: Vec<ForgetSnapshot>,
 }
 
 #[derive(Debug, Serialize)]
+/// This struct enhances `[SnapshotFile]` with the attributes `keep` and `reasons` which indicates if the snapshot should be kept and why.
 pub struct ForgetSnapshot {
+    /// The snapshot
     pub snapshot: SnapshotFile,
+    /// Whether it should be kept
     pub keep: bool,
+    /// reason(s) for keeping / not keeping the snapshot
     pub reasons: Vec<String>,
 }
 
 impl ForgetGroups {
+    /// Turn `ForgetGroups` into the list of all snapshot IDs to remove.
     pub fn into_forget_ids(self) -> Vec<Id> {
         self.0
             .into_iter()
@@ -41,6 +55,23 @@ impl ForgetGroups {
     }
 }
 
+/// Get the list of snapshots to forget.
+///
+/// # Type Parameters
+///
+/// * `P` - The progress bar type.
+/// * `S` - The state the repository is in.
+///
+/// # Arguments
+///
+/// * `repo` - The repository to use
+/// * `keep` - The keep options to use
+/// * `group_by` - The criterion to group snapshots by
+/// * `filter` - The filter to apply to the snapshots
+///
+/// # Returns
+///
+/// The list of snapshot groups with the corresponding snapshots and forget information
 pub(crate) fn get_forget_snapshots<P: ProgressBars, S: Open>(
     repo: &Repository<P, S>,
     keep: &KeepOptions,
@@ -64,10 +95,12 @@ pub(crate) fn get_forget_snapshots<P: ProgressBars, S: Open>(
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
 #[cfg_attr(feature = "merge", derive(merge::Merge))]
 #[serde_as]
-#[derive(Clone, Debug, PartialEq, Eq, Derivative, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Derivative, Deserialize, Setters)]
 #[derivative(Default)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[setters(into)]
 #[non_exhaustive]
+/// Options which snapshots should be kept. Used by the `forget` command.
 pub struct KeepOptions {
     /// Keep snapshots with this taglist (can be specified multiple times)
     #[cfg_attr(feature = "clap", clap(long, value_name = "TAG[,TAG,..]"))]
@@ -225,6 +258,26 @@ pub struct KeepOptions {
     pub keep_within_yearly: humantime::Duration,
 }
 
+/// Overwrite the value of `left` with `right` if `left` is zero.
+///
+/// This is used to overwrite the default values of `KeepOptions` with the values from the config file.
+///
+/// # Arguments
+///
+/// * `left` - The value to overwrite
+/// * `right` - The value to overwrite with
+///
+/// # Example
+///
+/// ```
+/// use rustic_core::commands::forget::overwrite_zero_duration;
+/// use humantime::Duration;
+///
+/// let mut left = "0s".parse::<humantime::Duration>().unwrap().into();
+/// let right = "60s".parse::<humantime::Duration>().unwrap().into();
+/// overwrite_zero_duration(&mut left, right);
+/// assert_eq!(left, "60s".parse::<humantime::Duration>().unwrap().into());
+/// ```
 #[cfg(feature = "merge")]
 fn overwrite_zero_duration(left: &mut humantime::Duration, right: humantime::Duration) {
     if *left == std::time::Duration::ZERO.into() {
@@ -232,46 +285,134 @@ fn overwrite_zero_duration(left: &mut humantime::Duration, right: humantime::Dur
     }
 }
 
+/// Always return false
+///
+/// # Arguments
+///
+/// * `_sn1` - The first snapshot
+/// * `_sn2` - The second snapshot
 const fn always_false(_sn1: &SnapshotFile, _sn2: &SnapshotFile) -> bool {
     false
 }
 
+/// Evaluate the year of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the year of the snapshots is equal
 fn equal_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year()
 }
 
+/// Evaluate the half year of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the half year of the snapshots is equal
 fn equal_half_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.month0() / 6 == t2.month0() / 6
 }
 
+/// Evaluate the quarter year of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the quarter year of the snapshots is equal
 fn equal_quarter_year(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.month0() / 3 == t2.month0() / 3
 }
 
+/// Evaluate the month of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the month of the snapshots is equal
 fn equal_month(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.month() == t2.month()
 }
 
+/// Evaluate the week of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the week of the snapshots is equal
 fn equal_week(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.iso_week().week() == t2.iso_week().week()
 }
 
+/// Evaluate the day of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the day of the snapshots is equal
 fn equal_day(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.ordinal() == t2.ordinal()
 }
 
+/// Evaluate the hours of the given snapshots
+///
+/// # Arguments
+///
+/// * `sn1` - The first snapshot
+/// * `sn2` - The second snapshot
+///
+/// # Returns
+///
+/// Whether the hours of the snapshots are equal
 fn equal_hour(sn1: &SnapshotFile, sn2: &SnapshotFile) -> bool {
     let (t1, t2) = (sn1.time, sn2.time);
     t1.year() == t2.year() && t1.ordinal() == t2.ordinal() && t1.hour() == t2.hour()
 }
 
 impl KeepOptions {
+    /// Check if the given snapshot matches the keep options.
+    ///
+    /// # Arguments
+    ///
+    /// * `sn` - The snapshot to check
+    /// * `last` - The last snapshot
+    /// * `has_next` - Whether there is a next snapshot
+    /// * `latest_time` - The time of the latest snapshot
+    ///
+    /// # Returns
+    ///
+    /// The list of reasons why the snapshot should be kept
     fn matches(
         &mut self,
         sn: &SnapshotFile,
@@ -369,6 +510,18 @@ impl KeepOptions {
         reason
     }
 
+    /// Apply the `[KeepOptions]` to the given list of [`SnapshotFile`]s returning the corresponding
+    /// list of [`ForgetSnapshot`]s
+    ///
+    /// # Arguments
+    ///
+    /// * `snapshots` - The list of snapshots to apply the options to
+    /// * `now` - The current time
+    ///
+    /// # Returns
+    ///
+    /// The list of snapshots with the attribute `keep` set to `true` if the snapshot should be kept and
+    /// `reasons` set to the list of reasons why the snapshot should be kept
     pub fn apply(
         &self,
         mut snapshots: Vec<SnapshotFile>,

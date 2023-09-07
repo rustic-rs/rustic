@@ -7,38 +7,70 @@ use crate::{
         polynom::{Polynom, Polynom64},
         rolling_hash::{Rabin64, RollingHash64},
     },
-    error::PolynomialErrorKind,
-    RusticResult,
+    error::{PolynomialErrorKind, RusticResult},
 };
 
 pub(super) mod constants {
+    /// The Splitmask is used to determine if a chunk is a chunk boundary.
     pub(super) const SPLITMASK: u64 = (1u64 << 20) - 1;
+    /// The size of a kilobyte.
     pub(super) const KB: usize = 1024;
+    /// The size of a megabyte.
     pub(super) const MB: usize = 1024 * KB;
+    /// The minimum size of a chunk.
     pub(super) const MIN_SIZE: usize = 512 * KB;
+    /// The maximum size of a chunk.
     pub(super) const MAX_SIZE: usize = 8 * MB;
+    /// Buffer size used for reading.
     pub(super) const BUF_SIZE: usize = 64 * KB;
+    /// Random polynomial maximum tries.
     pub(super) const RAND_POLY_MAX_TRIES: i32 = 1_000_000;
 }
 
+/// Default predicate for chunking.
 #[inline]
 const fn default_predicate(x: u64) -> bool {
     (x & constants::SPLITMASK) == 0
 }
 
+/// `ChunkIter` is an iterator that chunks data.
 pub(crate) struct ChunkIter<R: Read + Send> {
+    /// The buffer used for reading.
     buf: Vec<u8>,
+
+    /// The position in the buffer.
     pos: usize,
+
+    /// The reader.
     reader: R,
+
+    /// The predicate used to determine if a chunk is a chunk boundary.
     predicate: fn(u64) -> bool,
+
+    /// The rolling hash.
     rabin: Rabin64,
+
+    /// The size hint is used to optimize memory allocation; this should be an upper bound on the size.
     size_hint: usize,
+
+    /// The minimum size of a chunk.
     min_size: usize,
+
+    /// The maximum size of a chunk.
     max_size: usize,
+
+    /// If the iterator is finished.
     finished: bool,
 }
 
 impl<R: Read + Send> ChunkIter<R> {
+    /// Creates a new `ChunkIter`.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - The reader to read from.
+    /// * `size_hint` - The size hint is used to optimize memory allocation; this should be an upper bound on the size.
+    /// * `rabin` - The rolling hash.
     pub(crate) fn new(reader: R, size_hint: usize, rabin: Rabin64) -> Self {
         Self {
             buf: Vec::with_capacity(4 * constants::KB),
@@ -137,8 +169,11 @@ impl<R: Read + Send> Iterator for ChunkIter<R> {
 /// (largest prime number below 64-8)
 /// There are (2^53-2/53) irreducible polynomials of degree 53 in
 /// `F_2[X]`, c.f. Michael O. Rabin (1981): "Fingerprinting by Random
-/// Polynomials", page 4. If no polynomial could be found in one
-/// million tries, an error is returned.
+/// Polynomials", page 4.
+///
+/// # Errors
+///
+/// * [`PolynomialErrorKind::NoSuitablePolynomialFound`] - If no polynomial could be found in one million tries.
 pub fn random_poly() -> RusticResult<u64> {
     for _ in 0..constants::RAND_POLY_MAX_TRIES {
         let mut poly: u64 = thread_rng().gen();
@@ -157,17 +192,25 @@ pub fn random_poly() -> RusticResult<u64> {
     Err(PolynomialErrorKind::NoSuitablePolynomialFound.into())
 }
 
+/// A trait for extending polynomials.
 pub(crate) trait PolynomExtend {
+    /// Returns true IFF x is irreducible over `F_2`.
     fn irreducible(&self) -> bool;
+
+    /// Returns the degree of the polynomial.
     fn gcd(self, other: Self) -> Self;
+
+    /// Adds two polynomials.
     fn add(self, other: Self) -> Self;
+
+    /// Multiplies two polynomials modulo another polynomial.
     fn mulmod(self, other: Self, modulo: Self) -> Self;
 }
 
 // implementation goes along the lines of
 // https://github.com/restic/chunker/blob/master/polynomials.go
 impl PolynomExtend for Polynom64 {
-    // Irreducible returns true iff x is irreducible over F_2. This function
+    // Irreducible returns true IFF x is irreducible over F_2. This function
     // uses Ben Or's reducibility test.
     //
     // For details see "Tests and Constructions of Irreducible Polynomials over

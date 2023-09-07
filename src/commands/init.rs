@@ -9,16 +9,16 @@ use crate::{Application, RUSTIC_APP};
 
 use dialoguer::Password;
 
-use rustic_core::{ConfigOpts, KeyOpts, Repository};
+use rustic_core::{ConfigOptions, KeyOptions, Repository};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct InitCmd {
     #[clap(flatten, next_help_heading = "Key options")]
-    key_opts: KeyOpts,
+    key_opts: KeyOptions,
 
     #[clap(flatten, next_help_heading = "Config options")]
-    config_opts: ConfigOpts,
+    config_opts: ConfigOptions,
 }
 
 impl Runnable for InitCmd {
@@ -48,8 +48,8 @@ impl InitCmd {
 
 pub(crate) fn init<P, S>(
     repo: Repository<P, S>,
-    key_opts: &KeyOpts,
-    config_opts: &ConfigOpts,
+    key_opts: &KeyOptions,
+    config_opts: &ConfigOptions,
 ) -> Result<()> {
     let pass = repo.password()?.unwrap_or_else(|| {
         match Password::new()

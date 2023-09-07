@@ -2,26 +2,33 @@
 use std::collections::HashMap;
 
 use bytes::Bytes;
+use derive_setters::Setters;
 use itertools::Itertools;
 use log::{debug, error, warn};
 use rayon::prelude::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use zstd::stream::decode_all;
 
 use crate::{
-    backend::cache::Cache,
-    hash,
-    index::binarysorted::{IndexCollector, IndexType},
+    backend::{cache::Cache, decrypt::DecryptReadBackend, node::NodeType, FileType, ReadBackend},
+    blob::{tree::TreeStreamerOnce, BlobType},
+    crypto::hasher::hash,
+    error::RusticResult,
+    id::Id,
+    index::{
+        binarysorted::{IndexCollector, IndexType},
+        IndexBackend, IndexedBackend,
+    },
+    progress::Progress,
     progress::ProgressBars,
+    repofile::{IndexFile, IndexPack, PackHeader, PackHeaderLength, PackHeaderRef, SnapshotFile},
     repository::{Open, Repository},
-    BlobType, DecryptReadBackend, FileType, Id, IndexBackend, IndexFile, IndexPack, IndexedBackend,
-    NodeType, PackHeader, PackHeaderLength, PackHeaderRef, Progress, ReadBackend, RusticResult,
-    SnapshotFile, TreeStreamerOnce,
 };
 
-/// `check` subcommand
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CheckOpts {
+#[derive(Clone, Copy, Debug, Default, Setters)]
+#[setters(into)]
+/// Options for the `check` command
+pub struct CheckOptions {
     /// Don't verify the data saved in the cache
     #[cfg_attr(feature = "clap", clap(long, conflicts_with = "no_cache"))]
     pub trust_cache: bool,
@@ -31,7 +38,21 @@ pub struct CheckOpts {
     pub read_data: bool,
 }
 
-impl CheckOpts {
+impl CheckOptions {
+    /// Runs the `check` command
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The progress bar type.
+    /// * `S` - The state the repository is in.
+    ///
+    /// # Arguments
+    ///
+    /// * `repo` - The repository to check
+    ///
+    /// # Errors
+    ///
+    /// If the repository is corrupted
     pub(crate) fn run<P: ProgressBars, S: Open>(self, repo: &Repository<P, S>) -> RusticResult<()> {
         let be = repo.dbe();
         let cache = repo.cache();
@@ -47,7 +68,7 @@ impl CheckOpts {
                     // TODO: Only list the files once...
                     _ = be.list_with_size(file_type)?;
 
-                    let p = pb.progress_bytes(format!("checking {file_type} in cache..."));
+                    let p = pb.progress_bytes(format!("checking {file_type:?} in cache..."));
                     // TODO: Make concurrency (20) customizable
                     check_cache_files(20, cache, raw_be, file_type, &p)?;
                 }
@@ -111,13 +132,25 @@ impl CheckOpts {
     }
 }
 
+/// Checks if all files in the backend are also in the hot backend
+///
+/// # Arguments
+///
+/// * `be` - The backend to check
+/// * `be_hot` - The hot backend to check
+/// * `file_type` - The type of the files to check
+/// * `pb` - The progress bar to use
+///
+/// # Errors
+///
+/// If a file is missing or has a different size
 fn check_hot_files(
     be: &impl ReadBackend,
     be_hot: &impl ReadBackend,
     file_type: FileType,
     pb: &impl ProgressBars,
 ) -> RusticResult<()> {
-    let p = pb.progress_spinner(format!("checking {file_type} in hot repo..."));
+    let p = pb.progress_spinner(format!("checking {file_type:?} in hot repo..."));
     let mut files = be
         .list_with_size(file_type)?
         .into_iter()
@@ -129,6 +162,7 @@ fn check_hot_files(
         match files.remove(&id) {
             None => error!("hot file Type: {file_type:?}, Id: {id} does not exist in repo"),
             Some(size) if size != size_hot => {
+                // TODO: This should be an actual error not a log entry
                 error!("Type: {file_type:?}, Id: {id}: hot size: {size_hot}, actual size: {size}");
             }
             _ => {} //everything ok
@@ -143,6 +177,19 @@ fn check_hot_files(
     Ok(())
 }
 
+/// Checks if all files in the cache are also in the backend
+///
+/// # Arguments
+///
+/// * `concurrency` - The number of threads to use
+/// * `cache` - The cache to check
+/// * `be` - The backend to check
+/// * `file_type` - The type of the files to check
+/// * `p` - The progress bar to use
+///
+/// # Errors
+///
+/// If a file is missing or has a different size
 fn check_cache_files(
     _concurrency: usize,
     cache: &Cache,
@@ -188,7 +235,22 @@ fn check_cache_files(
     Ok(())
 }
 
-// check if packs correspond to index
+/// Check if packs correspond to index and are present in the backend
+///
+/// # Arguments
+///
+/// * `be` - The backend to check
+/// * `hot_be` - The hot backend to check
+/// * `read_data` - Whether to read the data of the packs
+/// * `pb` - The progress bar to use
+///
+/// # Errors
+///
+/// If a pack is missing or has a different size
+///
+/// # Returns
+///
+/// The index collector
 fn check_packs(
     be: &impl DecryptReadBackend,
     hot_be: &Option<impl ReadBackend>,
@@ -200,7 +262,7 @@ fn check_packs(
     let mut index_collector = IndexCollector::new(if read_data {
         IndexType::Full
     } else {
-        IndexType::FullTrees
+        IndexType::DataIds
     });
 
     let mut process_pack = |p: IndexPack, check_time: bool| {
@@ -265,6 +327,17 @@ fn check_packs(
     Ok(index_collector)
 }
 
+// TODO: Add documentation
+/// Checks if all packs in the backend are also in the index
+///
+/// # Arguments
+///
+/// * `be` - The backend to check
+/// * `packs` - The packs to check
+///
+/// # Errors
+///
+/// If a pack is missing or has a different size
 fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> RusticResult<()> {
     for (id, size) in be.list_with_size(FileType::Pack)? {
         match packs.remove(&id) {
@@ -282,7 +355,16 @@ fn check_packs_list(be: &impl ReadBackend, mut packs: HashMap<Id, u32>) -> Rusti
     Ok(())
 }
 
-// check if all snapshots and contained trees can be loaded and contents exist in the index
+/// Check if all snapshots and contained trees can be loaded and contents exist in the index
+///
+/// # Arguments
+///
+/// * `index` - The index to check
+/// * `pb` - The progress bar to use
+///
+/// # Errors
+///
+/// If a snapshot or tree is missing or has a different size
 fn check_snapshots(index: &impl IndexedBackend, pb: &impl ProgressBars) -> RusticResult<()> {
     let p = pb.progress_counter("reading snapshots...");
     let snap_trees: Vec<_> = index
@@ -340,6 +422,22 @@ fn check_snapshots(index: &impl IndexedBackend, pb: &impl ProgressBars) -> Rusti
     Ok(())
 }
 
+/// Check if a pack is valid
+///
+/// # Arguments
+///
+/// * `be` - The backend to use
+/// * `index_pack` - The pack to check
+/// * `data` - The data of the pack
+/// * `p` - The progress bar to use
+///
+/// # Errors
+///
+/// If the pack is invalid
+///
+/// # Panics
+///
+/// If zstd decompression fails.
 fn check_pack(
     be: &impl DecryptReadBackend,
     index_pack: IndexPack,

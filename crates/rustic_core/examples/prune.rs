@@ -1,5 +1,5 @@
 //! `prune` example
-use rustic_core::{PruneOpts, Repository, RepositoryOptions};
+use rustic_core::{PruneOptions, Repository, RepositoryOptions};
 use simplelog::{Config, LevelFilter, SimpleLogger};
 use std::error::Error;
 
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .password("test");
     let repo = Repository::new(&repo_opts)?.open()?;
 
-    let prune_opts = PruneOpts::default();
+    let prune_opts = PruneOptions::default();
     let prune_plan = repo.prune_plan(&prune_opts)?;
     println!("{:?}", prune_plan.stats);
     println!("to repack: {:?}", prune_plan.repack_packs());

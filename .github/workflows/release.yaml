@@ -5,7 +5,6 @@ on:
     paths-ignore:
       - "**/*.md"
       - "docs/**/*"
-      - "assets/**/*"
   push:
     branches:
       - main
@@ -13,7 +12,6 @@ on:
     paths-ignore:
       - "**/*.md"
       - "docs/**/*"
-      - "assets/**/*"
 
 name: Build release binaries
 

@@ -353,3 +353,54 @@ impl WriteBackend for S3Backend {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use rstest::rstest;
+
+    use crate::RusticError;
+
+    use super::*;
+
+    enum ExpectedResult {
+        NoError((Option<String>, String)),
+        Error(RusticError),
+    }
+
+    #[rstest]
+    #[case("s3://bucket/path", ExpectedResult::Error(S3ErrorKind::InvalidScheme("s3".to_string()).into()))]
+    #[case("http://localhost:9000/path", ExpectedResult::NoError((Some("http://localhost:9000".to_string()), "path".to_string())))]
+    #[case("http://localhost:9000", ExpectedResult::Error(S3ErrorKind::MissingBucketName("http://localhost:9000".to_string()).into()))]
+    #[case("bucket-name", ExpectedResult::NoError((None, "bucket-name".to_string())))]
+    fn test_url_parsing(#[case] url: &str, #[case] expected: ExpectedResult) -> RusticResult<()> {
+        let parsed = parse_s3_url(url);
+
+        match expected {
+            ExpectedResult::NoError(exp) => {
+                assert_eq!(parsed?, exp);
+            }
+            ExpectedResult::Error(_err) => {
+                assert!(parsed.is_err());
+                assert!(matches!(parsed.unwrap_err(), _err));
+            }
+        }
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(FileType::Config, None, "config")]
+    #[case(FileType::Config, Some(Id::new([0; 32])), "config")]
+    #[case(FileType::Pack, None, "data/")]
+    #[case(FileType::Pack, Some(Id::new([0; 32])), format!("data/{}/{}", "00", "00".repeat(32)))]
+    #[case(FileType::Key, None, "keys/")]
+    #[case(FileType::Key, Some(Id::new([0; 32])), format!("keys/{}", "00".repeat(32)))]
+    fn test_get_object_path(
+        #[case] tpe: FileType,
+        #[case] id: Option<Id>,
+        #[case] expected: String,
+    ) {
+        let path = object_path(tpe, id.as_ref());
+        assert_eq!(path, expected);
+    }
+}

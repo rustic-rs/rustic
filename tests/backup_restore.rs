@@ -12,17 +12,19 @@ use abscissa_core::testing::prelude::*;
 use aho_corasick::PatternID;
 use dircmp::Comparison;
 use pretty_assertions::assert_eq;
+use rand::{distributions::Alphanumeric, Rng};
+use rstest::rstest;
+use rstest_reuse::{self, *};
 use rustic_testing::{get_matches, TestResult};
 use std::io::Read;
 use tempfile::{tempdir, TempDir};
 
-pub fn rustic_runner(temp_dir: &TempDir) -> CmdRunner {
+pub fn rustic_runner(repo_arg: &str) -> CmdRunner {
     let password = "test";
-    let repo_dir = temp_dir.path().join("repo");
     let mut runner = CmdRunner::new(env!("CARGO_BIN_EXE_rustic"));
     runner
         .arg("-r")
-        .arg(repo_dir)
+        .arg(repo_arg)
         .arg("--password")
         .arg(password)
         .arg("--no-progress")
@@ -31,9 +33,25 @@ pub fn rustic_runner(temp_dir: &TempDir) -> CmdRunner {
     runner
 }
 
-fn setup() -> TestResult<TempDir> {
+#[template]
+#[rstest]
+#[case(|| -> TestResult<String> {
     let temp_dir = tempdir()?;
-    let mut runner = rustic_runner(&temp_dir);
+    let repo_dir = temp_dir.path().join("repo");
+    Ok(repo_dir.to_string_lossy().to_string())
+})]
+#[case(|| -> TestResult<String> {
+    let s: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(7)
+        .map(char::from)
+        .collect();
+    Ok(format!("s3:http://localhost:9000/{}", s.to_lowercase()))
+})]
+fn all_repo_types(#[case] get_repo_arg: impl Fn() -> TestResult<String>) {}
+
+fn setup(repo_arg: &str) -> TestResult<&str> {
+    let mut runner = rustic_runner(repo_arg);
     let mut cmd = runner.args(["init"]).run();
 
     let mut stdout = String::new();
@@ -50,17 +68,18 @@ fn setup() -> TestResult<TempDir> {
     );
 
     cmd.wait()?.expect_success();
-    Ok(temp_dir)
+    Ok(repo_arg)
 }
 
-#[test]
-fn test_backup_and_check_passes() -> TestResult<()> {
-    let temp_dir = setup()?;
+#[apply(all_repo_types)]
+fn test_backup_and_check_passes(get_repo_arg: impl Fn() -> TestResult<String>) -> TestResult<()> {
+    let repo_arg = get_repo_arg()?;
+    let _ = setup(&repo_arg)?;
     let backup = "crates/";
 
     {
         // Run `backup` for the first time
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.arg("backup").arg(backup).run();
 
         let mut output = String::new();
@@ -75,7 +94,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 
     {
         // Run `snapshots`
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.arg("snapshots").run();
         let mut output = String::new();
         cmd.stdout().read_to_string(&mut output)?;
@@ -90,7 +109,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 
     {
         // Run `backup` a second time
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.arg("backup").arg(backup).run();
 
         let mut output = String::new();
@@ -109,7 +128,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 
     {
         // Run `snapshots` a second time
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.arg("snapshots").run();
         let mut output = String::new();
         cmd.stdout().read_to_string(&mut output)?;
@@ -124,7 +143,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 
     {
         // Run `check --read-data`
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.args(["check", "--read-data"]).run();
         let mut output = String::new();
         cmd.stderr().read_to_string(&mut output)?;
@@ -140,9 +159,12 @@ fn test_backup_and_check_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_backup_and_restore_passes() -> TestResult<()> {
-    let temp_dir = setup()?;
+#[apply(all_repo_types)]
+fn test_backup_and_restore_passes(get_repo_arg: impl Fn() -> TestResult<String>) -> TestResult<()> {
+    let repo_arg = get_repo_arg()?;
+    setup(&repo_arg)?;
+
+    let temp_dir = tempdir()?;
     let restore_dir = temp_dir.path().join("restore");
     let backup = "crates";
 
@@ -152,7 +174,7 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
 
     {
         // Run `backup` for the first time
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.arg("backup").arg(&backup_files).run();
 
         let mut output = String::new();
@@ -166,7 +188,7 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
     }
     {
         // Run `restore`
-        let mut runner = rustic_runner(&temp_dir);
+        let mut runner = rustic_runner(&repo_arg);
         let mut cmd = runner.arg("restore").arg("latest").arg(&restore_dir).run();
 
         let mut output = String::new();

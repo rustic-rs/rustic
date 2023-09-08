@@ -126,6 +126,8 @@ aho-corasick = { workspace = true }
 dircmp = { workspace = true }
 once_cell = { workspace = true }
 pretty_assertions = { workspace = true }
+rstest = { workspace = true }
+rstest_reuse.workspace = true
 rustic_testing = { path = "crates/rustic_testing" }
 tempfile = { workspace = true }
 toml = { workspace = true }
@@ -232,6 +234,7 @@ self_update = { version = "0.37", default-features = false, features = ["rustls"
 
 # dev dependencies
 rstest = "0.18"
+rstest_reuse = "0.6.0"
 quickcheck = "1"
 quickcheck_macros = "1"
 tempfile = "3.8"

@@ -4,3 +4,5 @@
 mutants.out
 cargo-test*
 coverage/*lcov
+.devenv/
+.direnv/

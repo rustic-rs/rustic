@@ -2,8 +2,8 @@ use bytes::Bytes;
 
 use crate::{
     backend::{
-        local::LocalBackend, rclone::RcloneBackend, rest::RestBackend, FileType, ReadBackend,
-        WriteBackend,
+        local::LocalBackend, rclone::RcloneBackend, rest::RestBackend, s3::S3Backend, FileType,
+        ReadBackend, WriteBackend,
     },
     error::BackendErrorKind,
     error::RusticResult,
@@ -19,6 +19,7 @@ pub enum ChooseBackend {
     Rest(RestBackend),
     /// Rclone backend.
     Rclone(RcloneBackend),
+    S3(S3Backend),
 }
 
 impl ChooseBackend {
@@ -41,6 +42,7 @@ impl ChooseBackend {
             Some(("rclone", path)) => Self::Rclone(RcloneBackend::new(path)?),
             Some(("rest", path)) => Self::Rest(RestBackend::new(path)?),
             Some(("local", path)) => Self::Local(LocalBackend::new(path)?),
+            Some(("s3", path)) => Self::S3(S3Backend::new(path)?),
             Some((backend, _)) => {
                 return Err(BackendErrorKind::BackendNotSupported(backend.to_owned()).into())
             }
@@ -56,6 +58,7 @@ impl ReadBackend for ChooseBackend {
             Self::Local(local) => local.location(),
             Self::Rest(rest) => rest.location(),
             Self::Rclone(rclone) => rclone.location(),
+            Self::S3(s3) => s3.location(),
         }
     }
 
@@ -70,6 +73,7 @@ impl ReadBackend for ChooseBackend {
             Self::Local(local) => local.set_option(option, value),
             Self::Rest(rest) => rest.set_option(option, value),
             Self::Rclone(rclone) => rclone.set_option(option, value),
+            Self::S3(s3) => s3.set_option(option, value),
         }
     }
 
@@ -91,6 +95,7 @@ impl ReadBackend for ChooseBackend {
             Self::Local(local) => local.list_with_size(tpe),
             Self::Rest(rest) => rest.list_with_size(tpe),
             Self::Rclone(rclone) => rclone.list_with_size(tpe),
+            Self::S3(s3) => s3.list_with_size(tpe),
         }
     }
 
@@ -115,6 +120,7 @@ impl ReadBackend for ChooseBackend {
             Self::Local(local) => local.read_full(tpe, id),
             Self::Rest(rest) => rest.read_full(tpe, id),
             Self::Rclone(rclone) => rclone.read_full(tpe, id),
+            Self::S3(s3) => s3.read_full(tpe, id),
         }
     }
 
@@ -143,6 +149,7 @@ impl ReadBackend for ChooseBackend {
             Self::Local(local) => local.read_partial(tpe, id, cacheable, offset, length),
             Self::Rest(rest) => rest.read_partial(tpe, id, cacheable, offset, length),
             Self::Rclone(rclone) => rclone.read_partial(tpe, id, cacheable, offset, length),
+            Self::S3(s3) => s3.read_partial(tpe, id, cacheable, offset, length),
         }
     }
 }
@@ -154,6 +161,7 @@ impl WriteBackend for ChooseBackend {
             Self::Local(local) => local.create(),
             Self::Rest(rest) => rest.create(),
             Self::Rclone(rclone) => rclone.create(),
+            Self::S3(s3) => s3.create(),
         }
     }
 
@@ -170,6 +178,7 @@ impl WriteBackend for ChooseBackend {
             Self::Local(local) => local.write_bytes(tpe, id, cacheable, buf),
             Self::Rest(rest) => rest.write_bytes(tpe, id, cacheable, buf),
             Self::Rclone(rclone) => rclone.write_bytes(tpe, id, cacheable, buf),
+            Self::S3(s3) => s3.write_bytes(tpe, id, cacheable, buf),
         }
     }
 
@@ -185,6 +194,7 @@ impl WriteBackend for ChooseBackend {
             Self::Local(local) => local.remove(tpe, id, cacheable),
             Self::Rest(rest) => rest.remove(tpe, id, cacheable),
             Self::Rclone(rclone) => rclone.remove(tpe, id, cacheable),
+            Self::S3(s3) => s3.remove(tpe, id, cacheable),
         }
     }
 }

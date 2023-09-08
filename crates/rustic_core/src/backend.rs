@@ -8,6 +8,7 @@ pub(crate) mod local;
 pub(crate) mod node;
 pub(crate) mod rclone;
 pub(crate) mod rest;
+pub(crate) mod s3;
 pub(crate) mod stdin;
 
 use std::{io::Read, path::PathBuf};

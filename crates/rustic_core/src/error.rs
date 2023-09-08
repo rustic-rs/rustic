@@ -135,6 +135,10 @@ pub enum RusticErrorKind {
     #[error(transparent)]
     Rest(#[from] RestErrorKind),
 
+    /// [`S3ErrorKind`] describes the errors that can be returned while dealing with S3
+    #[error(transparent)]
+    S3(#[from] S3ErrorKind),
+
     /// [`StdInErrorKind`] describes the errors that can be returned while dealing IO from CLI
     #[error(transparent)]
     StdIn(#[from] StdInErrorKind),
@@ -742,6 +746,30 @@ pub enum RestErrorKind {
     JoiningUrlFailed(url::ParseError),
 }
 
+/// [`S3ErrorKind`] describes the errors that can be returned while dealing with S3
+#[derive(Error, Debug, Display)]
+pub enum S3ErrorKind {
+    /// `{0:?}`
+    CredentialsError(#[from] s3::creds::error::CredentialsError),
+    /// `{0:?}`
+    #[error(transparent)]
+    S3Error(#[from] s3::error::S3Error),
+    /// `failed to pass url: {0}`
+    ParsingS3UrlFailed(String),
+    /// `No bucket name defined in url: {0:?}`
+    MissingBucketName(String),
+    /// `invalid scheme: {0}`
+    InvalidScheme(String),
+    /// `received status code {0} in response`
+    ResponseStatusError(u16),
+    /// `failed to create bucket with response {1}: {0}`
+    CreateBucketFailed(String, u16),
+    /// backoff failed: {0:?}
+    BackoffError(#[from] backoff::Error<s3::error::S3Error>),
+    /// `{0:?}`
+    RegionError(#[from] s3::region::error::RegionError),
+}
+
 /// [`StdInErrorKind`] describes the errors that can be returned while dealing IO from CLI
 #[derive(Error, Debug, Display)]
 pub enum StdInErrorKind {
@@ -809,6 +837,7 @@ impl RusticErrorMarker for LocalErrorKind {}
 impl RusticErrorMarker for NodeErrorKind {}
 impl RusticErrorMarker for ProviderErrorKind {}
 impl RusticErrorMarker for RestErrorKind {}
+impl RusticErrorMarker for S3ErrorKind {}
 impl RusticErrorMarker for StdInErrorKind {}
 impl RusticErrorMarker for ArchiverErrorKind {}
 impl RusticErrorMarker for CommandErrorKind {}

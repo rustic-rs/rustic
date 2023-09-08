@@ -94,6 +94,9 @@ url = { workspace = true }
 # rclone backend
 semver = { workspace = true }
 
+# s3 backend
+rust-s3 = { workspace = true }
+
 # cache
 cachedir = { workspace = true }
 dirs = { workspace = true }
@@ -144,7 +147,7 @@ codegen-units = 4
 
 [profile.release]
 opt-level = 3
-debug = false # true for profiling
+debug = false            # true for profiling
 rpath = false
 lto = "fat"
 debug-assertions = false
@@ -161,7 +164,7 @@ codegen-units = 4
 
 [profile.bench]
 opt-level = 3
-debug = true # true for profiling
+debug = true             # true for profiling
 rpath = false
 lto = true
 debug-assertions = false

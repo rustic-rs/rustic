@@ -62,6 +62,9 @@ tracing-subscriber = { workspace = true }
 # rclone backend
 semver = { workspace = true }
 
+# s3 backend
+rust-s3 = { workspace = true }
+
 # parallelize
 crossbeam-channel = { workspace = true }
 pariter = { workspace = true }
@@ -201,6 +204,11 @@ url = "2.4.0"
 
 # rclone backend
 semver = "1"
+
+# s3 backend
+rust-s3 = { version = "0.33.0", features = [
+    "sync-rustls-tls",
+], default-features = false }
 
 # other dependencies
 bytes = "1"

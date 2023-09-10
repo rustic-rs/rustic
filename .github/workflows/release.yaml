@@ -80,11 +80,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
         with:
           fetch-depth: 0
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           toolchain: ${{ matrix.rust }}
           profile: minimal
@@ -102,14 +102,14 @@ jobs:
         if: ${{ matrix.job.use_cross != true}}
         run: |
           cargo install cargo-auditable cargo-audit
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
         with:
           key: ${{ matrix.job.target }}
       - name: Set Version
         shell: bash
         run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         if: ${{ matrix.job.use-cross == true }}
         with:
           command: build
@@ -117,7 +117,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           args: --release --target ${{ matrix.job.target }}
       - name: Cargo auditable build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         if: ${{ matrix.job.use-cross == false }}
         with:
           command: auditable
@@ -153,12 +153,12 @@ jobs:
 
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Storing binary as artefact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
         with:
           name: binary-${{ matrix.job.target}}
           path: target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
       - name: Releasing release versions
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
       - name: Releasing beta builds
         shell: bash
         run: |
@@ -213,7 +213,7 @@ jobs:
           #    runs-on: ubuntu-latest
           #    steps:
           #      - name: Checkout repository
-          #        uses: actions/checkout@v3
+          #        uses: actions/checkout@v4
           #      - uses: actions-rs/toolchain@v1
         #        with:
         #          toolchain: stable

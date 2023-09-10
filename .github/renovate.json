@@ -1,19 +1,31 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "extends": [
-        "config:base"
+        "config:recommended",
+        ":dependencyDashboard",
+        "helpers:pinGitHubActionDigests"
     ],
+    "separateMinorPatch": false,
+    "major": {
+        "dependencyDashboardApproval": true
+    },
     "labels": [
         "A-dependencies"
     ],
     "packageRules": [
         {
-            "matchPackagePatterns": [
+            "matchDatasources": [
                 "github-actions"
             ],
             "labels": [
                 "A-ci"
             ]
         }
-    ]
+    ],
+    "lockFileMaintenance": {
+        "enabled": true,
+        "extends": [
+            "schedule:monthly"
+        ]
+    }
 }

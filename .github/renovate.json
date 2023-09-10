@@ -6,6 +6,9 @@
         "helpers:pinGitHubActionDigests"
     ],
     "separateMinorPatch": false,
+    "prCreation": "status-success",
+    "prHourlyLimit": 1,
+    "prConcurrentLimit": 1,
     "major": {
         "dependencyDashboardApproval": true
     },
@@ -19,6 +22,14 @@
             ],
             "labels": [
                 "A-ci"
+            ]
+        },
+        {
+            "matchDatasources": [
+                "cargo"
+            ],
+            "extends": [
+                "schedule:weekly"
             ]
         }
     ],

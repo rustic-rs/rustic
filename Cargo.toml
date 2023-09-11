@@ -80,6 +80,7 @@ binrw = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true }
 serde-aux = { workspace = true }
+serde_derive = { workspace = true }
 serde_json = { workspace = true }
 serde_with = { workspace = true }
 
@@ -142,7 +143,9 @@ sha2 = "0.10"
 xattr = "1"
 
 [workspace.dependencies]
-rustic_core = { path = "crates/rustic_core/", features = ["cli"], version = "0" }
+rustic_core = { path = "crates/rustic_core/", features = [
+    "cli",
+], version = "0" }
 abscissa_core = "0.7.0"
 
 # logging
@@ -179,21 +182,29 @@ integer-sqrt = "0.1"
 # serialization
 binrw = "0.11"
 hex = { version = "0.4", features = ["serde"] }
-serde = { version = "1", features = ["serde_derive"] }
-serde_with = { version = "3.2", features = ["base64"] }
+serde = { version = "1.0.188" }
+serde_derive = "1"
+serde_with = { version = "3.3", features = ["base64"] }
 serde_json = "1"
 serde-aux = "4"
 
 # local backend
 walkdir = "2"
 ignore = "0.4"
-cached = { version = "0.45", default-features = false, features = ["proc_macro"] }
-nix = "0.26"
+cached = { version = "0.45", default-features = false, features = [
+    "proc_macro",
+] }
+nix = "0.27.1"
 filetime = "0.2"
 aho-corasick = "1"
 
 # rest backend
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-native-roots", "stream", "blocking"] }
+reqwest = { version = "0.11.20", default-features = false, features = [
+    "json",
+    "rustls-tls-native-roots",
+    "stream",
+    "blocking",
+] }
 backoff = "0.4"
 url = "2.4.0"
 
@@ -202,11 +213,21 @@ semver = "1"
 
 # other dependencies
 bytes = "1"
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+chrono = { version = "0.4", default-features = false, features = [
+    "clock",
+    "serde",
+] }
 zstd = "0.12"
 enum-map = "2"
-enum-map-derive = "0.13"
-rhai = { version = "1.15", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+enum-map-derive = "0.14.0"
+rhai = { version = "1.15", features = [
+    "sync",
+    "serde",
+    "no_optimize",
+    "no_module",
+    "no_custom_syntax",
+    "only_i64",
+] }
 simplelog = "0.12"
 comfy-table = "7.0.1"
 
@@ -228,7 +249,11 @@ humantime = "2"
 clap_complete = "4"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 once_cell = "1.18"
-self_update = { version = "0.38", default-features = false, features = ["rustls", "archive-tar", "compression-flate2"] }
+self_update = { version = "0.38", default-features = false, features = [
+    "rustls",
+    "archive-tar",
+    "compression-flate2",
+] }
 
 # dev dependencies
 rstest = "0.18"
@@ -257,7 +282,7 @@ codegen-units = 4
 
 [profile.release]
 opt-level = 3
-debug = false # true for profiling
+debug = false            # true for profiling
 rpath = false
 lto = "fat"
 debug-assertions = false
@@ -275,7 +300,7 @@ codegen-units = 4
 
 [profile.bench]
 opt-level = 3
-debug = true # true for profiling
+debug = true             # true for profiling
 rpath = false
 lto = true
 debug-assertions = false

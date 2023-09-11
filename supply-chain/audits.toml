@@ -1,0 +1,254 @@
+
+# cargo-vet audits file
+
+[[audits.bytesize]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.0 -> 1.3.0"
+notes = "Changes to parser look fine to me"
+
+[[audits.cached]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.44.0 -> 0.45.1"
+notes = "No unsafe changes, mostly changes needed for new release, examples, etc."
+
+[[audits.cached_proc_macro]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.17.0 -> 0.18.0"
+notes = "No, huge changes. No unsafe changed."
+
+[[audits.encoding_rs]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.32 -> 0.8.33"
+notes = "Dependency updates, switches back to `packed_simd` crate"
+
+[[audits.pin-project-lite]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.12 -> 0.2.13"
+notes = "Allows arguments to pinned drop implementation"
+
+[[audits.public-api]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.31.3 -> 0.32.0"
+notes = "Raised minimum nightly version to 2023-08-05, removed deprecated items from API, minor changes"
+
+[[audits.rustdoc-types]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.22.0 -> 0.23.0"
+notes = "Upgrades to Github actions, renamed Typedef to TypeAlias"
+
+[[audits.self_update]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.37.0 -> 0.38.0"
+notes = "Removes a lot of code in favour of self_replace, that has been factored out of rustup."
+
+[[audits.serde]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.185 -> 1.0.186"
+notes = "Mostly minor changes, removed module utf8, added cfg for releasing serde_derive in lockstep with serde"
+
+[[audits.serde]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.186 -> 1.0.188"
+notes = "Removes i128/u128 support, replaces macros with function calls. No unsafe."
+
+[[audits.serde_derive]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.185 -> 1.0.186"
+notes = "Minor changes, lockstep release with serde"
+
+[[audits.serde_derive]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.186 -> 1.0.188"
+notes = "Just version changes"
+
+[[audits.slab]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.8 -> 0.4.9"
+notes = "Implements clone from, no unsafe."
+
+[[audits.time]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.25 -> 0.3.27"
+notes = "Dependency update for serde and time-macros"
+
+[[audits.time-macros]]
+who = "simonsan <14062932+simonsan@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.11 -> 0.2.13"
+notes = "Just version and hash update"
+
+[[trusted.aho-corasick]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-28"
+end = "2024-09-10"
+
+[[trusted.anstream]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-03-16"
+end = "2024-08-26"
+
+[[trusted.anstyle]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-05-18"
+end = "2024-08-26"
+
+[[trusted.anstyle-wincon]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-03-08"
+end = "2024-08-26"
+
+[[trusted.backtrace]]
+criteria = "safe-to-deploy"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2023-06-29"
+end = "2024-08-26"
+
+[[trusted.bstr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-02"
+end = "2024-09-10"
+
+[[trusted.clap]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-12-08"
+end = "2024-08-26"
+
+[[trusted.clap_builder]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-03-28"
+end = "2024-08-26"
+
+[[trusted.clap_complete]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-12-31"
+end = "2024-08-26"
+
+[[trusted.clap_derive]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-12-08"
+end = "2024-08-26"
+
+[[trusted.clap_lex]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-04-15"
+end = "2024-08-26"
+
+[[trusted.globset]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2024-09-10"
+
+[[trusted.h2]]
+criteria = "safe-to-deploy"
+user-id = 359 # Sean McArthur (seanmonstar)
+start = "2019-03-13"
+end = "2024-08-26"
+
+[[trusted.ignore]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2024-09-10"
+
+[[trusted.memchr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-07"
+end = "2024-09-10"
+
+[[trusted.quickcheck]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-05-13"
+end = "2024-09-10"
+
+[[trusted.regex]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-27"
+end = "2024-09-10"
+
+[[trusted.regex-automata]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-25"
+end = "2024-09-10"
+
+[[trusted.regex-syntax]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-30"
+end = "2024-09-10"
+
+[[trusted.reqwest]]
+criteria = "safe-to-deploy"
+user-id = 359 # Sean McArthur (seanmonstar)
+start = "2019-03-04"
+end = "2024-08-26"
+
+[[trusted.rustic-rs]]
+criteria = "safe-to-deploy"
+user-id = 152504 # aawsome
+start = "2022-03-14"
+end = "2024-08-21"
+
+[[trusted.rustic_core]]
+criteria = "safe-to-deploy"
+user-id = 60784 # simonsan
+start = "2023-08-10"
+end = "2024-08-21"
+
+[[trusted.same-file]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-16"
+end = "2024-09-10"
+
+[[trusted.termcolor]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-06-04"
+end = "2024-09-10"
+
+[[trusted.walkdir]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-06-09"
+end = "2024-09-10"
+
+[[trusted.winapi-util]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2020-01-11"
+end = "2024-09-10"
+
+[[trusted.winnow]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-02-22"
+end = "2024-08-26"

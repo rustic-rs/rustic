@@ -22,7 +22,7 @@ jobs:
             os-name: windows
             target: x86_64-pc-windows-msvc
             architecture: x86_64
-            binary-postfix: ""
+            binary-postfix: ".exe"
             use-cross: false
           - os: macos-latest
             os-name: macos
@@ -75,11 +75,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
         with:
           fetch-depth: 0
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           toolchain: ${{ matrix.rust }}
           profile: minimal
@@ -92,41 +92,66 @@ jobs:
               sudo apt update
               sudo apt-get install -y musl-tools
           fi
-      - uses: Swatinem/rust-cache@v2
+      - name: install cargo-auditable for non-cross builds
+        shell: bash
+        if: ${{ matrix.job.use_cross != true}}
+        run: |
+          cargo install cargo-auditable cargo-audit
+      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
         with:
           key: ${{ matrix.job.target }}
       - name: Set Version
         shell: bash
         run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        if: ${{ matrix.job.use-cross == true }}
         with:
           command: build
           use-cross: ${{ matrix.job.use-cross }}
           toolchain: ${{ matrix.rust }}
           args: --release --target ${{ matrix.job.target }}
-
+      - name: Cargo auditable build
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        if: ${{ matrix.job.use-cross == false }}
+        with:
+          command: auditable
+          use-cross: ${{ matrix.job.use-cross }}
+          toolchain: ${{ matrix.rust }}
+          args: build --release --target ${{ matrix.job.target }}
       - name: Packaging final binary
-        if: ${{ !contains(github.ref_name, '/') }}
         shell: bash
+        id: package-binary
         run: |
+          cp -a config target/${{ matrix.job.target }}/release/config
           cd target/${{ matrix.job.target }}/release
 
           ########## create tar.gz ##########
-          RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}
-          tar czvf $RELEASE_NAME.tar.gz rustic${{ matrix.job.binary-postfix }}
+
+          # accounting for main branch and therefore beta builds
+          if [[ ${{ github.ref }} = refs/heads/main ]]; then
+              RELEASE_NAME=rustic-beta-${{ matrix.job.target}}.tar.gz
+          elif [[ ${{ github.ref }} = refs/tags/* ]]; then
+              RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
+          else    
+              RELEASE_NAME=rustic-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.job.target}}.tar.gz 
+          fi
+
+          tar czvf $RELEASE_NAME rustic${{ matrix.job.binary-postfix }} config/
 
           ########## create sha256 ##########
           if [[ ${{ runner.os }} == 'Windows' ]]; then
-            certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
+            certutil -hashfile $RELEASE_NAME sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
           else
-            shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+            shasum -a 256 $RELEASE_NAME > $RELEASE_NAME.sha256
           fi
+
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Storing binary as artefact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
         with:
           name: binary-${{ matrix.job.target}}
-          path: target/${{ matrix.job.target }}/release/rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
+          path: target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
 
   remove-build-label:
     name: Remove build label
@@ -138,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       always() &&
-      !contains(needs.*.result, 'skipped')
+      ! contains(needs.*.result, 'skipped')
     steps:
       - name: Remove label
         env:

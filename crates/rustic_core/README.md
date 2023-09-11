@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://github.com/rustic-rs/rustic/blob/main/assets/Logo.svg?raw=true" height="400" />
+<img src="https://media.githubusercontent.com/media/rustic-rs/docs/main/assets/readme_header.png" height="400" />
 </p>
 
 <p align="center">

@@ -33,7 +33,7 @@ options. Therefore `commandline arguments` have the highest precedence.
 
 Configuration files can be placed in the user's local config directory, e.g.
 `~/.config/rustic/` or in the global config dir, e.g. `/etc/rustic/`. You can
-use a different config files, e.g. `myconfig.toml` and use the `-P` option to
+use different config files, e.g. `myconfig.toml` and use the `-P` option to
 specify the profile name, e.g. `rustic -P myconfig`. Examples for different
 configuration files can be found here in the [/config/](/config) directory.
 

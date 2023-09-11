@@ -94,7 +94,8 @@ scoop install rustic
 Or you can check out the
 [releases](https://github.com/rustic-rs/rustic/releases).
 
-Nightly binaries are available [here](https://github.com/rustic-rs/nightly).
+Nightly binaries are available
+[here](https://rustic.cli.rs/docs/nightly_builds.html).
 
 ### From source
 

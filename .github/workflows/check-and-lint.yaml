@@ -4,12 +4,13 @@ on:
       - main
     paths-ignore:
       - "**/*.md"
-      - "docs/**"
+      - "docs/**/*"
   push:
     branches:
       - main
     paths-ignore:
       - "**/*.md"
+      - "docs/**/*"
 
 name: Check and Lint
 # env:
@@ -20,14 +21,14 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions-rs/cargo@v1
+      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         with:
           command: check
           args: --all-features --workspace
@@ -36,14 +37,14 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           profile: minimal
           toolchain: stable
           override: true
       - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         with:
           command: fmt
           args: --all -- --check
@@ -53,14 +54,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           toolchain: stable
           components: clippy
           override: true
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions-rs/clippy-check@v1
+      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - uses: actions-rs/clippy-check@b5b5f21f4797c02da247df37026fcd0a5024aa4d # v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-targets --all-features -- -D warnings

@@ -63,6 +63,10 @@ doc *ARGS:
 format:
 	@cargo +nightly fmt --all
 
+# Runs the formatter on md, json, and toml files.
+format-mjt:
+	dprint fmt
+
 # Runs the linter.
 lint: check
 	cargo clippy --no-default-features
@@ -106,6 +110,9 @@ natest *ARGS:
 #
 # updating the public API files for each platform works
 # by setting the environment variable `UPDATE_EXPECT=1`
+# 
+#  Run on Windows: `$env:UPDATE_EXPECT=1; cargo test --test public_api -p rustic_core -- --ignored`
+#  Run on Linux: `export UPDATE_EXPECT=1; cargo test --test public_api -p rustic_core -- --ignored`
 tpa:
 	cargo test --test public_api -p rustic_core -- --ignored
 
@@ -119,3 +126,6 @@ coverage:
 # as in which feature enables a given crate
 inv-ft *ARGS:
 	cargo tree -e features -i {{ARGS}}
+
+# Prepare a Contribution/Pull request and run necessary checks and lints
+pre-commit: format format-mjt test lint

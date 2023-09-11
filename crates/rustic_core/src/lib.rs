@@ -99,7 +99,6 @@ This crate exposes a few features for controlling dependency usage.
     overflowing_literals,
     path_statements,
     patterns_in_fns_without_body,
-    private_in_public,
     trivial_numeric_casts,
     unused_results,
     trivial_casts,

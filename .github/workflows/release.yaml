@@ -5,6 +5,7 @@ on:
       - release/*
     paths-ignore:
       - "**/*.md"
+      - "docs/**/*"
 
 name: Build release binaries
 

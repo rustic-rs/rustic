@@ -4,12 +4,13 @@ on:
       - main
     paths-ignore:
       - "**/*.md"
-      - "docs/**"
+      - "docs/**/*"
   push:
     branches:
       - main
     paths-ignore:
       - "**/*.md"
+      - "docs/**/*"
 
 name: Tests
 

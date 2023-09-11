@@ -24,6 +24,9 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 # Set shell for non-Windows OSs:
 set shell := ["bash", "-uc"]
 
+default:
+	@just --choose
+
 # Runs the benchmark suite
 # bench *ARGS:
 # 	cargo +nightly bench {{ARGS}}
@@ -62,6 +65,10 @@ doc *ARGS:
 # Runs the formatter on all Rust files.
 format:
 	@cargo +nightly fmt --all
+
+# Runs formatting on Rust files and other files supported by dprint.
+fmt: format
+	dprint fmt
 
 # Runs the linter.
 lint: check

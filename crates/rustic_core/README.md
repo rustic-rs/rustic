@@ -22,8 +22,8 @@ document.
 
 ## Contact
 
-You can ask questions in the [Discussions][3] or have a look at the
-[FAQ](docs/FAQ.md).
+You can ask questions in the [Discussions](https://github.com/rustic-rs/rustic/discussions) or have a look at the
+[FAQ](https://rustic.cli.rs/docs/FAQ.html).
 
 | Contact       | Where?                                                                                                   |
 | ------------- | -------------------------------------------------------------------------------------------------------- |

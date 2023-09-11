@@ -9,7 +9,7 @@ use crate::{Application, RUSTIC_APP};
 
 use dialoguer::Password;
 
-use rustic_core::{ConfigOptions, KeyOptions, Repository};
+use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -42,7 +42,9 @@ impl InitCmd {
         if repo.config_id()?.is_some() {
             bail!("Config file already exists. Aborting.");
         }
-        init(repo, &self.key_opts, &self.config_opts)
+
+        let _ = init(repo, &self.key_opts, &self.config_opts)?;
+        Ok(())
     }
 }
 
@@ -50,7 +52,7 @@ pub(crate) fn init<P, S>(
     repo: Repository<P, S>,
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
-) -> Result<()> {
+) -> Result<Repository<P, OpenStatus>> {
     let pass = repo.password()?.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
@@ -66,7 +68,5 @@ pub(crate) fn init<P, S>(
         }
     });
 
-    let _ = repo.init_with_password(&pass, key_opts, config_opts)?;
-
-    Ok(())
+    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
 }

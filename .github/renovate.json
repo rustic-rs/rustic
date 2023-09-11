@@ -1,0 +1,42 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":dependencyDashboard",
+        "helpers:pinGitHubActionDigests"
+    ],
+    "separateMinorPatch": false,
+    "prCreation": "status-success",
+    "prHourlyLimit": 1,
+    "prConcurrentLimit": 1,
+    "major": {
+        "dependencyDashboardApproval": true
+    },
+    "labels": [
+        "A-dependencies"
+    ],
+    "packageRules": [
+        {
+            "matchDatasources": [
+                "github-actions"
+            ],
+            "labels": [
+                "A-ci"
+            ]
+        },
+        {
+            "matchDatasources": [
+                "cargo"
+            ],
+            "extends": [
+                "schedule:weekly"
+            ]
+        }
+    ],
+    "lockFileMaintenance": {
+        "enabled": true,
+        "extends": [
+            "schedule:monthly"
+        ]
+    }
+}

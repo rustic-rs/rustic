@@ -17,9 +17,11 @@ use merge::Merge;
 use serde::Deserialize;
 
 use rustic_core::{
-    BackupOptions, LocalSourceFilterOptions, LocalSourceSaveOptions, ParentOptions, PathList,
-    SnapshotOptions,
+    BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
+    ParentOptions, PathList, Repository, SnapshotOptions,
 };
+
+use super::init::init;
 
 /// `backup` subcommand
 #[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
@@ -56,6 +58,11 @@ pub struct BackupCmd {
     #[merge(strategy = merge::bool::overwrite_false)]
     json: bool,
 
+    /// Initialize repository, if it doesn't exist yet
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    init: bool,
+
     #[clap(flatten, next_help_heading = "Options for parent processing")]
     #[serde(flatten)]
     parent_opts: ParentOptions,
@@ -67,6 +74,16 @@ pub struct BackupCmd {
     #[clap(flatten, next_help_heading = "Snapshot options")]
     #[serde(flatten)]
     snap_opts: SnapshotOptions,
+
+    #[clap(flatten, next_help_heading = "Key options (when using --init)")]
+    #[serde(skip)]
+    #[merge(skip)]
+    key_opts: KeyOptions,
+
+    #[clap(flatten, next_help_heading = "Config options (when using --init)")]
+    #[serde(skip)]
+    #[merge(skip)]
+    config_opts: ConfigOptions,
 
     #[clap(skip)]
     #[merge(strategy = merge_sources)]
@@ -98,7 +115,21 @@ impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let repo = open_repository(&config)?.to_indexed_ids()?;
+        let po = config.global.progress_options;
+        let repo = Repository::new_with_progress(&config.repository, po)?;
+        // Initialize repository if --init is set and it is not yet initialized
+        let repo = if self.init && repo.config_id()?.is_none() {
+            if config.global.dry_run {
+                bail!(
+                    "cannot initialize repository {} in dry-run mode!",
+                    repo.name
+                );
+            }
+            init(repo, &self.key_opts, &self.config_opts)?
+        } else {
+            open_repository(&config)?
+        }
+        .to_indexed_ids()?;
 
         // manually check for a "source" field, check is not done by serde, see above.
         if !config.backup.source.is_empty() {

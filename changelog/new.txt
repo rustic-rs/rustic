@@ -21,3 +21,4 @@ New features:
 - Check: Add check if time is set for packs-to-delete
 - ls: Options --long (-l) and --summary (-s) have been added.
 - forget: Option --json has been added.
+- backup: New option --init to initialize repository if it doesn't exist yet.

@@ -1,23 +1,44 @@
 //! `repair` index subcommand
+use derive_setters::Setters;
 use log::{debug, info, warn};
 
 use std::collections::HashMap;
 
 use crate::{
-    error::CommandErrorKind, DecryptReadBackend, DecryptWriteBackend, FileType, IndexFile,
-    IndexPack, Indexer, Open, PackHeader, PackHeaderRef, Progress, ProgressBars, ReadBackend,
-    Repository, RusticResult, WriteBackend,
+    backend::{
+        decrypt::{DecryptReadBackend, DecryptWriteBackend},
+        FileType, ReadBackend, WriteBackend,
+    },
+    error::{CommandErrorKind, RusticResult},
+    index::indexer::Indexer,
+    progress::{Progress, ProgressBars},
+    repofile::{IndexFile, IndexPack, PackHeader, PackHeaderRef},
+    repository::{Open, Repository},
 };
 
 #[cfg_attr(feature = "clap", derive(clap::Parser))]
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Setters)]
+#[setters(into)]
+#[non_exhaustive]
+/// Options for the `repair index` command
 pub struct RepairIndexOptions {
-    // Read all data packs, i.e. completely re-create the index
+    /// Read all data packs, i.e. completely re-create the index
     #[cfg_attr(feature = "clap", clap(long))]
-    read_all: bool,
+    pub read_all: bool,
 }
 
 impl RepairIndexOptions {
+    /// Runs the `repair index` command
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The progress bar type
+    /// * `S` - The state the repository is in
+    ///
+    /// # Arguments
+    ///
+    /// * `repo` - The repository to repair
+    /// * `dry_run` - Whether to actually modify the repository or just print what would be done
     pub(crate) fn repair<P: ProgressBars, S: Open>(
         self,
         repo: &Repository<P, S>,

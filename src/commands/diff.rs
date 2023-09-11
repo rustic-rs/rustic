@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 
 use rustic_core::{
-    BlobType, IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, Node, NodeType, ReadSourceEntry, Repository, RusticResult,
-    TreeStreamerOptions,
+    repofile::{BlobType, Node, NodeType},
+    IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
+    LsOptions, ReadSourceEntry, Repository, RusticResult,
 };
 
 /// `diff` subcommand
@@ -60,7 +60,7 @@ impl DiffCmd {
         _ = match (id1, id2) {
             (Some(id1), Some(id2)) => {
                 // diff between two snapshots
-                let snaps = repo.get_snapshots(&[id1.to_string(), id2.to_string()])?;
+                let snaps = repo.get_snapshots(&[id1, id2])?;
 
                 let snap1 = &snaps[0];
                 let snap2 = &snaps[1];
@@ -69,8 +69,8 @@ impl DiffCmd {
                 let node2 = repo.node_from_snapshot_and_path(snap2, path2)?;
 
                 diff(
-                    repo.ls(&node1, &TreeStreamerOptions::default(), true)?,
-                    repo.ls(&node2, &TreeStreamerOptions::default(), true)?,
+                    repo.ls(&node1, &LsOptions::default())?,
+                    repo.ls(&node2, &LsOptions::default())?,
                     self.no_content,
                     |_path, node1, node2| Ok(node1.content == node2.content),
                     self.metadata,
@@ -106,7 +106,7 @@ impl DiffCmd {
                 });
 
                 diff(
-                    repo.ls(&node1, &TreeStreamerOptions::default(), true)?,
+                    repo.ls(&node1, &LsOptions::default())?,
                     src,
                     self.no_content,
                     |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
@@ -141,7 +141,9 @@ fn identical_content_local<P, S: IndexedFull>(
     path: &Path,
     node: &Node,
 ) -> Result<bool> {
-    let Some(mut open_file) = local.get_matching_file(path, node.meta.size) else { return Ok(false) };
+    let Some(mut open_file) = local.get_matching_file(path, node.meta.size) else {
+        return Ok(false);
+    };
 
     for id in node.content.iter().flatten() {
         let ie = repo.get_index_entry(BlobType::Data, id)?;

@@ -1,6 +1,7 @@
 # Full rustic config file containing all options which are available through the config file.
 #
-# This file should be placed in the user's local config dir (~/.config/rustic/)
+# This file should be placed in the user's local config dir (~/.config/rustic/) or in the global
+# config dir (/etc/rustic).
 # If you save it under NAME.toml, use "rustic -P NAME" to access this profile.
 #
 # Note that most options can be overwritten by the corresponding command line option.

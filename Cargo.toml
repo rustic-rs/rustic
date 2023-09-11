@@ -187,7 +187,7 @@ serde-aux = "4"
 # local backend
 walkdir = "2"
 ignore = "0.4"
-cached = { version = "0.44", default-features = false, features = ["proc_macro"] }
+cached = { version = "0.45", default-features = false, features = ["proc_macro"] }
 nix = "0.26"
 filetime = "0.2"
 aho-corasick = "1"
@@ -195,7 +195,7 @@ aho-corasick = "1"
 # rest backend
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-native-roots", "stream", "blocking"] }
 backoff = "0.4"
-url = "2.3.1"
+url = "2.4.0"
 
 # rclone backend
 semver = "1"
@@ -208,7 +208,7 @@ enum-map = "2"
 enum-map-derive = "0.13"
 rhai = { version = "1.15", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 simplelog = "0.12"
-comfy-table = "6.1.4"
+comfy-table = "7.0.1"
 
 # cache
 dirs = "5"
@@ -223,15 +223,15 @@ path-dedot = "3"
 dunce = "1"
 gethostname = "0.4"
 bytesize = "1"
-itertools = "0.10"
+itertools = "0.11"
 humantime = "2"
 clap_complete = "4"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
-once_cell = "1.17"
-self_update = { version = "0.36", default-features = false, features = ["rustls", "archive-tar", "compression-flate2"] }
+once_cell = "1.18"
+self_update = { version = "0.38", default-features = false, features = ["rustls", "archive-tar", "compression-flate2"] }
 
 # dev dependencies
-rstest = "0.17"
+rstest = "0.18"
 quickcheck = "1"
 quickcheck_macros = "1"
 tempfile = "3.8"

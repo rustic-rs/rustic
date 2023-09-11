@@ -17,36 +17,59 @@ use crate::{
     blob::BlobType,
     crypto::{hasher::hash, CryptoKey},
     error::PackerErrorKind,
+    error::RusticResult,
     id::Id,
     index::indexer::SharedIndexer,
     repofile::{
         configfile::ConfigFile, indexfile::IndexBlob, indexfile::IndexPack,
         packfile::PackHeaderLength, packfile::PackHeaderRef, snapshotfile::SnapshotSummary,
     },
-    RusticResult,
 };
+
 pub(super) mod constants {
     use std::time::Duration;
 
+    /// Kilobyte in bytes
     pub(super) const KB: u32 = 1024;
+    /// Megabyte in bytes
     pub(super) const MB: u32 = 1024 * KB;
-    // the absolute maximum size of a pack: including headers it should not exceed 4 GB
+    /// The absolute maximum size of a pack: including headers it should not exceed 4 GB
     pub(super) const MAX_SIZE: u32 = 4076 * MB;
+    /// The maximum number of blobs in a pack
     pub(super) const MAX_COUNT: u32 = 10_000;
+    /// The maximum age of a pack
     pub(super) const MAX_AGE: Duration = Duration::from_secs(300);
 }
 
+/// The pack sizer is responsible for computing the size of the pack file.
 #[derive(Debug, Clone, Copy)]
 pub struct PackSizer {
+    /// The default size of a pack file.
     default_size: u32,
+    /// The grow factor of a pack file.
     grow_factor: u32,
+    /// The size limit of a pack file.
     size_limit: u32,
+    /// The current size of a pack file.
     current_size: u64,
+    /// The minimum pack size tolerance in percent before a repack is triggered.
     min_packsize_tolerate_percent: u32,
+    /// The maximum pack size tolerance in percent before a repack is triggered.
     max_packsize_tolerate_percent: u32,
 }
 
 impl PackSizer {
+    /// Creates a new `PackSizer` from a config file.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The config file.
+    /// * `blob_type` - The blob type.
+    /// * `current_size` - The current size of the pack file.
+    ///
+    /// # Returns
+    ///
+    /// A new `PackSizer`.
     #[must_use]
     pub fn from_config(config: &ConfigFile, blob_type: BlobType, current_size: u64) -> Self {
         let (default_size, grow_factor, size_limit) = config.packsize(blob_type);
@@ -62,6 +85,7 @@ impl PackSizer {
         }
     }
 
+    /// Computes the size of the pack file.
     #[must_use]
     pub fn pack_size(&self) -> u32 {
         (self.current_size.integer_sqrt() as u32 * self.grow_factor + self.default_size)
@@ -69,7 +93,11 @@ impl PackSizer {
             .min(constants::MAX_SIZE)
     }
 
-    // returns whether the given size is not too small or too large
+    /// Evaluates whether the given size is not too small or too large
+    ///
+    /// # Arguments
+    ///
+    /// * `size` - The size to check
     #[must_use]
     pub fn size_ok(&self, size: u32) -> bool {
         let target_size = self.pack_size();
@@ -80,23 +108,60 @@ impl PackSizer {
                 <= u64::from(target_size) * u64::from(self.max_packsize_tolerate_percent)
     }
 
+    /// Adds the given size to the current size.
+    ///
+    /// # Arguments
+    ///
+    /// * `added` - The size to add
+    ///
+    /// # Panics
+    ///
+    /// If the size is too large
     fn add_size(&mut self, added: u32) {
         self.current_size += u64::from(added);
     }
 }
 
+/// The `Packer` is responsible for packing blobs into pack files.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend type.
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct Packer<BE: DecryptWriteBackend> {
+    /// The raw packer wrapped in an Arc and RwLock.
     // This is a hack: raw_packer and indexer are only used in the add_raw() method.
     // TODO: Refactor as actor, like the other add() methods
     raw_packer: Arc<RwLock<RawPacker<BE>>>,
+    /// The shared indexer containing the backend.
     indexer: SharedIndexer<BE>,
+    /// The sender to send blobs to the raw packer.
     sender: Sender<(Bytes, Id, Option<u32>)>,
+    /// The receiver to receive the status from the raw packer.
     finish: Receiver<RusticResult<PackerStats>>,
 }
 
 impl<BE: DecryptWriteBackend> Packer<BE> {
+    /// Creates a new `Packer`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend type.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to write to.
+    /// * `blob_type` - The blob type.
+    /// * `indexer` - The indexer to write to.
+    /// * `config` - The config file.
+    /// * `total_size` - The total size of the pack file.
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
+    /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
     pub fn new(
         be: BE,
         blob_type: BlobType,
@@ -172,13 +237,32 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(packer)
     }
 
-    /// adds the blob to the packfile
+    /// Adds the blob to the packfile
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The blob data
+    /// * `id` - The blob id
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
     pub fn add(&self, data: Bytes, id: Id) -> RusticResult<()> {
         // compute size limit based on total size and size bounds
         self.add_with_sizelimit(data, id, None)
     }
 
-    /// adds the blob to the packfile, allows specifying a size limit for the pack file
+    /// Adds the blob to the packfile, allows specifying a size limit for the pack file
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The blob data
+    /// * `id` - The blob id
+    /// * `size_limit` - The size limit for the pack file
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
     fn add_with_sizelimit(&self, data: Bytes, id: Id, size_limit: Option<u32>) -> RusticResult<()> {
         self.sender
             .send((data, id, size_limit))
@@ -186,7 +270,20 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         Ok(())
     }
 
-    /// adds the already encrypted (and maybe compressed) blob to the packfile
+    /// Adds the already encrypted (and maybe compressed) blob to the packfile
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The blob data
+    /// * `id` - The blob id
+    /// * `data_len` - The length of the blob data
+    /// * `uncompressed_length` - The length of the blob data before compression
+    /// * `size_limit` - The size limit for the pack file
+    ///
+    /// # Errors
+    ///
+    /// If the blob is already present in the index
+    /// If sending the message to the raw packer fails.
     fn add_raw(
         &self,
         data: &[u8],
@@ -209,6 +306,11 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
         }
     }
 
+    /// Finalizes the packer and does cleanup
+    ///
+    /// # Panics
+    ///
+    /// If the channel could not be dropped
     pub fn finalize(self) -> RusticResult<PackerStats> {
         // cancel channel
         drop(self.sender);
@@ -217,14 +319,28 @@ impl<BE: DecryptWriteBackend> Packer<BE> {
     }
 }
 
+// TODO: add documentation!
 #[derive(Default, Debug, Clone, Copy)]
 pub struct PackerStats {
+    /// The number of blobs added
     blobs: u64,
+    /// The number of data blobs added
     data: u64,
+    /// The number of packed data blobs added
     data_packed: u64,
 }
 
 impl PackerStats {
+    /// Adds the stats to the summary
+    ///
+    /// # Arguments
+    ///
+    /// * `summary` - The summary to add to
+    /// * `tpe` - The blob type
+    ///
+    /// # Panics
+    ///
+    /// If the blob type is invalid
     pub fn apply(self, summary: &mut SnapshotSummary, tpe: BlobType) {
         summary.data_added += self.data;
         summary.data_added_packed += self.data_packed;
@@ -243,21 +359,49 @@ impl PackerStats {
     }
 }
 
+/// The `RawPacker` is responsible for packing blobs into pack files.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend type.
 #[allow(missing_debug_implementations, clippy::module_name_repetitions)]
 pub(crate) struct RawPacker<BE: DecryptWriteBackend> {
+    /// The backend to write to.
     be: BE,
+    /// The blob type to pack.
     blob_type: BlobType,
+    /// The file to write to
     file: BytesMut,
+    /// The size of the file
     size: u32,
+    /// The number of blobs in the pack
     count: u32,
+    /// The time the pack was created
     created: SystemTime,
+    /// The index of the pack
     index: IndexPack,
+    /// The actor to write the pack file
     file_writer: Option<Actor>,
+    /// The pack sizer
     pack_sizer: PackSizer,
+    /// The packer stats
     stats: PackerStats,
 }
 
 impl<BE: DecryptWriteBackend> RawPacker<BE> {
+    /// Creates a new `RawPacker`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend type.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to write to.
+    /// * `blob_type` - The blob type.
+    /// * `indexer` - The indexer to write to.
+    /// * `config` - The config file.
+    /// * `total_size` - The total size of the pack file.
     fn new(
         be: BE,
         blob_type: BlobType,
@@ -291,12 +435,26 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
         }
     }
 
+    /// Saves the packfile and returns the stats
+    ///
+    /// # Errors
+    ///
+    /// If the packfile could not be saved
     fn finalize(&mut self) -> RusticResult<PackerStats> {
         self.save()?;
         self.file_writer.take().unwrap().finalize()?;
         Ok(std::mem::take(&mut self.stats))
     }
 
+    /// Writes the given data to the packfile.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The data to write.
+    ///
+    /// # Returns
+    ///
+    /// The number of bytes written.
     fn write_data(&mut self, data: &[u8]) -> RusticResult<u32> {
         let len = data
             .len()
@@ -307,7 +465,20 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
         Ok(len)
     }
 
-    // adds the already compressed/encrypted blob to the packfile without any check
+    /// Adds the already compressed/encrypted blob to the packfile without any check
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The blob data
+    /// * `id` - The blob id
+    /// * `data_len` - The length of the blob data
+    /// * `uncompressed_length` - The length of the blob data before compression
+    /// * `size_limit` - The size limit for the pack file
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
+    /// * [`PackerErrorKind::CouldNotGetElapsedTimeFromSystemTime`] - If elapsed time could not be retrieved from system time
     fn add_raw(
         &mut self,
         data: &[u8],
@@ -349,9 +520,14 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
         Ok(())
     }
 
-    /// writes header and length of header to packfile
+    /// Writes header and length of header to packfile
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::IntConversionFailed`] - If converting the header length to u32 fails
+    /// * [`PackFileErrorKind::WritingBinaryRepresentationFailed`] - If the header could not be written
     fn write_header(&mut self) -> RusticResult<()> {
-        // comput the pack header
+        // compute the pack header
         let data = PackHeaderRef::from_index_pack(&self.index).to_binary()?;
 
         // encrypt and write to pack file
@@ -369,6 +545,16 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
         Ok(())
     }
 
+    /// Saves the packfile
+    ///
+    /// # Errors
+    ///
+    /// If the header could not be written
+    ///
+    /// # Errors
+    ///
+    /// * [`PackerErrorKind::IntConversionFailed`] - If converting the header length to u32 fails
+    /// * [`PackFileErrorKind::WritingBinaryRepresentationFailed`] - If the header could not be written
     fn save(&mut self) -> RusticResult<()> {
         if self.size == 0 {
             return Ok(());
@@ -392,14 +578,22 @@ impl<BE: DecryptWriteBackend> RawPacker<BE> {
     }
 }
 
+// TODO: add documentation
+/// # Type Parameters
+///
+/// * `BE` - The backend type.
 #[derive(Clone)]
 pub(crate) struct FileWriterHandle<BE: DecryptWriteBackend> {
+    /// The backend to write to.
     be: BE,
+    /// The shared indexer containing the backend.
     indexer: SharedIndexer<BE>,
+    /// Whether the file is cacheable.
     cacheable: bool,
 }
 
 impl<BE: DecryptWriteBackend> FileWriterHandle<BE> {
+    // TODO: add documentation
     fn process(&self, load: (Bytes, Id, IndexPack)) -> RusticResult<IndexPack> {
         let (file, id, mut index) = load;
         index.id = id;
@@ -415,12 +609,26 @@ impl<BE: DecryptWriteBackend> FileWriterHandle<BE> {
     }
 }
 
+// TODO: add documentation
 pub(crate) struct Actor {
+    /// The sender to send blobs to the raw packer.
     sender: Sender<(Bytes, IndexPack)>,
+    /// The receiver to receive the status from the raw packer.
     finish: Receiver<RusticResult<()>>,
 }
 
 impl Actor {
+    /// Creates a new `Actor`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend type.
+    ///
+    /// # Arguments
+    ///
+    /// * `fwh` - The file writer handle.
+    /// * `queue_len` - The length of the queue.
+    /// * `par` - The number of parallel threads.
     fn new<BE: DecryptWriteBackend>(
         fwh: FileWriterHandle<BE>,
         queue_len: usize,
@@ -453,6 +661,15 @@ impl Actor {
         }
     }
 
+    /// Sends the given data to the actor.
+    ///
+    /// # Arguments
+    ///
+    /// * `load` - The data to send.
+    ///
+    /// # Errors
+    ///
+    /// If sending the message to the actor fails.
     fn send(&self, load: (Bytes, IndexPack)) -> RusticResult<()> {
         self.sender
             .send(load)
@@ -460,6 +677,11 @@ impl Actor {
         Ok(())
     }
 
+    /// Finalizes the actor and does cleanup
+    ///
+    /// # Panics
+    ///
+    /// If the receiver is not present
     fn finalize(self) -> RusticResult<()> {
         // cancel channel
         drop(self.sender);
@@ -468,17 +690,42 @@ impl Actor {
     }
 }
 
+/// The `Repacker` is responsible for repacking blobs into pack files.
+///
+/// # Type Parameters
+///
+/// * `BE` - The backend to read from.
 #[allow(missing_debug_implementations)]
 pub struct Repacker<BE>
 where
     BE: DecryptFullBackend,
 {
+    /// The backend to read from.
     be: BE,
+    /// The packer to write to.
     packer: Packer<BE>,
+    /// The size limit of the pack file.
     size_limit: u32,
 }
 
 impl<BE: DecryptFullBackend> Repacker<BE> {
+    /// Creates a new `Repacker`.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `BE` - The backend to read from.
+    ///
+    /// # Arguments
+    ///
+    /// * `be` - The backend to read from.
+    /// * `blob_type` - The blob type.
+    /// * `indexer` - The indexer to write to.
+    /// * `config` - The config file.
+    /// * `total_size` - The total size of the pack file.
+    ///
+    /// # Errors
+    ///
+    /// If the Packer could not be created
     pub fn new(
         be: BE,
         blob_type: BlobType,
@@ -495,6 +742,17 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         })
     }
 
+    /// Adds the blob to the packfile without any check
+    ///
+    /// # Arguments
+    ///
+    /// * `pack_id` - The pack id
+    /// * `blob` - The blob to add
+    ///
+    /// # Errors
+    ///
+    /// If the blob could not be added
+    /// If reading the blob from the backend fails
     pub fn add_fast(&self, pack_id: &Id, blob: &IndexBlob) -> RusticResult<()> {
         let data = self.be.read_partial(
             FileType::Pack,
@@ -513,6 +771,17 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         Ok(())
     }
 
+    /// Adds the blob to the packfile
+    ///
+    /// # Arguments
+    ///
+    /// * `pack_id` - The pack id
+    /// * `blob` - The blob to add
+    ///
+    /// # Errors
+    ///
+    /// If the blob could not be added
+    /// If reading the blob from the backend fails
     pub fn add(&self, pack_id: &Id, blob: &IndexBlob) -> RusticResult<()> {
         let data = self.be.read_encrypted_partial(
             FileType::Pack,
@@ -527,6 +796,7 @@ impl<BE: DecryptFullBackend> Repacker<BE> {
         Ok(())
     }
 
+    /// Finalizes the repacker and returns the stats
     pub fn finalize(self) -> RusticResult<PackerStats> {
         self.packer.finalize()
     }

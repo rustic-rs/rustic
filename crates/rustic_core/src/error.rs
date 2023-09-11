@@ -22,24 +22,32 @@ use chrono::OutOfRangeError;
 use displaydoc::Display;
 use thiserror::Error;
 
-use crate::{id::Id, repofile::indexfile::IndexPack, NodeType};
+use crate::{backend::node::NodeType, id::Id, repofile::indexfile::IndexPack};
 
-/// Result type often returned from methods that can have rustic `Error`s.
+/// Result type that is being returned from methods that can fail and thus have [`RusticError`]s.
 pub type RusticResult<T> = Result<T, RusticError>;
 
 // [`Error`] is public, but opaque and easy to keep compatible.
 #[derive(Error, Debug)]
 #[error(transparent)]
+/// Errors that can result from rustic.
 pub struct RusticError(#[from] RusticErrorKind);
 
 // Accessors for anything we do want to expose publicly.
 impl RusticError {
+    /// Expose the inner error kind.
+    ///
+    /// This is useful for matching on the error kind.
     pub fn into_inner(self) -> RusticErrorKind {
         self.0
     }
 }
 
-// Private (pub(crate)) and free to change across minor version of the crate.
+/// [`RusticErrorKind`] describes the errors that can happen while executing a high-level command.
+///
+/// This is a non-exhaustive enum, so additional variants may be added in future. It is
+/// recommended to match against the wildcard `_` instead of listing all possible variants,
+/// to avoid problems when new variants are added.
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum RusticErrorKind {
@@ -151,8 +159,8 @@ pub enum CommandErrorKind {
     PackSizeNotMatching(Id, u32, u32),
     /// "used pack {0} does not exist!
     PackNotExisting(Id),
-    /// pack {0} got no decicion what to do
-    NoDecicion(Id),
+    /// pack {0} got no decision what to do
+    NoDecision(Id),
     /// {0:?}
     FromParseIntError(#[from] ParseIntError),
     /// {0}

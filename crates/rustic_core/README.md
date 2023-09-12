@@ -1,17 +1,13 @@
 <p align="center">
-<img src="https://media.githubusercontent.com/media/rustic-rs/docs/main/assets/readme_header.png" height="400" />
+<img src="https://media.githubusercontent.com/media/rustic-rs/docs/main/assets/readme_header_core.png" height="400" />
 </p>
-
+<p align="center"><b>Library for fast, encrypted, and deduplicated backups</b></p>
 <p align="center">
 <a href="https://crates.io/crates/rustic_core"><img src="https://img.shields.io/crates/v/rustic_core.svg" /></a>
 <a href="https://docs.rs/rustic_core/"><img src="https://img.shields.io/docsrs/rustic_core?style=flat&amp;labelColor=1c1d42&amp;color=4f396a&amp;logo=Rust&amp;logoColor=white" /></a>
 <a href="https://github.com/rustic-rs/rustic/blob/main/crates/rustic_core/"><img src="https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg" /></a>
 <a href="https://crates.io/crates/rustic_core"><img src="https://img.shields.io/crates/d/rustic_core.svg" /></a>
 <p>
-
-# *`rustic_core`*
-
-### **Library for fast, encrypted, and deduplicated backups**
 
 ## About
 

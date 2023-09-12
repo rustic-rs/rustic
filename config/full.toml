@@ -74,6 +74,7 @@ exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
+init = false
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.sources]]
@@ -104,6 +105,7 @@ exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
+init = false
 
 [[backup.sources]]
 source = "/path/to/source2 /second/path" # multiple local paths are allowd within one source

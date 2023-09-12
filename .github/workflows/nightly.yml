@@ -149,6 +149,14 @@ jobs:
             shasum -a 256 $RELEASE_NAME > $RELEASE_NAME.sha256
           fi
 
+          ########## create gpg signature ##########
+          echo "${{ secrets.GPG_RELEASE_PRIVATE_KEY }}" > private.key
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --pinentry-mode=loopback \
+            --passphrase-fd 0 --import private.key
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --pinentry-mode=loopback \
+            --passphrase-fd 0 --local-user 12B7166D9FD59124416952E34018C5DE3BF8C081 \
+            --armor --output $RELEASE_NAME.asc --detach-sign $RELEASE_NAME
+
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Storing binary as artefact
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
@@ -183,7 +191,9 @@ jobs:
           GIT_SSH='ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts'
 
           # clone the repo into our working directory
-          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/nightly.git $WORKING_DIR
+          # we use --depth 1 to avoid cloning the entire history
+          # and only the main branch to avoid cloning all branches
+          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/nightly.git --branch main --single-branch --depth 1 $WORKING_DIR
 
           # ensure destination directory exists
           mkdir -p $WORKING_DIR/$DEST_DIR

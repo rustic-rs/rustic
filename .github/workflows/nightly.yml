@@ -1,25 +1,23 @@
-on:
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**/*"
-  push:
-    branches:
-      - main
-      - release/*
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**/*"
+name: Continuous Deployment
 
-name: Build release binaries
+on:
+  workflow_dispatch:
+  schedule:
+    # “At 00:15.”
+    # https://crontab.guru/#15_0_*_*_*
+    - cron: "15 0 * * *"
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   publish:
     name: Publishing ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
+      fail-fast: false
       matrix:
         rust: [stable]
         job:
@@ -133,9 +131,9 @@ jobs:
 
           ########## create tar.gz ##########
 
-          # accounting for main branch and therefore beta builds
+          # accounting for main branch and therefore nightly builds
           if [[ ${{ github.ref }} = refs/heads/main ]]; then
-              RELEASE_NAME=rustic-beta-${{ matrix.job.target}}.tar.gz
+              RELEASE_NAME=rustic-nightly-${{ matrix.job.target}}.tar.gz
           elif [[ ${{ github.ref }} = refs/tags/* ]]; then
               RELEASE_NAME=rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
           else    
@@ -151,49 +149,51 @@ jobs:
             shasum -a 256 $RELEASE_NAME > $RELEASE_NAME.sha256
           fi
 
+          ########## create gpg signature ##########
+          echo "${{ secrets.GPG_RELEASE_PRIVATE_KEY }}" > private.key
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --pinentry-mode=loopback \
+            --passphrase-fd 0 --import private.key
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --pinentry-mode=loopback \
+            --passphrase-fd 0 --local-user 12B7166D9FD59124416952E34018C5DE3BF8C081 \
+            --armor --output $RELEASE_NAME.asc --detach-sign $RELEASE_NAME
+
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Storing binary as artefact
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
         with:
           name: binary-${{ matrix.job.target}}
           path: target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
-      - name: Releasing release versions
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            target/${{ matrix.job.target }}/release/${{ steps.package-binary.outputs.release_name }}*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-beta:
-    name: Publishing beta-builds
+  publish-nightly:
+    name: Publishing nightly builds
     needs: publish
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
-      - name: Releasing beta builds
+      - name: Releasing nightly builds
         shell: bash
         run: |
           # set up some directories
           WORKING_DIR=$(mktemp -d)
-          DEST_DIR=beta
+          DEST_DIR=rustic
 
           # set up the github deploy key
           mkdir -p ~/.ssh
-          echo "${{ secrets.BETA_RELEASE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.NIGHTLY_RELEASE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
           # set up git
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}"
           ssh-keyscan -H github.com > ~/.ssh/known_hosts
-          GIT_SSH='ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=~/.ssh/known_hosts'
+          GIT_SSH='ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts'
 
           # clone the repo into our working directory
-          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/rustic-beta.git $WORKING_DIR
+          # we use --depth 1 to avoid cloning the entire history
+          # and only the main branch to avoid cloning all branches
+          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/nightly.git --branch main --single-branch --depth 1 $WORKING_DIR
 
           # ensure destination directory exists
           mkdir -p $WORKING_DIR/$DEST_DIR
@@ -207,22 +207,3 @@ jobs:
           git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
           GIT_SSH_COMMAND=$GIT_SSH git pull --rebase
           GIT_SSH_COMMAND=$GIT_SSH git push
-
-          #  publish-cargo:
-          #    name: Publishing to Cargo
-          #    runs-on: ubuntu-latest
-          #    steps:
-          #      - name: Checkout repository
-          #        uses: actions/checkout@v4
-          #      - uses: actions-rs/toolchain@v1
-        #        with:
-        #          toolchain: stable
-        #          profile: minimal
-        #          override: true
-        #      - uses: Swatinem/rust-cache@v2
-        #        with:
-        #          key: ${{ matrix.job.target }}
-        #      - uses: actions-rs/cargo@v1
-        #        with:
-        #          command: publish
-        #          args: --token ${{ secrets.CARGO_API_KEY }}

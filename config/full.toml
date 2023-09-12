@@ -1,6 +1,7 @@
 # Full rustic config file containing all options which are available through the config file.
 #
-# This file should be placed in the user's local config dir (~/.config/rustic/)
+# This file should be placed in the user's local config dir (~/.config/rustic/) or in the global
+# config dir (/etc/rustic).
 # If you save it under NAME.toml, use "rustic -P NAME" to access this profile.
 #
 # Note that most options can be overwritten by the corresponding command line option.
@@ -79,6 +80,7 @@ exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
+init = false
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.sources]]
@@ -109,6 +111,7 @@ exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
+init = false
 
 [[backup.sources]]
 source = "/path/to/source2 /second/path" # multiple local paths are allowd within one source

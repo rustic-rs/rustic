@@ -1,27 +1,24 @@
-name: Continuous Deployment
+name: Create PR artifacts
 
 on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**/*"
   workflow_dispatch:
-  schedule:
-    # “At 00:15.”
-    # https://crontab.guru/#15_0_*_*_*
-    - cron: "15 0 * * *"
-
-defaults:
-  run:
-    shell: bash
 
 env:
   BINARY_NAME: rustic
-  BINARY_NIGHTLY_DIR: rustic
 
 jobs:
-  publish:
-    name: Publishing ${{ matrix.job.target }}
+  pr-build:
+    name: Build PR on ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.event.label.name == 'S-build' }}
     strategy:
-      fail-fast: false
       matrix:
         rust: [stable]
         job:
@@ -91,59 +88,35 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.job.target }}
           use-cross: ${{ matrix.job.use-cross }}
-          describe-tag-suffix: -nightly
+          describe-tag-suffix: -${{ github.run_id }}-${{ github.run_attempt }}
           binary-postfix: ${{ matrix.job.binary-postfix }}
           os: ${{ runner.os }}
           binary-name: ${{ env.BINARY_NAME }}
-          package-secondary-name: nightly-${{ matrix.job.target}}
+          package-secondary-name: ${{ matrix.job.target}}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          gpg-release-private-key: ${{ secrets.GPG_RELEASE_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
           github-ref: ${{ github.ref }}
-          sign-release: true
+          sign-release: false
           hash-release: true
           use-project-version: true
 
-  publish-nightly:
-    name: Publishing nightly builds
-    needs: publish
-    if: ${{ github.ref == 'refs/heads/main' }}
+  remove-build-label:
+    name: Remove build label
+    needs: pr-build
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     runs-on: ubuntu-latest
+    if: |
+      always() &&
+      ! contains(needs.*.result, 'skipped')
     steps:
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
-      - name: Releasing nightly builds
-        shell: bash
+      - name: Remove label
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # set up some directories
-          WORKING_DIR=$(mktemp -d)
-          DEST_DIR=$BINARY_NIGHTLY_DIR
-
-          # set up the github deploy key
-          mkdir -p ~/.ssh
-          echo "${{ secrets.NIGHTLY_RELEASE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-          # set up git
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}"
-          ssh-keyscan -H github.com > ~/.ssh/known_hosts
-          GIT_SSH='ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts'
-
-          # clone the repo into our working directory
-          # we use --depth 1 to avoid cloning the entire history
-          # and only the main branch to avoid cloning all branches
-          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/nightly.git --branch main --single-branch --depth 1 $WORKING_DIR
-
-          # ensure destination directory exists
-          mkdir -p $WORKING_DIR/$DEST_DIR
-
-          # do the copy
-          for i in binary-*; do cp -a $i/* $WORKING_DIR/$DEST_DIR; done
-
-          # create the commit
-          cd $WORKING_DIR
-          git add .
-          git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
-          GIT_SSH_COMMAND=$GIT_SSH git pull --rebase
-          GIT_SSH_COMMAND=$GIT_SSH git push
+          gh api \
+          --method DELETE \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          /repos/${{ github.repository }}/issues/${{ github.event.number }}/labels/S-build

@@ -1,27 +1,18 @@
-name: Continuous Deployment
+name: Build release binaries
 
 on:
-  workflow_dispatch:
-  schedule:
-    # “At 00:15.”
-    # https://crontab.guru/#15_0_*_*_*
-    - cron: "15 0 * * *"
-
-defaults:
-  run:
-    shell: bash
+  push:
+    branches:
+      - release/*
 
 env:
   BINARY_NAME: rustic
-  BINARY_NIGHTLY_DIR: rustic
 
 jobs:
   publish:
     name: Publishing ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
-      fail-fast: false
       matrix:
         rust: [stable]
         job:
@@ -91,59 +82,37 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.job.target }}
           use-cross: ${{ matrix.job.use-cross }}
-          describe-tag-suffix: -nightly
+          describe-tag-suffix: ""
           binary-postfix: ${{ matrix.job.binary-postfix }}
           os: ${{ runner.os }}
           binary-name: ${{ env.BINARY_NAME }}
-          package-secondary-name: nightly-${{ matrix.job.target}}
+          package-secondary-name: ${{ matrix.job.target}}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gpg-release-private-key: ${{ secrets.GPG_RELEASE_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
           github-ref: ${{ github.ref }}
           sign-release: true
           hash-release: true
-          use-project-version: true
-
-  publish-nightly:
-    name: Publishing nightly builds
-    needs: publish
-    if: ${{ github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
-      - name: Releasing nightly builds
-        shell: bash
-        run: |
-          # set up some directories
-          WORKING_DIR=$(mktemp -d)
-          DEST_DIR=$BINARY_NIGHTLY_DIR
-
-          # set up the github deploy key
-          mkdir -p ~/.ssh
-          echo "${{ secrets.NIGHTLY_RELEASE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-          # set up git
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}"
-          ssh-keyscan -H github.com > ~/.ssh/known_hosts
-          GIT_SSH='ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts'
-
-          # clone the repo into our working directory
-          # we use --depth 1 to avoid cloning the entire history
-          # and only the main branch to avoid cloning all branches
-          GIT_SSH_COMMAND=$GIT_SSH git clone git@github.com:rustic-rs/nightly.git --branch main --single-branch --depth 1 $WORKING_DIR
-
-          # ensure destination directory exists
-          mkdir -p $WORKING_DIR/$DEST_DIR
-
-          # do the copy
-          for i in binary-*; do cp -a $i/* $WORKING_DIR/$DEST_DIR; done
-
-          # create the commit
-          cd $WORKING_DIR
-          git add .
-          git commit -m "${{ github.job }} from https://github.com/${{ github.repository }}/commit/${{ github.sha }}" || echo
-          GIT_SSH_COMMAND=$GIT_SSH git pull --rebase
-          GIT_SSH_COMMAND=$GIT_SSH git push
+          use-project-version: false # not being used in rustic_server
+#
+# TODO!: add publishing to release draft
+# TODO!: include changelog in release draft
+#
+# publish-cargo:
+#   name: Publishing to Cargo
+#   runs-on: ubuntu-latest
+#   steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@v4
+#     - uses: actions-rs/toolchain@v1
+#     with:
+#       toolchain: stable
+#       profile: minimal
+#       override: true
+#   - uses: Swatinem/rust-cache@v2
+#     with:
+#       key: ${{ matrix.job.target }}
+#   - uses: actions-rs/cargo@v1
+#     with:
+#       command: publish
+#       args: --token ${{ secrets.CARGO_API_KEY }}

@@ -1,0 +1,37 @@
+name: Open a release PR
+on:
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: Crate to release
+        required: true
+        type: choice
+        options:
+          - rustic
+          - rustic_core
+      version:
+        description: Version to release
+        required: true
+        type: string
+
+jobs:
+  make-release-pr:
+    permissions:
+      id-token: write # Enable OIDC
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: chainguard-dev/actions/setup-gitsign@main
+      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - name: Install cargo-release
+        uses: taiki-e/install-action@v1
+        with:
+          tool: cargo-release
+      - uses: cargo-bins/release-pr@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ inputs.version }}
+          crate-name: ${{ inputs.crate }}
+          check-semver: true

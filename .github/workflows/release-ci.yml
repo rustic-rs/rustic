@@ -40,13 +40,13 @@ jobs:
           - os: ubuntu-latest
           - os: windows-latest
           - os: macos-latest
-        steps:
-          - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
-          - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
-            with:
-              profile: minimal
-              toolchain: stable
-              override: true
-          - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
-          - name: Check semver
-            uses: obi1kenobi/cargo-semver-checks-action@v2
+    steps:
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2

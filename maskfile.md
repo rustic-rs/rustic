@@ -12,7 +12,7 @@ Install `mask` with `cargo install mask`.
 
 Bash:
 
-```powershell
+```bash
 cargo check --no-default-features \
     && cargo check --all-features
 ```
@@ -30,7 +30,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 mask loop dev
 ```
 
@@ -46,7 +46,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo clean
 ```
 
@@ -56,13 +56,38 @@ PowerShell:
 [Diagnostics.Process]::Start("cargo", "clean").WaitForExit()
 ```
 
+## completions
+
+> Runs the completion generator and tests
+
+### completions regenerate
+
+> Regenerates the completion fixtures for all shells
+
+**IMPORTANT**: Only run on Bash for test compatibility.
+
+```bash
+cargo run -- completions powershell > tests/completions-fixtures/powershell.txt \
+    && cargo run -- completions bash > tests/completions-fixtures/bash.txt \
+    && cargo run -- completions fish > tests/completions-fixtures/fish.txt \
+    && cargo run -- completions zsh > tests/completions-fixtures/zsh.txt
+```
+
+### completions test
+
+> Test the completions for breaking changes
+
+```bash
+cargo test -r --all-targets --all-features --workspace -- --ignored
+```
+
 ## dev
 
 > Runs the development routines
 
 Bash:
 
-```powershell
+```bash
 $MASK format \
     && $MASK lint \
     && $MASK test \
@@ -84,7 +109,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo doc --all-features --no-deps --open $crate
 ```
 
@@ -104,7 +129,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo fmt --all
 ```
 
@@ -120,11 +145,9 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 dprint fmt
 ```
-
-Powershell:
 
 PowerShell:
 
@@ -138,7 +161,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 $MASK format cargo \
     && $MASK format dprint
 ```
@@ -156,7 +179,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo tree -e features -i $crate
 ```
 
@@ -172,7 +195,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 $MASK check \
     && cargo clippy --no-default-features -- -D warnings \
     && cargo clippy --all-features -- -D warnings
@@ -192,7 +215,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 watchexec -w src -- "$MASK $action"
 ```
 
@@ -210,7 +233,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo +nightly miri test --all-features -q --lib --tests $tests
 ```
 
@@ -231,7 +254,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo nextest run -r --all-features --workspace -- --ignored
 ```
 
@@ -247,7 +270,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo nextest run -r --all-features --workspace
 ```
 
@@ -269,7 +292,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 cargo nextest run -r --all-features -E "test($test)"
 ```
 
@@ -285,7 +308,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 $MASK fmt \
     && $MASK test \
     && $MASK lint
@@ -303,22 +326,20 @@ PowerShell:
 
 > Runs a test to check if the public api of `rustic_core` has been changed
 
-### public-api update
+### public-api regenerate
 
-> Updates the test files for the public api test
+> Regenerates the fixtures for the public api test
 
 Bash:
 
-```powershell
-export UPDATE_EXPECT=1
-cargo test --test public_api -p rustic_core -- --ignored
+```bash
+UPDATE_EXPECT=1; cargo test --test public_api -p rustic_core -- --ignored
 ```
 
 PowerShell:
 
 ```powershell
-$env:UPDATE_EXPECT=1
-[Diagnostics.Process]::Start("cargo", "test --test public_api -p rustic_core -- --ignored").WaitForExit()
+$env:UPDATE_EXPECT=1; [Diagnostics.Process]::Start("cargo", "test --test public_api -p rustic_core -- --ignored").WaitForExit()
 ```
 
 ### public-api test
@@ -327,7 +348,7 @@ $env:UPDATE_EXPECT=1
 
 Bash:
 
-```powershell
+```bash
 cargo test --test public_api -p rustic_core -- --ignored
 ```
 
@@ -343,7 +364,7 @@ PowerShell:
 
 Bash:
 
-```powershell
+```bash
 $MASK check \
     && $MASK lint
     && cargo test --all-features

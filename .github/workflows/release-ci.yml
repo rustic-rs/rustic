@@ -38,7 +38,7 @@ jobs:
     name: Check breaking CLI changes
     runs-on: ${{ matrix.job.os }}
     needs: determine-package
-    if: ${{ needs.determine-package.outputs.package }} == 'rustic-rs'
+    if: needs.determine-package.outputs.package == 'rustic-rs'
     strategy:
       matrix:
         rust: [stable]

@@ -50,6 +50,8 @@ impl KeyOptions {
     /// # Returns
     ///
     /// The id of the key.
+    ///
+    /// [`CommandErrorKind::FromJsonError`]: crate::error::CommandErrorKind::FromJsonError
     pub(crate) fn add_key<P, S: Open>(
         &self,
         repo: &Repository<P, S>,
@@ -99,6 +101,8 @@ impl KeyOptions {
     /// # Returns
     ///
     /// The id of the key.
+    ///
+    /// [`CommandErrorKind::FromJsonError`]: crate::error::CommandErrorKind::FromJsonError
     fn add<P, S>(&self, repo: &Repository<P, S>, pass: &str, key: Key) -> RusticResult<Id> {
         let ko = self.clone();
         let keyfile = KeyFile::generate(key, &pass, ko.hostname, ko.username, ko.with_created)?;

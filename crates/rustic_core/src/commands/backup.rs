@@ -168,7 +168,6 @@ pub struct BackupOptions {
 ///
 /// # Errors
 ///
-/// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
 /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
 /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
 /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
@@ -178,6 +177,12 @@ pub struct BackupOptions {
 /// # Returns
 ///
 /// The snapshot pointing to the backup'ed data.
+///
+/// [`PackerErrorKind::SendingCrossbeamMessageFailed`]: crate::error::PackerErrorKind::SendingCrossbeamMessageFailed
+/// [`PackerErrorKind::IntConversionFailed`]: crate::error::PackerErrorKind::IntConversionFailed
+/// [`PackerErrorKind::SendingCrossbeamMessageFailed`]: crate::error::PackerErrorKind::SendingCrossbeamMessageFailed
+/// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
+/// [`SnapshotFileErrorKind::OutOfRange`]: crate::error::SnapshotFileErrorKind::OutOfRange
 pub(crate) fn backup<P: ProgressBars, S: IndexedIds>(
     repo: &Repository<P, S>,
     opts: &BackupOptions,

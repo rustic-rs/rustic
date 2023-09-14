@@ -56,9 +56,11 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
     ///
     /// # Errors
     ///
-    /// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
     /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
     /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
+    ///
+    /// [`PackerErrorKind::SendingCrossbeamMessageFailed`]: crate::error::PackerErrorKind::SendingCrossbeamMessageFailed
+    /// [`PackerErrorKind::IntConversionFailed`]: crate::error::PackerErrorKind::IntConversionFailed
     pub(crate) fn new(
         be: BE,
         index: I,
@@ -95,11 +97,13 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
     ///
     /// # Errors
     ///
-    /// If the item could not be processed.
+    /// [`ArchiverErrorKind::UnpackingTreeTypeOptionalFailed`] - If the item could not be unpacked.
     ///
     /// # Returns
     ///
     /// The processed item.
+    ///
+    /// [`ArchiverErrorKind::UnpackingTreeTypeOptionalFailed`]: crate::error::ArchiverErrorKind::UnpackingTreeTypeOptionalFailed
     pub(crate) fn process<O: ReadSourceOpen>(
         &self,
         item: ItemWithParent<Option<O>>,
@@ -126,6 +130,7 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> FileArchiver<BE, I> {
         })
     }
 
+    // TODO: add documentation!
     fn backup_reader(
         &self,
         r: impl Read + Send + 'static,

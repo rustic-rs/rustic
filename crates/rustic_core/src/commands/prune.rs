@@ -159,6 +159,9 @@ impl PruneOptions {
     ///
     /// * [`CommandErrorKind::RepackUncompressedRepoV1`] - If `repack_uncompressed` is set and the repository is a version 1 repository
     /// * [`CommandErrorKind::FromOutOfRangeError`] - If `keep_pack` or `keep_delete` is out of range
+    ///
+    /// [`CommandErrorKind::RepackUncompressedRepoV1`]: crate::error::CommandErrorKind::RepackUncompressedRepoV1
+    /// [`CommandErrorKind::FromOutOfRangeError`]: crate::error::CommandErrorKind::FromOutOfRangeError
     pub fn get_plan<P: ProgressBars, S: Open>(
         &self,
         repo: &Repository<P, S>,
@@ -669,6 +672,8 @@ impl PrunePlan {
     /// # Errors
     ///
     /// * [`CommandErrorKind::BlobsMissing`] - If a blob is missing
+    ///
+    /// [`CommandErrorKind::BlobsMissing`]: crate::error::CommandErrorKind::BlobsMissing
     fn check(&self) -> RusticResult<()> {
         for (id, count) in &self.used_ids {
             if *count == 0 {
@@ -691,7 +696,7 @@ impl PrunePlan {
     ///
     /// # Errors
     ///
-    // TODO: add documentation!
+    // TODO: add errors!
     fn decide_packs(
         &mut self,
         keep_pack: Duration,
@@ -807,7 +812,7 @@ impl PrunePlan {
     ///
     /// # Errors
     ///
-    // TODO: add documentation!
+    // TODO: add errors!
     fn decide_repack(
         &mut self,
         max_repack: &LimitOption,
@@ -883,6 +888,10 @@ impl PrunePlan {
     /// * [`CommandErrorKind::NoDecision`] - If a pack is undecided
     /// * [`CommandErrorKind::PackSizeNotMatching`] - If the size of a pack does not match
     /// * [`CommandErrorKind::PackNotExisting`] - If a pack does not exist
+    ///
+    /// [`CommandErrorKind::NoDecision`]: crate::error::CommandErrorKind::NoDecision
+    /// [`CommandErrorKind::PackSizeNotMatching`]: crate::error::CommandErrorKind::PackSizeNotMatching
+    /// [`CommandErrorKind::PackNotExisting`]: crate::error::CommandErrorKind::PackNotExisting
     fn check_existing_packs(&mut self) -> RusticResult<()> {
         for pack in self.index_files.iter().flat_map(|index| &index.packs) {
             let existing_size = self.existing_packs.remove(&pack.id);
@@ -1304,7 +1313,7 @@ impl PackInfo {
 ///
 /// # Errors
 ///
-/// * [`CommandErrorKind::Backend`] - If an error occurs while reading from the backend
+// TODO!: add errors!
 fn find_used_blobs(
     index: &impl IndexedBackend,
     ignore_snaps: &[Id],

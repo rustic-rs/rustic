@@ -27,8 +27,11 @@ pub(super) mod constants {
 ///
 /// # Errors
 ///
-/// * [`RepositoryErrorKind::FromNomError`] - If the command could not be parsed.
+/// * [`RepositoryErrorKind::FromSplitError`] - If the command could not be parsed.
 /// * [`RepositoryErrorKind::FromThreadPoolbilderError`] - If the thread pool could not be created.
+///
+/// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
+/// [`RepositoryErrorKind::FromThreadPoolbilderError`]: crate::error::RepositoryErrorKind::FromThreadPoolbilderError
 pub(crate) fn warm_up_wait<P: ProgressBars, S>(
     repo: &Repository<P, S>,
     packs: impl ExactSizeIterator<Item = Id>,
@@ -51,8 +54,11 @@ pub(crate) fn warm_up_wait<P: ProgressBars, S>(
 ///
 /// # Errors
 ///
-/// * [`RepositoryErrorKind::FromNomError`] - If the command could not be parsed.
+/// * [`RepositoryErrorKind::FromSplitError`] - If the command could not be parsed.
 /// * [`RepositoryErrorKind::FromThreadPoolbilderError`] - If the thread pool could not be created.
+///
+/// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
+/// [`RepositoryErrorKind::FromThreadPoolbilderError`]: crate::error::RepositoryErrorKind::FromThreadPoolbilderError
 pub(crate) fn warm_up<P: ProgressBars, S>(
     repo: &Repository<P, S>,
     packs: impl ExactSizeIterator<Item = Id>,
@@ -75,7 +81,9 @@ pub(crate) fn warm_up<P: ProgressBars, S>(
 ///
 /// # Errors
 ///
-/// * [`RepositoryErrorKind::FromNomError`] - If the command could not be parsed.
+/// * [`RepositoryErrorKind::FromSplitError`] - If the command could not be parsed.
+///
+/// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
 fn warm_up_command<P: ProgressBars>(
     packs: impl ExactSizeIterator<Item = Id>,
     command: &str,
@@ -106,6 +114,8 @@ fn warm_up_command<P: ProgressBars>(
 /// # Errors
 ///
 /// * [`RepositoryErrorKind::FromThreadPoolbilderError`] - If the thread pool could not be created.
+///
+/// [`RepositoryErrorKind::FromThreadPoolbilderError`]: crate::error::RepositoryErrorKind::FromThreadPoolbilderError
 fn warm_up_access<P: ProgressBars, S>(
     repo: &Repository<P, S>,
     packs: impl ExactSizeIterator<Item = Id>,

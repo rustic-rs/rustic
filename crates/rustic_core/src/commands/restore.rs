@@ -143,6 +143,9 @@ impl RestoreOptions {
     ///
     /// * [`CommandErrorKind::ErrorCreating`] - If a directory could not be created.
     /// * [`CommandErrorKind::ErrorCollecting`] - If the restore information could not be collected.
+    ///
+    /// [`CommandErrorKind::ErrorCreating`]: crate::error::CommandErrorKind::ErrorCreating
+    /// [`CommandErrorKind::ErrorCollecting`]: crate::error::CommandErrorKind::ErrorCollecting
     pub(crate) fn collect_and_prepare<P: ProgressBars, S: IndexedFull>(
         self,
         repo: &Repository<P, S>,
@@ -410,6 +413,10 @@ impl RestoreOptions {
 ///
 /// * [`CommandErrorKind::ErrorSettingLength`] - If the length of a file could not be set.
 /// * [`CommandErrorKind::FromRayonError`] - If the restore failed.
+///
+/// [`CommandErrorKind::ErrorSettingLength`]: crate::error::CommandErrorKind::ErrorSettingLength
+/// [`CommandErrorKind::FromRayonError`]: crate::error::CommandErrorKind::FromRayonError
+/// [`LocalBackend`]: crate::backend::local::LocalBackend
 fn restore_contents<P: ProgressBars, S: Open>(
     repo: &Repository<P, S>,
     dest: &LocalDestination,
@@ -584,7 +591,7 @@ impl BlobLocation {
     }
 }
 
-/// `FileLocation` contains information about a file within a blob
+/// [`FileLocation`] contains information about a file within a blob
 #[derive(Debug)]
 struct FileLocation {
     // TODO: The index of the file within ... ?
@@ -597,7 +604,7 @@ struct FileLocation {
     matches: bool,
 }
 
-/// `AddFileResult` indicates the result of adding a file to [`FileInfos`]
+/// [`AddFileResult`] indicates the result of adding a file to [`FileLocation`]
 // TODO: Add documentation!
 enum AddFileResult {
     Existing,
@@ -606,7 +613,7 @@ enum AddFileResult {
 }
 
 impl RestorePlan {
-    /// Add the file to [`FileInfos`] using `index` to get blob information.
+    /// Add the file to [`FileLocation`] using `index` to get blob information.
     ///
     /// # Type Parameters
     ///

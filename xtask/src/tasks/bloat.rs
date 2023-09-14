@@ -5,6 +5,7 @@ use duct::cmd;
 /// Show longest times taken in release build
 ///
 /// # Errors
+/// 
 /// Errors if the command failed
 ///
 pub fn bloat_time(package: impl Into<Option<String>>) -> Result<()> {
@@ -16,6 +17,7 @@ pub fn bloat_time(package: impl Into<Option<String>>) -> Result<()> {
 /// Show biggest crates in release build
 ///
 /// # Errors
+/// 
 /// Errors if the command failed
 ///
 pub fn bloat_deps(package: impl Into<Option<String>>) -> Result<()> {

@@ -36,6 +36,10 @@ use crate::{
 /// # Returns
 ///
 /// The data read.
+///
+/// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
+/// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+/// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
 pub(crate) fn cat_file<P, S: Open>(
     repo: &Repository<P, S>,
     tpe: FileType,
@@ -62,6 +66,8 @@ pub(crate) fn cat_file<P, S: Open>(
 /// # Errors
 ///
 /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
+///
+/// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
 pub(crate) fn cat_blob<P, S: IndexedFull>(
     repo: &Repository<P, S>,
     tpe: BlobType,
@@ -93,6 +99,8 @@ pub(crate) fn cat_blob<P, S: IndexedFull>(
 /// # Returns
 ///
 /// The data read.
+///
+/// [`CommandErrorKind::PathIsNoDir`]: crate::error::CommandErrorKind::PathIsNoDir
 pub(crate) fn cat_tree<P: ProgressBars, S: IndexedTree>(
     repo: &Repository<P, S>,
     snap: &str,

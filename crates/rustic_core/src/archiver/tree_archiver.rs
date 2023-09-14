@@ -55,9 +55,11 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
     ///
     /// # Errors
     ///
-    /// * [`PackerErrorKind::ZstdError`] - If the zstd compression level is invalid.
     /// * [`PackerErrorKind::SendingCrossbeamMessageFailed`] - If sending the message to the raw packer fails.
     /// * [`PackerErrorKind::IntConversionFailed`] - If converting the data length to u64 fails
+    ///
+    /// [`PackerErrorKind::SendingCrossbeamMessageFailed`]: crate::error::PackerErrorKind::SendingCrossbeamMessageFailed
+    /// [`PackerErrorKind::IntConversionFailed`]: crate::error::PackerErrorKind::IntConversionFailed
     pub(crate) fn new(
         be: BE,
         index: I,
@@ -90,6 +92,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
     /// # Errors
     ///
     /// * [`ArchiverErrorKind::TreeStackEmpty`] - If the tree stack is empty.
+    ///
+    /// [`ArchiverErrorKind::TreeStackEmpty`]: crate::error::ArchiverErrorKind::TreeStackEmpty
     // TODO: Add more errors!
     pub(crate) fn add(&mut self, item: TreeItem) -> RusticResult<()> {
         match item {
@@ -163,6 +167,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
     /// # Returns
     ///
     /// The id of the tree.
+    ///
+    /// [`PackerErrorKind::SendingCrossbeamMessageFailed`]: crate::error::PackerErrorKind::SendingCrossbeamMessageFailed
     fn backup_tree(&mut self, path: &Path, parent: &ParentResult<Id>) -> RusticResult<Id> {
         let (chunk, id) = self.tree.serialize()?;
         let dirsize = chunk.len() as u64;
@@ -210,6 +216,8 @@ impl<BE: DecryptWriteBackend, I: IndexedBackend> TreeArchiver<BE, I> {
     /// # Panics
     ///
     /// If the channel of the tree packer is not dropped.
+    ///
+    /// [`PackerErrorKind::SendingCrossbeamMessageFailed`]: crate::error::PackerErrorKind::SendingCrossbeamMessageFailed
     pub(crate) fn finalize(
         mut self,
         parent_tree: Option<Id>,

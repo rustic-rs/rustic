@@ -35,6 +35,8 @@ use crate::{
 /// # Returns
 ///
 /// A tuple of the key and the config file.
+/// 
+/// [`PolynomialErrorKind::NoSuitablePolynomialFound`]: crate::error::PolynomialErrorKind::NoSuitablePolynomialFound
 pub(crate) fn init<P, S>(
     repo: &Repository<P, S>,
     pass: &str,

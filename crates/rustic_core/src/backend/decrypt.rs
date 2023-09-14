@@ -66,6 +66,9 @@ pub trait DecryptReadBackend: ReadBackend {
     ///
     /// * [`CryptBackendErrorKind::DecodingZstdCompressedDataFailed`] - If the data could not be decoded.
     /// * [`CryptBackendErrorKind::LengthOfUncompressedDataDoesNotMatch`] - If the length of the uncompressed data does not match the given length.
+    ///
+    /// [`CryptBackendErrorKind::DecodingZstdCompressedDataFailed`]: crate::error::CryptBackendErrorKind::DecodingZstdCompressedDataFailed
+    /// [`CryptBackendErrorKind::LengthOfUncompressedDataDoesNotMatch`]: crate::error::CryptBackendErrorKind::LengthOfUncompressedDataDoesNotMatch
     fn read_encrypted_from_partial(
         &self,
         data: &[u8],
@@ -207,6 +210,8 @@ pub trait DecryptWriteBackend: WriteBackend {
     /// # Returns
     ///
     /// The id of the file.
+    ///
+    /// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
     fn save_file<F: RepoFile>(&self, file: &F) -> RusticResult<Id> {
         let data = serde_json::to_vec(file)
             .map_err(CryptBackendErrorKind::SerializingToJsonByteVectorFailed)?;
@@ -336,6 +341,8 @@ impl<R: WriteBackend, C: CryptoKey> DecryptWriteBackend for DecryptBackend<R, C>
     /// # Returns
     ///
     /// The id of the data.
+    ///
+    /// [`CryptBackendErrorKind::CopyEncodingDataFailed`]: crate::error::CryptBackendErrorKind::CopyEncodingDataFailed
     fn hash_write_full(&self, tpe: FileType, data: &[u8]) -> RusticResult<Id> {
         let data = match self.zstd {
             Some(level) => {
@@ -386,6 +393,9 @@ impl<R: ReadBackend, C: CryptoKey> DecryptReadBackend for DecryptBackend<R, C> {
     ///
     /// * [`CryptBackendErrorKind::DecryptionNotSupportedForBackend`] - If the backend does not support decryption.
     /// * [`CryptBackendErrorKind::DecodingZstdCompressedDataFailed`] - If the data could not be decoded.
+    ///
+    /// [`CryptBackendErrorKind::DecryptionNotSupportedForBackend`]: crate::error::CryptBackendErrorKind::DecryptionNotSupportedForBackend
+    /// [`CryptBackendErrorKind::DecodingZstdCompressedDataFailed`]: crate::error::CryptBackendErrorKind::DecodingZstdCompressedDataFailed
     fn read_encrypted_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         let decrypted = self.decrypt(&self.read_full(tpe, id)?)?;
         Ok(match decrypted.first() {

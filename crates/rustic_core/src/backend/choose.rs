@@ -5,8 +5,7 @@ use crate::{
         local::LocalBackend, rclone::RcloneBackend, rest::RestBackend, FileType, ReadBackend,
         WriteBackend,
     },
-    error::BackendErrorKind,
-    error::RusticResult,
+    error::{BackendErrorKind, RusticResult},
     id::Id,
 };
 
@@ -34,6 +33,11 @@ impl ChooseBackend {
     /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
     /// * [`RestErrorKind::UrlParsingFailed`] - If the url could not be parsed.
     /// * [`RestErrorKind::BuildingClientFailed`] - If the client could not be built.
+    ///
+    /// [`BackendErrorKind::BackendNotSupported`]: crate::error::BackendErrorKind::BackendNotSupported
+    /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
+    /// [`RestErrorKind::UrlParsingFailed`]: crate::error::RestErrorKind::UrlParsingFailed
+    /// [`RestErrorKind::BuildingClientFailed`]: crate::error::RestErrorKind::BuildingClientFailed
     pub fn from_url(url: &str) -> RusticResult<Self> {
         Ok(match url.split_once(':') {
             #[cfg(windows)]
@@ -110,6 +114,9 @@ impl ReadBackend for ChooseBackend {
     /// # Returns
     ///
     /// The data read.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
+    /// [`LocalErrorKind::ReadingContentsOfFileFailed`]: crate::error::LocalErrorKind::ReadingContentsOfFileFailed
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         match self {
             Self::Local(local) => local.read_full(tpe, id),

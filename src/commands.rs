@@ -184,6 +184,12 @@ impl Configurable<RusticConfig> for EntryPoint {
 /// * [`RepositoryErrorKind::PasswordCommandParsingFailed`] - If parsing the password command failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
 /// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
+///
+/// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
+/// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: crate::error::RepositoryErrorKind::OpeningPasswordFileFailed
+/// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: crate::error::RepositoryErrorKind::PasswordCommandParsingFailed
+/// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
+/// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
 fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOptions, OpenStatus>> {
     let po = config.global.progress_options;
     let repo = Repository::new_with_progress(&config.repository, po)?;

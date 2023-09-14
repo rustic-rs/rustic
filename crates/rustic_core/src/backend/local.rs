@@ -82,6 +82,8 @@ impl LocalBackend {
     /// # Errors
     ///
     /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    /// 
+    /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
     // TODO: We should use `impl Into<Path/PathBuf>` here. we even use it in the body!
     pub fn new(path: &str) -> RusticResult<Self> {
         let path = path.into();
@@ -126,7 +128,7 @@ impl LocalBackend {
     /// # Errors
     ///
     /// * [`LocalErrorKind::FromAhoCorasick`] - If the patterns could not be compiled.
-    /// * [`LocalErrorKind::FromNomError`] - If the command could not be parsed.
+    /// * [`LocalErrorKind::FromSplitError`] - If the command could not be parsed.
     /// * [`LocalErrorKind::CommandExecutionFailed`] - If the command could not be executed.
     /// * [`LocalErrorKind::CommandNotSuccessful`] - If the command was not successful.
     ///
@@ -136,6 +138,11 @@ impl LocalBackend {
     /// * `%file` - The path to the file.
     /// * `%type` - The type of the file.
     /// * `%id` - The id of the file.
+    ///
+    /// [`LocalErrorKind::FromAhoCorasick`]: crate::error::LocalErrorKind::FromAhoCorasick
+    /// [`LocalErrorKind::FromSplitError`]: crate::error::LocalErrorKind::FromSplitError
+    /// [`LocalErrorKind::CommandExecutionFailed`]: crate::error::LocalErrorKind::CommandExecutionFailed
+    /// [`LocalErrorKind::CommandNotSuccessful`]: crate::error::LocalErrorKind::CommandNotSuccessful
     fn call_command(tpe: FileType, id: &Id, filename: &Path, command: &str) -> RusticResult<()> {
         let id = id.to_hex();
         let patterns = &["%file", "%type", "%id"];
@@ -211,6 +218,8 @@ impl ReadBackend for LocalBackend {
     /// # Notes
     ///
     /// If the file type is `FileType::Config`, this will return a list with a single default id.
+    ///
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     fn list(&self, tpe: FileType) -> RusticResult<Vec<Id>> {
         trace!("listing tpe: {tpe:?}");
         if tpe == FileType::Config {
@@ -242,6 +251,11 @@ impl ReadBackend for LocalBackend {
     /// * [`LocalErrorKind::FromTryIntError`] - If the length of the file could not be converted to u32.
     /// * [`LocalErrorKind::QueryingWalkDirMetadataFailed`] - If the metadata of the file could not be queried.
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
+    ///
+    /// [`LocalErrorKind::QueryingMetadataFailed`]: crate::error::LocalErrorKind::QueryingMetadataFailed
+    /// [`LocalErrorKind::FromTryIntError`]: crate::error::LocalErrorKind::FromTryIntError
+    /// [`LocalErrorKind::QueryingWalkDirMetadataFailed`]: crate::error::LocalErrorKind::QueryingWalkDirMetadataFailed
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
         trace!("listing tpe: {tpe:?}");
         let path = self.path.join(tpe.dirname());
@@ -290,6 +304,8 @@ impl ReadBackend for LocalBackend {
     /// # Errors
     ///
     /// * [`LocalErrorKind::ReadingContentsOfFileFailed`] - If the file could not be read.
+    ///
+    /// [`LocalErrorKind::ReadingContentsOfFileFailed`]: crate::error::LocalErrorKind::ReadingContentsOfFileFailed
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         trace!("reading tpe: {tpe:?}, id: {id}");
         Ok(fs::read(self.path(tpe, id))
@@ -313,6 +329,11 @@ impl ReadBackend for LocalBackend {
     /// * [`LocalErrorKind::CouldNotSeekToPositionInFile`] - If the file could not be seeked to the given position.
     /// * [`LocalErrorKind::FromTryIntError`] - If the length of the file could not be converted to u32.
     /// * [`LocalErrorKind::ReadingExactLengthOfFileFailed`] - If the length of the file could not be read.
+    ///
+    /// [`LocalErrorKind::OpeningFileFailed`]: crate::error::LocalErrorKind::OpeningFileFailed
+    /// [`LocalErrorKind::CouldNotSeekToPositionInFile`]: crate::error::LocalErrorKind::CouldNotSeekToPositionInFile
+    /// [`LocalErrorKind::FromTryIntError`]: crate::error::LocalErrorKind::FromTryIntError
+    /// [`LocalErrorKind::ReadingExactLengthOfFileFailed`]: crate::error::LocalErrorKind::ReadingExactLengthOfFileFailed
     fn read_partial(
         &self,
         tpe: FileType,
@@ -343,6 +364,8 @@ impl WriteBackend for LocalBackend {
     /// # Errors
     ///
     /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    ///
+    /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
     fn create(&self) -> RusticResult<()> {
         trace!("creating repo at {:?}", self.path);
 
@@ -373,6 +396,12 @@ impl WriteBackend for LocalBackend {
     /// * [`LocalErrorKind::SettingFileLengthFailed`] - If the length of the file could not be set.
     /// * [`LocalErrorKind::CouldNotWriteToBuffer`] - If the bytes could not be written to the file.
     /// * [`LocalErrorKind::SyncingOfOsMetadataFailed`] - If the metadata of the file could not be synced.
+    ///
+    /// [`LocalErrorKind::OpeningFileFailed`]: crate::error::LocalErrorKind::OpeningFileFailed
+    /// [`LocalErrorKind::FromTryIntError`]: crate::error::LocalErrorKind::FromTryIntError
+    /// [`LocalErrorKind::SettingFileLengthFailed`]: crate::error::LocalErrorKind::SettingFileLengthFailed
+    /// [`LocalErrorKind::CouldNotWriteToBuffer`]: crate::error::LocalErrorKind::CouldNotWriteToBuffer
+    /// [`LocalErrorKind::SyncingOfOsMetadataFailed`]: crate::error::LocalErrorKind::SyncingOfOsMetadataFailed
     fn write_bytes(
         &self,
         tpe: FileType,
@@ -416,6 +445,8 @@ impl WriteBackend for LocalBackend {
     /// # Errors
     ///
     /// * [`LocalErrorKind::FileRemovalFailed`] - If the file could not be removed.
+    ///
+    /// [`LocalErrorKind::FileRemovalFailed`]: crate::error::LocalErrorKind::FileRemovalFailed
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> RusticResult<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);
@@ -450,6 +481,8 @@ impl LocalDestination {
     /// # Errors
     ///
     /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
+    ///
+    /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
     // TODO: We should use `impl Into<Path/PathBuf>` here. we even use it in the body!
     pub fn new(path: &str, create: bool, expect_file: bool) -> RusticResult<Self> {
         let is_dir = path.ends_with('/');
@@ -504,6 +537,8 @@ impl LocalDestination {
     /// # Notes
     ///
     /// This will remove the directory recursively.
+    ///
+    /// [`LocalErrorKind::DirectoryRemovalFailed`]: crate::error::LocalErrorKind::DirectoryRemovalFailed
     pub fn remove_dir(&self, dirname: impl AsRef<Path>) -> RusticResult<()> {
         Ok(fs::remove_dir_all(dirname).map_err(LocalErrorKind::DirectoryRemovalFailed)?)
     }
@@ -524,6 +559,8 @@ impl LocalDestination {
     ///
     /// * If the file is a symlink, the symlink will be removed, not the file it points to.
     /// * If the file is a directory or device, this will fail.
+    ///
+    /// [`LocalErrorKind::FileRemovalFailed`]: crate::error::LocalErrorKind::FileRemovalFailed
     pub fn remove_file(&self, filename: impl AsRef<Path>) -> RusticResult<()> {
         Ok(fs::remove_file(filename).map_err(LocalErrorKind::FileRemovalFailed)?)
     }
@@ -541,6 +578,8 @@ impl LocalDestination {
     /// # Notes
     ///
     /// This will create the directory structure recursively.
+    ///
+    /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
     pub fn create_dir(&self, item: impl AsRef<Path>) -> RusticResult<()> {
         let dirname = self.path.join(item);
         fs::create_dir_all(dirname).map_err(LocalErrorKind::DirectoryCreationFailed)?;
@@ -557,6 +596,8 @@ impl LocalDestination {
     /// # Errors
     ///
     /// * [`LocalErrorKind::SettingTimeMetadataFailed`] - If the times could not be set
+    ///
+    /// [`LocalErrorKind::SettingTimeMetadataFailed`]: crate::error::LocalErrorKind::SettingTimeMetadataFailed
     pub fn set_times(&self, item: impl AsRef<Path>, meta: &Metadata) -> RusticResult<()> {
         let filename = self.path(item);
         if let Some(mtime) = meta.mtime {
@@ -602,6 +643,8 @@ impl LocalDestination {
     /// # Errors
     ///
     /// * [`LocalErrorKind::FromErrnoError`] - If the user/group could not be set.
+    ///
+    /// [`LocalErrorKind::FromErrnoError`]: crate::error::LocalErrorKind::FromErrnoError
     pub fn set_user_group(&self, item: impl AsRef<Path>, meta: &Metadata) -> RusticResult<()> {
         let filename = self.path(item);
 
@@ -651,6 +694,8 @@ impl LocalDestination {
     /// # Errors
     ///
     /// * [`LocalErrorKind::FromErrnoError`] - If the uid/gid could not be set.
+    ///
+    /// [`LocalErrorKind::FromErrnoError`]: crate::error::LocalErrorKind::FromErrnoError
     pub fn set_uid_gid(&self, item: impl AsRef<Path>, meta: &Metadata) -> RusticResult<()> {
         let filename = self.path(item);
 
@@ -689,6 +734,8 @@ impl LocalDestination {
     /// # Errors        
     ///
     /// * [`LocalErrorKind::SettingFilePermissionsFailed`] - If the permissions could not be set.
+    ///
+    /// [`LocalErrorKind::SettingFilePermissionsFailed`]: crate::error::LocalErrorKind::SettingFilePermissionsFailed
     pub fn set_permission(&self, item: impl AsRef<Path>, node: &Node) -> RusticResult<()> {
         if node.is_symlink() {
             return Ok(());
@@ -738,6 +785,10 @@ impl LocalDestination {
     /// * [`LocalErrorKind::ListingXattrsFailed`] - If listing the extended attributes failed.
     /// * [`LocalErrorKind::GettingXattrFailed`] - If getting an extended attribute failed.
     /// * [`LocalErrorKind::SettingXattrFailed`] - If setting an extended attribute failed.
+    ///
+    /// [`LocalErrorKind::ListingXattrsFailed`]: crate::error::LocalErrorKind::ListingXattrsFailed
+    /// [`LocalErrorKind::GettingXattrFailed`]: crate::error::LocalErrorKind::GettingXattrFailed
+    /// [`LocalErrorKind::SettingXattrFailed`]: crate::error::LocalErrorKind::SettingXattrFailed
     pub fn set_extended_attributes(
         &self,
         item: impl AsRef<Path>,
@@ -812,6 +863,11 @@ impl LocalDestination {
     ///
     /// If the file exists, truncate it to the given length. (TODO: check if this is correct)
     /// If it doesn't exist, create a new (empty) one with given length.
+    ///
+    /// [`LocalErrorKind::FileDoesNotHaveParent`]: crate::error::LocalErrorKind::FileDoesNotHaveParent
+    /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
+    /// [`LocalErrorKind::OpeningFileFailed`]: crate::error::LocalErrorKind::OpeningFileFailed
+    /// [`LocalErrorKind::SettingFileLengthFailed`]: crate::error::LocalErrorKind::SettingFileLengthFailed
     pub fn set_length(&self, item: impl AsRef<Path>, size: u64) -> RusticResult<()> {
         let filename = self.path(item);
         let dir = filename
@@ -849,6 +905,10 @@ impl LocalDestination {
     /// * [`LocalErrorKind::SymlinkingFailed`] - If the symlink could not be created.
     /// * [`LocalErrorKind::FromTryIntError`] - If the device could not be converted to the correct type.
     /// * [`LocalErrorKind::FromErrnoError`] - If the device could not be created.
+    ///
+    /// [`LocalErrorKind::SymlinkingFailed`]: crate::error::LocalErrorKind::SymlinkingFailed
+    /// [`LocalErrorKind::FromTryIntError`]: crate::error::LocalErrorKind::FromTryIntError
+    /// [`LocalErrorKind::FromErrnoError`]: crate::error::LocalErrorKind::FromErrnoError
     pub fn create_special(&self, item: impl AsRef<Path>, node: &Node) -> RusticResult<()> {
         let filename = self.path(item);
 
@@ -916,6 +976,11 @@ impl LocalDestination {
     /// * [`LocalErrorKind::CouldNotSeekToPositionInFile`] - If the file could not be seeked to the given position.
     /// * [`LocalErrorKind::FromTryIntError`] - If the length of the file could not be converted to u32.
     /// * [`LocalErrorKind::ReadingExactLengthOfFileFailed`] - If the length of the file could not be read.
+    ///
+    /// [`LocalErrorKind::OpeningFileFailed`]: crate::error::LocalErrorKind::OpeningFileFailed
+    /// [`LocalErrorKind::CouldNotSeekToPositionInFile`]: crate::error::LocalErrorKind::CouldNotSeekToPositionInFile
+    /// [`LocalErrorKind::FromTryIntError`]: crate::error::LocalErrorKind::FromTryIntError
+    /// [`LocalErrorKind::ReadingExactLengthOfFileFailed`]: crate::error::LocalErrorKind::ReadingExactLengthOfFileFailed
     pub fn read_at(&self, item: impl AsRef<Path>, offset: u64, length: u64) -> RusticResult<Bytes> {
         let filename = self.path(item);
         let mut file = File::open(filename).map_err(LocalErrorKind::OpeningFileFailed)?;
@@ -970,6 +1035,10 @@ impl LocalDestination {
     /// # Notes
     ///
     /// This will create the file if it doesn't exist.
+    ///
+    /// [`LocalErrorKind::OpeningFileFailed`]: crate::error::LocalErrorKind::OpeningFileFailed
+    /// [`LocalErrorKind::CouldNotSeekToPositionInFile`]: crate::error::LocalErrorKind::CouldNotSeekToPositionInFile
+    /// [`LocalErrorKind::CouldNotWriteToBuffer`]: crate::error::LocalErrorKind::CouldNotWriteToBuffer
     pub fn write_at(&self, item: impl AsRef<Path>, offset: u64, data: &[u8]) -> RusticResult<()> {
         let filename = self.path(item);
         let mut file = fs::OpenOptions::new()

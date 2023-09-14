@@ -512,7 +512,7 @@ pub enum TreeErrorKind {
     ReceivingCrossbreamMessageFailed(#[from] crossbeam_channel::RecvError),
 }
 
-/// [`BackendCacheErrorKind`] describes the errors that can be returned by a Caching action in Backends
+/// [`CacheBackendErrorKind`] describes the errors that can be returned by a Caching action in Backends
 #[derive(Error, Debug, Display)]
 pub enum CacheBackendErrorKind {
     /// no cache dir
@@ -536,7 +536,7 @@ pub enum CacheBackendErrorKind {
     RemovingDataOnCacheBackendFailed,
 }
 
-/// [`BackendCryptErrorKind`] describes the errors that can be returned by a Decryption action in Backends
+/// [`CryptBackendErrorKind`] describes the errors that can be returned by a Decryption action in Backends
 #[derive(Error, Debug, Display)]
 pub enum CryptBackendErrorKind {
     /// decryption not supported for backend

@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 /// Remove a set of files given a glob
 ///
 /// # Errors
+/// 
 /// Fails if listing or removal fails
 ///
 pub fn clean_files(pattern: &str) -> AnyResult<()> {
@@ -20,6 +21,7 @@ pub fn clean_files(pattern: &str) -> AnyResult<()> {
 /// Remove a single file
 ///
 /// # Errors
+/// 
 /// Fails if removal fails
 ///
 pub fn remove_file<P>(path: P) -> AnyResult<()>
@@ -33,6 +35,7 @@ where
 /// Remove a directory with its contents
 ///
 /// # Errors
+/// 
 /// Fails if removal fails
 ///
 pub fn remove_dir<P>(path: P) -> AnyResult<()>
@@ -42,7 +45,7 @@ where
     fsx::dir::remove(path).map_err(anyhow::Error::msg)
 }
 
-///
+
 /// Check if path exists
 ///
 pub fn exists<P>(path: P) -> bool
@@ -52,10 +55,11 @@ where
     std::path::Path::exists(path.as_ref())
 }
 
-///
+
 /// Copy entire folder contents
 ///
 /// # Errors
+/// 
 /// Fails if file operations fail
 ///
 pub fn copy_contents<P, Q>(from: P, to: Q, overwrite: bool) -> AnyResult<u64>
@@ -69,7 +73,7 @@ where
     fsx::dir::copy(from, to, &opts).map_err(anyhow::Error::msg)
 }
 
-///
+
 /// Prompt the user to confirm an action
 ///
 /// # Panics

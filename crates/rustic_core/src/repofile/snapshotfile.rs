@@ -201,6 +201,8 @@ impl SnapshotSummary {
     /// # Errors
     ///
     /// * [`SnapshotFileErrorKind::OutOfRange`] - If the time is not in the range of `Local::now()`
+    ///
+    /// [`SnapshotFileErrorKind::OutOfRange`]: crate::error::SnapshotFileErrorKind::OutOfRange
     pub(crate) fn finalize(&mut self, snap_time: DateTime<Local>) -> RusticResult<()> {
         let end_time = Local::now();
         self.backup_duration = (end_time - self.backup_start)
@@ -331,6 +333,10 @@ impl SnapshotFile {
     /// # Note
     ///
     /// This is the preferred way to create a new [`SnapshotFile`] to be used within [`crate::Repository::backup`].
+    ///
+    /// [`SnapshotFileErrorKind::NonUnicodeHostname`]: crate::error::SnapshotFileErrorKind::NonUnicodeHostname
+    /// [`SnapshotFileErrorKind::OutOfRange`]: crate::error::SnapshotFileErrorKind::OutOfRange
+    /// [`SnapshotFileErrorKind::ReadingDescriptionFailed`]: crate::error::SnapshotFileErrorKind::ReadingDescriptionFailed
     pub fn from_options(opts: &SnapshotOptions) -> RusticResult<Self> {
         let hostname = if let Some(host) = &opts.host {
             host.clone()
@@ -424,6 +430,10 @@ impl SnapshotFile {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
+    ///
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
+    /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+    /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     pub(crate) fn from_str<B: DecryptReadBackend>(
         be: &B,
         string: &str,
@@ -447,6 +457,8 @@ impl SnapshotFile {
     /// # Errors
     ///
     /// * [`SnapshotFileErrorKind::NoSnapshotsFound`] - If no snapshots are found
+    ///
+    /// [`SnapshotFileErrorKind::NoSnapshotsFound`]: crate::error::SnapshotFileErrorKind::NoSnapshotsFound
     pub(crate) fn latest<B: DecryptReadBackend>(
         be: &B,
         predicate: impl FnMut(&Self) -> bool + Send + Sync,
@@ -485,6 +497,10 @@ impl SnapshotFile {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
+    ///
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
+    /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+    /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     pub(crate) fn from_id<B: DecryptReadBackend>(be: &B, id: &str) -> RusticResult<Self> {
         info!("getting snapshot...");
         let id = be.find_id(FileType::Snapshot, id)?;
@@ -504,6 +520,10 @@ impl SnapshotFile {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
+    ///
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
+    /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+    /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     pub(crate) fn from_ids<B: DecryptReadBackend, T: AsRef<str>>(
         be: &B,
         ids: &[T],
@@ -990,6 +1010,8 @@ impl StringList {
     /// # Errors
     ///
     /// * [`SnapshotFileErrorKind::NonUnicodePath`] - If a path is not valid unicode
+    ///
+    /// [`SnapshotFileErrorKind::NonUnicodePath`]: crate::error::SnapshotFileErrorKind::NonUnicodePath
     pub(crate) fn set_paths<T: AsRef<Path>>(&mut self, paths: &[T]) -> RusticResult<()> {
         self.0 = paths
             .iter()
@@ -1073,7 +1095,9 @@ impl PathList {
     ///
     /// # Errors
     ///
-    /// * [`SnapshotFileErrorKind::FromNomError`] - If the parsing failed
+    /// * [`SnapshotFileErrorKind::FromSplitError`] - If the parsing failed
+    ///
+    /// [`SnapshotFileErrorKind::FromSplitError`]: crate::error::SnapshotFileErrorKind::FromSplitError
     pub fn from_string(sources: &str) -> RusticResult<Self> {
         let sources = split(sources).map_err(SnapshotFileErrorKind::FromSplitError)?;
         Ok(Self::from_strings(sources))
@@ -1103,6 +1127,9 @@ impl PathList {
     ///
     /// * [`SnapshotFileErrorKind::RemovingDotsFromPathFailed`] - If removing dots from path failed
     /// * [`SnapshotFileErrorKind::CanonicalizingPathFailed`] - If canonicalizing path failed
+    ///
+    /// [`SnapshotFileErrorKind::RemovingDotsFromPathFailed`]: crate::error::SnapshotFileErrorKind::RemovingDotsFromPathFailed
+    /// [`SnapshotFileErrorKind::CanonicalizingPathFailed`]: crate::error::SnapshotFileErrorKind::CanonicalizingPathFailed
     pub fn sanitize(mut self) -> RusticResult<Self> {
         for path in &mut self.0 {
             *path = path

@@ -128,6 +128,9 @@ impl RestBackend {
     ///
     /// * [`RestErrorKind::UrlParsingFailed`] - If the url could not be parsed.
     /// * [`RestErrorKind::BuildingClientFailed`] - If the client could not be built.
+    ///
+    /// [`RestErrorKind::UrlParsingFailed`]: crate::error::RestErrorKind::UrlParsingFailed
+    /// [`RestErrorKind::BuildingClientFailed`]: crate::error::RestErrorKind::BuildingClientFailed
     pub fn new(url: &str) -> RusticResult<Self> {
         let url = if url.ends_with('/') {
             Url::parse(url).map_err(RestErrorKind::UrlParsingFailed)?
@@ -250,6 +253,10 @@ impl ReadBackend for RestBackend {
     /// # Returns
     ///
     /// A vector of tuples containing the id and size of the files.
+    ///
+    /// [`RestErrorKind::JoiningUrlFailed`]: crate::error::RestErrorKind::JoiningUrlFailed
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     fn list_with_size(&self, tpe: FileType) -> RusticResult<Vec<(Id, u32)>> {
         trace!("listing tpe: {tpe:?}");
         let url = if tpe == FileType::Config {
@@ -318,6 +325,8 @@ impl ReadBackend for RestBackend {
     ///
     /// * [`reqwest::Error`] - If the request failed.
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         trace!("reading tpe: {tpe:?}, id: {id}");
         let url = self.url(tpe, id)?;
@@ -349,6 +358,8 @@ impl ReadBackend for RestBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn read_partial(
         &self,
         tpe: FileType,
@@ -384,6 +395,8 @@ impl WriteBackend for RestBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn create(&self) -> RusticResult<()> {
         let url = self
             .url
@@ -412,6 +425,8 @@ impl WriteBackend for RestBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     // TODO: If the file is not cacheable, the bytes could be written to a temporary file and then moved to the final location.
     fn write_bytes(
         &self,
@@ -445,6 +460,8 @@ impl WriteBackend for RestBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn remove(&self, tpe: FileType, id: &Id, _cacheable: bool) -> RusticResult<()> {
         trace!("removing tpe: {:?}, id: {}", &tpe, &id);
         let url = self.url(tpe, id)?;

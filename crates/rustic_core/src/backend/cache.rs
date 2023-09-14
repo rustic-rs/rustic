@@ -99,6 +99,8 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
     /// # Returns
     ///
     /// The data read.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         match (&self.cache, tpe.is_cacheable()) {
             (None, _) | (Some(_), false) => self.be.read_full(tpe, id),
@@ -133,6 +135,8 @@ impl<BE: WriteBackend> ReadBackend for CachedBackend<BE> {
     /// # Returns
     ///
     /// The data read.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     fn read_partial(
         &self,
         tpe: FileType,
@@ -234,6 +238,9 @@ impl Cache {
     ///
     /// * [`CacheBackendErrorKind::NoCacheDirectory`] - If no path is given and the default cache directory could not be determined.
     /// * [`CacheBackendErrorKind::FromIoError`] - If the cache directory could not be created.
+    ///
+    /// [`CacheBackendErrorKind::NoCacheDirectory`]: crate::error::CacheBackendErrorKind::NoCacheDirectory
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     pub fn new(id: Id, path: Option<PathBuf>) -> RusticResult<Self> {
         let mut path = path.unwrap_or({
             let mut dir = cache_dir().ok_or_else(|| CacheBackendErrorKind::NoCacheDirectory)?;
@@ -295,6 +302,9 @@ impl Cache {
     ///
     /// * [`CacheBackendErrorKind::FromIoError`] - If the cache directory could not be read.
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     pub fn list_with_size(&self, tpe: FileType) -> RusticResult<HashMap<Id, u32>> {
         let path = self.path.join(tpe.dirname());
 
@@ -333,6 +343,8 @@ impl Cache {
     /// # Errors
     ///
     /// * [`CacheBackendErrorKind::FromIoError`] - If the cache directory could not be read.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     pub fn remove_not_in_list(&self, tpe: FileType, list: &Vec<(Id, u32)>) -> RusticResult<()> {
         let mut list_cache = self.list_with_size(tpe)?;
         // remove present files from the cache list
@@ -361,6 +373,8 @@ impl Cache {
     /// # Errors
     ///
     /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be read.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     pub fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         trace!("cache reading tpe: {:?}, id: {}", &tpe, &id);
         let data = fs::read(self.path(tpe, id)).map_err(CacheBackendErrorKind::FromIoError)?;
@@ -380,6 +394,8 @@ impl Cache {
     /// # Errors
     ///
     /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be read.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     pub fn read_partial(
         &self,
         tpe: FileType,
@@ -416,6 +432,8 @@ impl Cache {
     /// # Errors
     ///
     /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be written.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     pub fn write_bytes(&self, tpe: FileType, id: &Id, buf: Bytes) -> RusticResult<()> {
         trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         fs::create_dir_all(self.dir(tpe, id)).map_err(CacheBackendErrorKind::FromIoError)?;
@@ -440,6 +458,8 @@ impl Cache {
     /// # Errors
     ///
     /// * [`CacheBackendErrorKind::FromIoError`] - If the file could not be removed.
+    ///
+    /// [`CacheBackendErrorKind::FromIoError`]: crate::error::CacheBackendErrorKind::FromIoError
     pub fn remove(&self, tpe: FileType, id: &Id) -> RusticResult<()> {
         trace!("cache writing tpe: {:?}, id: {}", &tpe, &id);
         let filename = self.path(tpe, id);

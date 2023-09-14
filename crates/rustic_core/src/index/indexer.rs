@@ -100,6 +100,8 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     /// # Errors
     ///
     /// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the index file could not be serialized.
+    ///
+    /// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
     pub fn finalize(&self) -> RusticResult<()> {
         self.save()
     }
@@ -109,6 +111,8 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     /// # Errors
     ///
     /// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the index file could not be serialized.
+    ///
+    /// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
     pub fn save(&self) -> RusticResult<()> {
         if (self.file.packs.len() + self.file.packs_to_delete.len()) > 0 {
             _ = self.be.save_file(&self.file)?;
@@ -126,6 +130,9 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     ///
     /// * [`IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime`] - If the elapsed time could not be retrieved from the system time.
     /// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the index file could not be serialized.
+    ///
+    /// [`IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime`]: crate::error::IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime
+    /// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
     pub fn add(&mut self, pack: IndexPack) -> RusticResult<()> {
         self.add_with(pack, false)
     }
@@ -140,6 +147,9 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     ///
     /// * [`IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime`] - If the elapsed time could not be retrieved from the system time.
     /// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the index file could not be serialized.
+    ///
+    /// [`IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime`]: crate::error::IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime
+    /// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
     pub fn add_remove(&mut self, pack: IndexPack) -> RusticResult<()> {
         self.add_with(pack, true)
     }
@@ -155,6 +165,9 @@ impl<BE: DecryptWriteBackend> Indexer<BE> {
     ///
     /// * [`IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime`] - If the elapsed time could not be retrieved from the system time.
     /// * [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`] - If the index file could not be serialized.
+    ///
+    /// [`IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime`]: crate::error::IndexErrorKind::CouldNotGetElapsedTimeFromSystemTime
+    /// [`CryptBackendErrorKind::SerializingToJsonByteVectorFailed`]: crate::error::CryptBackendErrorKind::SerializingToJsonByteVectorFailed
     pub fn add_with(&mut self, pack: IndexPack, delete: bool) -> RusticResult<()> {
         self.count += pack.blobs.len();
 

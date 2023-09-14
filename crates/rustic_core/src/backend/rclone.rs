@@ -58,6 +58,11 @@ pub struct RcloneBackend {
 /// # Returns
 ///
 /// The rclone version as a tuple of (major, minor, patch).
+/// 
+/// [`ProviderErrorKind::FromIoError`]: crate::error::ProviderErrorKind::FromIoError
+/// [`ProviderErrorKind::FromUtf8Error`]: crate::error::ProviderErrorKind::FromUtf8Error
+/// [`ProviderErrorKind::NoOutputForRcloneVersion`]: crate::error::ProviderErrorKind::NoOutputForRcloneVersion
+/// [`ProviderErrorKind::FromParseIntError`]: crate::error::ProviderErrorKind::FromParseIntError
 fn rclone_version() -> RusticResult<(i32, i32, i32)> {
     let rclone_version_output = Command::new("rclone")
         .arg("version")
@@ -99,6 +104,13 @@ impl RcloneBackend {
     /// * [`ProviderErrorKind::UrlNotStartingWithHttp`] - If the URL does not start with `http`.
     /// * [`RestErrorKind::UrlParsingFailed`] - If the URL could not be parsed.
     /// * [`RestErrorKind::BuildingClientFailed`] - If the client could not be built.
+    /// 
+    /// [`ProviderErrorKind::FromIoError`]: crate::error::ProviderErrorKind::FromIoError
+    /// [`ProviderErrorKind::NoStdOutForRclone`]: crate::error::ProviderErrorKind::NoStdOutForRclone
+    /// [`ProviderErrorKind::RCloneExitWithBadStatus`]: crate::error::ProviderErrorKind::RCloneExitWithBadStatus
+    /// [`ProviderErrorKind::UrlNotStartingWithHttp`]: crate::error::ProviderErrorKind::UrlNotStartingWithHttp
+    /// [`RestErrorKind::UrlParsingFailed`]: crate::error::RestErrorKind::UrlParsingFailed
+    /// [`RestErrorKind::BuildingClientFailed`]: crate::error::RestErrorKind::BuildingClientFailed
     pub fn new(url: &str) -> RusticResult<Self> {
         match rclone_version() {
             Ok((major, minor, patch)) => {
@@ -238,6 +250,8 @@ impl ReadBackend for RcloneBackend {
     /// # Returns
     ///
     /// The data read.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn read_full(&self, tpe: FileType, id: &Id) -> RusticResult<Bytes> {
         self.rest.read_full(tpe, id)
     }
@@ -259,6 +273,8 @@ impl ReadBackend for RcloneBackend {
     /// # Returns
     ///
     /// The data read.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn read_partial(
         &self,
         tpe: FileType,
@@ -277,6 +293,8 @@ impl WriteBackend for RcloneBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn create(&self) -> RusticResult<()> {
         self.rest.create()
     }
@@ -293,6 +311,8 @@ impl WriteBackend for RcloneBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn write_bytes(&self, tpe: FileType, id: &Id, cacheable: bool, buf: Bytes) -> RusticResult<()> {
         self.rest.write_bytes(tpe, id, cacheable, buf)
     }
@@ -308,6 +328,8 @@ impl WriteBackend for RcloneBackend {
     /// # Errors
     ///
     /// * [`RestErrorKind::BackoffError`] - If the backoff failed.
+    ///
+    /// [`RestErrorKind::BackoffError`]: crate::error::RestErrorKind::BackoffError
     fn remove(&self, tpe: FileType, id: &Id, cacheable: bool) -> RusticResult<()> {
         self.rest.remove(tpe, id, cacheable)
     }

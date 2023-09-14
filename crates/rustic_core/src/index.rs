@@ -321,7 +321,7 @@ impl<BE: DecryptReadBackend> IndexBackend<BE> {
         Self::new_from_collector(be, p, IndexCollector::new(IndexType::DataIds))
     }
 
-    /// Convert the Arc<Index> to an Index
+    /// Convert the `Arc<Index>` to an Index
     pub fn into_index(self) -> Index {
         match Arc::try_unwrap(self.index) {
             Ok(index) => index,
@@ -353,6 +353,8 @@ impl<BE: DecryptReadBackend> IndexedBackend for IndexBackend<BE> {
     /// # Errors
     ///
     /// * [`IndexErrorKind::BlobInIndexNotFound`] - If the blob could not be found in the index
+    /// 
+    /// [`IndexErrorKind::BlobInIndexNotFound`]: crate::error::IndexErrorKind::BlobInIndexNotFound
     fn blob_from_backend(&self, tpe: BlobType, id: &Id) -> RusticResult<Bytes> {
         self.get_id(tpe, id).map_or_else(
             || Err(IndexErrorKind::BlobInIndexNotFound.into()),

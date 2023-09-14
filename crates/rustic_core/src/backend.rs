@@ -167,6 +167,9 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     ///
     /// This function is used to find the id of a snapshot or index file.
     /// The id of a snapshot or index file is the id of the first pack file.
+    /// 
+    /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+    /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     fn find_starts_with<T: AsRef<str>>(&self, tpe: FileType, vec: &[T]) -> RusticResult<Vec<Id>> {
         #[derive(Clone, Copy, PartialEq, Eq)]
         enum MapResult<T> {
@@ -215,6 +218,10 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
+    /// 
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
+    /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+    /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     fn find_id(&self, tpe: FileType, id: &str) -> RusticResult<Id> {
         Ok(self.find_ids(tpe, &[id.to_string()])?.remove(0))
     }
@@ -235,6 +242,10 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
+    /// 
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
+    /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
+    /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     fn find_ids<T: AsRef<str>>(&self, tpe: FileType, ids: &[T]) -> RusticResult<Vec<Id>> {
         ids.iter()
             .map(|id| Id::from_hex(id.as_ref()))

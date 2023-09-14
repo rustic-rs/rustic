@@ -210,6 +210,8 @@ impl Parent {
     /// # Errors
     ///
     /// * [`ArchiverErrorKind::TreeStackEmpty`] - If the tree stack is empty.
+    ///
+    /// [`ArchiverErrorKind::TreeStackEmpty`]: crate::error::ArchiverErrorKind::TreeStackEmpty
     fn finish_dir(&mut self) -> RusticResult<()> {
         let (tree, node_idx) = self
             .stack
@@ -242,6 +244,8 @@ impl Parent {
     /// # Errors
     ///
     /// * [`ArchiverErrorKind::TreeStackEmpty`] - If the tree stack is empty.
+    ///
+    /// [`ArchiverErrorKind::TreeStackEmpty`]: crate::error::ArchiverErrorKind::TreeStackEmpty
     pub(crate) fn process<BE: IndexedBackend, O>(
         &mut self,
         be: &BE,

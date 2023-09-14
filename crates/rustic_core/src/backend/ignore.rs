@@ -133,6 +133,9 @@ impl LocalSource {
     ///
     /// * [`IgnoreErrorKind::GenericError`] - If the a glob pattern could not be added to the override builder.
     /// * [`IgnoreErrorKind::FromIoError`] - If a glob file could not be read.
+    ///
+    /// [`IgnoreErrorKind::GenericError`]: crate::error::IgnoreErrorKind::GenericError
+    /// [`IgnoreErrorKind::FromIoError`]: crate::error::IgnoreErrorKind::FromIoError
     pub fn new(
         save_opts: LocalSourceSaveOptions,
         filter_opts: &LocalSourceFilterOptions,
@@ -240,6 +243,8 @@ impl ReadSourceOpen for OpenFile {
     /// # Errors
     ///
     /// * [`IgnoreErrorKind::UnableToOpenFile`] - If the file could not be opened.
+    ///
+    /// [`IgnoreErrorKind::UnableToOpenFile`]: crate::error::IgnoreErrorKind::UnableToOpenFile
     fn open(self) -> RusticResult<Self::Reader> {
         let path = self.0;
         File::open(path).map_err(|err| IgnoreErrorKind::UnableToOpenFile(err).into())
@@ -315,6 +320,9 @@ impl Iterator for LocalSource {
 ///
 /// * [`IgnoreErrorKind::GenericError`] - If metadata could not be read.
 /// * [`IgnoreErrorKind::FromIoError`] - If path of the entry could not be read.
+///
+/// [`IgnoreErrorKind::GenericError`]: crate::error::IgnoreErrorKind::GenericError
+/// [`IgnoreErrorKind::FromIoError`]: crate::error::IgnoreErrorKind::FromIoError
 #[cfg(windows)]
 fn map_entry(
     entry: DirEntry,
@@ -440,6 +448,9 @@ fn get_group_by_gid(gid: u32) -> Option<String> {
 ///
 /// * [`IgnoreErrorKind::GenericError`] - If metadata could not be read.
 /// * [`IgnoreErrorKind::FromIoError`] - If the xattr of the entry could not be read.
+/// 
+/// [`IgnoreErrorKind::GenericError`]: crate::error::IgnoreErrorKind::GenericError
+/// [`IgnoreErrorKind::FromIoError`]: crate::error::IgnoreErrorKind::FromIoError
 #[cfg(not(windows))]
 // map_entry: turn entry into (Path, Node)
 fn map_entry(

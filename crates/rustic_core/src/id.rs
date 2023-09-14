@@ -61,6 +61,8 @@ impl Id {
     ///
     /// assert_eq!(id.to_hex().as_str(), "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
     /// ```
+    /// 
+    /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     pub fn from_hex(s: &str) -> RusticResult<Self> {
         let mut id = Self::default();
 

@@ -24,6 +24,8 @@ use crate::{
 /// # Errors
 ///
 /// * [`CommandErrorKind::DumpNotSupported`] - If the node is not a file.
+///
+/// [`CommandErrorKind::DumpNotSupported`]: crate::error::CommandErrorKind::DumpNotSupported
 pub(crate) fn dump<P, S: IndexedFull>(
     repo: &Repository<P, S>,
     node: &Node,

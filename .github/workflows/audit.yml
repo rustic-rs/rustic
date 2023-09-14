@@ -25,7 +25,7 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
       - uses: actions-rs/audit-check@35b7b53b1e25b55642157ac01b4adceb5b9ebef3 # v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

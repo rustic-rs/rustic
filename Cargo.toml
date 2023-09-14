@@ -180,7 +180,7 @@ integer-sqrt = "0.1"
 binrw = "0.11"
 hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["serde_derive"] }
-serde_with = { version = "3.2", features = ["base64"] }
+serde_with = { version = "3.3", features = ["base64"] }
 serde_json = "1"
 serde-aux = "4"
 

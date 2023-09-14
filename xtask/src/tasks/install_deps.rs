@@ -21,7 +21,7 @@ pub enum InstallationKind {
 /// Install cargo tools
 ///
 /// # Errors
-/// 
+///
 /// Errors if one of the commands failed
 ///
 pub fn install_deps(kind: InstallationKind) -> Result<()> {

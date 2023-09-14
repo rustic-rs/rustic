@@ -181,7 +181,7 @@ impl ConfigOptions {
     /// * [`CommandErrorKind::SizeTooLarge`] - If the size is too large
     /// * [`CommandErrorKind::MinPackSizeTolerateWrong`] - If the min packsize tolerate percent is wrong
     /// * [`CommandErrorKind::MaxPackSizeTolerateWrong`] - If the max packsize tolerate percent is wrong
-    /// 
+    ///
     /// [`CommandErrorKind::VersionNotSupported`]: crate::error::CommandErrorKind::VersionNotSupported
     /// [`CommandErrorKind::CannotDowngrade`]: crate::error::CommandErrorKind::CannotDowngrade
     /// [`CommandErrorKind::NoCompressionV1Repo`]: crate::error::CommandErrorKind::NoCompressionV1Repo

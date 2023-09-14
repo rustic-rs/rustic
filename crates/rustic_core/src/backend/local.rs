@@ -82,7 +82,7 @@ impl LocalBackend {
     /// # Errors
     ///
     /// * [`LocalErrorKind::DirectoryCreationFailed`] - If the directory could not be created.
-    /// 
+    ///
     /// [`LocalErrorKind::DirectoryCreationFailed`]: crate::error::LocalErrorKind::DirectoryCreationFailed
     // TODO: We should use `impl Into<Path/PathBuf>` here. we even use it in the body!
     pub fn new(path: &str) -> RusticResult<Self> {

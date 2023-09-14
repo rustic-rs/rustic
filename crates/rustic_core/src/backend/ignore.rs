@@ -448,7 +448,7 @@ fn get_group_by_gid(gid: u32) -> Option<String> {
 ///
 /// * [`IgnoreErrorKind::GenericError`] - If metadata could not be read.
 /// * [`IgnoreErrorKind::FromIoError`] - If the xattr of the entry could not be read.
-/// 
+///
 /// [`IgnoreErrorKind::GenericError`]: crate::error::IgnoreErrorKind::GenericError
 /// [`IgnoreErrorKind::FromIoError`]: crate::error::IgnoreErrorKind::FromIoError
 #[cfg(not(windows))]

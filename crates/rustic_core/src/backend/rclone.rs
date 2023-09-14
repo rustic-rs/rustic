@@ -58,7 +58,7 @@ pub struct RcloneBackend {
 /// # Returns
 ///
 /// The rclone version as a tuple of (major, minor, patch).
-/// 
+///
 /// [`ProviderErrorKind::FromIoError`]: crate::error::ProviderErrorKind::FromIoError
 /// [`ProviderErrorKind::FromUtf8Error`]: crate::error::ProviderErrorKind::FromUtf8Error
 /// [`ProviderErrorKind::NoOutputForRcloneVersion`]: crate::error::ProviderErrorKind::NoOutputForRcloneVersion
@@ -104,7 +104,7 @@ impl RcloneBackend {
     /// * [`ProviderErrorKind::UrlNotStartingWithHttp`] - If the URL does not start with `http`.
     /// * [`RestErrorKind::UrlParsingFailed`] - If the URL could not be parsed.
     /// * [`RestErrorKind::BuildingClientFailed`] - If the client could not be built.
-    /// 
+    ///
     /// [`ProviderErrorKind::FromIoError`]: crate::error::ProviderErrorKind::FromIoError
     /// [`ProviderErrorKind::NoStdOutForRclone`]: crate::error::ProviderErrorKind::NoStdOutForRclone
     /// [`ProviderErrorKind::RCloneExitWithBadStatus`]: crate::error::ProviderErrorKind::RCloneExitWithBadStatus

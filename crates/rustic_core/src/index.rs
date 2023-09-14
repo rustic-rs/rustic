@@ -353,7 +353,7 @@ impl<BE: DecryptReadBackend> IndexedBackend for IndexBackend<BE> {
     /// # Errors
     ///
     /// * [`IndexErrorKind::BlobInIndexNotFound`] - If the blob could not be found in the index
-    /// 
+    ///
     /// [`IndexErrorKind::BlobInIndexNotFound`]: crate::error::IndexErrorKind::BlobInIndexNotFound
     fn blob_from_backend(&self, tpe: BlobType, id: &Id) -> RusticResult<Bytes> {
         self.get_id(tpe, id).map_or_else(

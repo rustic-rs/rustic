@@ -167,7 +167,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     ///
     /// This function is used to find the id of a snapshot or index file.
     /// The id of a snapshot or index file is the id of the first pack file.
-    /// 
+    ///
     /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
     /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
     fn find_starts_with<T: AsRef<str>>(&self, tpe: FileType, vec: &[T]) -> RusticResult<Vec<Id>> {
@@ -218,7 +218,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
-    /// 
+    ///
     /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
     /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique
@@ -242,7 +242,7 @@ pub trait ReadBackend: Clone + Send + Sync + 'static {
     /// * [`IdErrorKind::HexError`] - If the string is not a valid hexadecimal string
     /// * [`BackendErrorKind::NoSuitableIdFound`] - If no id could be found.
     /// * [`BackendErrorKind::IdNotUnique`] - If the id is not unique.
-    /// 
+    ///
     /// [`IdErrorKind::HexError`]: crate::error::IdErrorKind::HexError
     /// [`BackendErrorKind::NoSuitableIdFound`]: crate::error::BackendErrorKind::NoSuitableIdFound
     /// [`BackendErrorKind::IdNotUnique`]: crate::error::BackendErrorKind::IdNotUnique

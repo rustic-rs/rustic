@@ -32,7 +32,6 @@ jobs:
   semver-check:
     name: Check SemVer
     runs-on: ubuntu-latest
-    needs: breaking-cli
     strategy:
       matrix:
         rust: [stable]

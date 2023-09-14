@@ -28,7 +28,7 @@ jobs:
         run: |
           if [[ ${{ github.ref }} == *"rustic_core"* ]]; then
           echo "package=rustic_core" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == *"rustic_testing"*]]; then
+          elif [[ ${{ github.ref }} == *"rustic_testing"* ]]; then
           echo "package=rustic_testing" >> $GITHUB_OUTPUT
           elif [[ ${{ github.ref }} == *"rustic-"* ]]; then
           echo "package=rustic-rs" >> $GITHUB_OUTPUT

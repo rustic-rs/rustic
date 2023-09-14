@@ -37,6 +37,10 @@ cli = ["merge", "clap"]
 merge = ["dep:merge"]
 clap = ["dep:clap", "dep:clap_complete"]
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--document-private-items"]
+
 [dependencies]
 # errors
 displaydoc = { workspace = true }
@@ -144,7 +148,7 @@ codegen-units = 4
 
 [profile.release]
 opt-level = 3
-debug = false # true for profiling
+debug = false            # true for profiling
 rpath = false
 lto = "fat"
 debug-assertions = false
@@ -161,7 +165,7 @@ codegen-units = 4
 
 [profile.bench]
 opt-level = 3
-debug = true # true for profiling
+debug = true             # true for profiling
 rpath = false
 lto = true
 debug-assertions = false

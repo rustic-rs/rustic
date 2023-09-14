@@ -13,7 +13,7 @@ jobs:
       matrix:
         rust: [stable]
         job:
-          - os: macos-latest
+          # - os: macos-latest # TODO: Need to generate fixtures for macOS first
           - os: ubuntu-latest
           - os: windows-latest
     steps:

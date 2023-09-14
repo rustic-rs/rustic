@@ -12,7 +12,7 @@ on:
   #       required: true
   #       type: choice
   #       options:
-  #         - rustic
+  #         - rustic-rs
   #         - rustic_core
   #         - rustic_testing
 
@@ -28,15 +28,17 @@ jobs:
         run: |
           if [[ ${{ github.ref }} == 'refs/release/rustic_core-*' ]]; then
           echo "package=rustic_core" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.ref }} == 'refs/release/rustic_testing-*' ]]; then
+          echo "package=rustic_testing" >> $GITHUB_OUTPUT
           elif [[ ${{ github.ref }} == 'refs/release/rustic-*' ]]; then
-          echo "package=rustic" >> $GITHUB_OUTPUT
+          echo "package=rustic-rs" >> $GITHUB_OUTPUT
           fi
 
   breaking-cli:
     name: Check breaking CLI changes
     runs-on: ${{ matrix.job.os }}
     needs: determine-package
-    if: ${{ needs.determine-package.outputs.package }} == 'rustic'
+    if: ${{ needs.determine-package.outputs.package }} == 'rustic-rs'
     strategy:
       matrix:
         rust: [stable]

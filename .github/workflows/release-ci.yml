@@ -3,7 +3,7 @@ name: Check release
 on:
   push:
     branches:
-      - release/*
+      - "release/**"
   # TODO!: We might want to do it manually? Not sure.
   # workflow_dispatch:
   #   inputs:

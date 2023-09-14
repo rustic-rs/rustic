@@ -3,7 +3,7 @@ name: Build release binaries
 on:
   push:
     branches:
-      - release/*
+      - "release/**"
 
 env:
   BINARY_NAME: rustic

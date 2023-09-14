@@ -26,9 +26,9 @@ jobs:
       - name: Determine package
         id: determine-package-name
         run: |
-          if [[ ${{ github.ref }} == 'refs/releases/rustic_core-*' ]]; then
+          if [[ ${{ github.ref }} == 'refs/release/rustic_core-*' ]]; then
           echo "package=rustic_core" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == 'refs/releases/rustic-*' ]]; then
+          elif [[ ${{ github.ref }} == 'refs/release/rustic-*' ]]; then
           echo "package=rustic" >> $GITHUB_OUTPUT
           fi
 

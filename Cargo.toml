@@ -132,7 +132,7 @@ toml = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }
-libc = "0.2.147"
+libc = "0.2.148"
 
 [target.'cfg(windows)'.dependencies]
 # unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17
@@ -180,7 +180,7 @@ integer-sqrt = "0.1"
 binrw = "0.11"
 hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["serde_derive"] }
-serde_with = { version = "3.2", features = ["base64"] }
+serde_with = { version = "3.3", features = ["base64"] }
 serde_json = "1"
 serde-aux = "4"
 
@@ -205,8 +205,8 @@ bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 zstd = "0.12"
 enum-map = "2"
-enum-map-derive = "0.13"
-rhai = { version = "1.15", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+enum-map-derive = "0.14"
+rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 simplelog = "0.12"
 comfy-table = "7.0.1"
 
@@ -236,7 +236,7 @@ quickcheck = "1"
 quickcheck_macros = "1"
 tempfile = "3.8"
 pretty_assertions = "1.4"
-toml = "0.7"
+toml = "0.8"
 dircmp = "0.2"
 
 # cargo-binstall support

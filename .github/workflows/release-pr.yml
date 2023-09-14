@@ -22,14 +22,14 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
       - uses: chainguard-dev/actions/setup-gitsign@main
       - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
       - name: Install cargo-release
-        uses: taiki-e/install-action@v1
+        uses: taiki-e/install-action@9a29ce630c67077a359246f3e4f84941e05f28b5 # v1
         with:
           tool: cargo-release
-      - uses: cargo-bins/release-pr@v2
+      - uses: cargo-bins/release-pr@deeacca5a38bacc74a3f444b798f4b9bba40f6ad # v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ inputs.version }}

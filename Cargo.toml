@@ -206,7 +206,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 zstd = "0.12"
 enum-map = "2"
 enum-map-derive = "0.14"
-rhai = { version = "1.15", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 simplelog = "0.12"
 comfy-table = "7.0.1"
 

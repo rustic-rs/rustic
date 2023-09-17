@@ -2359,7 +2359,7 @@ dependencies = [
 
 [[package]]
 name = "rustic_core"
-version = "0.6.0"
+version = "0.1.1"
 dependencies = [
  "aes256ctr_poly1305aes",
  "aho-corasick",
@@ -2371,7 +2371,6 @@ dependencies = [
  "cachedir",
  "chrono",
  "clap",
- "clap_complete",
  "crossbeam-channel",
  "derivative",
  "derive_more",

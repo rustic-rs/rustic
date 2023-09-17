@@ -16,6 +16,11 @@ backup tool that provides fast, encrypted, deduplicated backups. It reads and
 writes the `restic` repository format, which is described in their design
 document.
 
+**Note**: `rustic_core` is in an early development stage and its API is subject
+to change in the next releases. If you want to give feedback on that, please
+open a thread in our
+[discussions](https://github.com/rustic-rs/rustic/discussions).
+
 ## Contact
 
 You can ask questions in the
@@ -34,7 +39,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rustic_core = "0.6"
+rustic_core = "0.1.1"
 ```
 
 ## Crate features

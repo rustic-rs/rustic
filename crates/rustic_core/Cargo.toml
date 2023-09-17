@@ -1,6 +1,6 @@
 [package]
 name = "rustic_core"
-version = "0.6.0"
+version = "0.1.1"
 authors = ["Alexander Weiss"]
 categories = [
   "Algorithms",
@@ -10,12 +10,13 @@ categories = [
   "Data structures",
   "Filesystem",
 ]
+documentation = "https://docs.rs/rustic_core"
 edition = { workspace = true }
 homepage = { workspace = true }
 include = ["src/**/*", "LICENSE-*", "README.md", "examples/**/*"]
 keywords = ["backup", "restic", "deduplication", "encryption", "library"]
 license = { workspace = true }
-publish = false # Don't publish until we fix/stabilize public api!!!
+publish = true
 readme = "README.md"
 resolver = "2"
 rust-version = "1.66.1"
@@ -35,7 +36,7 @@ edition = "2021"
 default = []
 cli = ["merge", "clap"]
 merge = ["dep:merge"]
-clap = ["dep:clap", "dep:clap_complete"]
+clap = ["dep:clap"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -104,7 +105,6 @@ dirs = { workspace = true }
 
 # cli
 clap = { workspace = true, optional = true }
-clap_complete = { workspace = true, optional = true }
 
 bytesize = { workspace = true }
 directories = { workspace = true }

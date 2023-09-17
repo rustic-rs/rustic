@@ -61,11 +61,11 @@ The `rustic` project is split into multiple crates:
 You can ask questions in the [Discussions][3] or have a look at the
 [FAQ](https://rustic.cli.rs/docs/FAQ.html).
 
-| Contact       | Where?                                                                                                   |
-| ------------- | -------------------------------------------------------------------------------------------------------- |
-| Issue Tracker | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)                                              |
-| Discord       | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ?style=flat-square)](https://discord.gg/WRUWENZnzQ) |
-| Discussions   | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)                                    |
+| Contact       | Where?                                                                                                          |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| Issue Tracker | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)                                                     |
+| Discord       | [![Discord](https://dcbadge.vercel.app/api/server/WRUWENZnzQ?style=flat-square)](https://discord.gg/WRUWENZnzQ) |
+| Discussions   | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)                                           |
 
 ## Getting started
 
@@ -119,7 +119,16 @@ We have collected some improvements of `rustic` over `restic`
 
 ## Contributing
 
-Contributions in form of [issues][4] or PRs are very welcome.
+Tried rustic and not satisfied? Don't just walk away! You can help:
+
+You can report issues or suggest new features on our
+[Discord server](https://discord.gg/WRUWENZnzQ) or using
+[Github Issues](https://github.com/rustic-rs/rustic/issues/new/choose)!
+
+Do you know how to code or got an idea for an improvement? Don't keep it to
+yourself!
+
+- Contribute fixes or new features via a pull requests!
 
 Please make sure, that you read the
 [contribution guide](https://rustic.cli.rs/docs/contributing-to-rustic.html).
@@ -151,4 +160,3 @@ at your option.
 [1]: https://github.com/restic/restic
 [2]: https://github.com/restic/restic/blob/master/doc/design.rst
 [3]: https://github.com/rustic-rs/rustic/discussions
-[4]: https://github.com/rustic-rs/rustic/issues/new/choose

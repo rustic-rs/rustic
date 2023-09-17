@@ -22,13 +22,13 @@
 targets = [
 
 
-    # The triple can be any string, but only the target triples built in to
-    # rustc (as of 1.40) can be checked against actual config expressions
-    # { triple = "x86_64-unknown-linux-musl" },
-    # You can also specify which target_features you promise are enabled for a
-    # particular target. target_features are currently not validated against
-    # the actual valid features supported by the target architecture.
-    # { triple = "wasm32-unknown-unknown", features = ["atomics"] },
+  # The triple can be any string, but only the target triples built in to
+  # rustc (as of 1.40) can be checked against actual config expressions
+  # { triple = "x86_64-unknown-linux-musl" },
+  # You can also specify which target_features you promise are enabled for a
+  # particular target. target_features are currently not validated against
+  # the actual valid features supported by the target architecture.
+  # { triple = "wasm32-unknown-unknown", features = ["atomics"] },
 ]
 # When creating the dependency graph used as the source of truth when checks are
 # executed, this field can be used to prune crates from the graph, removing them
@@ -78,7 +78,7 @@ notice = "warn"
 ignore = [
 
 
-    # "RUSTSEC-0000-0000",
+  # "RUSTSEC-0000-0000",
 ]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
@@ -108,13 +108,13 @@ unlicensed = "warn"
 allow = [
 
 
-    # "MIT",
-    # "Apache-2.0",
-    # "Apache-2.0 WITH LLVM-exception",
-    # "ISC",
-    # "BSD-3-Clause",
-    # "CC0-1.0",
-    # "Unicode-DFS-2016",
+  # "MIT",
+  # "Apache-2.0",
+  # "Apache-2.0 WITH LLVM-exception",
+  # "ISC",
+  # "BSD-3-Clause",
+  # "CC0-1.0",
+  # "Unicode-DFS-2016",
 ]
 # List of explicitly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
@@ -122,7 +122,7 @@ allow = [
 deny = [
 
 
-    # "Nokia",
+  # "Nokia",
 ]
 # Lint level for licenses considered copyleft
 copyleft = "warn"
@@ -150,9 +150,9 @@ confidence-threshold = 0.8
 exceptions = [
 
 
-    # Each entry is the crate and version constraint, and its specific allow
-    # list
-    # { allow = ["Zlib"], name = "adler32", version = "*" },
+  # Each entry is the crate and version constraint, and its specific allow
+  # list
+  # { allow = ["Zlib"], name = "adler32", version = "*" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
@@ -187,7 +187,7 @@ ignore = false
 registries = [
 
 
-    # "https://sekretz.com/registry
+  # "https://sekretz.com/registry
 ]
 
 # This section is considered when running `cargo deny check bans`.
@@ -216,19 +216,19 @@ external-default-features = "allow"
 allow = [
 
 
-    # { name = "ansi_term", version = "=0.11.0" },
+  # { name = "ansi_term", version = "=0.11.0" },
 ]
 # List of crates to deny
 deny = [
 
 
-    # Each entry the name of a crate and a version range. If version is
-    # not specified, all versions will be matched.
-    # { name = "ansi_term", version = "=0.11.0" },
-    #
-    # Wrapper crates can optionally be specified to allow the crate when it
-    # is a direct dependency of the otherwise banned crate
-    # { name = "ansi_term", version = "=0.11.0", wrappers = [] },
+  # Each entry the name of a crate and a version range. If version is
+  # not specified, all versions will be matched.
+  # { name = "ansi_term", version = "=0.11.0" },
+  #
+  # Wrapper crates can optionally be specified to allow the crate when it
+  # is a direct dependency of the otherwise banned crate
+  # { name = "ansi_term", version = "=0.11.0", wrappers = [] },
 ]
 
 # List of features to allow/deny
@@ -258,7 +258,7 @@ deny = [
 skip = [
 
 
-    # { name = "ansi_term", version = "=0.11.0" },
+  # { name = "ansi_term", version = "=0.11.0" },
 ]
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive
@@ -267,7 +267,7 @@ skip = [
 skip-tree = [
 
 
-    # { name = "ansi_term", version = "=0.11.0", depth = 20 },
+  # { name = "ansi_term", version = "=0.11.0", depth = 20 },
 ]
 
 # This section is considered when running `cargo deny check sources`.

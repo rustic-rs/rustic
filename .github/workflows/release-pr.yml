@@ -7,7 +7,7 @@ on:
         required: true
         type: choice
         options:
-          - rustic
+          - rustic-rs
           - rustic_core
       version:
         description: Version to release

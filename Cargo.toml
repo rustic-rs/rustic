@@ -243,8 +243,12 @@ dircmp = "0.2"
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ repo }-v{ version }-{ target }{ archive-suffix }"
-bin-dir = "{ bin }{ binary-ext }"
+bin-dir = "{ bin }-{ target }/{ bin }{ binary-ext }"
 pkg-fmt = "tar.gz"
+
+[package.metadata.binstall.signing]
+algorithm = "minisign"
+pubkey = "RWRsVnMnBLgZRL5oF8hrVNGxYhLIsl/ORrwYVhdk4np77dist7JO/1ce"
 
 # see: https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.dev]

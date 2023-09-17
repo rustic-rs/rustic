@@ -12,6 +12,8 @@ on:
       - "**/*.md"
   schedule:
     - cron: "0 0 * * 0"
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   check:

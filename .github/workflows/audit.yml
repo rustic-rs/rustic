@@ -1,6 +1,7 @@
 name: Security audit
 
 on:
+  pull_request:
   schedule:
     # Runs at 00:00 UTC everyday
     - cron: "0 0 * * *"
@@ -10,7 +11,8 @@ on:
       - "**/Cargo.lock"
       - "crates/**/Cargo.toml"
       - "crates/**/Cargo.lock"
-  pull_request:
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   audit:

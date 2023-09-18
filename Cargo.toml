@@ -142,7 +142,7 @@ sha2 = "0.10"
 xattr = "1"
 
 [workspace.dependencies]
-rustic_core = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"], version = "0" }
+rustic_core = { version = "0.1.1", features = ["cli"] }
 abscissa_core = "0.7.0"
 
 # logging

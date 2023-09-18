@@ -6,7 +6,7 @@
 
 pub(crate) mod progress_options;
 
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use directories::ProjectDirs;
 
@@ -110,6 +110,16 @@ pub struct GlobalOptions {
     #[clap(flatten)]
     #[serde(flatten)]
     pub progress_options: ProgressOptions,
+
+    /// List of environment variables to set (only in config file)
+    #[clap(skip)]
+    #[merge(strategy = extend)]
+    pub env: HashMap<String, String>,
+}
+
+/// extend the contents of right to left.
+fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
+    left.extend(right);
 }
 
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {

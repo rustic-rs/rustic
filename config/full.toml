@@ -15,6 +15,12 @@ no-progress = false
 progress-interval = "100ms"
 dry-run = false
 
+# Global env variables: These are set by rustic before calling a subcommand, e.g. rclone or commands
+# defined in the repository options.
+[global.env]
+# This is only an example how to set an rclone env variable. Default: No variables are defined.
+RCLONE_XXX = "true"
+
 # Repository options: These options define which backend to use and which password to use.
 [repository]
 repository = "/repo/rustic" # Must be set

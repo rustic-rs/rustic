@@ -50,6 +50,16 @@ configuration files can be found here in the [/config/](/config) directory.
 | progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL |
 | use-profile       | An array of profiles to use.                                                      | Empty array   |                   | RUSTIC_USE_PROFILE       |
 
+### Global Options - env variables
+
+All given environment variables are set before processing. This is handy to
+configure e.g. the `rclone`-backend or some commands which will be called by
+rustic.
+
+**Important**: Please do not forget to include environment variables set in the
+config file as a possible source of errors if you encounter problems. They could
+possibly shadow other values that you have already set.
+
 ### Repository Options
 
 | Attribute        | Description                                                | Default Value            | Example Value          | Environment Variable    |

@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.5.4-dev"
+version = "0.6.0"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/rustic-rs/rustic"

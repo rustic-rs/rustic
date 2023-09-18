@@ -2073,7 +2073,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.5.4-dev"
+version = "0.6.0"
 dependencies = [
  "abscissa_core",
  "aes256ctr_poly1305aes",

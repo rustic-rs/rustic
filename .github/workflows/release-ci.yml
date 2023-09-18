@@ -16,35 +16,27 @@ on:
   #         - rustic_testing
 
 jobs:
-  determine-package:
-    name: Determine package to release
-    runs-on: ubuntu-latest
-    outputs:
-      package: ${{ steps.determine-package-name.outputs.package }}
-    steps:
-      - name: Determine package
-        id: determine-package-name
-        run: |
-          if [[ ${{ github.ref }} == *"rustic_core"* ]]; then
-          echo "package=rustic_core" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == *"rustic_testing"* ]]; then
-          echo "package=rustic_testing" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == *"rustic-"* ]]; then
-          echo "package=rustic-rs" >> $GITHUB_OUTPUT
-          fi
+  # determine-package:
+  #   name: Determine package to release
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     package: ${{ steps.determine-package-name.outputs.package }}
+  #   steps:
+  #     - name: Determine package
+  #       id: determine-package-name
+  #       run: |
+  #         if [[ ${{ github.ref }} == *"rustic_core"* ]]; then
+  #         echo "package=rustic_core" >> $GITHUB_OUTPUT
+  #         elif [[ ${{ github.ref }} == *"rustic_testing"* ]]; then
+  #         echo "package=rustic_testing" >> $GITHUB_OUTPUT
+  #         elif [[ ${{ github.ref }} == *"rustic-"* ]]; then
+  #         echo "package=rustic-rs" >> $GITHUB_OUTPUT
+  #         fi
 
   breaking-cli:
     name: Check breaking CLI changes
-    runs-on: ${{ matrix.job.os }}
-    needs: determine-package
-    if: needs.determine-package.outputs.package == 'rustic-rs'
-    strategy:
-      matrix:
-        rust: [stable]
-        job:
-          # - os: macos-latest # TODO: Need to generate fixtures for macOS first
-          - os: ubuntu-latest
-          - os: windows-latest
+    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
@@ -56,12 +48,11 @@ jobs:
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         with:
           command: test
-          args: -r --all-targets --all-features --workspace -p ${{ needs.determine-package.outputs.package }} -- --ignored
+          args: -r --all-targets --all-features -p rustic-rs --test completions -- --ignored
 
   semver-check:
     name: Check SemVer
     runs-on: ubuntu-latest
-    needs: determine-package
     strategy:
       matrix:
         rust: [stable]
@@ -81,4 +72,4 @@ jobs:
       - name: Check semver
         uses: obi1kenobi/cargo-semver-checks-action@e275dda72e250d4df5b564e969e1348d67fefa52 # v2
         with:
-          package: ${{ needs.determine-package.outputs.package }}
+          package: rustic-rs

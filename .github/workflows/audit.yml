@@ -1,6 +1,7 @@
 name: Security audit
 
 on:
+  pull_request:
   schedule:
     # Runs at 00:00 UTC everyday
     - cron: "0 0 * * *"
@@ -10,7 +11,8 @@ on:
       - "**/Cargo.lock"
       - "crates/**/Cargo.toml"
       - "crates/**/Cargo.lock"
-  pull_request:
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   audit:
@@ -25,7 +27,17 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
       - uses: actions-rs/audit-check@35b7b53b1e25b55642157ac01b4adceb5b9ebef3 # v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  cargo-deny:
+    name: Run cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+
+      - uses: EmbarkStudios/cargo-deny-action@a50c7d5f86370e02fae8472c398f15a36e517bb8 # v1
+        with:
+          command: check bans licenses sources

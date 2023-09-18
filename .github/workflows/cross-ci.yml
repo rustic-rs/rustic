@@ -1,24 +1,29 @@
-name: Create PR artifacts
+name: Cross CI
 
 on:
   pull_request:
-    types: [labeled]
-    branches:
-      - main
     paths-ignore:
       - "**/*.md"
-      - "docs/**/*"
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "renovate/**"
+      - "release/**"
+    paths-ignore:
+      - "**/*.md"
+  merge_group:
+    types: [checks_requested]
 
-env:
-  BINARY_NAME: rustic
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  pr-build:
-    name: Build PR on ${{ matrix.job.target }}
+  publish:
+    name: Cross checking ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    if: ${{ github.event.label.name == 'S-build' }}
     strategy:
+      fail-fast: false
       matrix:
         rust: [stable]
         job:
@@ -26,55 +31,46 @@ jobs:
             os-name: windows
             target: x86_64-pc-windows-msvc
             architecture: x86_64
-            binary-postfix: ".exe"
             use-cross: false
           - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
-            binary-postfix: ""
             use-cross: false
           - os: macos-latest
             os-name: macos
             target: aarch64-apple-darwin
             architecture: arm64
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-gnu
             architecture: x86_64
-            binary-postfix: ""
             use-cross: false
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-musl
             architecture: x86_64
-            binary-postfix: ""
             use-cross: false
           - os: ubuntu-latest
             os-name: linux
             target: aarch64-unknown-linux-gnu
             architecture: arm64
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: i686-unknown-linux-gnu
             architecture: i686
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: netbsd
             target: x86_64-unknown-netbsd
             architecture: x86_64
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: armv7-unknown-linux-gnueabihf
             architecture: armv7
-            binary-postfix: ""
             use-cross: true
 
     steps:
@@ -82,41 +78,25 @@ jobs:
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
         with:
           fetch-depth: 0 # fetch all history so that git describe works
-      - name: Create binary artifact
-        uses: rustic-rs/create-binary-artifact-action@main # dev
+      - name: Set up Rust
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           toolchain: ${{ matrix.rust }}
+          override: true
           target: ${{ matrix.job.target }}
-          use-cross: ${{ matrix.job.use-cross }}
-          describe-tag-suffix: -${{ github.run_id }}-${{ github.run_attempt }}
-          binary-postfix: ${{ matrix.job.binary-postfix }}
-          os: ${{ runner.os }}
-          binary-name: ${{ env.BINARY_NAME }}
-          package-secondary-name: ${{ matrix.job.target}}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-ref: ${{ github.ref }}
-          sign-release: false
-          hash-release: true
-          use-project-version: true
-
-  remove-build-label:
-    name: Remove build label
-    needs: pr-build
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-    runs-on: ubuntu-latest
-    if: |
-      always() &&
-      ! contains(needs.*.result, 'skipped')
-    steps:
-      - name: Remove label
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: install compiler
+        shell: bash
+        if: ${{ matrix.job.target == 'x86_64-unknown-linux-musl' }}
         run: |
-          gh api \
-          --method DELETE \
-          -H "Accept: application/vnd.github+json" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          /repos/${{ github.repository }}/issues/${{ github.event.number }}/labels/S-build
+          sudo apt update
+          sudo apt-get install -y musl-tools
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
+        with:
+          key: ${{ matrix.job.target }}
+      - name: Cargo check
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        with:
+          command: check
+          use-cross: ${{ matrix.job.use-cross }}
+          toolchain: ${{ matrix.job.toolchain }}
+          args: --release --all-features --target ${{ matrix.job.target }}

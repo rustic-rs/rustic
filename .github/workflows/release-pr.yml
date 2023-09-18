@@ -7,8 +7,7 @@ on:
         required: true
         type: choice
         options:
-          - rustic
-          - rustic_core
+          - rustic-rs
       version:
         description: Version to release
         required: true
@@ -22,14 +21,14 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
       - uses: chainguard-dev/actions/setup-gitsign@main
-      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
       - name: Install cargo-release
-        uses: taiki-e/install-action@v1
+        uses: taiki-e/install-action@de0d48bde65ea4c3b39598619c16d930abf31208 # v2
         with:
           tool: cargo-release
-      - uses: cargo-bins/release-pr@v2
+      - uses: cargo-bins/release-pr@deeacca5a38bacc74a3f444b798f4b9bba40f6ad # v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ inputs.version }}

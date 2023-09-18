@@ -24,11 +24,11 @@ license = { workspace = true }
 readme = "README.md"
 repository = { workspace = true }
 resolver = "2"
-rust-version = "1.67.1"
+rust-version = "1.70.0"
 description = { workspace = true }
 
 [workspace]
-members = ["crates/rustic_core", "crates/rustic_testing", "xtask"]
+members = ["crates/rustic_testing", "xtask"]
 
 [[bin]]
 name = "rustic"
@@ -132,7 +132,7 @@ toml = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
 sha2 = { version = "0.10", features = ["asm"] }
-libc = "0.2.147"
+libc = "0.2.148"
 
 [target.'cfg(windows)'.dependencies]
 # unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17
@@ -142,7 +142,7 @@ sha2 = "0.10"
 xattr = "1"
 
 [workspace.dependencies]
-rustic_core = { path = "crates/rustic_core/", features = ["cli"], version = "0" }
+rustic_core = { version = "0.1.1", features = ["cli"] }
 abscissa_core = "0.7.0"
 
 # logging
@@ -180,7 +180,7 @@ integer-sqrt = "0.1"
 binrw = "0.11"
 hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["serde_derive"] }
-serde_with = { version = "3.2", features = ["base64"] }
+serde_with = { version = "3.3", features = ["base64"] }
 serde_json = "1"
 serde-aux = "4"
 
@@ -190,7 +190,7 @@ ignore = "0.4"
 cached = { version = "0.45", default-features = false, features = ["proc_macro"] }
 nix = { version = "0.27", default-features = false, features = ["user", "fs"] }
 filetime = "0.2"
-aho-corasick = "1"
+aho-corasick = "1.1.0"
 
 # rest backend
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-native-roots", "stream", "blocking"] }
@@ -205,8 +205,8 @@ bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 zstd = "0.12"
 enum-map = "2"
-enum-map-derive = "0.13"
-rhai = { version = "1.15", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+enum-map-derive = "0.14"
+rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 simplelog = "0.12"
 comfy-table = "7.0.1"
 
@@ -236,15 +236,19 @@ quickcheck = "1"
 quickcheck_macros = "1"
 tempfile = "3.8"
 pretty_assertions = "1.4"
-toml = "0.7"
+toml = "0.8"
 dircmp = "0.2"
 
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ repo }-v{ version }-{ target }{ archive-suffix }"
-bin-dir = "{ bin }{ binary-ext }"
+bin-dir = "{ bin }-{ target }/{ bin }{ binary-ext }"
 pkg-fmt = "tar.gz"
+
+[package.metadata.binstall.signing]
+algorithm = "minisign"
+pubkey = "RWSWSCEJEEacVeCy0va71hlrVtiW8YzMzOyJeso0Bfy/ZXq5OryWi/8T"
 
 # see: https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.dev]

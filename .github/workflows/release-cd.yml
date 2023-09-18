@@ -3,7 +3,7 @@ name: Build release binaries
 on:
   push:
     branches:
-      - release/*
+      - "release/**"
 
 env:
   BINARY_NAME: rustic
@@ -77,7 +77,7 @@ jobs:
         with:
           fetch-depth: 0 # fetch all history so that git describe works
       - name: Create binary artifact
-        uses: rustic-rs/create-binary-artifact@main # dev
+        uses: rustic-rs/create-binary-artifact-action@main # dev
         with:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.job.target }}
@@ -90,6 +90,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gpg-release-private-key: ${{ secrets.GPG_RELEASE_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          rsign-release-private-key: ${{ secrets.RSIGN_RELEASE_PRIVATE_KEY }}
+          rsign-passphrase: ${{ secrets.RSIGN_PASSPHRASE }}
           github-ref: ${{ github.ref }}
           sign-release: true
           hash-release: true

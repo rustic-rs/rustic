@@ -1,7 +1,5 @@
 //! `init` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use abscissa_core::{status_err, Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 
@@ -14,9 +12,11 @@ use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct InitCmd {
+    /// Key options
     #[clap(flatten, next_help_heading = "Key options")]
     key_opts: KeyOptions,
 
+    /// Config options
     #[clap(flatten, next_help_heading = "Config options")]
     config_opts: ConfigOptions,
 }
@@ -48,6 +48,31 @@ impl InitCmd {
     }
 }
 
+/// Initialize repository
+///
+/// # Arguments
+///
+/// * `repo` - Repository to initialize
+/// * `key_opts` - Key options
+/// * `config_opts` - Config options
+///
+/// # Errors
+///
+///  * [`RepositoryErrorKind::OpeningPasswordFileFailed`] - If opening the password file failed
+/// * [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`] - If reading the password failed
+/// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
+/// * [`RepositoryErrorKind::PasswordCommandParsingFailed`] - If parsing the password command failed
+/// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
+///
+/// # Returns
+///
+/// Returns the initialized repository
+///
+/// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: rustic_core::error::RepositoryErrorKind::OpeningPasswordFileFailed
+/// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
+/// [`RepositoryErrorKind::FromSplitError`]: rustic_core::error::RepositoryErrorKind::FromSplitError
+/// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: rustic_core::error::RepositoryErrorKind::PasswordCommandParsingFailed
+/// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 pub(crate) fn init<P, S>(
     repo: Repository<P, S>,
     key_opts: &KeyOptions,

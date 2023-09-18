@@ -1,7 +1,5 @@
 //! `key` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
 use std::path::PathBuf;
@@ -16,6 +14,7 @@ use rustic_core::{KeyOptions, Repository, RepositoryOptions};
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(super) struct KeyCmd {
+    /// Subcommand to run
     #[clap(subcommand)]
     cmd: KeySubCmd,
 }
@@ -32,6 +31,7 @@ pub(crate) struct AddCmd {
     #[clap(long)]
     pub(crate) new_password_file: Option<PathBuf>,
 
+    /// Key options
     #[clap(flatten)]
     pub(crate) key_opts: KeyOptions,
 }

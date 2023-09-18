@@ -12,6 +12,7 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use rustic_core::{Progress, ProgressBars};
 
+/// Progress Bar Config
 #[serde_as]
 #[derive(Default, Debug, Parser, Clone, Copy, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -34,14 +35,21 @@ pub struct ProgressOptions {
 }
 
 impl ProgressOptions {
+    /// Get the progress interval
+    ///
+    /// # Returns
+    ///
+    /// `Duration::ZERO` if no progress is enabled
     fn progress_interval(&self) -> Duration {
         self.progress_interval.map_or(Duration::ZERO, |i| *i)
     }
 
+    /// Create a hidden progress bar
     pub fn no_progress() -> RusticProgress {
         RusticProgress(ProgressBar::hidden())
     }
 }
+
 impl ProgressBars for ProgressOptions {
     type P = RusticProgress;
 
@@ -97,6 +105,7 @@ impl ProgressBars for ProgressOptions {
     }
 }
 
+/// A default progress bar
 #[derive(Debug, Clone)]
 pub struct RusticProgress(ProgressBar);
 

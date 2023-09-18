@@ -215,10 +215,13 @@ fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOpti
     Err(anyhow!("incorrect password"))
 }
 
-#[test]
-fn verify_cli() {
+#[cfg(test)]
+mod tests {
     use crate::commands::EntryPoint;
     use clap::CommandFactory;
 
-    EntryPoint::command().debug_assert();
+    #[test]
+    fn verify_cli() {
+        EntryPoint::command().debug_assert();
+    }
 }

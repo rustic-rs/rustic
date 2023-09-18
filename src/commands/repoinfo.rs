@@ -1,7 +1,5 @@
 //! `repoinfo` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
 };
@@ -38,6 +36,9 @@ impl Runnable for RepoInfoCmd {
     }
 }
 
+/// Infos about the repository
+///
+/// This struct is used to serialize infos in `json` format.
 #[serde_with::apply(Option => #[serde(default, skip_serializing_if = "Option::is_none")])]
 #[derive(Serialize)]
 struct Infos {
@@ -85,6 +86,12 @@ impl RepoInfoCmd {
     }
 }
 
+/// Print infos about repository files
+///
+/// # Arguments
+///
+/// * `text` - the text to print before the table
+/// * `info` - the [`RepoFileInfo`]s to print
 pub fn print_file_info(text: &str, info: Vec<RepoFileInfo>) {
     let mut table = table_right_from(1, ["File type", "Count", "Total Size"]);
     let mut total_count = 0;
@@ -110,6 +117,11 @@ pub fn print_file_info(text: &str, info: Vec<RepoFileInfo>) {
     println!();
 }
 
+/// Print infos about index
+///
+/// # Arguments
+///
+/// * `index_info` - the [`IndexInfos`] to print
 pub fn print_index_info(index_info: IndexInfos) {
     let mut table = table_right_from(
         1,

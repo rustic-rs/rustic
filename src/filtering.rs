@@ -8,6 +8,9 @@ use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 
+/// A function to filter snapshots
+///
+/// The function is called with a [`SnapshotFile`] and must return a boolean.
 #[derive(Clone, Debug)]
 pub(crate) struct SnapshotFn(FnPtr, AST);
 
@@ -22,6 +25,13 @@ impl FromStr for SnapshotFn {
 }
 
 impl SnapshotFn {
+    /// Call the function with a [`SnapshotFile`]
+    ///
+    /// The function must return a boolean.
+    ///
+    /// # Errors
+    ///
+    // TODO!: add errors!
     fn call<T: Clone + Send + Sync + 'static>(
         &self,
         sn: &SnapshotFile,
@@ -65,6 +75,15 @@ pub struct SnapshotFilter {
 }
 
 impl SnapshotFilter {
+    /// Check if a [`SnapshotFile`] matches the filter
+    ///
+    /// # Arguments
+    ///
+    /// * `snapshot` - The snapshot to check
+    ///
+    /// # Returns
+    ///
+    /// `true` if the snapshot matches the filter, `false` otherwise
     #[must_use]
     pub fn matches(&self, snapshot: &SnapshotFile) -> bool {
         if let Some(filter_fn) = &self.filter_fn {

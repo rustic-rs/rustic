@@ -2,8 +2,6 @@
 
 use std::path::Path;
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -45,6 +43,7 @@ pub(crate) struct LsCmd {
     #[clap(long, short = 'l')]
     long: bool,
 
+    /// Listing options
     #[clap(flatten)]
     ls_opts: LsOptions,
 }
@@ -58,6 +57,9 @@ impl Runnable for LsCmd {
     }
 }
 
+/// Sumary of a ls command
+///
+/// This struct is used to print a summary of the ls command.
 #[derive(Default)]
 struct Summary {
     files: usize,
@@ -66,6 +68,11 @@ struct Summary {
 }
 
 impl Summary {
+    /// Update the summary with the node
+    ///
+    /// # Arguments
+    ///
+    /// * `node` - the node to update the summary with
     fn update(&mut self, node: &Node) {
         if node.is_dir() {
             self.dirs += 1;
@@ -113,7 +120,12 @@ impl LsCmd {
     }
 }
 
-// print node in format similar to unix `ls`
+/// Print node in format similar to unix `ls`
+///
+/// # Arguments
+///
+/// * `node` - the node to print
+/// * `path` - the path of the node
 fn print_node(node: &Node, path: &Path) {
     println!(
         "{:>1}{:>9} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
@@ -145,7 +157,7 @@ fn print_node(node: &Node, path: &Path) {
     );
 }
 
-// helper fn to put permissions in readable format
+/// Convert permissions into readable format
 fn parse_permissions(mode: u32) -> String {
     let user = triplet(mode, S_IRUSR, S_IWUSR, S_IXUSR);
     let group = triplet(mode, S_IRGRP, S_IWGRP, S_IXGRP);
@@ -153,7 +165,18 @@ fn parse_permissions(mode: u32) -> String {
     [user, group, other].join("")
 }
 
-// helper fn to put permissions in readable format
+/// Create a triplet of permissions
+///
+/// # Arguments
+///
+/// * `mode` - the mode to convert
+/// * `read` - the read bit
+/// * `write` - the write bit
+/// * `execute` - the execute bit
+///
+/// # Returns
+///
+/// The triplet of permissions as a string
 fn triplet(mode: u32, read: u32, write: u32, execute: u32) -> String {
     match (mode & read, mode & write, mode & execute) {
         (0, 0, 0) => "---",

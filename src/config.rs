@@ -27,29 +27,47 @@ use crate::{
 };
 
 /// Rustic Configuration
+///
+/// Further documentation can be found [here](https://github.com/rustic-rs/rustic/blob/main/config/README.md).
+///
+/// # Example
+// TODO: add example
 #[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RusticConfig {
+    /// Global options
     #[clap(flatten, next_help_heading = "Global options")]
     pub global: GlobalOptions,
 
+    /// Repository options
     #[clap(flatten, next_help_heading = "Repository options")]
     pub repository: RepositoryOptions,
 
+    /// Snapshot filter options
     #[clap(flatten, next_help_heading = "Snapshot filter options")]
     pub snapshot_filter: SnapshotFilter,
 
+    /// Backup options
     #[clap(skip)]
     pub backup: BackupCmd,
 
+    /// Copy options
     #[clap(skip)]
     pub copy: Targets,
 
+    /// Forget options
     #[clap(skip)]
     pub forget: ForgetOptions,
 }
 
 impl RusticConfig {
+    /// Merge a profile into the current config
+    ///
+    /// # Arguments
+    ///
+    /// * `profile` - name of the profile to merge
+    ///
+    // TODO!: Explain more
     pub fn merge_profile(&mut self, profile: &str) -> Result<(), FrameworkError> {
         let profile_filename = profile.to_string() + ".toml";
         let paths = get_config_paths(&profile_filename);
@@ -77,6 +95,9 @@ impl RusticConfig {
     }
 }
 
+/// Global options
+///
+/// These options are available for all commands.
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
@@ -92,7 +113,7 @@ pub struct GlobalOptions {
     #[merge(strategy = merge::vec::append)]
     pub use_profile: Vec<String>,
 
-    /// Only show what would be done without modifying anything. Does not affect read-only commands
+    /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
     #[merge(strategy = merge::bool::overwrite_false)]
     pub dry_run: bool,
@@ -102,7 +123,10 @@ pub struct GlobalOptions {
     pub log_level: Option<String>,
 
     /// Write log messages to the given file instead of printing them.
-    /// Note: warnings and errors are still additionally printed unless they are ignored by --log-level
+    ///
+    /// # Note
+    ///
+    /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE")]
     pub log_file: Option<PathBuf>,
 
@@ -117,11 +141,21 @@ pub struct GlobalOptions {
     pub env: HashMap<String, String>,
 }
 
-/// extend the contents of right to left.
+/// Extend the contents of a [`HashMap`] with the contents of another
+/// [`HashMap`] with the same key and value types.
 fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
     left.extend(right);
 }
 
+/// Get the paths to the config file
+///
+/// # Arguments
+///
+/// * `filename` - name of the config file
+///
+/// # Returns
+///
+/// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
     [
         ProjectDirs::from("", "", "rustic")
@@ -139,6 +173,12 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
     .collect()
 }
 
+/// Get the path to the global config directory on Windows.
+///
+/// # Returns
+///
+/// The path to the global config directory on Windows.
+/// If the environment variable `PROGRAMDATA` is not set, `None` is returned.
 #[cfg(target_os = "windows")]
 fn get_global_config_path() -> Option<PathBuf> {
     std::env::var_os("PROGRAMDATA").map(|program_data| {
@@ -148,11 +188,22 @@ fn get_global_config_path() -> Option<PathBuf> {
     })
 }
 
+/// Get the path to the global config directory on ios and wasm targets.
+///
+/// # Returns
+///
+/// `None` is returned.
 #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
 fn get_global_config_path() -> Option<PathBuf> {
     None
 }
 
+/// Get the path to the global config directory on non-Windows,
+/// non-iOS, non-wasm targets.
+///
+/// # Returns
+///
+/// "/etc/rustic" is returned.
 #[cfg(not(any(target_os = "windows", target_os = "ios", target_arch = "wasm32")))]
 fn get_global_config_path() -> Option<PathBuf> {
     Some(PathBuf::from("/etc/rustic"))

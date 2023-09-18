@@ -9,7 +9,8 @@ the same name as `rustic`.
 
 ### rustic_core - [Link](https://crates.io/crates/rustic_core)
 
-Core functionality for the `rustic` ecosystem. Can be found [here](https://github.com/rustic-rs/rustic_core).
+Core functionality for the `rustic` ecosystem. Can be found
+[here](https://github.com/rustic-rs/rustic_core).
 
 ### rustic_testing (reserved) - [Link](https://crates.io/crates/rustic_testing)
 

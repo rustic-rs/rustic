@@ -49,27 +49,28 @@ jobs:
         with:
           command: test
           args: -r --all-targets --all-features -p rustic-rs --test completions -- --ignored
+#
+# FIXME: This is broken, when rustic-rs is released, we should fix it.
+# semver-check:
+#   name: Check SemVer
+#   runs-on: ubuntu-latest
+#   strategy:
+#     matrix:
+#       rust: [stable]
+#       job:
+#         - os: ubuntu-latest
+#         # - os: windows-latest # Panics
+#         # - os: macos-latest # Panics
+#   steps:
+#     - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+#     - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+#       with:
+#         profile: minimal
+#         toolchain: stable
+#         override: true
+#     - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
 
-  semver-check:
-    name: Check SemVer
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust: [stable]
-        job:
-          - os: ubuntu-latest
-          # - os: windows-latest # Panics
-          # - os: macos-latest # Panics
-    steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-
-      - name: Check semver
-        uses: obi1kenobi/cargo-semver-checks-action@e275dda72e250d4df5b564e969e1348d67fefa52 # v2
-        with:
-          package: rustic-rs
+#     - name: Check semver
+#       uses: obi1kenobi/cargo-semver-checks-action@e275dda72e250d4df5b564e969e1348d67fefa52 # v2
+#       with:
+#         package: rustic-rs

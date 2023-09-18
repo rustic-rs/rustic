@@ -128,14 +128,15 @@ Tried rustic and not satisfied? Don't just walk away! You can help:
 Do you know how to code or got an idea for an improvement? Don't keep it to
 yourself!
 
-- [Contribute fixes](https://github.com/rustic-rs/rustic/contribute) or new features via a pull requests!
+- [Contribute fixes](https://github.com/rustic-rs/rustic/contribute) or new
+  features via a pull requests!
 
 Please make sure, that you read the
 [contribution guide](https://rustic.cli.rs/docs/contributing-to-rustic.html).
 
 ## Minimum Rust version policy
 
-This crate's minimum supported `rustc` version is `1.67.1`.
+This crate's minimum supported `rustc` version is `1.70.0`.
 
 The current policy is that the minimum Rust version required to use this crate
 can be increased in minor version updates. For example, if `crate 1.0` requires

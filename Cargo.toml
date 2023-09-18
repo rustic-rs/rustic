@@ -24,7 +24,7 @@ license = { workspace = true }
 readme = "README.md"
 repository = { workspace = true }
 resolver = "2"
-rust-version = "1.67.1"
+rust-version = "1.70.0"
 description = { workspace = true }
 
 [workspace]

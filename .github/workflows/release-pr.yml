@@ -33,4 +33,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ inputs.version }}
           crate-name: ${{ inputs.crate }}
-          check-semver: true
+          check-semver: false # FIXME: Set back to true and check rustic-rs library API

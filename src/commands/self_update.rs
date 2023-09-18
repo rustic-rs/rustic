@@ -9,7 +9,6 @@ use self_update::cargo_crate_version;
 use semver::Version;
 
 /// `self-update` subcommand
-
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct SelfUpdateCmd {
     /// Do not ask before processing the self-update

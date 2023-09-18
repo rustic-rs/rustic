@@ -40,6 +40,10 @@ harness = true
 edition = "2021"
 # required-features = []
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
+
 [dependencies]
 abscissa_core = { workspace = true }
 rustic_core = { workspace = true }

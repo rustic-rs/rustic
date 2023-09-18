@@ -77,7 +77,7 @@ information on how to get started.
 
 ### From binaries
 
-##### [cargo-binstall](https://crates.io/crates/cargo-binstall)
+#### [cargo-binstall](https://crates.io/crates/cargo-binstall)
 
 ```bash
 cargo binstall rustic-rs
@@ -128,7 +128,7 @@ Tried rustic and not satisfied? Don't just walk away! You can help:
 Do you know how to code or got an idea for an improvement? Don't keep it to
 yourself!
 
-- Contribute fixes or new features via a pull requests!
+- [Contribute fixes](https://github.com/rustic-rs/rustic/contribute) or new features via a pull requests!
 
 Please make sure, that you read the
 [contribution guide](https://rustic.cli.rs/docs/contributing-to-rustic.html).

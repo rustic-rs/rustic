@@ -13,7 +13,6 @@ on:
   #       type: choice
   #       options:
   #         - rustic-rs
-  #         - rustic_core
   #         - rustic_testing
 
 jobs:

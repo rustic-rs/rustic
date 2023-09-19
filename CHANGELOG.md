@@ -4,8 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [0.6.0] - 2023-09-19
 
+### Breaking Changes
+
+- We refactored to
+  [`rustic_core`](https://www.github.com/rustic-rs/rustic_core). This means that
+  most of the underlying logic can now be used as a library. The CLI is now a
+  thin wrapper around the library. This also means that the CLI is now much more
+  customizable. Please check out the
+  [documentation](https://rustic.cli.rs/docs/getting_started.html) for more
+  information.
+
 ### Bug Fixes
 
+- prune did abort when no time was set for a pack-do-delete. This case is now
+  handled correctly.
+- retrying backend access didn't work for long operations. This has been fixed
+  (and retries are now customizable)
+- The zstd compression library led to data corruption in very unlikely cases.
+  This has been fixed by a dependency update.
+- The glob option did only work with absolute files. This has been fixed.
+- Non-unicode link targets are now correctly handled on Unix (after this has
+  been added to the restic repo format).
 - Correct glob-matching for relative paths
   ([#783](https://github.com/rustic-rs/rustic/issues/783))
 - Maskfile

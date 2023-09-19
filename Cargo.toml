@@ -94,7 +94,7 @@ toml = { workspace = true }
 libc = "0.2.148"
 [workspace.dependencies]
 rustic_core = { version = "0.1.1", features = ["cli"] }
-abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
+abscissa_core = { version = "0.7.0", default-features = false, features = ["application", "testing"] }
 
 # logging
 log = "0.4"

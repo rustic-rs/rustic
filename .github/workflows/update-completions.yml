@@ -35,7 +35,7 @@ jobs:
         id: generated-fixtures
         with:
           command: install
-          args: -r --path .
+          args: --path .
 
       - name: Generate completions
         shell: bash

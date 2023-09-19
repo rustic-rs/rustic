@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable]
-        feature: ["default", "mimalloc", jemallocator]
+        feature: [default]
         job:
           - os: windows-latest
             os-name: windows

@@ -85,4 +85,4 @@ jobs:
           target: ${{ matrix.job.target }}
           use-cross: ${{ matrix.job.use-cross }}
           all-features: "false"
-          feature: ${{ matrix.job.feature }}
+          feature: ${{ matrix.feature }}

@@ -30,6 +30,11 @@ description = { workspace = true }
 [workspace]
 members = ["crates/rustic_testing", "xtask"]
 
+[features]
+default = []
+mimalloc = ["dep:mimalloc"]
+jemallocator = ["dep:jemallocator-global"]
+
 [[bin]]
 name = "rustic"
 path = "src/bin/rustic.rs"
@@ -120,6 +125,8 @@ gethostname = { workspace = true }
 humantime = { workspace = true }
 indicatif = { workspace = true }
 itertools = { workspace = true }
+jemallocator-global = { version = "0.3.2", optional = true }
+mimalloc = { version = "0.1.39", default_features = false, optional = true }
 path-dedot = { workspace = true }
 rhai = { workspace = true }
 shell-words = { workspace = true }

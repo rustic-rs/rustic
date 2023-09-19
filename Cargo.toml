@@ -52,59 +52,18 @@ rustic_core = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 
-# macros
-derivative = { workspace = true }
-derive_more = { workspace = true }
-derive_setters = { workspace = true }
-
 # logging
 log = { workspace = true }
-tracing-appender = { workspace = true }
-tracing-error = { workspace = true }
-tracing-subscriber = { workspace = true }
-
-# rclone backend
-semver = { workspace = true }
-
-# parallelize
-crossbeam-channel = { workspace = true }
-pariter = { workspace = true }
-rayon = { workspace = true }
-
-# crypto
-aes256ctr_poly1305aes = { workspace = true }
-rand = { workspace = true }
-scrypt = { workspace = true }
-
-# chunker / packer
-integer-sqrt = { workspace = true }
 
 # serialization
-binrw = { workspace = true }
-hex = { workspace = true }
 serde = { workspace = true }
-serde-aux = { workspace = true }
 serde_json = { workspace = true }
 serde_with = { workspace = true }
 
 # other dependencies
-bytes = { workspace = true }
 chrono = { workspace = true }
-enum-map = { workspace = true }
-enum-map-derive = { workspace = true }
 self_update = { workspace = true }
-zstd = { workspace = true }
-
-# local backend
-aho-corasick = { workspace = true }
-filetime = { workspace = true }
-ignore = { workspace = true }
-nix = { workspace = true }
-walkdir = { workspace = true }
-
-# cache
-cachedir = { workspace = true }
-dirs = { workspace = true }
+semver = { workspace = true }
 
 # commands
 clap = { workspace = true }
@@ -113,16 +72,13 @@ merge = { workspace = true }
 
 bytesize = { workspace = true }
 comfy-table = { workspace = true }
-dialoguer = "0.10.4"
+dialoguer = { workspace = true }
 directories = { workspace = true }
-dunce = { workspace = true }
 gethostname = { workspace = true }
 humantime = { workspace = true }
 indicatif = { workspace = true }
 itertools = { workspace = true }
-path-dedot = { workspace = true }
 rhai = { workspace = true }
-shell-words = { workspace = true }
 simplelog = { workspace = true }
 
 [dev-dependencies]
@@ -135,96 +91,37 @@ tempfile = { workspace = true }
 toml = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
-sha2 = { version = "0.10", features = ["asm"] }
 libc = "0.2.148"
-
-[target.'cfg(windows)'.dependencies]
-# unfortunately, the asm extensions do not build on MSVC, see https://github.com/RustCrypto/asm-hashes/issues/17
-sha2 = "0.10"
-
-[target.'cfg(not(any(windows, target_os="openbsd")))'.dependencies]
-xattr = "1"
-
 [workspace.dependencies]
 rustic_core = { version = "0.1.1", features = ["cli"] }
-abscissa_core = "0.7.0"
+abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
 
 # logging
-tracing-appender = { version = "0.2.2", features = ["parking_lot"] }
-tracing-error = "0.2.0"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+log = "0.4"
 
 # errors
 displaydoc = "0.2.4"
 thiserror = "1"
 anyhow = "1"
 
-# macros
-derive_more = "0.99"
-derivative = "2"
-derive_setters = "0.1"
-
-# logging
-log = "0.4"
-
-# parallelize
-crossbeam-channel = "0.5"
-rayon = "1"
-pariter = "0.5"
-
-# crypto
-aes256ctr_poly1305aes = "0.1"
-rand = "0.8"
-scrypt = { version = "0.11", default-features = false }
-
-# chunker / packer
-integer-sqrt = "0.1"
-
 # serialization
-binrw = "0.11"
-hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["serde_derive"] }
 serde_with = { version = "3.3", features = ["base64"] }
 serde_json = "1"
-serde-aux = "4"
-
-# local backend
-walkdir = "2"
-ignore = "0.4"
-cached = { version = "0.45", default-features = false, features = ["proc_macro"] }
-nix = { version = "0.27", default-features = false, features = ["user", "fs"] }
-filetime = "0.2"
-aho-corasick = "1.1.0"
-
-# rest backend
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-native-roots", "stream", "blocking"] }
-backoff = "0.4"
-url = "2.4.1"
-
-# rclone backend
-semver = "1"
 
 # other dependencies
-bytes = "1"
+aho-corasick = "1.1.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
-zstd = "0.12"
-enum-map = "2"
-enum-map-derive = "0.14"
 rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+semver = "1"
 simplelog = "0.12"
 comfy-table = "7.0.1"
-
-# cache
-dirs = "5"
-cachedir = "0.3"
 
 # commands
 merge = "0.1"
 directories = "5"
-shell-words = "1"
+dialoguer = "0.10.4"
 indicatif = "0.17"
-path-dedot = "3"
-dunce = "1"
 gethostname = "0.4"
 bytesize = "1"
 itertools = "0.11"

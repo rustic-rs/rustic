@@ -2,9 +2,3 @@
 rustdocflags = ["--document-private-items"]
 # rustflags = "-C target-cpu=native -D warnings"
 # incremental = true
-
-[alias]
-xtask = "run --package xtask --"
-
-[target.x86_64-pc-windows-msvc]
-linker = "rust-lld.exe"

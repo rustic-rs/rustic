@@ -50,6 +50,6 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add tests/completions-fixtures/*
-          git commit -m "Generated: Updated Completions fixtures
+          git commit -m "Generated: Updated Completions fixtures"
           git pull --rebase
           git push

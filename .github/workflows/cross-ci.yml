@@ -86,17 +86,17 @@ jobs:
           target: ${{ matrix.job.target }}
       - name: install compiler
         shell: bash
-        if: ${{ matrix.job.target == 'x86_64-unknown-linux-musl' }}
+        if: matrix.job.target == 'x86_64-unknown-linux-musl'
         run: |
           sudo apt update
           sudo apt-get install -y musl-tools
       - name: install compiler on macos
         shell: bash
-        if: ${{ matrix.job.target == 'x86_64-apple-darwin' }}
+        if: matrix.job.target == 'x86_64-apple-darwin' && matrix.job.use-cross == 'false'
         run: |
           brew install michaeleisel/zld/zld
       - name: install mold linker on linux gnu
-        if: ${{ matrix.job.target == 'x86_64-unknown-linux-gnu' }}
+        if: matrix.job.target == 'x86_64-unknown-linux-gnu' && matrix.job.use-cross == 'false'
         uses: rui314/setup-mold@v1
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
         with:

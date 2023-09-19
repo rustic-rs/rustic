@@ -35,7 +35,9 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        feature: ["default", "mimalloc", jemallocator]
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
       - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
@@ -47,7 +49,7 @@ jobs:
       - uses: actions-rs/clippy-check@b5b5f21f4797c02da247df37026fcd0a5024aa4d # v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features -- -D warnings
+          args: --all-targets --features ${{ matrix.feature }} -- -D warnings
           name: Clippy Output
 
   test:
@@ -56,6 +58,7 @@ jobs:
     strategy:
       matrix:
         rust: [stable]
+        feature: ["default", "mimalloc", jemallocator]
         job:
           - os: macos-latest
           - os: ubuntu-latest
@@ -81,7 +84,7 @@ jobs:
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         with:
           command: test
-          args: -r --all-targets --all-features --workspace
+          args: -r --all-targets --features ${{ matrix.feature }} --workspace
 
   docs:
     name: Build docs

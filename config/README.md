@@ -1,3 +1,7 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/rustic-rs/assets/main/logos/readme_header_config.png" height="400" />
+</p>
+
 # Rustic Configuration Specification
 
 `rustic` is a backup tool that allows users to define their backup options using

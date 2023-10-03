@@ -167,6 +167,12 @@ lto = false
 debug-assertions = true
 codegen-units = 4
 
+# compile dependencies with optimizations in dev mode
+# see: https://doc.rust-lang.org/stable/cargo/reference/profiles.html#overrides
+[profile.dev.package."*"]
+opt-level = 3
+debug = true
+
 [profile.release]
 opt-level = 3
 debug = false # true for profiling

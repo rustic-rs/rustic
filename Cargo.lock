@@ -2167,7 +2167,6 @@ dependencies = [
  "log",
  "merge",
  "mimalloc",
- "nix",
  "once_cell",
  "pariter",
  "path-dedot",

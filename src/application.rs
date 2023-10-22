@@ -117,7 +117,7 @@ impl Application for RusticApp {
 
             Some(file) => CombinedLogger::init(vec![
                 TermLogger::new(
-                    level_filter.max(LevelFilter::Warn),
+                    level_filter.min(LevelFilter::Warn),
                     simplelog::ConfigBuilder::new()
                         .set_time_level(LevelFilter::Off)
                         .build(),

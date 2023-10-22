@@ -43,6 +43,14 @@ impl InitCmd {
             bail!("Config file already exists. Aborting.");
         }
 
+        // Handle dry-run mode
+        if config.global.dry_run {
+            bail!(
+                "cannot initialize repository {} in dry-run mode!",
+                repo.name
+            );
+        }
+
         let _ = init(repo, &self.key_opts, &self.config_opts)?;
         Ok(())
     }

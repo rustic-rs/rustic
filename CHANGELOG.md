@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.0] - 2023-09-20
+## [0.6.0] - 2023-10-23
 
 ### Breaking Changes
 
@@ -16,275 +16,39 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
-- prune did abort when no time was set for a pack-do-delete. This case is now
-  handled correctly.
-- retrying backend access didn't work for long operations. This has been fixed
+- Retrying backend access didn't work for long operations. This has been fixed
   (and retries are now customizable)
+- Prune did abort when no time was set for a pack-do-delete. This case is now
+  handled correctly.
 - The zstd compression library led to data corruption in very unlikely cases.
   This has been fixed by a dependency update.
 - The glob option did only work with absolute files. This has been fixed.
 - Non-unicode link targets are now correctly handled on Unix (after this has
   been added to the restic repo format).
-- Correct glob-matching for relative paths
-  ([#783](https://github.com/rustic-rs/rustic/issues/783))
-- Maskfile
-- Update rust crate libc to 0.2.148
-  ([#884](https://github.com/rustic-rs/rustic/issues/884))
-
-### Documentation
-
-- Add contacts to README.md
-- Add `CONTRIBUTING.md` ([#762](https://github.com/rustic-rs/rustic/issues/762))
-- Fully document configuration specification and environment variables
-  ([#766](https://github.com/rustic-rs/rustic/issues/766))
-- Update Readme layout, move docs to separate repository, add rustic_core
-  Readme.md ([#820](https://github.com/rustic-rs/rustic/issues/820))
-- Add rustic_core logo
-- Set subtitle for rustic_core readme
-- Add link to nightly binaries
-- Add link to nightly downloads in documentation
-- Replace justfile with self-documenting maskfile
-- Fix item links in documentation for rustic_core
-- Pass "--document-private-items" to rustdoc via metadata in manifest
-- Rewrite contribution remark
-- Fix lsit indent
-- Add contributing short link
+- The `--dry-run` option now works as expected in the `init` command.
 
 ### Features
 
 - New global configuration paths are available, located at `/etc/rustic/*.toml`
-  or`%PROGRAMDATA%/rustic/config/*.toml`, depending on your platform.
+  or `%PROGRAMDATA%/rustic/config/*.toml`, depending on your platform.
+- REST backend: Now allows to use custom TLS root certificates.
 - Environment variables for programms called by rustic can now be set in the
   config files.
-- REST backend: Now allows to use custom TLS root certificates.
+- Creation of new keys now enforces confirmation of entered key. This helps to
+  prevent mistype of passwords during the initial entry
+- Wait for password-command to successfully exit, allowing to input something
+  into the command, and read password from stdout.
+- backup: New option --init to initialize repository if it doesn't exist yet.
+- backup: New option `no-require-git` - if enabled, a git repository is not
+  required to apply `git-ignore` rule.
 - restore: The restore algorithm has been improved and should now be faster for
   remote repositories.
 - restore: Files are now allocated just before being first processed. This
   allows easier resumed restores.
-- New option: `no-require-git` for backup - if enabled, a git repository is not
-  required to apply `git-ignore` rule.
-- fix: wait for password-command to successfully exit, allowing to input
-  something into the command, and read password from stdout.
-- repoinfo: Added new options --json, --only-files, --only-index
-- Creation of new keys now enforces confirmation of entered key. This helps to
-  prevent mistype of passwords during the initial entry
-- Check: Add check if time is set for packs-to-delete
+- repoinfo: Added new options --json, --only-files, --only-index.
+- check: Add check if time is set for packs-to-delete.
 - ls: Options --long (-l) and --summary (-s) have been added.
 - forget: Option --json has been added.
-- backup: New option --init to initialize repository if it doesn't exist yet.
-- Option to disable requiring git repository for git-ignore rules
-- Wait for password-command to exit
-- Add `--json` option to `forget` command
-  ([#806](https://github.com/rustic-rs/rustic/issues/806))
-- Add init option ([#805](https://github.com/rustic-rs/rustic/issues/805))
-- Add optional (unsupported) allocators
-  ([#897](https://github.com/rustic-rs/rustic/issues/897))
-
-### Generated
-
-- Updated Completions fixtures
-
-### Miscellaneous Tasks
-
-- Bump libc from 0.2.145 to 0.2.146
-- Bump tempfile from 3.5.0 to 3.6.0
-- Bump serde from 1.0.163 to 1.0.164
-- Bump clap from 4.3.2 to 4.3.3
-- Bump log from 0.4.18 to 0.4.19
-- Bump clap from 4.3.3 to 4.3.4
-- Bump sha2 from 0.10.6 to 0.10.7
-- Bump serde_json from 1.0.96 to 1.0.97
-- Bump rhai from 1.14.0 to 1.15.0
-- Bump clap from 4.3.4 to 4.3.5
-- Bump clap from 4.3.5 to 4.3.8
-- Bump rhai from 1.15.0 to 1.15.1
-- Bump libc from 0.2.146 to 0.2.147
-- Bump toml from 0.7.4 to 0.7.5
-- Bump serde_json from 1.0.97 to 1.0.99
-- Bump clap from 4.3.8 to 4.3.10
-- Bump serde from 1.0.164 to 1.0.166
-- Bump thiserror from 1.0.40 to 1.0.41
-- Bump clap_complete from 4.3.1 to 4.3.2
-- Bump clap from 4.3.10 to 4.3.11
-- Bump serde from 1.0.166 to 1.0.167
-- Bump enum-map from 2.5.0 to 2.6.0
-- Bump serde_json from 1.0.99 to 1.0.100
-- Bump toml from 0.7.5 to 0.7.6
-- Bump enum-map-derive from 0.11.0 to 0.12.0
-- Bump pretty_assertions from 1.3.0 to 1.4.0
-- Bump thiserror from 1.0.41 to 1.0.43
-- Bump serde from 1.0.167 to 1.0.168
-- Bump serde_json from 1.0.100 to 1.0.101
-- Bump serde_json from 1.0.101 to 1.0.102
-- Bump clap from 4.3.11 to 4.3.12
-- Ignore markdown files in CI
-  ([#773](https://github.com/rustic-rs/rustic/issues/773))
-- Bump thiserror from 1.0.43 to 1.0.44
-- Bump clap from 4.3.17 to 4.3.19
-- Bump xattr from 1.0.0 to 1.0.1
-- Bump enum-map-derive from 0.12.0 to 0.13.0
-- Lint markdown with dprint, run initial dprint fmt
-  ([#830](https://github.com/rustic-rs/rustic/issues/830))
-- Add support for `cargo-binstall`
-  ([#829](https://github.com/rustic-rs/rustic/issues/829))
-- Fix artifacts not building, do non-cross builds with `cargo-auditable` and
-  include `config/` directory into package
-  ([#843](https://github.com/rustic-rs/rustic/issues/843))
-- Replace dependabot with renovate for easier dependency management
-  ([#867](https://github.com/rustic-rs/rustic/issues/867))
-- Lint has been removed
-- Nightly builds
-- Remove docs/screenshots directory as that has been moved to the assets
-  repository
-- Sign binary package
-- Declutter and reorganize ci files
-- Restructure workflows, split out common action under
-  <https://github.com/rustic-rs/create-binary-artifact>
-- Add temporarily generated files from tests to gitignore
-- Rename action to better reflect its intentions
-- Add doc builds to ci for warnings
-- Exclude macOS from breaking CLI changes
-- Remove restriction of semver check to run only when cli check has passed
-- Make release checks for breaking changes run package dependent
-- Fix typo in ref name
-- Fix name for workspace package
-- Remove git protocol flag for public-api as it's now working with sparse
-  registry
-- Fix github refs
-- Use bash substring comparison to determine package name from branch
-- Fix unexpected token in expression error
-- Fix woggly github action comparison
-- Add triaging of issues
-- Run release checks also on release subbranches
-- Run on renovate branches
-- Add merge queue checks
-- Add cargo deny
-- Update package name for release-pr
-- Relink to new image location
-- Add support for signing binaries with rsign2 for cargo-binstall
-- Update public key
-- Remove rustic core
-- Remove outdated lint
-- Up cargo msrv
-- Set rustic_core version to released version on crates.io
-- Implement manual completions generation and update check
-- Add cross ci only for checks
-- Remove binary postfix leftover
-- Add build instructions to manifest
-- Update library documentation
-- Deactivate semver checks until rustic-rs library is released
-- Release
-- Comment out broken semver-check until release
-- Remove release cd in favour of cross-ci, artifacts can then be build from the
-  main branch or with S-build if needed
-- Fix completions fixture install routine
-- Fix missing string delimiter
-- Try using different compilers/linkers to speed up ci builds
-- Install compilers/linkers
-- User different compilers/linkers only on non-cross builds
-- Remove os-dependent settings from project config
-- Use cross-ci action
-- Try building x86_64-pc-windows-gnu for nightly
-
-### Refactor
-
-- Replace `nom` with `shellwords` to split strings
-  ([#752](https://github.com/rustic-rs/rustic/issues/752))
-- Add metadata to crate manifests
-  ([#822](https://github.com/rustic-rs/rustic/issues/822))
-
-### Build
-
-- Bump serde_json from 1.0.102 to 1.0.103
-  ([#772](https://github.com/rustic-rs/rustic/issues/772))
-- Bump clap from 4.3.12 to 4.3.16
-  ([#771](https://github.com/rustic-rs/rustic/issues/771))
-- Bump serde_with from 3.0.0 to 3.1.0
-  ([#769](https://github.com/rustic-rs/rustic/issues/769))
-- Bump anyhow from 1.0.71 to 1.0.72
-  ([#770](https://github.com/rustic-rs/rustic/issues/770))
-- Bump public-api from 0.29.1 to 0.31.2
-  ([#695](https://github.com/rustic-rs/rustic/issues/695))
-- Bump zstd from 0.12.3+zstd.1.5.2 to 0.12.4
-  ([#776](https://github.com/rustic-rs/rustic/issues/776))
-- Bump semver from 1.0.17 to 1.0.18
-  ([#775](https://github.com/rustic-rs/rustic/issues/775))
-- Bump tempfile from 3.6.0 to 3.7.0
-  ([#778](https://github.com/rustic-rs/rustic/issues/778))
-- Bump clap from 4.3.16 to 4.3.17
-  ([#777](https://github.com/rustic-rs/rustic/issues/777))
-- Bump serde_json from 1.0.103 to 1.0.104
-  ([#786](https://github.com/rustic-rs/rustic/issues/786))
-- Bump indicatif from 0.17.5 to 0.17.6
-  ([#790](https://github.com/rustic-rs/rustic/issues/790))
-- Bump enum-map from 2.6.0 to 2.6.1
-  ([#789](https://github.com/rustic-rs/rustic/issues/789))
-- Bump public-api from 0.31.2 to 0.31.3
-  ([#796](https://github.com/rustic-rs/rustic/issues/796))
-- Bump serde_with from 3.1.0 to 3.2.0
-  ([#795](https://github.com/rustic-rs/rustic/issues/795))
-- Bump rustdoc-json from 0.8.6 to 0.8.7
-  ([#794](https://github.com/rustic-rs/rustic/issues/794))
-- Bump serde from 1.0.181 to 1.0.183
-  ([#801](https://github.com/rustic-rs/rustic/issues/801))
-- Bump filetime from 0.2.21 to 0.2.22
-  ([#802](https://github.com/rustic-rs/rustic/issues/802))
-- Bump tempfile from 3.7.0 to 3.7.1
-  ([#803](https://github.com/rustic-rs/rustic/issues/803))
-- Bump clap from 4.3.19 to 4.3.21
-  ([#807](https://github.com/rustic-rs/rustic/issues/807))
-- Bump aho-corasick from 1.0.2 to 1.0.3
-  ([#811](https://github.com/rustic-rs/rustic/issues/811))
-- Bump log from 0.4.19 to 0.4.20
-  ([#814](https://github.com/rustic-rs/rustic/issues/814))
-- Bump aho-corasick from 1.0.3 to 1.0.4
-  ([#815](https://github.com/rustic-rs/rustic/issues/815))
-- Bump thiserror from 1.0.44 to 1.0.46
-  ([#816](https://github.com/rustic-rs/rustic/issues/816))
-- Bump anyhow from 1.0.72 to 1.0.74
-  ([#817](https://github.com/rustic-rs/rustic/issues/817))
-- Bump serde_json from 1.0.104 to 1.0.105
-  ([#818](https://github.com/rustic-rs/rustic/issues/818))
-- Bump thiserror from 1.0.46 to 1.0.47
-  ([#826](https://github.com/rustic-rs/rustic/issues/826))
-- Bump clap from 4.3.21 to 4.3.22
-  ([#827](https://github.com/rustic-rs/rustic/issues/827))
-- Bump anyhow from 1.0.74 to 1.0.75
-  ([#828](https://github.com/rustic-rs/rustic/issues/828))
-- Bump clap from 4.3.22 to 4.3.23
-  ([#833](https://github.com/rustic-rs/rustic/issues/833))
-- Bump tempfile from 3.7.1 to 3.8.0
-  ([#834](https://github.com/rustic-rs/rustic/issues/834))
-- Bump rustls-webpki from 0.100.1 to 0.100.2
-  ([#844](https://github.com/rustic-rs/rustic/issues/844))
-- Bump actions/checkout from 3 to 4
-  ([#863](https://github.com/rustic-rs/rustic/issues/863))
-
-### Ls
-
-- Add options --summary and --long
-
-### Prune
-
-- Add example using rustic_core
-- Don't abort if time is unset for pack-to-delete
-
-### Repoinfo
-
-- Add options --json, --only-files, --only-index
-
-### Rest/rclone
-
-- Make # of retries cusomizable and use sensible default
-
-### Restore
-
-- Download multiple contiguous blobs in one request
-- Create files just before processing
-
-### Rustic_core
-
-- Add NoProgress and NoProgressBars (e.g. for examples)
 
 ## [0.5.4] - 2023-06-05
 

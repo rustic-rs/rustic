@@ -350,12 +350,20 @@ _rustic() {
             return 0
             ;;
         rustic__backup)
-            opts="-g -f -x -P -n -r -p -h --group-by --parent --force --ignore-ctime --ignore-inode --stdin-filename --as-path --with-atime --ignore-devid --glob --iglob --glob-file --iglob-file --git-ignore --exclude-if-present --one-file-system --exclude-larger-than --label --tag --description --description-from --delete-never --delete-after --host --json --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [SOURCE]..."
+            opts="-g -f -x -P -n -r -p -h --stdin-filename --as-path --with-atime --ignore-devid --json --init --group-by --parent --force --ignore-ctime --ignore-inode --glob --iglob --glob-file --iglob-file --git-ignore --no-require-git --exclude-if-present --one-file-system --exclude-larger-than --label --tag --description --description-from --time --delete-never --delete-after --host --command --hostname --username --with-created --set-compression --set-version --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [SOURCE]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --stdin-filename)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --as-path)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --group-by)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -365,14 +373,6 @@ _rustic() {
                     return 0
                     ;;
                 --parent)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --stdin-filename)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --as-path)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -416,11 +416,67 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --time)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --delete-after)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
                 --host)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --command)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --hostname)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --username)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-compression)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-version)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-treepack-size)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-treepack-size-limit)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-treepack-growfactor)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-datapack-size)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-datapack-growfactor)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-datapack-size-limit)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-min-packsize-tolerate-percent)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-max-packsize-tolerate-percent)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1604,12 +1660,20 @@ _rustic() {
             return 0
             ;;
         rustic__copy)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-P -n -r -p -h --init --hostname --username --with-created --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --hostname)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --username)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --use-profile)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -1698,7 +1762,7 @@ _rustic() {
             return 0
             ;;
         rustic__diff)
-            opts="-x -P -n -r -p -h --metadata --no-content --glob --iglob --glob-file --iglob-file --git-ignore --exclude-if-present --one-file-system --exclude-larger-than --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT1[:PATH1]> <SNAPSHOT2[:PATH2]|PATH2>"
+            opts="-x -P -n -r -p -h --metadata --no-content --glob --iglob --glob-file --iglob-file --git-ignore --no-require-git --exclude-if-present --one-file-system --exclude-larger-than --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT1[:PATH1]> <SNAPSHOT2[:PATH2]|PATH2>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1910,7 +1974,7 @@ _rustic() {
             return 0
             ;;
         rustic__forget)
-            opts="-g -l -H -d -w -m -y -P -n -r -p -h --group-by --prune --filter-host --filter-label --filter-paths --filter-tags --filter-fn --keep-tags --keep-id --keep-last --keep-hourly --keep-daily --keep-weekly --keep-monthly --keep-quarter-yearly --keep-half-yearly --keep-yearly --keep-within --keep-within-hourly --keep-within-daily --keep-within-weekly --keep-within-monthly --keep-within-quarter-yearly --keep-within-half-yearly --keep-within-yearly --max-repack --max-unused --keep-pack --keep-delete --instant-delete --fast-repack --repack-uncompressed --repack-all --repack-cacheable-only --no-resize --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help [ID]..."
+            opts="-g -l -H -d -w -m -y -P -n -r -p -h --json --group-by --prune --filter-host --filter-label --filter-paths --filter-tags --filter-fn --keep-tags --keep-id --keep-last --keep-hourly --keep-daily --keep-weekly --keep-monthly --keep-quarter-yearly --keep-half-yearly --keep-yearly --keep-within --keep-within-hourly --keep-within-daily --keep-within-weekly --keep-within-monthly --keep-within-quarter-yearly --keep-within-half-yearly --keep-within-yearly --max-repack --max-unused --keep-pack --keep-delete --instant-delete --fast-repack --repack-uncompressed --repack-all --repack-cacheable-only --no-resize --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3068,7 +3132,7 @@ _rustic() {
             return 0
             ;;
         rustic__ls)
-            opts="-P -n -r -p -h --recursive --glob --iglob --glob-file --iglob-file --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
+            opts="-s -l -P -n -r -p -h --summary --long --glob --iglob --glob-file --iglob-file --recursive --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3178,7 +3242,7 @@ _rustic() {
             return 0
             ;;
         rustic__merge)
-            opts="-P -n -r -p -h --json --delete --label --tag --description --description-from --delete-never --delete-after --host --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-P -n -r -p -h --json --delete --label --tag --description --description-from --time --delete-never --delete-after --host --command --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3200,11 +3264,19 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --time)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --delete-after)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
                 --host)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --command)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -3756,7 +3828,7 @@ _rustic() {
             return 0
             ;;
         rustic__repoinfo)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --only-files --only-index --json --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3850,7 +3922,7 @@ _rustic() {
             return 0
             ;;
         rustic__restore)
-            opts="-P -n -r -p -h --delete --numeric-id --no-ownership --verify-existing --glob --iglob --glob-file --iglob-file --filter-host --filter-label --filter-paths --filter-tags --filter-fn --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help <SNAPSHOT[:PATH]> <DESTINATION>"
+            opts="-P -n -r -p -h --delete --numeric-id --no-ownership --verify-existing --glob --iglob --glob-file --iglob-file --recursive --filter-host --filter-label --filter-paths --filter-tags --filter-fn --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help <SNAPSHOT[:PATH]> <DESTINATION>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4362,4 +4434,4 @@ _rustic() {
     esac
 }
 
-complete -F _rustic -o bashdefault -o default rustic
+complete -F _rustic -o nosort -o bashdefault -o default rustic

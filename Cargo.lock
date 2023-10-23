@@ -2129,38 +2129,22 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.5.4-dev"
+version = "0.6.0"
 dependencies = [
  "abscissa_core",
- "aes256ctr_poly1305aes",
  "aho-corasick",
  "anyhow",
- "binrw",
- "bytes",
  "bytesize",
- "cachedir",
  "chrono",
  "clap",
  "clap_complete",
  "comfy-table",
- "crossbeam-channel",
- "derivative",
- "derive_more",
- "derive_setters",
  "dialoguer",
  "dircmp",
  "directories",
- "dirs",
- "dunce",
- "enum-map",
- "enum-map-derive",
- "filetime",
  "gethostname",
- "hex",
  "humantime",
- "ignore",
  "indicatif",
- "integer-sqrt",
  "itertools",
  "jemallocator-global",
  "libc",
@@ -2169,33 +2153,19 @@ dependencies = [
  "mimalloc",
  "nix",
  "once_cell",
- "pariter",
- "path-dedot",
  "pretty_assertions",
- "rand",
- "rayon",
  "rhai",
  "rustic_core",
  "rustic_testing",
- "scrypt",
  "self_update",
  "semver",
  "serde",
- "serde-aux",
  "serde_json",
  "serde_with",
- "sha2",
- "shell-words",
  "simplelog",
  "tempfile",
  "thiserror",
  "toml 0.8.0",
- "tracing-appender",
- "tracing-error",
- "tracing-subscriber",
- "walkdir",
- "xattr",
- "zstd",
 ]
 
 [[package]]
@@ -2996,18 +2966,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-appender"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09d48f71a791638519505cefafe162606f706c25592e4bde4d97600c0195312e"
-dependencies = [
- "crossbeam-channel",
- "parking_lot",
- "time",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "tracing-attributes"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3026,16 +2984,6 @@ checksum = "0955b8137a1df6f1a2e9a37d8a6656291ff0297c1a97c24e0d8425fe2312f79a"
 dependencies = [
  "once_cell",
  "valuable",
-]
-
-[[package]]
-name = "tracing-error"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d686ec1c0f384b1277f097b2f279a2ecc11afe8c133c1aabf036a27cb4cd206e"
-dependencies = [
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

@@ -2151,7 +2151,6 @@ dependencies = [
  "log",
  "merge",
  "mimalloc",
- "nix",
  "once_cell",
  "pretty_assertions",
  "rhai",

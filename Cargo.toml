@@ -152,7 +152,7 @@ dircmp = "0.2"
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ repo }-v{ version }-{ target }{ archive-suffix }"
 bin-dir = "{ bin }-{ target }/{ bin }{ binary-ext }"
-pkg-fmt = "tar.gz"
+pkg-fmt = "tgz"
 
 [package.metadata.binstall.signing]
 algorithm = "minisign"

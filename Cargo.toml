@@ -122,7 +122,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 semver = "1"
 simplelog = "0.12"
-comfy-table = "7.0.1"
+comfy-table = "7.1.0"
 
 # commands
 merge = "0.1"

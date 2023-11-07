@@ -127,7 +127,7 @@ comfy-table = "7.1.0"
 # commands
 merge = "0.1"
 directories = "5"
-dialoguer = "0.10.4"
+dialoguer = "0.11.0"
 indicatif = "0.17"
 gethostname = "0.4"
 bytesize = "1"

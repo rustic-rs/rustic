@@ -41,3 +41,17 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@1e59595bed8fc55c969333d08d7817b36888f0c5 # v1
         with:
           command: check bans licenses sources
+
+  result:
+    name: Result (Audit)
+    runs-on: ubuntu-latest
+    needs:
+      - audit
+      - cargo-deny
+    steps:
+      - name: Mark the job as successful
+        run: exit 0
+        if: success()
+      - name: Mark the job as unsuccessful
+        run: exit 1
+        if: "!success()"

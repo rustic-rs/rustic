@@ -100,7 +100,7 @@ toml = { workspace = true }
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2.150"
 [workspace.dependencies]
-rustic_core = { version = "0.1.1", features = ["cli"] }
+rustic_core = { version = "0.1.2", features = ["cli"] }
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application", "testing"] }
 
 # logging

@@ -131,7 +131,7 @@ dialoguer = "0.11.0"
 indicatif = "0.17"
 gethostname = "0.4"
 bytesize = "1"
-itertools = "0.11"
+itertools = "0.12"
 humantime = "2"
 clap_complete = "4"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }

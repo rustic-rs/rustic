@@ -204,5 +204,5 @@ codegen-units = 1
 # will result in a file like target/generate-rpm/rustic-rs-0.6.1-1.x86_64.rpm
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/release/rustic", dest = "/usr/bin/rustic", mode = "0755", config = false, doc = false, user = "root", group = "root" }
+  { source = "target/release/rustic", dest = "/usr/bin/rustic", mode = "0755", config = false, doc = false, user = "root", group = "root" },
 ]

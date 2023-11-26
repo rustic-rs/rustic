@@ -63,11 +63,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           fetch-depth: 0
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
         with:
           toolchain: ${{ matrix.rust }}
           profile: minimal
@@ -80,14 +80,14 @@ jobs:
               sudo apt update
               sudo apt-get install -y musl-tools
           fi
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
         with: 
           key: ${{ matrix.job.target }}
       - name: Set Version
         shell: bash
         run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
         with:
           command: build
           use-cross: ${{ matrix.job.use-cross }}
@@ -111,12 +111,12 @@ jobs:
             shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
           fi
       - name: Storing binary as artefact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
         with:
           name: binary-${{ matrix.job.target}}
           path: target/${{ matrix.job.target }}/release/rustic-${{ github.ref_name }}-${{ matrix.job.target}}.tar.gz
       - name: Releasing release versions
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           files: |
             target/${{ matrix.job.target }}/release/rustic-*.tar.gz

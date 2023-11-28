@@ -35,6 +35,7 @@ jobs:
 
   breaking-cli:
     name: Check breaking CLI changes
+    if: ${{ github.repository_owner == 'rustic-rs' }}
     runs-on: ubuntu-latest
 
     steps:

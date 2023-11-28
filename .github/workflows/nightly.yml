@@ -19,7 +19,7 @@ jobs:
   publish:
     name: Publishing ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/heads/main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -115,7 +115,7 @@ jobs:
   publish-nightly:
     name: Publishing nightly builds
     needs: publish
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all workflow run artifacts

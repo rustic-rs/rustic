@@ -21,16 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
         with:
-          profile: minimal
           toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
-        with:
-          command: fmt
-          args: --all -- --check
+          components: rustfmt
+      - name: Run Cargo Fmt
+        run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
@@ -40,17 +37,14 @@ jobs:
         feature: [default]
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
         with:
           toolchain: stable
           components: clippy
-          override: true
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-      - uses: actions-rs/clippy-check@b5b5f21f4797c02da247df37026fcd0a5024aa4d # v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --features ${{ matrix.feature }} -- -D warnings
-          name: Clippy Output
+      - name: Run clippy
+        run: cargo clippy --all-targets --features ${{ matrix.feature }} -- -D warnings
 
   test:
     name: Test
@@ -75,16 +69,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
-        with:
-          command: test
-          args: -r --all-targets --features ${{ matrix.feature }} --workspace
+      - name: Run Cargo Test
+        run: cargo test -r --all-targets --features ${{ matrix.feature }} --workspace
 
   docs:
     name: Build docs
@@ -108,16 +99,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
-        with:
-          command: doc
-          args: --no-deps --all-features --workspace --examples
+      - name: Run Cargo Doc
+        run: cargo doc --no-deps --all-features --workspace --examples
 
   result:
     name: Result (CI)

@@ -22,12 +22,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       # Ensure that the latest version of Cargo is installed
-      - name: Install Rust
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
         with:
           toolchain: stable
-          profile: minimal
-          override: true
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
       - uses: actions-rs/audit-check@35b7b53b1e25b55642157ac01b4adceb5b9ebef3 # v1
         with:

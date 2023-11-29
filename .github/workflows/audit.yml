@@ -27,7 +27,7 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-      - uses: actions-rs/audit-check@35b7b53b1e25b55642157ac01b4adceb5b9ebef3 # v1
+      - uses: rustsec/audit-check@4da312dd0f2a5e6b58fecaec5b19e7271ce2ec5d # v1.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -43,8 +43,8 @@ jobs:
           command: check bans licenses sources
 
   result:
-    name: Result (Audit)
     if: ${{ github.repository_owner == 'rustic-rs' }}
+    name: Result (Audit)
     runs-on: ubuntu-latest
     needs:
       - audit

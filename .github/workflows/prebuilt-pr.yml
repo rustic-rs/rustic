@@ -15,9 +15,9 @@ env:
 
 jobs:
   pr-build:
+    if: ${{ github.event.label.name == 'S-build' && github.repository_owner == 'rustic-rs' }}
     name: Build PR on ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    if: ${{ github.event.label.name == 'S-build' }}
     strategy:
       matrix:
         rust: [stable]
@@ -109,7 +109,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       always() &&
-      ! contains(needs.*.result, 'skipped')
+      ! contains(needs.*.result, 'skipped') &&
+      github.repository_owner == 'rustic-rs'
     steps:
       - name: Remove label
         env:

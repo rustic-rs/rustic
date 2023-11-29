@@ -15,6 +15,7 @@ on:
 
 jobs:
   make-release-pr:
+    if: ${{ github.repository_owner == 'rustic-rs' }}
     permissions:
       id-token: write # Enable OIDC
       pull-requests: write

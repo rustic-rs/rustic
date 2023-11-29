@@ -67,12 +67,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
         with:
           toolchain: ${{ matrix.rust }}
-          profile: minimal
-          override: true
-          target: ${{ matrix.job.target }}
+          targets: ${{ matrix.job.target }}
       - name: install compiler
         shell: bash
         run: |

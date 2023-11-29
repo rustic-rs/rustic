@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       # Ensure that the latest version of Cargo is installed
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@439cf607258077187679211f12aa6f19af4a0af7 # v1
+        uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2

@@ -26,7 +26,7 @@ jobs:
       - uses: chainguard-dev/actions/setup-gitsign@main
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
       - name: Install cargo-release
-        uses: taiki-e/install-action@b61491983a082ef851796e8c4feac004b49da5be # v2
+        uses: taiki-e/install-action@f7c663c03b51ed0d93e9cec22a575d3f02175989 # v2
         with:
           tool: cargo-release
       - uses: cargo-bins/release-pr@deeacca5a38bacc74a3f444b798f4b9bba40f6ad # v2

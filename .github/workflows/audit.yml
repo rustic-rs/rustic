@@ -27,7 +27,7 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-      - uses: rustsec/audit-check@4da312dd0f2a5e6b58fecaec5b19e7271ce2ec5d # v1.4.1
+      - uses: rustsec/audit-check@dd51754d4e59da7395a4cd9b593f0ff2d61a9b95 # v1.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 

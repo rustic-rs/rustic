@@ -81,13 +81,13 @@ jobs:
               sudo apt-get install -y musl-tools
           fi
       - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-        with: 
+        with:
           key: ${{ matrix.job.target }}
       - name: Set Version
         shell: bash
         run: echo "PROJECT_VERSION=$(git describe --tags)" >> $GITHUB_ENV
       - name: Cargo build
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        uses: ClementTsang/cargo-action@a211c79cf22973eb590277586fbea20269ca3ca0 # v0 (attention: this should be double checked for security issues)
         with:
           command: build
           use-cross: ${{ matrix.job.use-cross }}

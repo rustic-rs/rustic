@@ -17,6 +17,7 @@ use abscissa_core::path::AbsPathBuf;
 use abscissa_core::FrameworkError;
 use clap::Parser;
 use itertools::Itertools;
+use log::Level;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
@@ -61,35 +62,40 @@ pub struct RusticConfig {
 }
 
 impl RusticConfig {
-    /// Merge a profile into the current config
+    /// Merge a profile into the current config by reading the corresponding config file.
+    /// Also recursively merge all profiles given within this config file.
     ///
     /// # Arguments
     ///
     /// * `profile` - name of the profile to merge
-    ///
-    // TODO!: Explain more
-    pub fn merge_profile(&mut self, profile: &str) -> Result<(), FrameworkError> {
+    /// * `merge_logs` - Vector to collect logs during merging
+    /// * `level_missing` - The log level to use if this profile is missing. Recursive calls will produce a Warning.
+    pub fn merge_profile(
+        &mut self,
+        profile: &str,
+        merge_logs: &mut Vec<(Level, String)>,
+        level_missing: Level,
+    ) -> Result<(), FrameworkError> {
         let profile_filename = profile.to_string() + ".toml";
         let paths = get_config_paths(&profile_filename);
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
-            // TODO: This should be log::info! - however, the logging config
-            // can be stored in the config file and is needed to initialize the logger
-            eprintln!("using config {}", path.display());
+            merge_logs.push((Level::Info, format!("using config {}", path.display())));
             let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profile.clone() {
-                config.merge_profile(profile)?;
+                config.merge_profile(profile, merge_logs, Level::Warn)?;
             }
             self.merge(config);
         } else {
             let paths_string = paths.iter().map(|path| path.display()).join(", ");
-            // TODO: This should be log::warn! - however, the logging config
-            // can be stored in the config file and is needed to initialize the logger
-            eprintln!(
-                "using no config file, none of these exist: {}",
-                &paths_string
-            );
+            merge_logs.push((
+                level_missing,
+                format!(
+                    "using no config file, none of these exist: {}",
+                    &paths_string
+                ),
+            ));
         };
         Ok(())
     }

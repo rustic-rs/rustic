@@ -23,7 +23,9 @@ pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
 
+use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::{
@@ -38,10 +40,15 @@ use crate::{
     {Application, RUSTIC_APP},
 };
 
-use abscissa_core::{config::Override, Command, Configurable, FrameworkError, Runnable, Shutdown};
+use abscissa_core::{
+    config::Override, terminal::ColorChoice, Command, Configurable, FrameworkError,
+    FrameworkErrorKind, Runnable, Shutdown,
+};
 use anyhow::{anyhow, Result};
 use dialoguer::Password;
+use log::{log, Level};
 use rustic_core::{OpenStatus, Repository};
+use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
@@ -153,13 +160,57 @@ impl Configurable<RusticConfig> for EntryPoint {
         // rustic logic and merged with the CLI options.
         // That's why it says `_config`, because it's not read at all and therefore not needed.
         let mut config = self.config.clone();
-        if config.global.use_profile.is_empty() {
-            config.global.use_profile.push("rustic".to_string());
-        }
+
+        // collect logs during merging as we start the logger *after* merging
+        let mut merge_logs = Vec::new();
 
         // get global options from command line / env and config file
-        for profile in &config.global.use_profile.clone() {
-            config.merge_profile(profile)?;
+        if config.global.use_profile.is_empty() {
+            config.merge_profile("rustic", &mut merge_logs, Level::Info)?;
+        } else {
+            for profile in &config.global.use_profile.clone() {
+                config.merge_profile(profile, &mut merge_logs, Level::Warn)?;
+            }
+        }
+
+        // start logger
+        let level_filter = match &config.global.log_level {
+            Some(level) => LevelFilter::from_str(level)
+                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+            None => LevelFilter::Info,
+        };
+        match &config.global.log_file {
+            None => TermLogger::init(
+                level_filter,
+                simplelog::ConfigBuilder::new()
+                    .set_time_level(LevelFilter::Off)
+                    .build(),
+                TerminalMode::Stderr,
+                ColorChoice::Auto,
+            )
+            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+
+            Some(file) => CombinedLogger::init(vec![
+                TermLogger::new(
+                    level_filter.min(LevelFilter::Warn),
+                    simplelog::ConfigBuilder::new()
+                        .set_time_level(LevelFilter::Off)
+                        .build(),
+                    TerminalMode::Stderr,
+                    ColorChoice::Auto,
+                ),
+                WriteLogger::new(
+                    level_filter,
+                    simplelog::Config::default(),
+                    File::options().create(true).append(true).open(file)?,
+                ),
+            ])
+            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+        }
+
+        // display logs from merging
+        for (level, merge_log) in merge_logs {
+            log!(level, "{}", merge_log);
         }
 
         match &self.commands {

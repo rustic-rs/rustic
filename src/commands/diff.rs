@@ -56,7 +56,7 @@ impl DiffCmd {
         let (id1, path1) = arg_to_snap_path(&self.snap1, "");
         let (id2, path2) = arg_to_snap_path(&self.snap2, path1);
 
-        _ = match (id1, id2) {
+        match (id1, id2) {
             (Some(id1), Some(id2)) => {
                 // diff between two snapshots
                 let snaps = repo.get_snapshots(&[id1, id2])?;
@@ -73,7 +73,7 @@ impl DiffCmd {
                     self.no_content,
                     |_path, node1, node2| Ok(node1.content == node2.content),
                     self.metadata,
-                )
+                )?;
             }
             (Some(id1), None) => {
                 // diff between snapshot and local path
@@ -110,7 +110,7 @@ impl DiffCmd {
                     self.no_content,
                     |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
                     self.metadata,
-                )
+                )?;
             }
             (None, _) => {
                 bail!("cannot use local path as first argument");

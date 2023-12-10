@@ -57,6 +57,11 @@ pub struct BackupCmd {
     #[merge(strategy = merge::bool::overwrite_false)]
     json: bool,
 
+    /// Don't show any output
+    #[clap(long, conflicts_with = "json")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    quiet: bool,
+
     /// Initialize repository, if it doesn't exist yet
     #[clap(long)]
     #[merge(strategy = merge::bool::overwrite_false)]
@@ -224,7 +229,7 @@ impl BackupCmd {
             if opts.json {
                 let mut stdout = std::io::stdout();
                 serde_json::to_writer_pretty(&mut stdout, &snap)?;
-            } else {
+            } else if !opts.quiet {
                 let summary = snap.summary.unwrap();
                 println!(
                     "Files:       {} new, {} changed, {} unchanged",

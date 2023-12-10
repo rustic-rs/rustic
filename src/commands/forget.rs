@@ -30,6 +30,10 @@ pub(super) struct ForgetCmd {
     #[clap(long)]
     json: bool,
 
+    /// Don't show any output
+    #[clap(long, conflicts_with = "json")]
+    quiet: bool,
+
     /// Forget options
     #[clap(flatten)]
     config: ForgetOptions,
@@ -122,7 +126,7 @@ impl ForgetCmd {
         if self.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &groups)?;
-        } else {
+        } else if !self.quiet {
             print_groups(&groups);
         }
 

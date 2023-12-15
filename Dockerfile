@@ -16,12 +16,8 @@ COPY . .
 RUN cargo build --release
 
 # why we dont use alpine for base image - https://andygrove.io/2020/05/why-musl-extremely-slow/
-FROM debian:bookworm as runtime
+FROM debian:bookworm-slim as runtime
 
 COPY --from=builder /app/target/release/rustic /usr/local/bin
-
-# usually container will be used with --rm option
-# so we ignore cache
-ENV RUSTIC_NO_CACHE=true
 
 ENTRYPOINT ["/usr/local/bin/rustic"]

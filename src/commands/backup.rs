@@ -52,6 +52,11 @@ pub struct BackupCmd {
     #[serde(flatten)]
     ignore_save_opts: LocalSourceSaveOptions,
 
+    /// Don't scan the backup source for its size - this disables ETA estimation for backup.
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub no_scan: bool,
+
     /// Output generated snapshot in json format
     #[clap(long)]
     #[merge(strategy = merge::bool::overwrite_false)]
@@ -223,6 +228,7 @@ impl BackupCmd {
                 .parent_opts(opts.parent_opts)
                 .ignore_save_opts(opts.ignore_save_opts)
                 .ignore_filter_opts(opts.ignore_filter_opts)
+                .no_scan(opts.no_scan)
                 .dry_run(config.global.dry_run);
             let snap = repo.backup(&backup_opts, source.clone(), opts.snap_opts.to_snapshot()?)?;
 

@@ -120,17 +120,12 @@ serde-aux = "4"
 # local backend
 walkdir = "2"
 ignore = "0.4"
-cached = {version = "0.44", default-features = false, features = ["proc_macro"]} 
+cached = { version = "0.44", default-features = false, features = ["proc_macro"] }
 nix = "0.26"
 filetime = "0.2"
 
 # rest backend
-reqwest = { version = "0.11", default-features = false, features = [
-    "json",
-    "rustls-tls-native-roots",
-    "stream",
-    "blocking",
-] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-native-roots", "stream", "blocking"] }
 backoff = "0.4"
 url = "2.3.1"
 
@@ -180,37 +175,38 @@ pubkey = "RWSWSCEJEEacVeCy0va71hlrVtiW8YzMzOyJeso0Bfy/ZXq5OryWi/8T"
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
-# Include the example config files into the distribution archives
+# Extra static files to include in each App (path relative to this Cargo.toml's dir)
 include = ["./config/", "./changelog/"]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.1.0"
-# CI backends to support (see 'cargo dist generate-ci')
+cargo-dist-version = "0.6.0"
+# CI backends to support
 ci = ["github"]
 # The installers to generate for each app
-installers = ["shell", "powershell"]
-# Archive formats to generate for each operating system
+installers = ["shell", "powershell", "msi"]
+# The archive format to use for non-windows builds (defaults .tar.xz)
 unix-archive = ".tar.xz"
+# The archive format to use for windows builds (defaults .zip)
 windows-archive = ".zip"
-# Although cargo-dist was built around the "keep trying" approach, it can be
-# it's useful to fail-fast in CI to not waste resources on a failed build
-# that we might need to fix first.
+# Whether failing tasks should make us give up on all other tasks
 fail-fast = true
-# Generated checksum
+# Checksums to generate for each App
 checksum = "sha512"
-# The path to install app to
-install-path = "~/.rustic/"
+# Path that installers should place binaries in
+install-path = "~/.rustic"
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = [
-    "x86_64-unknown-linux-gnu",
-    "x86_64-unknown-linux-musl",
-    "aarch64-unknown-linux-gnu",
-    "i686-unknown-linux-gnu",
-    "x86_64-unknown-netbsd",
-    "armv7-unknown-linux-gnueabihf",
-    "x86_64-apple-darwin",
-    "x86_64-pc-windows-msvc",
-    "aarch64-apple-darwin",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-unknown-linux-gnu",
+  "i686-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-unknown-linux-musl",
+  "x86_64-pc-windows-msvc",
+  # "armv7-unknown-linux-gnueabihf", // TODO: still not supported?
+  # "x86_64-unknown-netbsd", // TODO: still not supported?
 ]
+# Publish jobs to run in CI
+pr-run-mode = "plan"
 
 # see: https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.dev]
@@ -260,6 +256,12 @@ codegen-units = 1
 assets = [
   { source = "target/release/rustic", dest = "/usr/bin/rustic", mode = "0755", config = false, doc = false, user = "root", group = "root" },
 ]
+
+[package.metadata.wix]
+upgrade-guid = "B0E343B9-B108-4C67-B2DE-AD83082D7B4C"
+path-guid = "06B64AD9-F9EB-470A-9A83-32BF491EAC6F"
+license = false
+eula = false
 
 # The profile that 'cargo dist' will build with
 [profile.dist]

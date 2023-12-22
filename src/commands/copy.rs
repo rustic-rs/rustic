@@ -66,7 +66,7 @@ impl CopyCmd {
         let poly = repo.config().poly()?;
         for target_opt in &config.copy.targets {
             let repo_dest =
-                Repository::new_with_progress(target_opt, config.global.progress_options)?;
+                Repository::new_with_progress(target_opt, config.global.progress_options.clone())?;
 
             let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
                 if config.global.dry_run {

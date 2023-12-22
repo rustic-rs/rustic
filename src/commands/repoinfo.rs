@@ -53,7 +53,7 @@ impl RepoInfoCmd {
         let infos = Infos {
             files: (!self.only_index)
                 .then(|| {
-                    let po = config.global.progress_options;
+                    let po = config.global.progress_options.clone();
                     let repo = Repository::new_with_progress(&config.repository, po)?;
                     repo.infos_files()
                 })

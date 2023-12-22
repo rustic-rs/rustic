@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, fmt::Write, time::Duration};
 
-use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
+use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
 use merge::Merge;
@@ -14,7 +14,7 @@ use rustic_core::{Progress, ProgressBars};
 
 /// Progress Bar Config
 #[serde_as]
-#[derive(Default, Debug, Parser, Clone, Copy, Deserialize, Serialize, Merge)]
+#[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ProgressOptions {
     /// Don't show any progress bar
@@ -32,6 +32,11 @@ pub struct ProgressOptions {
     )]
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub progress_interval: Option<humantime::Duration>,
+
+    #[serde(skip)]
+    #[clap(skip)]
+    #[merge(skip)]
+    mp: MultiProgress,
 }
 
 impl ProgressOptions {
@@ -62,6 +67,7 @@ impl ProgressBars for ProgressOptions {
                 .template("[{elapsed_precise}] {prefix:30} {spinner}")
                 .unwrap(),
         );
+        let p = self.mp.add(p);
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
         RusticProgress(p, ProgressType::Spinner)
@@ -76,6 +82,7 @@ impl ProgressBars for ProgressOptions {
                 .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}")
                 .unwrap(),
         );
+        let p = self.mp.add(p);
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
         RusticProgress(p, ProgressType::Counter)
@@ -94,6 +101,7 @@ impl ProgressBars for ProgressOptions {
             .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}            {bytes_per_sec:12}")
             .unwrap()
             );
+        let p = self.mp.add(p);
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
         RusticProgress(p, ProgressType::Bytes)

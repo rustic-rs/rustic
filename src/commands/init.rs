@@ -34,7 +34,7 @@ impl InitCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let po = config.global.progress_options;
+        let po = config.global.progress_options.clone();
         let repo = Repository::new_with_progress(&config.repository, po)?;
 
         // Note: This is again checked in repo.init_with_password(), however we want to inform

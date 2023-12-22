@@ -131,7 +131,7 @@ impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let po = config.global.progress_options;
+        let po = config.global.progress_options.clone();
         let repo = Repository::new_with_progress(&config.repository, po)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {

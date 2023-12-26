@@ -6,7 +6,6 @@
         "helpers:pinGitHubActionDigests"
     ],
     "separateMinorPatch": false,
-    "prCreation": "status-success",
     "prHourlyLimit": 1,
     "prConcurrentLimit": 1,
     "major": {

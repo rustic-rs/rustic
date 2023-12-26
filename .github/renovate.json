@@ -44,6 +44,7 @@
     ],
     "lockFileMaintenance": {
         "enabled": true,
+        "automerge": true,
         "extends": [
             "schedule:monthly"
         ]

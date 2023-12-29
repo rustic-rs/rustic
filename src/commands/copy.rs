@@ -8,9 +8,10 @@ use anyhow::{bail, Result};
 use log::{error, info};
 
 use merge::Merge;
+use rustic_backend::BackendOptions;
 use serde::Deserialize;
 
-use rustic_core::{CopySnapshot, Id, KeyOptions, Repository, RepositoryOptions};
+use rustic_core::{overwrite, CopySnapshot, Id, KeyOptions, Repository, RepositoryOptions};
 
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -30,10 +31,14 @@ pub(crate) struct CopyCmd {
 
 /// Target repository options
 #[derive(Default, Clone, Debug, Deserialize, Merge)]
-pub struct Targets {
+pub struct TargetOptions {
     /// Target repositories
-    #[merge(strategy = merge::vec::overwrite_empty)]
-    targets: Vec<RepositoryOptions>,
+    #[merge(strategy = overwrite)]
+    options: RepositoryOptions,
+
+    /// Backend options
+    #[merge(strategy = overwrite)]
+    backend: BackendOptions,
 }
 
 impl Runnable for CopyCmd {
@@ -49,8 +54,8 @@ impl CopyCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        if config.copy.targets.is_empty() {
-            status_err!("no [[copy.targets]] section in config file found!");
+        if config.copy.is_empty() {
+            status_err!("no [[copy]] section in config file found!");
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
@@ -64,9 +69,15 @@ impl CopyCmd {
         snapshots.sort_unstable();
 
         let poly = repo.config().poly()?;
-        for target_opt in &config.copy.targets {
-            let repo_dest =
-                Repository::new_with_progress(target_opt, config.global.progress_options)?;
+        for target_opt in &config.copy {
+            let repo_dest = {
+                let backends = target_opt.backend.to_backends()?;
+                Repository::new_with_progress(
+                    &target_opt.options,
+                    backends,
+                    config.global.progress_options,
+                )?
+            };
 
             let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
                 if config.global.dry_run {

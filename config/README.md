@@ -64,27 +64,32 @@ rustic.
 config file as a possible source of errors if you encounter problems. They could
 possibly shadow other values that you have already set.
 
+### Backend Options
+
+| Attribute  | Description                           | Default Value | Example Value | Environment Variable |
+| ---------- | ------------------------------------- | ------------- | ------------- | -------------------- |
+| repository | The path to the repository. Required. | Not set       | "/tmp/rustic" | RUSTIC_REPOSITORY    |
+| repo-hot   | The path to the hot repository.       | Not set       |               | RUSTIC_REPO_HOT      |
+
+### Backend Options (Additional)
+
+| Attribute           | Description                                                            | Default Value | Example Value                  |
+| ------------------- | ---------------------------------------------------------------------- | ------------- | ------------------------------ |
+| post-create-command | Command to execute after creating a snapshot in the **local backend**. | Not set       | "par2create -qq -n1 -r5 %file" |
+| post-delete-command | Command to execute after deleting a snapshot in the **local backend**. | Not set       | "sh -c \"rm -f %file*.par2\""  |
+
 ### Repository Options
 
 | Attribute        | Description                                                | Default Value            | Example Value          | Environment Variable    |
 | ---------------- | ---------------------------------------------------------- | ------------------------ | ---------------------- | ----------------------- |
 | cache-dir        | Path to the cache directory.                               | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ | RUSTIC_CACHE_DIR        |
 | no-cache         | If true, disables caching.                                 | false                    |                        | RUSTIC_NO_CACHE         |
-| repository       | The path to the repository. Required.                      | Not set                  | "/tmp/rustic"          | RUSTIC_REPOSITORY       |
-| repo-hot         | The path to the hot repository.                            | Not set                  |                        | RUSTIC_REPO_HOT         |
 | password         | The password for the repository.                           | Not set                  | "mySecretPassword"     | RUSTIC_PASSWORD         |
 | password-file    | Path to a file containing the password for the repository. | Not set                  |                        | RUSTIC_PASSWORD_FILE    |
 | password-command | Command to retrieve the password for the repository.       | Not set                  |                        | RUSTIC_PASSWORD_COMMAND |
 | warm-up          | If true, warms up the repository by file access.           | false                    |                        |                         |
 | warm-up-command  | Command to warm up the repository.                         | Not set                  |                        |                         |
 | warm-up-wait     | The wait time for warming up the repository.               | Not set                  |                        |                         |
-
-### Repository Options (Additional)
-
-| Attribute           | Description                                                        | Default Value | Example Value                  |
-| ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
-| post-create-command | Command to execute after creating a snapshot in the local backend. | Not set       | "par2create -qq -n1 -r5 %file" |
-| post-delete-command | Command to execute after deleting a snapshot in the local backend. | Not set       | "sh -c \"rm -f %file*.par2\""  |
 
 ### Snapshot-Filter Options
 
@@ -160,17 +165,24 @@ source-individual section.
 **Note**: Copy-targets are simply repositories with the same defaults as within
 the repository section.
 
-| Attribute           | Description                                                            | Default Value            | Example Value          |
-| ------------------- | ---------------------------------------------------------------------- | ------------------------ | ---------------------- |
-| cache-dir           | Path to the cache directory for the target repository.                 | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ |
-| no-cache            | If true, disables caching for the target repository.                   | false                    |                        |
-| password            | The password for the target repository.                                | Not set                  |                        |
-| password-file       | Path to a file containing the password for the target repository.      | Not set                  |                        |
-| password-command    | Command to retrieve the password for the target repository.            | Not set                  |                        |
-| post-create-command | Command to execute after creating a snapshot in the target repository. | Not set                  |                        |
-| post-delete-command | Command to execute after deleting a snapshot in the target repository. | Not set                  |                        |
-| repository          | The path or URL to the target repository.                              | Not set                  |                        |
-| repo-hot            | The path or URL to the hot target repository.                          | Not set                  |                        |
-| warm-up             | If true, warms up the target repository by file access.                | Not set                  |                        |
-| warm-up-command     | Command to warm up the target repository.                              | Not set                  |                        |
-| warm-up-wait        | The wait time for warming up the target repository.                    | Not set                  |                        |
+#### Copy Target Backends
+
+| Attribute           | Description                                                            | Default Value | Example Value                  |
+| ------------------- | ---------------------------------------------------------------------- | ------------- | ------------------------------ |
+| repository          | The path or URL to the target repository.                              | Not set       |                                |
+| repo-hot            | The path or URL to the hot target repository.                          | Not set       |                                |
+| post-create-command | Command to execute after creating a snapshot in the **local backend**. | Not set       | "par2create -qq -n1 -r5 %file" |
+| post-delete-command | Command to execute after deleting a snapshot in the **local backend**. | Not set       | "sh -c \"rm -f %file*.par2\""  |
+
+#### Copy Target Options
+
+| Attribute        | Description                                                       | Default Value            | Example Value          |
+| ---------------- | ----------------------------------------------------------------- | ------------------------ | ---------------------- |
+| cache-dir        | Path to the cache directory for the target repository.            | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ |
+| no-cache         | If true, disables caching for the target repository.              | false                    |                        |
+| password         | The password for the target repository.                           | Not set                  |                        |
+| password-file    | Path to a file containing the password for the target repository. | Not set                  |                        |
+| password-command | Command to retrieve the password for the target repository.       | Not set                  |                        |
+| warm-up          | If true, warms up the target repository by file access.           | Not set                  |                        |
+| warm-up-command  | Command to warm up the target repository.                         | Not set                  |                        |
+| warm-up-wait     | The wait time for warming up the target repository.               | Not set                  |                        |

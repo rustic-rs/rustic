@@ -18,11 +18,12 @@ use abscissa_core::FrameworkError;
 use clap::Parser;
 use itertools::Itertools;
 use log::Level;
+use rustic_backend::BackendOptions;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commands::{backup::BackupCmd, copy::Targets, forget::ForgetOptions},
+    commands::{backup::BackupCmd, copy::TargetOptions, forget::ForgetOptions},
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
@@ -40,6 +41,9 @@ pub struct RusticConfig {
     #[clap(flatten, next_help_heading = "Global options")]
     pub global: GlobalOptions,
 
+    #[clap(flatten, next_help_heading = "Backend options")]
+    pub backend: BackendOptions,
+
     /// Repository options
     #[clap(flatten, next_help_heading = "Repository options")]
     pub repository: RepositoryOptions,
@@ -54,7 +58,8 @@ pub struct RusticConfig {
 
     /// Copy options
     #[clap(skip)]
-    pub copy: Targets,
+    #[merge(strategy = merge::vec::overwrite_empty)]
+    pub copy: Vec<TargetOptions>,
 
     /// Forget options
     #[clap(skip)]

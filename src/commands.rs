@@ -243,7 +243,10 @@ impl Configurable<RusticConfig> for EntryPoint {
 /// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
 fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOptions, OpenStatus>> {
     let po = config.global.progress_options;
-    let repo = Repository::new_with_progress(&config.repository, po)?;
+
+    let backends = config.backend.to_backends()?;
+
+    let repo = Repository::new_with_progress(&config.repository, backends, po)?;
     match repo.password()? {
         // if password is given, directly return the result of find_key_in_backend and don't retry
         Some(pass) => {

@@ -50,11 +50,13 @@ impl RepoInfoCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
+        let backends = config.backend.to_backends()?;
+
         let infos = Infos {
             files: (!self.only_index)
                 .then(|| {
                     let po = config.global.progress_options;
-                    let repo = Repository::new_with_progress(&config.repository, po)?;
+                    let repo = Repository::new_with_progress(&config.repository, backends, po)?;
                     repo.infos_files()
                 })
                 .transpose()?,

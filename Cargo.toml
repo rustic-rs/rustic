@@ -51,6 +51,7 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { workspace = true }
+rustic_backend = { workspace = true }
 rustic_core = { workspace = true }
 
 # errors
@@ -63,6 +64,7 @@ log = { workspace = true }
 # serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_path_to_error = { workspace = true }
 serde_with = { workspace = true }
 
 # other dependencies
@@ -84,7 +86,7 @@ humantime = { workspace = true }
 indicatif = { workspace = true }
 itertools = { workspace = true }
 jemallocator-global = { version = "0.3.2", optional = true }
-mimalloc = { version = "0.1.39", default_features = false, optional = true }
+mimalloc = { version = "0.1.39", default-features = false, optional = true }
 rhai = { workspace = true }
 simplelog = { workspace = true }
 
@@ -92,17 +94,25 @@ simplelog = { workspace = true }
 abscissa_core = { workspace = true, features = ["testing"] }
 aho-corasick = { workspace = true }
 dircmp = { workspace = true }
+insta = { version = "1.34.0", features = ["toml"] }
 once_cell = { workspace = true }
 pretty_assertions = { workspace = true }
+rstest = { workspace = true }
 rustic_testing = { path = "crates/rustic_testing" }
 tempfile = { workspace = true }
-toml = { workspace = true }
+toml = { workspace = true, features = ["parse", "preserve_order"] }
+toml_edit = { workspace = true, features = ["serde"] }
 
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2.150"
 [workspace.dependencies]
-rustic_core = { version = "0.1.2", features = ["cli"] }
-abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
+rustic_core = { path = "../rustic_core/crates/core", version = "0.1.2", features = ["cli"] }
+rustic_backend = { path = "../rustic_core/crates/backends", version = "0.1.0", features = ["cli"] }
+# rustic_core = { version = "0.1.2", features = ["cli"] }
+
+abscissa_core = { version = "0.7.0", default-features = false, features = [
+  "application",
+] }
 
 # logging
 log = "0.4"
@@ -116,6 +126,8 @@ anyhow = "1"
 serde = { version = "1", features = ["serde_derive"] }
 serde_with = { version = "3.4", features = ["base64"] }
 serde_json = "1"
+serde_path_to_error = "0.1.14"
+toml_edit = { version = "0.21.0", features = ["serde"] }
 
 # other dependencies
 aho-corasick = "1.1.2"
@@ -145,7 +157,7 @@ quickcheck = "1"
 quickcheck_macros = "1"
 tempfile = "3.8"
 pretty_assertions = "1.4"
-toml = "0.8"
+toml = { version = "0.8", features = ["parse", "preserve_order"] }
 dircmp = "0.2"
 
 # cargo-binstall support
@@ -199,6 +211,11 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
+
+# Faster insta testing runs
+[profile.dev.package]
+insta = { opt-level = 3 }
+similar = { opt-level = 3 }
 
 # Allows quick RPM file generation, if "cargo-generate-rpm" is installed:
 #  cargo build --release; cargo generate-rpm

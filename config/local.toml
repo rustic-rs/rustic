@@ -3,8 +3,10 @@
 # backup usage: "rustic -P local backup
 # cleanup:      "rustic -P local forget --prune
 #
-[repository]
+[backend]
 repository = "/backup/rustic"
+
+[repository]
 password-file = "/root/key-rustic"
 no-cache = true # no cache needed for local repository
 

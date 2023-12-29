@@ -4,9 +4,11 @@
 # backup usage: "rustic -P ovh-hot-cold backup
 # cleanup:      "rustic -P ovh-hot-cold forget --prune
 #
-[repository]
+[backend]
 repository = "rclone:ovh:backup-home"
 repo-hot = "rclone:ovh:backup-home-hot"
+
+[repository]
 password-file = "/root/key-rustic-ovh"
 cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository
 warm-up = true # cold storage needs warm-up, just trying to access a file is sufficient to start the warm-up

@@ -60,10 +60,14 @@ impl AddCmd {
         // create new "artificial" repo using the given password options
         let repo_opts = RepositoryOptions {
             password_file: self.new_password_file.clone(),
-            repository: Some(String::new()), // fake repository to make Repository::new() not bail
             ..Default::default()
         };
-        let repo_newpass = Repository::new(&repo_opts)?;
+        // TODO: fake repository to make Repository::new() not bail??
+        // String::new() was passed before!?
+        // Should we implemented default on RepositoryBackends?
+        // And make .repository optional?
+        let backends = config.backend.to_backends()?;
+        let repo_newpass = Repository::new(&repo_opts, backends)?;
 
         let pass = repo_newpass
             .password()

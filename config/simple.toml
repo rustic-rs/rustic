@@ -1,3 +1,5 @@
-[repository]
+[backend]
 repository = "/tmp/repo"
+
+[repository]
 password = "test"

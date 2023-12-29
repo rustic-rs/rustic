@@ -130,9 +130,10 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+        let backends = config.backend.to_backends()?;
 
         let po = config.global.progress_options;
-        let repo = Repository::new_with_progress(&config.repository, po)?;
+        let repo = Repository::new_with_progress(&config.repository, backends, po)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
             if config.global.dry_run {
@@ -224,7 +225,7 @@ impl BackupCmd {
                 .ignore_save_opts(opts.ignore_save_opts)
                 .ignore_filter_opts(opts.ignore_filter_opts)
                 .dry_run(config.global.dry_run);
-            let snap = repo.backup(&backup_opts, source.clone(), opts.snap_opts.to_snapshot()?)?;
+            let snap = repo.backup(&backup_opts, &source, opts.snap_opts.to_snapshot()?)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();

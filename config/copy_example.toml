@@ -4,18 +4,27 @@
 # See "rustic copy --help" for options how to select or filter snapshots to copy.
 
 # [repository] specified the source repository
-[repository]
+[backend]
 repository = "/tmp/repo"
+
+# [repository] specified the source repository
+[repository]
 password = "test"
 
 # you can specify multiple targets
-[[copy.targets]]
-repository = "/tmp/repo2"
+[[copy]]
+[[copy.options]]
 password = "test"
 no-cache = true
 
-[[copy.targets]]
-repository = "rclone:ovh:backup"
-repo-hot = "clone:ovh:backup-hot"
+[[copy.backend]]
+repository = "/tmp/repo2"
+
+[[copy]]
+[[copy.options]]
 password-file = "/root/key-rustic-ovh"
 cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository
+
+[[copy.backend]]
+repository = "rclone|ovh:backup"
+repo-hot = "rclone|ovh:backup-hot"

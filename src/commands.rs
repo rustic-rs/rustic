@@ -108,6 +108,7 @@ enum RusticCmd {
     ShowConfig(ShowConfigCmd),
 
     /// Update to the latest rustic release
+    #[cfg_attr(not(feature = "self-update"), clap(hide = true))]
     SelfUpdate(SelfUpdateCmd),
 
     /// Remove unused data or repack repository pack files

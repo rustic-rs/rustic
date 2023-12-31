@@ -89,6 +89,7 @@ rhai = { workspace = true }
 simplelog = { workspace = true }
 
 [dev-dependencies]
+abscissa_core = { workspace = true, features = ["testing"] }
 aho-corasick = { workspace = true }
 dircmp = { workspace = true }
 once_cell = { workspace = true }
@@ -101,7 +102,7 @@ toml = { workspace = true }
 libc = "0.2.150"
 [workspace.dependencies]
 rustic_core = { version = "0.1.2", features = ["cli"] }
-abscissa_core = { version = "0.7.0", default-features = false, features = ["application", "testing"] }
+abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
 
 # logging
 log = "0.4"

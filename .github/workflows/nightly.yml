@@ -121,6 +121,8 @@ jobs:
     steps:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        with:
+          path: artifacts
       - name: Releasing nightly builds
         shell: bash
         run: |
@@ -148,7 +150,7 @@ jobs:
           mkdir -p $WORKING_DIR/$DEST_DIR
 
           # do the copy
-          for i in binary-*; do cp -a $i/* $WORKING_DIR/$DEST_DIR; done
+          for artifact_dir in artifacts/binary-*; do cp -a $artifact_dir/* $WORKING_DIR/$DEST_DIR; done
 
           # create the commit
           cd $WORKING_DIR

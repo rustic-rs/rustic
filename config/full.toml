@@ -151,11 +151,14 @@ keep-withing-quarter-yearly = "0 year"
 keep-withing-half-yearly = "1 year"
 keep-within-yearly = "10 years"
 
-# Multiple targets are available for the copy command. Each specify a repository with exactly identical options as in
-# the [repository] section.
+# Multiple targets are available for the copy command.
+# Each specify a repository with exactly identical options as in
+# the [repository] and [backend] section.
 [[copy]]
-[[copy.options]]
-# one of the three password options must be set
+# First copy target
+[copy.options]
+# Optional, but one of the three password options must be set
+# either on CLI, in the config file or in the environment variables
 password = "mySecretPassword"
 password-file = "/my/password.txt"
 password-command = "my_command.sh"
@@ -166,11 +169,12 @@ warm-up = false
 warm-up-command = "warmup.sh %id" # Default: not set
 warm-up-wait = "10min" # Default: not set
 
-[[copy.backend]]
+[copy.backend]
 repository = "/repo/rustic" # Must be set
 repo-hot = "/my/hot/repo" # Default: not set
 
 [[copy]]
-[[copy.backend]]
+# Second copy target
+[copy.backend]
 repository = "/repo/rustic2" # Must be set
 # ...

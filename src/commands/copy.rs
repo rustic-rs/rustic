@@ -34,7 +34,7 @@ pub(crate) struct CopyCmd {
 pub struct TargetOptions {
     /// Target repositories
     #[merge(strategy = overwrite)]
-    options: RepositoryOptions,
+    options: Option<RepositoryOptions>,
 
     /// Backend options
     #[merge(strategy = overwrite)]
@@ -72,11 +72,20 @@ impl CopyCmd {
         for target_opt in &config.copy {
             let repo_dest = {
                 let backends = target_opt.backend.to_backends()?;
-                Repository::new_with_progress(
-                    &target_opt.options,
-                    backends,
-                    config.global.progress_options,
-                )?
+
+                if let Some(options) = &target_opt.options {
+                    Repository::new_with_progress(
+                        &options,
+                        backends,
+                        config.global.progress_options,
+                    )?
+                } else {
+                    Repository::new_with_progress(
+                        &RepositoryOptions::default(),
+                        backends,
+                        config.global.progress_options,
+                    )?
+                }
             };
 
             let repo_dest = if self.init && repo_dest.config_id()?.is_none() {

@@ -123,6 +123,8 @@ jobs:
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           path: artifacts
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
       - name: Releasing nightly builds
         shell: bash
         run: |

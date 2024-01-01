@@ -1,5 +1,7 @@
+# Backend options: These options define which backend to use.
 [backend]
 repository = "/tmp/repo"
 
+# Repository options: These options define which repository settings and passwords to use.
 [repository]
 password = "test"

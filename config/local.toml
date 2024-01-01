@@ -2,10 +2,12 @@
 #
 # backup usage: "rustic -P local backup
 # cleanup:      "rustic -P local forget --prune
-#
+
+# Backend options: These options define which backend to use.
 [backend]
 repository = "/backup/rustic"
 
+# Repository options: These options define which repository settings and passwords to use.
 [repository]
 password-file = "/root/key-rustic"
 no-cache = true # no cache needed for local repository

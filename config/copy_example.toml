@@ -3,11 +3,11 @@
 # If the config file is named "copy_example.toml", run "rustic -P copy_example copy" to copy all snapshots.
 # See "rustic copy --help" for options how to select or filter snapshots to copy.
 
-# [repository] specified the source repository
+# [backend] specifies the backend for a repository
 [backend]
 repository = "/tmp/repo"
 
-# [repository] specified the source repository
+# [repository] specifies the options for a repository
 [repository]
 password = "test"
 

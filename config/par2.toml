@@ -13,5 +13,6 @@ post-create-command = "par2create -qq -n1 -r5 %file"
 # Note that we want to use a "*" in the rm command, hence we have to call sh to resolve the wildcard!
 post-delete-command = "sh -c \"rm -f %file*.par2\""
 
+# Repository options: These options define which repository settings and passwords to use.
 [repository]
 password = "test"

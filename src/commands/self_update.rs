@@ -26,9 +26,7 @@ impl Runnable for SelfUpdateCmd {
 impl SelfUpdateCmd {
     #[cfg(feature = "self-update")]
     fn inner_run(&self) -> Result<()> {
-        use semver::Version;
-
-        let current_version = Version::parse(self_update::cargo_crate_version!())?;
+        let current_version = semver::Version::parse(self_update::cargo_crate_version!())?;
 
         let release = self_update::backends::github::Update::configure()
             .repo_owner("rustic-rs")
@@ -41,7 +39,7 @@ impl SelfUpdateCmd {
 
         let latest_release = release.get_latest_release()?;
 
-        let upstream_version = Version::parse(&latest_release.version)?;
+        let upstream_version = semver::Version::parse(&latest_release.version)?;
 
         match current_version.cmp(&upstream_version) {
             std::cmp::Ordering::Greater => {

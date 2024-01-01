@@ -17,9 +17,9 @@ env:
 
 jobs:
   publish:
+    if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/heads/main' }}
     name: Publishing ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
-    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -28,6 +28,12 @@ jobs:
           - os: windows-latest
             os-name: windows
             target: x86_64-pc-windows-msvc
+            architecture: x86_64
+            binary-postfix: ".exe"
+            use-cross: false
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-gnu
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
@@ -67,12 +73,13 @@ jobs:
             architecture: i686
             binary-postfix: ""
             use-cross: true
-          - os: ubuntu-latest
-            os-name: netbsd
-            target: x86_64-unknown-netbsd
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: true
+          # TODO!: This needs a fix, linking `execinfo` fails
+          # - os: ubuntu-latest
+          #   os-name: netbsd
+          #   target: x86_64-unknown-netbsd
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: armv7-unknown-linux-gnueabihf
@@ -82,11 +89,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
           fetch-depth: 0 # fetch all history so that git describe works
       - name: Create binary artifact
-        uses: rustic-rs/create-binary-artifact@main # dev
+        uses: rustic-rs/create-binary-artifact-action@main # dev
         with:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.job.target }}
@@ -99,15 +106,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gpg-release-private-key: ${{ secrets.GPG_RELEASE_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          rsign-release-private-key: ${{ secrets.RSIGN_RELEASE_PRIVATE_KEY }}
+          rsign-passphrase: ${{ secrets.RSIGN_PASSPHRASE }}
           github-ref: ${{ github.ref }}
           sign-release: true
           hash-release: true
           use-project-version: true
 
   publish-nightly:
+    if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/heads/main' }}
     name: Publishing nightly builds
     needs: publish
-    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all workflow run artifacts

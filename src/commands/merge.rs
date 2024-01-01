@@ -1,7 +1,5 @@
 //! `merge` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -26,6 +24,7 @@ pub(super) struct MergeCmd {
     #[clap(long)]
     delete: bool,
 
+    /// Snapshot options
     #[clap(flatten, next_help_heading = "Snapshot options")]
     snap_opts: SnapshotOptions,
 }

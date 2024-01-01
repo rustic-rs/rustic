@@ -1,0 +1,52 @@
+name: Update Completions fixtures
+
+permissions:
+  id-token: write # Enable OIDC
+  pull-requests: write
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_branch:
+        description: PR branch to push to
+        required: true
+        type: string
+
+jobs:
+  update-fixtures:
+    name: Update Completions fixtures
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          ref: refs/heads/${{ inputs.pr_branch }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
+
+      - name: Run Cargo Install
+        id: generated-fixtures
+        run: cargo install --path .
+
+      - name: Generate completions
+        shell: bash
+        run: |
+          rustic completions bash > tests/completions-fixtures/bash.txt
+          rustic completions fish > tests/completions-fixtures/fish.txt 
+          rustic completions zsh > tests/completions-fixtures/zsh.txt
+          rustic completions powershell > tests/completions-fixtures/powershell.txt
+
+      - name: Push fixtures to branch
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add tests/completions-fixtures/*
+          git commit -m "Generated: Updated Completions fixtures"
+          git pull --rebase
+          git push

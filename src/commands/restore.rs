@@ -1,7 +1,5 @@
 //! `restore` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
 };
@@ -26,12 +24,15 @@ pub(crate) struct RestoreCmd {
     #[clap(value_name = "DESTINATION")]
     dest: String,
 
+    /// Restore options
     #[clap(flatten)]
     opts: RestoreOptions,
 
+    /// List options
     #[clap(flatten)]
     ls_opts: LsOptions,
 
+    /// Snapshot filter options (when using latest)
     #[clap(
         flatten,
         next_help_heading = "Snapshot filter options (when using latest)"

@@ -1,17 +1,12 @@
 //! `self-update` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{Application, RUSTIC_APP};
 
 use abscissa_core::{status_err, Command, Runnable, Shutdown};
 
 use anyhow::Result;
-use self_update::cargo_crate_version;
-use semver::Version;
 
 /// `self-update` subcommand
-
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct SelfUpdateCmd {
     /// Do not ask before processing the self-update
@@ -29,8 +24,9 @@ impl Runnable for SelfUpdateCmd {
 }
 
 impl SelfUpdateCmd {
+    #[cfg(feature = "self-update")]
     fn inner_run(&self) -> Result<()> {
-        let current_version = Version::parse(cargo_crate_version!())?;
+        let current_version = semver::Version::parse(self_update::cargo_crate_version!())?;
 
         let release = self_update::backends::github::Update::configure()
             .repo_owner("rustic-rs")
@@ -43,7 +39,7 @@ impl SelfUpdateCmd {
 
         let latest_release = release.get_latest_release()?;
 
-        let upstream_version = Version::parse(&latest_release.version)?;
+        let upstream_version = semver::Version::parse(&latest_release.version)?;
 
         match current_version.cmp(&upstream_version) {
             std::cmp::Ordering::Greater => {
@@ -64,5 +60,11 @@ impl SelfUpdateCmd {
         }
 
         Ok(())
+    }
+    #[cfg(not(feature = "self-update"))]
+    fn inner_run(&self) -> Result<()> {
+        anyhow::bail!(
+            "This version of rustic was built without the \"self-update\" feature. Please use your system package manager to update it."
+        );
     }
 }

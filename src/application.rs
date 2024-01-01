@@ -1,16 +1,14 @@
 //! Rustic Abscissa Application
-use std::fs::File;
-use std::str::FromStr;
+use std::env;
 
 use abscissa_core::{
     application::{self, AppCell},
     config::{self, CfgCell},
-    terminal::{component::Terminal, ColorChoice},
-    Application, Component, FrameworkError, FrameworkErrorKind, StandardPaths,
+    terminal::component::Terminal,
+    Application, Component, FrameworkError, StandardPaths,
 };
 
 use anyhow::Result;
-use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 // use crate::helpers::*;
 use crate::{commands::EntryPoint, config::RusticConfig};
@@ -92,39 +90,9 @@ impl Application for RusticApp {
         // Configure components
         self.state.components_mut().after_config(&config)?;
 
-        // start logger
-        let level_filter = match &config.global.log_level {
-            Some(level) => LevelFilter::from_str(level)
-                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
-            None => LevelFilter::Info,
-        };
-        match &config.global.log_file {
-            None => TermLogger::init(
-                level_filter,
-                simplelog::ConfigBuilder::new()
-                    .set_time_level(LevelFilter::Off)
-                    .build(),
-                TerminalMode::Stderr,
-                ColorChoice::Auto,
-            )
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
-
-            Some(file) => CombinedLogger::init(vec![
-                TermLogger::new(
-                    level_filter.max(LevelFilter::Warn),
-                    simplelog::ConfigBuilder::new()
-                        .set_time_level(LevelFilter::Off)
-                        .build(),
-                    TerminalMode::Stderr,
-                    ColorChoice::Auto,
-                ),
-                WriteLogger::new(
-                    level_filter,
-                    simplelog::Config::default(),
-                    File::options().create(true).append(true).open(file)?,
-                ),
-            ])
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+        // set all given environment variables
+        for (env, value) in config.global.env.iter() {
+            env::set_var(env, value);
         }
 
         self.config.set_once(config);

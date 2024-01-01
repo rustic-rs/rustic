@@ -1,123 +1,105 @@
-name: Create PR artifacts
+name: Cross CI
 
 on:
   pull_request:
-    types: [labeled]
-    branches:
-      - main
     paths-ignore:
       - "**/*.md"
-      - "docs/**/*"
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "renovate/**"
+      - "release/**"
+    paths-ignore:
+      - "**/*.md"
+  merge_group:
+    types: [checks_requested]
 
-env:
-  BINARY_NAME: rustic
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  pr-build:
-    if: ${{ github.event.label.name == 'S-build' && github.repository_owner == 'rustic-rs' }}
-    name: Build PR on ${{ matrix.job.target }}
+  cross-check:
+    name: Cross checking ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
+      fail-fast: false
       matrix:
         rust: [stable]
+        feature: [default]
         job:
           - os: windows-latest
             os-name: windows
             target: x86_64-pc-windows-msvc
             architecture: x86_64
-            binary-postfix: ".exe"
+            use-cross: false
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-gnu
+            architecture: x86_64
             use-cross: false
           - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
-            binary-postfix: ""
             use-cross: false
           - os: macos-latest
             os-name: macos
             target: aarch64-apple-darwin
             architecture: arm64
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-gnu
             architecture: x86_64
-            binary-postfix: ""
             use-cross: false
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-musl
             architecture: x86_64
-            binary-postfix: ""
             use-cross: false
           - os: ubuntu-latest
             os-name: linux
             target: aarch64-unknown-linux-gnu
             architecture: arm64
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: i686-unknown-linux-gnu
             architecture: i686
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: netbsd
             target: x86_64-unknown-netbsd
             architecture: x86_64
-            binary-postfix: ""
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: armv7-unknown-linux-gnueabihf
             architecture: armv7
-            binary-postfix: ""
             use-cross: true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-        with:
-          fetch-depth: 0 # fetch all history so that git describe works
-      - name: Create binary artifact
-        uses: rustic-rs/create-binary-artifact-action@main # dev
+
+      - name: Run Cross-CI action
+        uses: rustic-rs/cross-ci-action@main
         with:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.job.target }}
           use-cross: ${{ matrix.job.use-cross }}
-          describe-tag-suffix: -${{ github.run_id }}-${{ github.run_attempt }}
-          binary-postfix: ${{ matrix.job.binary-postfix }}
-          os: ${{ runner.os }}
-          binary-name: ${{ env.BINARY_NAME }}
-          package-secondary-name: ${{ matrix.job.target}}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-ref: ${{ github.ref }}
-          sign-release: false
-          hash-release: true
-          use-project-version: true
+          all-features: "false"
+          feature: ${{ matrix.feature }}
 
-  remove-build-label:
-    name: Remove build label
-    needs: pr-build
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
+  result:
+    name: Result (Cross-CI)
     runs-on: ubuntu-latest
-    if: |
-      always() &&
-      ! contains(needs.*.result, 'skipped') &&
-      github.repository_owner == 'rustic-rs'
+    needs: cross-check
     steps:
-      - name: Remove label
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api \
-          --method DELETE \
-          -H "Accept: application/vnd.github+json" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          /repos/${{ github.repository }}/issues/${{ github.event.number }}/labels/S-build
+      - name: Mark the job as successful
+        run: exit 0
+        if: success()
+      - name: Mark the job as unsuccessful
+        run: exit 1
+        if: "!success()"

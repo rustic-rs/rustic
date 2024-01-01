@@ -1,7 +1,5 @@
 //! `smapshot` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
@@ -47,6 +45,7 @@ pub(crate) struct SnapshotCmd {
     #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
 }
+
 impl Runnable for SnapshotCmd {
     fn run(&self) {
         if let Err(err) = self.inner_run() {
@@ -142,7 +141,9 @@ impl SnapshotCmd {
     }
 }
 
+/// Trait to print a table
 trait PrintTable {
+    /// Print a table
     fn print_table(&self);
 }
 

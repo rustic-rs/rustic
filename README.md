@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://media.githubusercontent.com/media/rustic-rs/assets/main/logos/readme_header.png" height="400" />
+<img src="https://raw.githubusercontent.com/rustic-rs/assets/main/logos/readme_header.png" height="400" />
 </p>
 <p align="center"><b>fast, encrypted, and deduplicated backups</b></p>
 
@@ -8,7 +8,7 @@
 <a href="https://docs.rs/rustic-rs/"><img src="https://img.shields.io/docsrs/rustic-rs?style=flat&amp;labelColor=1c1d42&amp;color=4f396a&amp;logo=Rust&amp;logoColor=white" /></a>
 <a href="https://raw.githubusercontent.com/rustic-rs/rustic/main/"><img src="https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg" /></a>
 <a href="https://crates.io/crates/rustic-rs"><img src="https://img.shields.io/crates/d/rustic-rs.svg" /></a>
-<a href="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml/badge.svg" />
+<a href="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml/badge.svg" /></a>
 <p>
 
 ## About
@@ -61,11 +61,11 @@ The `rustic` project is split into multiple crates:
 You can ask questions in the [Discussions][3] or have a look at the
 [FAQ](https://rustic.cli.rs/docs/FAQ.html).
 
-| Contact       | Where?                                                                                                   |
-| ------------- | -------------------------------------------------------------------------------------------------------- |
-| Issue Tracker | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)                                              |
-| Discord       | [![](https://dcbadge.vercel.app/api/server/WRUWENZnzQ?style=flat-square)](https://discord.gg/WRUWENZnzQ) |
-| Discussions   | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)                                    |
+| Contact       | Where?                                                                                                          |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| Issue Tracker | [GitHub Issues](https://github.com/rustic-rs/rustic/issues)                                                     |
+| Discord       | [![Discord](https://dcbadge.vercel.app/api/server/WRUWENZnzQ?style=flat-square)](https://discord.gg/WRUWENZnzQ) |
+| Discussions   | [GitHub Discussions](https://github.com/rustic-rs/rustic/discussions)                                           |
 
 ## Getting started
 
@@ -77,7 +77,7 @@ information on how to get started.
 
 ### From binaries
 
-##### [cargo-binstall](https://crates.io/crates/cargo-binstall)
+#### [cargo-binstall](https://crates.io/crates/cargo-binstall)
 
 ```bash
 cargo binstall rustic-rs
@@ -119,14 +119,24 @@ We have collected some improvements of `rustic` over `restic`
 
 ## Contributing
 
-Contributions in form of [issues][4] or PRs are very welcome.
+Tried rustic and not satisfied? Don't just walk away! You can help:
+
+- You can report issues or suggest new features on our
+  [Discord server](https://discord.gg/WRUWENZnzQ) or using
+  [Github Issues](https://github.com/rustic-rs/rustic/issues/new/choose)!
+
+Do you know how to code or got an idea for an improvement? Don't keep it to
+yourself!
+
+- [Contribute fixes](https://github.com/rustic-rs/rustic/contribute) or new
+  features via a pull requests!
 
 Please make sure, that you read the
 [contribution guide](https://rustic.cli.rs/docs/contributing-to-rustic.html).
 
 ## Minimum Rust version policy
 
-This crate's minimum supported `rustc` version is `1.67.1`.
+This crate's minimum supported `rustc` version is `1.70.0`.
 
 The current policy is that the minimum Rust version required to use this crate
 can be increased in minor version updates. For example, if `crate 1.0` requires
@@ -151,4 +161,3 @@ at your option.
 [1]: https://github.com/restic/restic
 [2]: https://github.com/restic/restic/blob/master/doc/design.rst
 [3]: https://github.com/rustic-rs/rustic/discussions
-[4]: https://github.com/rustic-rs/rustic/issues/new/choose

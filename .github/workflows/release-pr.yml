@@ -7,8 +7,7 @@ on:
         required: true
         type: choice
         options:
-          - rustic
-          - rustic_core
+          - rustic-rs
       version:
         description: Version to release
         required: true
@@ -16,22 +15,23 @@ on:
 
 jobs:
   make-release-pr:
+    if: ${{ github.repository_owner == 'rustic-rs' }}
     permissions:
       id-token: write # Enable OIDC
       pull-requests: write
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - uses: chainguard-dev/actions/setup-gitsign@main
-      - uses: Swatinem/rust-cache@e207df5d269b42b69c8bc5101da26f7d31feddb4 # v2
+      - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
       - name: Install cargo-release
-        uses: taiki-e/install-action@v1
+        uses: taiki-e/install-action@f7c663c03b51ed0d93e9cec22a575d3f02175989 # v2
         with:
           tool: cargo-release
-      - uses: cargo-bins/release-pr@v2
+      - uses: cargo-bins/release-pr@deeacca5a38bacc74a3f444b798f4b9bba40f6ad # v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ inputs.version }}
           crate-name: ${{ inputs.crate }}
-          check-semver: true
+          check-semver: false # FIXME: Set back to true and check rustic-rs library API

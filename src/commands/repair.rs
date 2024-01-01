@@ -1,7 +1,5 @@
 //! `repair` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 use abscissa_core::{Command, Runnable, Shutdown};
 
@@ -12,6 +10,7 @@ use rustic_core::{RepairIndexOptions, RepairSnapshotsOptions};
 /// `repair` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct RepairCmd {
+    /// Subcommand to run
     #[clap(subcommand)]
     cmd: RepairSubCmd,
 }
@@ -26,12 +25,15 @@ enum RepairSubCmd {
 
 #[derive(Default, Debug, clap::Parser, Command)]
 struct IndexSubCmd {
+    /// Index repair options
     #[clap(flatten)]
     opts: RepairIndexOptions,
 }
 
+/// `repair snapshots` subcommand
 #[derive(Default, Debug, clap::Parser, Command)]
 struct SnapSubCmd {
+    /// Snapshot repair options
     #[clap(flatten)]
     opts: RepairSnapshotsOptions,
 

@@ -1,7 +1,5 @@
 //! `config` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -13,6 +11,7 @@ use rustic_core::ConfigOptions;
 /// `config` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct ConfigCmd {
+    /// Config options
     #[clap(flatten)]
     config_opts: ConfigOptions,
 }

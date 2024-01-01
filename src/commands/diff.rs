@@ -1,7 +1,5 @@
 //! `diff` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -35,6 +33,7 @@ pub(crate) struct DiffCmd {
     #[clap(long)]
     no_content: bool,
 
+    /// Ignore options
     #[clap(flatten)]
     ignore_opts: LocalSourceFilterOptions,
 }
@@ -57,7 +56,7 @@ impl DiffCmd {
         let (id1, path1) = arg_to_snap_path(&self.snap1, "");
         let (id2, path2) = arg_to_snap_path(&self.snap2, path1);
 
-        _ = match (id1, id2) {
+        match (id1, id2) {
             (Some(id1), Some(id2)) => {
                 // diff between two snapshots
                 let snaps = repo.get_snapshots(&[id1, id2])?;
@@ -74,7 +73,7 @@ impl DiffCmd {
                     self.no_content,
                     |_path, node1, node2| Ok(node1.content == node2.content),
                     self.metadata,
-                )
+                )?;
             }
             (Some(id1), None) => {
                 // diff between snapshot and local path
@@ -111,7 +110,7 @@ impl DiffCmd {
                     self.no_content,
                     |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
                     self.metadata,
-                )
+                )?;
             }
             (None, _) => {
                 bail!("cannot use local path as first argument");
@@ -122,6 +121,16 @@ impl DiffCmd {
     }
 }
 
+/// Split argument into snapshot id and path
+///
+/// # Arguments
+///
+/// * `arg` - argument to split
+/// * `default_path` - default path if no path is given
+///
+/// # Returns
+///
+/// A tuple of the snapshot id and the path
 fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>, &'a str) {
     match arg.split_once(':') {
         Some((id, path)) => (Some(id), path),
@@ -135,6 +144,25 @@ fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>
     }
 }
 
+/// Check if the content of a file in a snapshot is identical to the content of a local file
+///
+/// # Arguments
+///
+/// * `local` - local destination
+/// * `repo` - repository
+/// * `path` - path of the file in the snapshot
+/// * `node` - node of the file in the snapshot
+///
+/// # Errors
+///
+/// * [`RepositoryErrorKind::IdNotFound`] - If the id of a blob is not found in the repository
+///
+/// # Returns
+///
+/// `true` if the content of the file in the snapshot is identical to the content of the local file,
+/// `false` otherwise
+///
+/// [`RepositoryErrorKind::IdNotFound`]: rustic_core::error::RepositoryErrorKind::IdNotFound
 fn identical_content_local<P, S: IndexedFull>(
     local: &LocalDestination,
     repo: &Repository<P, S>,
@@ -155,6 +183,19 @@ fn identical_content_local<P, S: IndexedFull>(
     Ok(true)
 }
 
+/// Compare two streams of nodes and print the differences
+///
+/// # Arguments
+///
+/// * `tree_streamer1` - first stream of nodes
+/// * `tree_streamer2` - second stream of nodes
+/// * `no_content` - don't check for different file contents
+/// * `file_identical` - function to check if the content of two files is identical
+/// * `metadata` - show differences in metadata
+///
+/// # Errors
+///
+// TODO!: add errors!
 fn diff(
     mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
     mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,

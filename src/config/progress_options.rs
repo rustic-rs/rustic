@@ -12,6 +12,7 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use rustic_core::{Progress, ProgressBars};
 
+/// Progress Bar Config
 #[serde_as]
 #[derive(Default, Debug, Parser, Clone, Copy, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -34,14 +35,21 @@ pub struct ProgressOptions {
 }
 
 impl ProgressOptions {
+    /// Get the progress interval
+    ///
+    /// # Returns
+    ///
+    /// `Duration::ZERO` if no progress is enabled
     fn progress_interval(&self) -> Duration {
         self.progress_interval.map_or(Duration::ZERO, |i| *i)
     }
 
+    /// Create a hidden progress bar
     pub fn no_progress() -> RusticProgress {
-        RusticProgress(ProgressBar::hidden())
+        RusticProgress(ProgressBar::hidden(), ProgressType::Hidden)
     }
 }
+
 impl ProgressBars for ProgressOptions {
     type P = RusticProgress;
 
@@ -56,7 +64,7 @@ impl ProgressBars for ProgressOptions {
         );
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
-        RusticProgress(p)
+        RusticProgress(p, ProgressType::Spinner)
     }
 
     fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
@@ -65,12 +73,12 @@ impl ProgressBars for ProgressOptions {
         }
         let p = ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}")
+                .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}")
                 .unwrap(),
         );
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
-        RusticProgress(p)
+        RusticProgress(p, ProgressType::Counter)
     }
 
     fn progress_hidden(&self) -> RusticProgress {
@@ -83,22 +91,26 @@ impl ProgressBars for ProgressOptions {
         }
         let p = ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
-            .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
-                match (s.pos(), s.len()){
-                    (pos,Some(len)) if pos != 0 => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
-                    (_, _) => write!(w,"-"),
-                }.unwrap())
-            .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
+            .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}            {bytes_per_sec:12}")
             .unwrap()
             );
         p.set_prefix(prefix);
         p.enable_steady_tick(self.progress_interval());
-        RusticProgress(p)
+        RusticProgress(p, ProgressType::Bytes)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct RusticProgress(ProgressBar);
+enum ProgressType {
+    Hidden,
+    Spinner,
+    Counter,
+    Bytes,
+}
+
+/// A default progress bar
+#[derive(Debug, Clone)]
+pub struct RusticProgress(ProgressBar, ProgressType);
 
 impl Progress for RusticProgress {
     fn is_hidden(&self) -> bool {
@@ -106,6 +118,30 @@ impl Progress for RusticProgress {
     }
 
     fn set_length(&self, len: u64) {
+        match self.1 {
+            ProgressType::Counter => {
+                self.0.set_style(
+                    ProgressStyle::default_bar()
+                        .template(
+                            "[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}",
+                        )
+                        .unwrap(),
+                );
+            }
+            ProgressType::Bytes => {
+                self.0.set_style(
+                    ProgressStyle::default_bar()
+                        .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
+                            match (s.pos(), s.len()){
+                                (pos,Some(len)) if pos != 0 => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
+                                (_, _) => write!(w,"-"),
+                            }.unwrap())
+                        .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
+                        .unwrap()
+                );
+            }
+            _ => {}
+        }
         self.0.set_length(len);
     }
 

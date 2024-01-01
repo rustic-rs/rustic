@@ -1,3 +1,7 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/rustic-rs/assets/main/logos/readme_header_config.png" height="400" />
+</p>
+
 # Rustic Configuration Specification
 
 `rustic` is a backup tool that allows users to define their backup options using
@@ -49,6 +53,16 @@ configuration files can be found here in the [/config/](/config) directory.
 | no-progress       | If true, disables progress indicators.                                            | false         |                   | RUSTIC_NO_PROGRESS       |
 | progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL |
 | use-profile       | An array of profiles to use.                                                      | Empty array   |                   | RUSTIC_USE_PROFILE       |
+
+### Global Options - env variables
+
+All given environment variables are set before processing. This is handy to
+configure e.g. the `rclone`-backend or some commands which will be called by
+rustic.
+
+**Important**: Please do not forget to include environment variables set in the
+config file as a possible source of errors if you encounter problems. They could
+possibly shadow other values that you have already set.
 
 ### Repository Options
 

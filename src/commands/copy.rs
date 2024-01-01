@@ -1,7 +1,5 @@
 //! `copy` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository, helpers::table_with_titles, status_err, Application, RUSTIC_APP,
 };
@@ -25,12 +23,15 @@ pub(crate) struct CopyCmd {
     #[clap(long)]
     init: bool,
 
+    /// Key options (when using --init)
     #[clap(flatten, next_help_heading = "Key options (when using --init)")]
     key_opts: KeyOptions,
 }
 
+/// Target repository options
 #[derive(Default, Clone, Debug, Deserialize, Merge)]
 pub struct Targets {
+    /// Target repositories
     #[merge(strategy = merge::vec::overwrite_empty)]
     targets: Vec<RepositoryOptions>,
 }
@@ -64,7 +65,8 @@ impl CopyCmd {
 
         let poly = repo.config().poly()?;
         for target_opt in &config.copy.targets {
-            let repo_dest = Repository::new(target_opt)?;
+            let repo_dest =
+                Repository::new_with_progress(target_opt, config.global.progress_options)?;
 
             let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
                 if config.global.dry_run {

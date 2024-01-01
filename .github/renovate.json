@@ -6,7 +6,6 @@
         "helpers:pinGitHubActionDigests"
     ],
     "separateMinorPatch": false,
-    "prCreation": "status-success",
     "prHourlyLimit": 1,
     "prConcurrentLimit": 1,
     "major": {
@@ -17,12 +16,22 @@
     ],
     "packageRules": [
         {
+            "description": "Automerge pin updates for GitHub Actions",
             "matchDatasources": [
                 "github-actions"
             ],
+            "matchDepTypes": [
+                "action"
+            ],
+            "matchUpdateTypes": [
+                "pin",
+                "digest",
+                "pinDigest"
+            ],
             "labels": [
                 "A-ci"
-            ]
+            ],
+            "automerge": true
         },
         {
             "matchDatasources": [
@@ -35,6 +44,7 @@
     ],
     "lockFileMaintenance": {
         "enabled": true,
+        "automerge": true,
         "extends": [
             "schedule:monthly"
         ]

@@ -1,7 +1,5 @@
 //! `forget` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository, helpers::table_with_titles, status_err, Application, RusticConfig,
     RUSTIC_APP,
@@ -32,9 +30,15 @@ pub(super) struct ForgetCmd {
     #[clap(long)]
     json: bool,
 
+    /// Don't show any output
+    #[clap(long, conflicts_with = "json")]
+    quiet: bool,
+
+    /// Forget options
     #[clap(flatten)]
     config: ForgetOptions,
 
+    /// Prune options (only when used with --prune)
     #[clap(
         flatten,
         next_help_heading = "PRUNE OPTIONS (only when used with --prune)"
@@ -57,6 +61,7 @@ impl Override<RusticConfig> for ForgetCmd {
     }
 }
 
+/// Forget options
 #[serde_as]
 #[derive(Clone, Default, Debug, clap::Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
@@ -71,10 +76,12 @@ pub struct ForgetOptions {
     #[merge(strategy = merge::bool::overwrite_false)]
     prune: bool,
 
+    /// Snapshot filter options
     #[clap(flatten, next_help_heading = "Snapshot filter options")]
     #[serde(flatten)]
     filter: SnapshotFilter,
 
+    /// Retention options
     #[clap(flatten, next_help_heading = "Retention options")]
     #[serde(flatten)]
     keep: KeepOptions,
@@ -119,7 +126,7 @@ impl ForgetCmd {
         if self.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &groups)?;
-        } else {
+        } else if !self.quiet {
             print_groups(&groups);
         }
 
@@ -146,6 +153,11 @@ impl ForgetCmd {
     }
 }
 
+/// Print groups to stdout
+///
+/// # Arguments
+///
+/// * `groups` - forget groups to print
 fn print_groups(groups: &ForgetGroups) {
     for ForgetGroup { group, snapshots } in &groups.0 {
         if !group.is_empty() {

@@ -32,7 +32,6 @@ Application based on the [Abscissa] framework.
     overflowing_literals,
     path_statements,
     patterns_in_fns_without_body,
-    private_in_public,
     trivial_numeric_casts,
     unused_results,
     trivial_casts,

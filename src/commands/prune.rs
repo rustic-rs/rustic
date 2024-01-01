@@ -1,7 +1,5 @@
 //! `prune` subcommand
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
 };
@@ -16,6 +14,7 @@ use rustic_core::{PruneOptions, PruneStats};
 #[allow(clippy::struct_excessive_bools)]
 #[derive(clap::Parser, Command, Debug, Clone)]
 pub(crate) struct PruneCmd {
+    /// Prune options
     #[clap(flatten)]
     pub(crate) opts: PruneOptions,
 }
@@ -47,6 +46,12 @@ impl PruneCmd {
         Ok(())
     }
 }
+
+/// Print statistics about the prune operation
+///
+/// # Arguments
+///
+/// * `stats` - Statistics about the prune operation
 #[allow(clippy::cast_precision_loss)]
 fn print_stats(stats: &PruneStats) {
     let pack_stat = &stats.packs;

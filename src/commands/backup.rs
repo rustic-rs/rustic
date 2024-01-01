@@ -2,8 +2,6 @@
 
 use std::path::PathBuf;
 
-/// App-local prelude includes `app_reader()`/`app_writer()`/`app_config()`
-/// accessors along with logging macros. Customize as you see fit.
 use crate::{
     commands::open_repository,
     helpers::bytes_size_to_string,
@@ -49,6 +47,7 @@ pub struct BackupCmd {
     #[clap(long, value_name = "PATH")]
     as_path: Option<PathBuf>,
 
+    /// Ignore save options
     #[clap(flatten)]
     #[serde(flatten)]
     ignore_save_opts: LocalSourceSaveOptions,
@@ -58,33 +57,44 @@ pub struct BackupCmd {
     #[merge(strategy = merge::bool::overwrite_false)]
     json: bool,
 
+    /// Don't show any output
+    #[clap(long, conflicts_with = "json")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    quiet: bool,
+
     /// Initialize repository, if it doesn't exist yet
     #[clap(long)]
     #[merge(strategy = merge::bool::overwrite_false)]
     init: bool,
 
+    /// Parent processing options
     #[clap(flatten, next_help_heading = "Options for parent processing")]
     #[serde(flatten)]
     parent_opts: ParentOptions,
 
+    /// Exclude options
     #[clap(flatten, next_help_heading = "Exclude options")]
     #[serde(flatten)]
     ignore_filter_opts: LocalSourceFilterOptions,
 
+    /// Snapshot options
     #[clap(flatten, next_help_heading = "Snapshot options")]
     #[serde(flatten)]
     snap_opts: SnapshotOptions,
 
+    /// Key options (when using --init)
     #[clap(flatten, next_help_heading = "Key options (when using --init)")]
     #[serde(skip)]
     #[merge(skip)]
     key_opts: KeyOptions,
 
+    /// Config options (when using --init)
     #[clap(flatten, next_help_heading = "Config options (when using --init)")]
     #[serde(skip)]
     #[merge(skip)]
     config_opts: ConfigOptions,
 
+    /// Backup sources
     #[clap(skip)]
     #[merge(strategy = merge_sources)]
     sources: Vec<BackupCmd>,
@@ -95,7 +105,13 @@ pub struct BackupCmd {
     source: String,
 }
 
-// Merge backup sources: If a source is already defined on left, use that. Else add it.
+/// Merge backup sources
+///
+/// If a source is already defined on left, use that. Else add it.
+///
+/// # Arguments
+///
+/// * `left` - Vector of backup sources
 pub(crate) fn merge_sources(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCmd>) {
     left.append(&mut right);
     left.sort_by(|opt1, opt2| opt1.source.cmp(&opt2.source));
@@ -213,7 +229,7 @@ impl BackupCmd {
             if opts.json {
                 let mut stdout = std::io::stdout();
                 serde_json::to_writer_pretty(&mut stdout, &snap)?;
-            } else {
+            } else if !opts.quiet {
                 let summary = snap.summary.unwrap();
                 println!(
                     "Files:       {} new, {} changed, {} unchanged",

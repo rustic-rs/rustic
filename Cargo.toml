@@ -31,9 +31,10 @@ description = { workspace = true }
 members = ["crates/rustic_testing", "xtask"]
 
 [features]
-default = []
+default = ["self-update"]
 mimalloc = ["dep:mimalloc"]
 jemallocator = ["dep:jemallocator-global"]
+self-update = ["dep:self_update", "dep:semver"]
 
 [[bin]]
 name = "rustic"
@@ -69,8 +70,8 @@ serde_with = { workspace = true }
 
 # other dependencies
 chrono = { workspace = true }
-self_update = { workspace = true }
-semver = { workspace = true }
+self_update = { workspace = true, optional = true }
+semver = { workspace = true, optional = true }
 
 # commands
 clap = { workspace = true }

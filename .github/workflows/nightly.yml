@@ -124,7 +124,7 @@ jobs:
         with:
           path: artifacts
       - name: Display structure of downloaded files
-        run: ls -R artifacts
+        run: ls -R
       - name: Releasing nightly builds
         shell: bash
         run: |

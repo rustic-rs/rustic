@@ -10,7 +10,7 @@ use abscissa_core::{Command, FrameworkError, Runnable};
 use anyhow::Result;
 
 use merge::Merge;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
@@ -63,7 +63,7 @@ impl Override<RusticConfig> for ForgetCmd {
 
 /// Forget options
 #[serde_as]
-#[derive(Clone, Default, Debug, clap::Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ForgetOptions {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")

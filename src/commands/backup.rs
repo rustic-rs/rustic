@@ -12,7 +12,7 @@ use anyhow::{bail, Context, Result};
 use log::{debug, info, warn};
 
 use merge::Merge;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use rustic_core::{
     BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
@@ -22,7 +22,7 @@ use rustic_core::{
 use super::init::init;
 
 /// `backup` subcommand
-#[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
+#[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 // Note: using cli_sources, sources and source within this struct is a hack to support serde(deny_unknown_fields)
 // for deserializing the backup options from TOML

@@ -19,7 +19,6 @@ pub(crate) mod repair;
 pub(crate) mod repoinfo;
 pub(crate) mod restore;
 pub(crate) mod self_update;
-pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
 
@@ -34,7 +33,7 @@ use crate::{
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
         init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
         repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        snapshots::SnapshotCmd, tag::TagCmd,
     },
     config::{progress_options::ProgressOptions, RusticConfig},
     {Application, RUSTIC_APP},
@@ -103,9 +102,6 @@ enum RusticCmd {
 
     /// Show a detailed overview of the snapshots within the repository
     Snapshots(SnapshotCmd),
-
-    /// Show the configuration which has been read from the config file(s)
-    ShowConfig(ShowConfigCmd),
 
     /// Update to the latest rustic release
     #[cfg_attr(not(feature = "self-update"), clap(hide = true))]

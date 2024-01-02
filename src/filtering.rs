@@ -2,10 +2,10 @@ use crate::error::RhaiErrorKinds;
 
 use log::warn;
 use rustic_core::{repofile::SnapshotFile, StringList};
-use std::{error::Error, str::FromStr};
+use std::{error::Error, fmt::Display, str::FromStr};
 
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 /// A function to filter snapshots
@@ -13,6 +13,13 @@ use serde_with::{serde_as, DisplayFromStr};
 /// The function is called with a [`SnapshotFile`] and must return a boolean.
 #[derive(Clone, Debug)]
 pub(crate) struct SnapshotFn(FnPtr, AST);
+
+impl Display for SnapshotFn {
+    // FIXME: What shall we display here?
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<function>")
+    }
+}
 
 impl FromStr for SnapshotFn {
     type Err = RhaiErrorKinds;
@@ -43,7 +50,7 @@ impl SnapshotFn {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Deserialize, merge::Merge, clap::Parser)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, merge::Merge, clap::Parser)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)

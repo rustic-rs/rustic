@@ -1,43 +1,23 @@
 //! `config` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+pub mod set;
+pub mod show;
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use crate::commands::config::{set::SetConfigCmd, show::ShowConfigCmd};
 
-use anyhow::Result;
-
-use rustic_core::ConfigOptions;
+use abscissa_core::{Command, Runnable};
 
 /// `config` subcommand
-#[derive(clap::Parser, Command, Debug)]
+#[derive(clap::Parser, Command, Runnable, Debug)]
 pub(crate) struct ConfigCmd {
-    /// Config options
-    #[clap(flatten)]
-    config_opts: ConfigOptions,
+    #[clap(subcommand)]
+    cmd: ConfigSubCmd,
 }
 
-impl Runnable for ConfigCmd {
-    fn run(&self) {
-        if let Err(err) = self.inner_run() {
-            status_err!("{}", err);
-            RUSTIC_APP.shutdown(Shutdown::Crash);
-        };
-    }
-}
-
-impl ConfigCmd {
-    fn inner_run(&self) -> Result<()> {
-        let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
-
-        let changed = repo.apply_config(&self.config_opts)?;
-
-        if changed {
-            println!("saved new config");
-        } else {
-            println!("config is unchanged");
-        }
-
-        Ok(())
-    }
+#[derive(clap::Subcommand, Debug, Runnable)]
+enum ConfigSubCmd {
+    /// Set the configuration
+    Set(SetConfigCmd),
+    /// Show the configuration which has been read from the config file(s)
+    Show(ShowConfigCmd),
 }

@@ -33,7 +33,7 @@ use crate::{
 ///
 /// # Example
 // TODO: add example
-#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RusticConfig {
     /// Global options

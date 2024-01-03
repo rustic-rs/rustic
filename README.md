@@ -80,7 +80,7 @@ information on how to get started.
 #### [cargo-binstall](https://crates.io/crates/cargo-binstall)
 
 ```bash
-cargo binstall rustic-rs
+cargo install rustic-rs
 ```
 
 #### Windows

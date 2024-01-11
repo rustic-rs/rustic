@@ -133,6 +133,7 @@ impl DiffCmd {
 /// A tuple of the snapshot id and the path
 fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>, &'a str) {
     match arg.split_once(':') {
+        Some(("local", path)) => (None, path),
         Some((id, path)) => (Some(id), path),
         None => {
             if arg.contains('/') {

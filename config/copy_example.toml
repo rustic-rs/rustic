@@ -11,24 +11,6 @@ repository = "/tmp/repo"
 [repository]
 password = "test"
 
+[copy]
 # you can specify multiple copy targets
-[[copy]]
-# First copy target
-[copy.options]
-# Optional, but one of the three password options must be set
-# either on CLI, in the config file or in the environment variables
-password = "test"
-no-cache = true
-
-[copy.backend]
-repository = "/tmp/repo2"
-
-[[copy]]
-# Second copy target
-[copy.options]
-password-file = "/root/key-rustic-ovh"
-cache-dir = "/var/lib/cache/rustic" # explicitly specify cache dir for remote repository
-
-[copy.backend]
-repository = "rclone|ovh:backup"
-repo-hot = "rclone|ovh:backup-hot"
+target-profiles = ["local", "ovh-hot-cold"]

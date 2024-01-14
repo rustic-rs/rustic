@@ -23,7 +23,7 @@ use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commands::{backup::BackupCmd, copy::TargetOptions, forget::ForgetOptions},
+    commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
@@ -58,8 +58,7 @@ pub struct RusticConfig {
 
     /// Copy options
     #[clap(skip)]
-    #[merge(strategy = merge::vec::overwrite_empty)]
-    pub copy: Vec<TargetOptions>,
+    pub copy: CopyCmd,
 
     /// Forget options
     #[clap(skip)]
@@ -78,29 +77,29 @@ impl RusticConfig {
     pub fn merge_profile(
         &mut self,
         profile: &str,
-        merge_logs: &mut Vec<(Level, String)>,
+        log_fn: &mut impl FnMut(Level, String),
         level_missing: Level,
     ) -> Result<(), FrameworkError> {
         let profile_filename = profile.to_string() + ".toml";
         let paths = get_config_paths(&profile_filename);
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
-            merge_logs.push((Level::Info, format!("using config {}", path.display())));
+            log_fn(Level::Info, format!("using config {}", path.display()));
             let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profile.clone() {
-                config.merge_profile(profile, merge_logs, Level::Warn)?;
+                config.merge_profile(profile, log_fn, level_missing)?;
             }
             self.merge(config);
         } else {
             let paths_string = paths.iter().map(|path| path.display()).join(", ");
-            merge_logs.push((
+            log_fn(
                 level_missing,
                 format!(
                     "using no config file, none of these exist: {}",
                     &paths_string
                 ),
-            ));
+            );
         };
         Ok(())
     }

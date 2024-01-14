@@ -164,13 +164,13 @@ impl Configurable<RusticConfig> for EntryPoint {
 
         // collect logs during merging as we start the logger *after* merging
         let mut merge_logs = Vec::new();
-
+        let mut log_fn = |level, message| merge_logs.push((level, message));
         // get global options from command line / env and config file
         if config.global.use_profile.is_empty() {
-            config.merge_profile("rustic", &mut merge_logs, Level::Info)?;
+            config.merge_profile("rustic", &mut log_fn, Level::Info)?;
         } else {
             for profile in &config.global.use_profile.clone() {
-                config.merge_profile(profile, &mut merge_logs, Level::Warn)?;
+                config.merge_profile(profile, &mut log_fn, Level::Warn)?;
             }
         }
 

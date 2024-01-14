@@ -108,7 +108,7 @@ toml_edit = { workspace = true, features = ["serde"] }
 libc = "0.2.150"
 [workspace.dependencies]
 rustic_core = { path = "../rustic_core/crates/core", features = ["cli"] }
-rustic_backend = { path = "../rustic_core/crates/backends" }
+rustic_backend = { path = "../rustic_core/crates/backend" }
 # rustic_core = { version = "0.1.2", features = ["cli"] }
 
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }

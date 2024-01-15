@@ -41,12 +41,8 @@ pub struct RusticConfig {
     #[clap(flatten, next_help_heading = "Global options")]
     pub global: GlobalOptions,
 
-    #[clap(flatten, next_help_heading = "Backend options")]
-    pub backend: BackendOptions,
-
-    /// Repository options
-    #[clap(flatten, next_help_heading = "Repository options")]
-    pub repository: RepositoryOptions,
+    #[clap(flatten)]
+    pub repository: Repository,
 
     /// Snapshot filter options
     #[clap(flatten, next_help_heading = "Snapshot filter options")]
@@ -63,6 +59,19 @@ pub struct RusticConfig {
     /// Forget options
     #[clap(skip)]
     pub forget: ForgetOptions,
+}
+
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct Repository {
+    #[clap(flatten, next_help_heading = "Backend options")]
+    #[serde(flatten)]
+    pub backend: BackendOptions,
+
+    /// Repository options
+    #[clap(flatten, next_help_heading = "Repository options")]
+    #[serde(flatten)]
+    pub repository: RepositoryOptions,
 }
 
 impl RusticConfig {

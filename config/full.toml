@@ -21,20 +21,11 @@ dry-run = false
 # This is only an example how to set an rclone env variable. Default: No variables are defined.
 RCLONE_XXX = "true"
 
-# Backend options: These options define which backend to use.
-[backend]
-repository = "/repo/rustic" # Must be set
-repo-hot = "/my/hot/repo" # Default: not set
-
-# Additional backend options - depending on backend. These can be only set in the config file.
-[backend.options]
-post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
-post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set
-retry = "default" # Only rest/rclone backend; Allowed values: "false"/"off", "default" or number of retries
-timeout = "10min" # Only rest/rclone backend
 
 # Repository options: These options define which repository settings and passwords to use.
 [repository]
+repository = "/repo/rustic" # Must be set
+repo-hot = "/my/hot/repo" # Default: not set
 # Optional, but one of the three password options must be set
 # either on CLI, in the config file or in environment variables
 password = "mySecretPassword"
@@ -46,6 +37,13 @@ cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g
 warm-up = false
 warm-up-command = "warmup.sh %id" # Default: not set
 warm-up-wait = "10min" # Default: not set
+
+# Additional backend options - depending on backend. These can be only set in the config file.
+[repository.options]
+post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
+post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set
+retry = "default" # Only rest/rclone backend; Allowed values: "false"/"off", "default" or number of retries
+timeout = "10min" # Only rest/rclone backend
 
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]

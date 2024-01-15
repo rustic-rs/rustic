@@ -93,9 +93,9 @@ fn copy_to_target<P: ProgressBars, I: IndexedFull>(
             &mut |level, message| log!(level, "{}", message),
             Level::Warn,
         )?;
-        let backends = target_opts.backend.to_backends()?;
+        let backends = target_opts.repository.backend.to_backends()?;
         Repository::new_with_progress(
-            &target_opts.repository,
+            &target_opts.repository.repository,
             backends,
             config.global.progress_options,
         )?

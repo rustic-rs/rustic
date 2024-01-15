@@ -130,10 +130,10 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let backends = config.backend.to_backends()?;
+        let backends = config.repository.backend.to_backends()?;
 
         let po = config.global.progress_options;
-        let repo = Repository::new_with_progress(&config.repository, backends, po)?;
+        let repo = Repository::new_with_progress(&config.repository.repository, backends, po)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
             if config.global.dry_run {

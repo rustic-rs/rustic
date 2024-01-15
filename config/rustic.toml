@@ -10,12 +10,9 @@
 log-level = "debug"
 log-file = "/log/rustic.log"
 
-# Backend options: These options define which backend to use.
-[backend]
-repository = "/tmp/rustic"
-
 # Repository options: These options define which backend to use and which password to use.
 [repository]
+repository = "/tmp/rustic"
 password = "mySecretPassword"
 
 # snapshot-filter options: These options apply to all commands that use snapshot filters

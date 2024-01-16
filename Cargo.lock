@@ -2808,7 +2808,6 @@ dependencies = [
  "clap",
  "derive_setters",
  "displaydoc",
- "dunce",
  "hex",
  "humantime",
  "itertools",

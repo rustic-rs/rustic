@@ -123,7 +123,7 @@ fn copy_to_target<P: ProgressBars, I: IndexedFull>(
 
     let snaps = repo_dest.relevant_copy_snapshots(
         |sn| !opts.ids.is_empty() || config.snapshot_filter.matches(sn),
-        &snapshots,
+        snapshots,
     )?;
 
     let mut table = table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);

@@ -9,7 +9,9 @@ use serde::Serialize;
 
 use crate::helpers::table_right_from;
 use anyhow::Result;
-use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos, Repository};
+use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos};
+
+use super::get_repository;
 
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -52,15 +54,14 @@ impl RepoInfoCmd {
 
         let infos = Infos {
             files: (!self.only_index)
-                .then(|| {
-                    let po = config.global.progress_options;
-                    let repo = Repository::new_with_progress(&config.repository, po)?;
-                    repo.infos_files()
+                .then(|| -> Result<_> {
+                    let repo = get_repository(&config.repository)?;
+                    Ok(repo.infos_files()?)
                 })
                 .transpose()?,
             index: (!self.only_files)
                 .then(|| -> Result<_> {
-                    let repo = open_repository(&config)?;
+                    let repo = open_repository(&config.repository)?;
                     Ok(repo.infos_index()?)
                 })
                 .transpose()?,

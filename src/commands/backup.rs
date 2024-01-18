@@ -3,7 +3,6 @@
 use std::path::PathBuf;
 
 use crate::{
-    commands::open_repository,
     helpers::bytes_size_to_string,
     {status_err, Application, RUSTIC_APP},
 };
@@ -16,10 +15,10 @@ use serde::Deserialize;
 
 use rustic_core::{
     BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    ParentOptions, PathList, Repository, SnapshotOptions,
+    ParentOptions, PathList, SnapshotOptions,
 };
 
-use super::init::init;
+use super::{get_repository, init::init};
 
 /// `backup` subcommand
 #[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
@@ -135,9 +134,7 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let po = config.global.progress_options;
-        let repo = Repository::new_with_progress(&config.repository, po)?;
+        let repo = get_repository(&config.repository)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
             if config.global.dry_run {
@@ -148,7 +145,7 @@ impl BackupCmd {
             }
             init(repo, &self.key_opts, &self.config_opts)?
         } else {
-            open_repository(&config)?
+            repo.open()?
         }
         .to_indexed_ids()?;
 
@@ -230,7 +227,7 @@ impl BackupCmd {
                 .ignore_filter_opts(opts.ignore_filter_opts)
                 .no_scan(opts.no_scan)
                 .dry_run(config.global.dry_run);
-            let snap = repo.backup(&backup_opts, source.clone(), opts.snap_opts.to_snapshot()?)?;
+            let snap = repo.backup(&backup_opts, &source, opts.snap_opts.to_snapshot()?)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();

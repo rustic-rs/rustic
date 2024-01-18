@@ -71,7 +71,7 @@ impl Runnable for TagCmd {
 impl TagCmd {
     fn inner_run(&self) -> anyhow::Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?

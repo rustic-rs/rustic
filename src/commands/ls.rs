@@ -43,6 +43,10 @@ pub(crate) struct LsCmd {
     #[clap(long, short = 'l')]
     long: bool,
 
+    /// show uid/gid instead of user/group
+    #[clap(long)]
+    numeric_uid_gid: bool,
+
     /// Listing options
     #[clap(flatten)]
     ls_opts: LsOptions,
@@ -103,7 +107,7 @@ impl LsCmd {
             let (path, node) = item?;
             summary.update(&node);
             if self.long {
-                print_node(&node, &path);
+                print_node(&node, &path, self.numeric_uid_gid);
             } else {
                 println!("{path:?} ");
             }
@@ -126,7 +130,7 @@ impl LsCmd {
 ///
 /// * `node` - the node to print
 /// * `path` - the path of the node
-fn print_node(node: &Node, path: &Path) {
+fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
     println!(
         "{:>1}{:>9} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
         match node.node_type {
@@ -142,8 +146,18 @@ fn print_node(node: &Node, path: &Path) {
             .mode
             .map(parse_permissions)
             .unwrap_or_else(|| "?????????".to_string()),
-        node.meta.user.clone().unwrap_or_else(|| "?".to_string()),
-        node.meta.group.clone().unwrap_or_else(|| "?".to_string()),
+        if numeric_uid_gid {
+            node.meta.uid.map(|uid| uid.to_string())
+        } else {
+            node.meta.user.clone()
+        }
+        .unwrap_or_else(|| "?".to_string()),
+        if numeric_uid_gid {
+            node.meta.gid.map(|uid| uid.to_string())
+        } else {
+            node.meta.group.clone()
+        }
+        .unwrap_or_else(|| "?".to_string()),
         node.meta.size,
         node.meta
             .mtime

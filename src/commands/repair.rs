@@ -60,7 +60,7 @@ impl Runnable for IndexSubCmd {
 impl IndexSubCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
         repo.repair_index(&self.opts, config.global.dry_run)?;
         Ok(())
     }
@@ -78,7 +78,7 @@ impl Runnable for SnapSubCmd {
 impl SnapSubCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?.to_indexed()?;
+        let repo = open_repository(&config.repository)?.to_indexed()?;
         let snaps = if self.ids.is_empty() {
             repo.get_all_snapshots()?
         } else {

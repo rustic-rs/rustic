@@ -14,6 +14,7 @@ pub(crate) mod key;
 pub(crate) mod list;
 pub(crate) mod ls;
 pub(crate) mod merge;
+pub(crate) mod mount;
 pub(crate) mod prune;
 pub(crate) mod repair;
 pub(crate) mod repoinfo;
@@ -22,21 +23,22 @@ pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
+pub(crate) mod webdav;
 
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
-        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
-        repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, mount::MountCmd,
+        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
+        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
+        tag::TagCmd, webdav::WebDavCmd,
     },
-    config::{progress_options::ProgressOptions, RusticConfig},
+    config::{progress_options::ProgressOptions, RepoOptions, RusticConfig},
     {Application, RUSTIC_APP},
 };
 
@@ -92,6 +94,9 @@ enum RusticCmd {
     /// Manage keys
     Key(KeyCmd),
 
+    /// Mount repository
+    Mount(MountCmd),
+
     /// List repository files
     List(ListCmd),
 
@@ -125,6 +130,9 @@ enum RusticCmd {
 
     /// Change tags of snapshots
     Tag(TagCmd),
+
+    /// Mount repository
+    Webdav(WebDavCmd),
 }
 
 /// Entry point for the application. It needs to be a struct to allow using subcommands!
@@ -223,11 +231,24 @@ impl Configurable<RusticConfig> for EntryPoint {
     }
 }
 
-/// Open the repository with the given config
+/// Get the repository with the given options
 ///
 /// # Arguments
 ///
-/// * `config` - The config file
+/// * `repo_opts` - The repository options
+///
+fn get_repository(repo_opts: &RepoOptions) -> Result<Repository<ProgressOptions, ()>> {
+    let po = RUSTIC_APP.config().global.progress_options;
+    let backends = repo_opts.be.to_backends()?;
+    let repo = Repository::new_with_progress(&repo_opts.repo, backends, po)?;
+    Ok(repo)
+}
+
+/// Open the repository with the given options
+///
+/// # Arguments
+///
+/// * `repo_opts` - The repository options
 ///
 /// # Errors
 ///
@@ -242,9 +263,8 @@ impl Configurable<RusticConfig> for EntryPoint {
 /// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: crate::error::RepositoryErrorKind::PasswordCommandParsingFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 /// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
-fn open_repository(config: &Arc<RusticConfig>) -> Result<Repository<ProgressOptions, OpenStatus>> {
-    let po = config.global.progress_options;
-    let repo = Repository::new_with_progress(&config.repository, po)?;
+fn open_repository(repo_opts: &RepoOptions) -> Result<Repository<ProgressOptions, OpenStatus>> {
+    let repo = get_repository(repo_opts)?;
     match repo.password()? {
         // if password is given, directly return the result of find_key_in_backend and don't retry
         Some(pass) => {

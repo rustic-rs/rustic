@@ -41,7 +41,7 @@ impl Runnable for MergeCmd {
 impl MergeCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?.to_indexed_ids()?;
+        let repo = open_repository(&config.repository)?.to_indexed_ids()?;
 
         let snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?

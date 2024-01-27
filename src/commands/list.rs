@@ -28,8 +28,7 @@ impl Runnable for ListCmd {
 impl ListCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let tpe = match self.tpe.as_str() {
             // special treatment for listing blobs: read the index and display it

@@ -26,7 +26,7 @@ impl Runnable for CheckCmd {
 impl CheckCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
         repo.check(self.opts)?;
         Ok(())
     }

@@ -31,7 +31,7 @@ impl Runnable for PruneCmd {
 impl PruneCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let pruner = repo.prune_plan(&self.opts)?;
 

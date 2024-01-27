@@ -99,7 +99,7 @@ impl Runnable for ForgetCmd {
 impl ForgetCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let group_by = config.forget.group_by.unwrap_or_default();
 

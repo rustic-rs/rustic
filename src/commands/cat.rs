@@ -59,7 +59,7 @@ impl Runnable for CatCmd {
 impl CatCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let data = match &self.cmd {
             CatSubCmd::Config => repo.cat_file(FileType::Config, "")?,

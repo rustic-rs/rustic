@@ -1,7 +1,10 @@
 //! `copy` subcommand
 
 use crate::{
-    commands::open_repository, helpers::table_with_titles, status_err, Application, RUSTIC_APP,
+    commands::{get_repository, open_repository},
+    config::RepoOptions,
+    helpers::table_with_titles,
+    status_err, Application, RUSTIC_APP,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
@@ -10,7 +13,7 @@ use log::{error, info};
 use merge::Merge;
 use serde::Deserialize;
 
-use rustic_core::{CopySnapshot, Id, KeyOptions, Repository, RepositoryOptions};
+use rustic_core::{CopySnapshot, Id, KeyOptions};
 
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -33,7 +36,7 @@ pub(crate) struct CopyCmd {
 pub struct Targets {
     /// Target repositories
     #[merge(strategy = merge::vec::overwrite_empty)]
-    targets: Vec<RepositoryOptions>,
+    targets: Vec<RepoOptions>,
 }
 
 impl Runnable for CopyCmd {
@@ -54,7 +57,7 @@ impl CopyCmd {
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
-        let repo = open_repository(&config)?.to_indexed()?;
+        let repo = open_repository(&config.repository)?.to_indexed()?;
         let mut snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
         } else {
@@ -65,8 +68,7 @@ impl CopyCmd {
 
         let poly = repo.config().poly()?;
         for target_opt in &config.copy.targets {
-            let repo_dest =
-                Repository::new_with_progress(target_opt, config.global.progress_options)?;
+            let repo_dest = get_repository(target_opt)?;
 
             let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
                 if config.global.dry_run {

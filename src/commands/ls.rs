@@ -91,8 +91,7 @@ impl Summary {
 impl LsCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let repo = open_repository(&config)?.to_indexed()?;
+        let repo = open_repository(&config.repository)?.to_indexed()?;
 
         let node =
             repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;

@@ -2,7 +2,8 @@
 #
 # backup usage: "rustic -P local backup
 # cleanup:      "rustic -P local forget --prune
-#
+
+# Repository options: These options define which repository settings and passwords to use.
 [repository]
 repository = "/backup/rustic"
 password-file = "/root/key-rustic"

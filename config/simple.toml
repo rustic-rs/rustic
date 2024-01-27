@@ -1,3 +1,4 @@
+# Repository options: These options define which repository settings and passwords to use.
 [repository]
 repository = "/tmp/repo"
 password = "test"

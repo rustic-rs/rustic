@@ -44,6 +44,10 @@ use abscissa_core::{
     FrameworkErrorKind, Runnable, Shutdown,
 };
 use anyhow::{anyhow, Result};
+use clap::builder::{
+    styling::{AnsiColor, Effects},
+    Styles,
+};
 use dialoguer::Password;
 use log::{log, Level};
 use rustic_core::{OpenStatus, Repository};
@@ -126,9 +130,17 @@ enum RusticCmd {
     Tag(TagCmd),
 }
 
+fn styles() -> Styles {
+    Styles::styled()
+        .header(AnsiColor::Red.on_default() | Effects::BOLD)
+        .usage(AnsiColor::Red.on_default() | Effects::BOLD)
+        .literal(AnsiColor::Blue.on_default() | Effects::BOLD)
+        .placeholder(AnsiColor::Green.on_default())
+}
+
 /// Entry point for the application. It needs to be a struct to allow using subcommands!
 #[derive(clap::Parser, Command, Debug)]
-#[command(author, about, name="rustic", version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
+#[command(author, about, name="rustic", styles=styles(), version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
 pub struct EntryPoint {
     #[command(flatten)]
     pub config: RusticConfig,

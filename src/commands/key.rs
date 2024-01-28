@@ -9,7 +9,7 @@ use anyhow::Result;
 use dialoguer::Password;
 use log::info;
 
-use rustic_core::{KeyOptions, Repository, RepositoryOptions};
+use rustic_core::{KeyOptions, RepositoryOptions};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -27,9 +27,17 @@ enum KeySubCmd {
 
 #[derive(clap::Parser, Debug)]
 pub(crate) struct AddCmd {
+    /// New password
+    #[clap(long)]
+    pub(crate) new_password: Option<String>,
+
     /// File from which to read the new password
     #[clap(long)]
     pub(crate) new_password_file: Option<PathBuf>,
+
+    /// Command to get the new password from
+    #[clap(long)]
+    pub(crate) new_password_command: Option<String>,
 
     /// Key options
     #[clap(flatten)]
@@ -54,19 +62,18 @@ impl Runnable for AddCmd {
 impl AddCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+        let repo = open_repository(&config.repository)?;
 
-        let repo = open_repository(&config)?;
-
-        // create new "artificial" repo using the given password options
-        let repo_opts = RepositoryOptions {
+        // create new Repository options which just contain password information
+        let pass_opts = RepositoryOptions {
+            password: self.new_password.clone(),
             password_file: self.new_password_file.clone(),
-            repository: Some(String::new()), // fake repository to make Repository::new() not bail
+            password_command: self.new_password_command.clone(),
             ..Default::default()
         };
-        let repo_newpass = Repository::new(&repo_opts)?;
 
-        let pass = repo_newpass
-            .password()
+        let pass = pass_opts
+            .evaluate_password()
             .map_err(|err| err.into())
             .transpose()
             .unwrap_or_else(|| -> Result<_> {

@@ -3,23 +3,21 @@
 use std::path::PathBuf;
 
 use crate::{
-    commands::open_repository,
+    commands::{get_repository, init::init},
     helpers::bytes_size_to_string,
-    {status_err, Application, RUSTIC_APP},
+    status_err, Application, RUSTIC_APP,
 };
+
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Context, Result};
 use log::{debug, info, warn};
-
 use merge::Merge;
 use serde::Deserialize;
 
 use rustic_core::{
     BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    ParentOptions, PathList, Repository, SnapshotOptions,
+    ParentOptions, PathList, SnapshotOptions,
 };
-
-use super::init::init;
 
 /// `backup` subcommand
 #[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
@@ -51,6 +49,11 @@ pub struct BackupCmd {
     #[clap(flatten)]
     #[serde(flatten)]
     ignore_save_opts: LocalSourceSaveOptions,
+
+    /// Don't scan the backup source for its size - this disables ETA estimation for backup.
+    #[clap(long)]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub no_scan: bool,
 
     /// Output generated snapshot in json format
     #[clap(long)]
@@ -130,9 +133,7 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let po = config.global.progress_options;
-        let repo = Repository::new_with_progress(&config.repository, po)?;
+        let repo = get_repository(&config.repository)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
             if config.global.dry_run {
@@ -143,7 +144,7 @@ impl BackupCmd {
             }
             init(repo, &self.key_opts, &self.config_opts)?
         } else {
-            open_repository(&config)?
+            repo.open()?
         }
         .to_indexed_ids()?;
 
@@ -223,8 +224,9 @@ impl BackupCmd {
                 .parent_opts(opts.parent_opts)
                 .ignore_save_opts(opts.ignore_save_opts)
                 .ignore_filter_opts(opts.ignore_filter_opts)
+                .no_scan(opts.no_scan)
                 .dry_run(config.global.dry_run);
-            let snap = repo.backup(&backup_opts, source.clone(), opts.snap_opts.to_snapshot()?)?;
+            let snap = repo.backup(&backup_opts, &source, opts.snap_opts.to_snapshot()?)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();

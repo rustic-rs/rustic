@@ -18,6 +18,7 @@ use abscissa_core::FrameworkError;
 use clap::Parser;
 use itertools::Itertools;
 use log::Level;
+use rustic_backend::BackendOptions;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +43,7 @@ pub struct RusticConfig {
 
     /// Repository options
     #[clap(flatten, next_help_heading = "Repository options")]
-    pub repository: RepositoryOptions,
+    pub repository: AllRepositoryOptions,
 
     /// Snapshot filter options
     #[clap(flatten, next_help_heading = "Snapshot filter options")]
@@ -59,6 +60,20 @@ pub struct RusticConfig {
     /// Forget options
     #[clap(skip)]
     pub forget: ForgetOptions,
+}
+
+#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct AllRepositoryOptions {
+    /// Repository options
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub repo: RepositoryOptions,
+
+    /// Backend options
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub be: BackendOptions,
 }
 
 impl RusticConfig {

@@ -271,8 +271,8 @@ fn open_repository(
                     .interact()?;
                 match repo.clone().open_with_password(&pass) {
                     Ok(repo) => return Ok(repo),
-                    // TODO: fail if error != Password incorrect
-                    Err(_) => continue,
+                    Err(err) if err.is_incorrect_password() => continue,
+                    Err(err) => return Err(err.into()),
                 }
             }
         }

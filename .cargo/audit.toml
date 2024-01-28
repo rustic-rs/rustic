@@ -1,0 +1,6 @@
+[advisories]
+ignore = [
+  # FIXME!: See https://github.com/RustCrypto/RSA/issues/19#issuecomment-1822995643.
+  # There is no workaround available yet.
+  "RUSTSEC-2023-0071",
+]

@@ -9,7 +9,7 @@ use dialoguer::Password;
 
 use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 
-use super::open_repository;
+use super::get_repository;
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -35,7 +35,7 @@ impl Runnable for InitCmd {
 impl InitCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
+        let repo = get_repository(&config.repository)?;
 
         // Note: This is again checked in repo.init_with_password(), however we want to inform
         // users before they are prompted to enter a password

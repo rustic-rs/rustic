@@ -81,6 +81,7 @@ one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
 init = false
+skip-identical-parent = false
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.sources]]
@@ -112,6 +113,7 @@ one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
 init = false
+skip-identical-parent = false
 
 [[backup.sources]]
 source = "/path/to/source2 /second/path" # multiple local paths are allowd within one source

@@ -52,6 +52,7 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { workspace = true }
+rustic_backend = { workspace = true }
 rustic_core = { workspace = true }
 
 # errors
@@ -102,8 +103,9 @@ toml = { workspace = true }
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2.152"
 [workspace.dependencies]
-rustic_core = { version = "0.1.2", features = ["cli"] }
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
+rustic_backend = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
+rustic_core = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
 
 # logging
 log = "0.4"

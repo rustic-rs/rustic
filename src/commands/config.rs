@@ -28,7 +28,7 @@ impl Runnable for ConfigCmd {
 impl ConfigCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let changed = repo.apply_config(&self.config_opts)?;
 

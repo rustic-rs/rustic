@@ -58,7 +58,7 @@ impl Runnable for SnapshotCmd {
 impl SnapshotCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
+        let repo = open_repository(&config.repository)?;
 
         let groups = repo.get_snapshot_group(&self.ids, self.group_by, |sn| {
             config.snapshot_filter.matches(sn)

@@ -11,7 +11,7 @@ use anyhow::{bail, Context, Result};
 use rustic_core::{
     repofile::{BlobType, Node, NodeType},
     IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    LsOptions, ReadSourceEntry, Repository, RusticResult,
+    LsOptions, ReadSource, ReadSourceEntry, Repository, RusticResult,
 };
 
 /// `diff` subcommand
@@ -50,8 +50,7 @@ impl Runnable for DiffCmd {
 impl DiffCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let repo = open_repository(&config)?.to_indexed()?;
+        let repo = open_repository(&config.repository)?.to_indexed()?;
 
         let (id1, path1) = arg_to_snap_path(&self.snap1, "");
         let (id2, path2) = arg_to_snap_path(&self.snap2, path1);
@@ -92,6 +91,7 @@ impl DiffCmd {
                     &self.ignore_opts,
                     &[&path2],
                 )?
+                .entries()
                 .map(|item| -> RusticResult<_> {
                     let ReadSourceEntry { path, node, .. } = item?;
                     let path = if is_dir {

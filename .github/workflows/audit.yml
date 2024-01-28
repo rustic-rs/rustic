@@ -30,6 +30,7 @@ jobs:
       - uses: rustsec/audit-check@dd51754d4e59da7395a4cd9b593f0ff2d61a9b95 # v1.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ignore: RUSTSEC-2023-0071  # rsa thingy, ignored for now
 
   cargo-deny:
     name: Run cargo-deny

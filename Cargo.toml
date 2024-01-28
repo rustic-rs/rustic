@@ -104,8 +104,8 @@ toml = { workspace = true }
 libc = "0.2.152"
 [workspace.dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.1.0", features = ["cli"] }
-rustic_core = { version = "0.2.0", features = ["cli"] }
+rustic_backend = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
+rustic_core = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
 
 # logging
 log = "0.4"

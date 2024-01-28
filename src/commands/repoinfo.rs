@@ -1,17 +1,16 @@
 //! `repoinfo` subcommand
 
 use crate::{
-    commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
+    commands::{get_repository, open_repository},
+    helpers::{bytes_size_to_string, table_right_from},
+    status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use serde::Serialize;
 
-use crate::helpers::table_right_from;
 use anyhow::Result;
 use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos};
-
-use super::get_repository;
 
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]

@@ -35,7 +35,7 @@ use crate::{
         repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
         show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
     },
-    config::{progress_options::ProgressOptions, RepoOptions, RusticConfig},
+    config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
 };
 
@@ -228,7 +228,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 ///
 /// * `repo_opts` - The repository options
 ///
-fn get_repository(repo_opts: &RepoOptions) -> Result<Repository<ProgressOptions, ()>> {
+fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<ProgressOptions, ()>> {
     let po = RUSTIC_APP.config().global.progress_options;
     let backends = repo_opts.be.to_backends()?;
     let repo = Repository::new_with_progress(&repo_opts.repo, backends, po)?;
@@ -254,7 +254,9 @@ fn get_repository(repo_opts: &RepoOptions) -> Result<Repository<ProgressOptions,
 /// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: crate::error::RepositoryErrorKind::PasswordCommandParsingFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 /// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
-fn open_repository(repo_opts: &RepoOptions) -> Result<Repository<ProgressOptions, OpenStatus>> {
+fn open_repository(
+    repo_opts: &AllRepositoryOptions,
+) -> Result<Repository<ProgressOptions, OpenStatus>> {
     let repo = get_repository(repo_opts)?;
     match repo.password()? {
         // if password is given, directly return the result of find_key_in_backend and don't retry

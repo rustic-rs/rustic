@@ -3,13 +3,14 @@
 use std::path::PathBuf;
 
 use crate::{
+    commands::{get_repository, init::init},
     helpers::bytes_size_to_string,
-    {status_err, Application, RUSTIC_APP},
+    status_err, Application, RUSTIC_APP,
 };
+
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Context, Result};
 use log::{debug, info, warn};
-
 use merge::Merge;
 use serde::Deserialize;
 
@@ -17,8 +18,6 @@ use rustic_core::{
     BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
     ParentOptions, PathList, SnapshotOptions,
 };
-
-use super::{get_repository, init::init};
 
 /// `backup` subcommand
 #[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]

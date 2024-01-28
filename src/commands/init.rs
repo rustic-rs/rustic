@@ -2,14 +2,11 @@
 
 use abscissa_core::{status_err, Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
-
-use crate::{Application, RUSTIC_APP};
-
 use dialoguer::Password;
 
-use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
+use crate::{commands::get_repository, Application, RUSTIC_APP};
 
-use super::get_repository;
+use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]

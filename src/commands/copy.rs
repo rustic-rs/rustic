@@ -2,14 +2,13 @@
 
 use crate::{
     commands::{get_repository, open_repository},
-    config::RepoOptions,
+    config::AllRepositoryOptions,
     helpers::table_with_titles,
     status_err, Application, RUSTIC_APP,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 use log::{error, info};
-
 use merge::Merge;
 use serde::Deserialize;
 
@@ -36,7 +35,7 @@ pub(crate) struct CopyCmd {
 pub struct Targets {
     /// Target repositories
     #[merge(strategy = merge::vec::overwrite_empty)]
-    targets: Vec<RepoOptions>,
+    targets: Vec<AllRepositoryOptions>,
 }
 
 impl Runnable for CopyCmd {

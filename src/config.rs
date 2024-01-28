@@ -43,7 +43,7 @@ pub struct RusticConfig {
 
     /// Repository options
     #[clap(flatten, next_help_heading = "Repository options")]
-    pub repository: RepoOptions,
+    pub repository: AllRepositoryOptions,
 
     /// Snapshot filter options
     #[clap(flatten, next_help_heading = "Snapshot filter options")]
@@ -64,7 +64,7 @@ pub struct RusticConfig {
 
 #[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct RepoOptions {
+pub struct AllRepositoryOptions {
     /// Repository options
     #[clap(flatten)]
     #[serde(flatten)]

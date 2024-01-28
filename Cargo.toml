@@ -100,7 +100,7 @@ tempfile = { workspace = true }
 toml = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
-libc = "0.2.151"
+libc = "0.2.152"
 [workspace.dependencies]
 rustic_core = { version = "0.1.2", features = ["cli"] }
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }

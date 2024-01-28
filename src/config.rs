@@ -65,15 +65,15 @@ pub struct RusticConfig {
 #[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct AllRepositoryOptions {
-    /// Repository options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    pub repo: RepositoryOptions,
-
     /// Backend options
     #[clap(flatten)]
     #[serde(flatten)]
     pub be: BackendOptions,
+
+    /// Repository options
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub repo: RepositoryOptions,
 }
 
 impl RusticConfig {

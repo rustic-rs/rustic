@@ -69,7 +69,7 @@ impl WebDavCmd {
 
         let vfs = if let Some(snap) = &self.snap {
             let node = repo.node_from_snapshot_path(snap, sn_filter)?;
-            Vfs::from_dirnode(node, file_access)
+            Vfs::from_dirnode(node)
         } else {
             let snapshots = repo.get_matching_snapshots(sn_filter)?;
             let (latest, identical) = if self.symlinks {
@@ -77,14 +77,7 @@ impl WebDavCmd {
             } else {
                 (Latest::AsDir, IdenticalSnapshot::AsDir)
             };
-            Vfs::from_snapshots(
-                snapshots,
-                path_template,
-                time_template,
-                latest,
-                identical,
-                file_access,
-            )?
+            Vfs::from_snapshots(snapshots, &path_template, &time_template, latest, identical)?
         };
         let addr = self
             .addr
@@ -92,7 +85,7 @@ impl WebDavCmd {
             .next()
             .ok_or_else(|| anyhow!("no address given"))?;
         let dav_server = DavHandler::builder()
-            .filesystem(vfs.into_webdav_fs(repo))
+            .filesystem(vfs.into_webdav_fs(repo, file_access))
             .build_handler();
 
         tokio::runtime::Builder::new_current_thread()

@@ -235,6 +235,8 @@ impl Configurable<RusticConfig> for EntryPoint {
 
         match &self.commands {
             RusticCmd::Forget(cmd) => cmd.override_config(config),
+            #[cfg(feature = "webdav")]
+            RusticCmd::Webdav(cmd) => cmd.override_config(config),
 
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),

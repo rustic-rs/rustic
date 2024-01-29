@@ -80,6 +80,7 @@ merge = { workspace = true }
 
 bytesize = { workspace = true }
 comfy-table = { workspace = true }
+dav-server = { version = "0.5.8", default-features = false, features = ["warp-compat"], optional = true }
 dialoguer = { workspace = true }
 directories = { workspace = true }
 gethostname = { workspace = true }
@@ -90,9 +91,8 @@ jemallocator-global = { version = "0.3.2", optional = true }
 mimalloc = { version = "0.1.39", default_features = false, optional = true }
 rhai = { workspace = true }
 simplelog = { workspace = true }
-dav-server = { version = "0.5.8", default-features = false, features = ["warp-compat"], optional = true }
+tokio = { version = "1", optional = true }
 warp = { version = "0.3.6", optional = true }
-tokio = {version = "1", optional = true }
 
 [dev-dependencies]
 abscissa_core = { workspace = true, features = ["testing"] }

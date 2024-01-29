@@ -1,4 +1,4 @@
-//! `mount` subcommand
+//! `webdav` subcommand
 use std::net::ToSocketAddrs;
 
 use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};

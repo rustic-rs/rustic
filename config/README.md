@@ -178,14 +178,15 @@ the repository section.
 ### WebDAV Options
 
 `rustic` supports mounting snapshots via WebDAV. This is useful if you want to
-access your snapshots via a file manager. The following options are available to
-be used in your configuration file:
+access your snapshots via a file manager.
+
+**Note**: `https://` and Authentication are not supported yet.
+
+The following options are available to be used in your configuration file:
 
 | Attribute     | Description                                                                                                                                               | Default Value                                                                     | Example Value |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------- |
 | address       | Address of the WebDAV server.                                                                                                                             | localhost:8000                                                                    |               |
-| username      | Username for the WebDAV server.                                                                                                                           | Not set                                                                           |               |
-| password      | Password for the WebDAV server.                                                                                                                           | Not set                                                                           |               |
 | path-template | The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced.      | `[{hostname}]/[{label}]/{time}`                                                   |               |
 | time-template | The time template to use to display times in the path template. See <https://docs.rs/chrono/latest/chrono/format/strftime/index.html> for format options. | `%Y-%m-%d_%H-%M-%S`                                                               |               |
 | symlinks      | If true, follows symlinks.                                                                                                                                | false                                                                             |               |

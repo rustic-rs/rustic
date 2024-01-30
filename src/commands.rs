@@ -22,11 +22,15 @@ pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
+#[cfg(feature = "webdav")]
+pub(crate) mod webdav;
 
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+#[cfg(feature = "webdav")]
+use crate::commands::webdav::WebDavCmd;
 use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
@@ -128,6 +132,10 @@ enum RusticCmd {
 
     /// Change tags of snapshots
     Tag(TagCmd),
+
+    /// Start a webdav server which allows to access the repository
+    #[cfg(feature = "webdav")]
+    Webdav(WebDavCmd),
 }
 
 fn styles() -> Styles {
@@ -227,6 +235,8 @@ impl Configurable<RusticConfig> for EntryPoint {
 
         match &self.commands {
             RusticCmd::Forget(cmd) => cmd.override_config(config),
+            #[cfg(feature = "webdav")]
+            RusticCmd::Webdav(cmd) => cmd.override_config(config),
 
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),

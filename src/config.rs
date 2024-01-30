@@ -22,6 +22,8 @@ use rustic_backend::BackendOptions;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "webdav")]
+use crate::commands::webdav::WebDavCmd;
 use crate::{
     commands::{backup::BackupCmd, copy::Targets, forget::ForgetOptions},
     config::progress_options::ProgressOptions,
@@ -60,20 +62,25 @@ pub struct RusticConfig {
     /// Forget options
     #[clap(skip)]
     pub forget: ForgetOptions,
+
+    #[cfg(feature = "webdav")]
+    /// webdav options
+    #[clap(skip)]
+    pub webdav: WebDavCmd,
 }
 
 #[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct AllRepositoryOptions {
-    /// Repository options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    pub repo: RepositoryOptions,
-
     /// Backend options
     #[clap(flatten)]
     #[serde(flatten)]
     pub be: BackendOptions,
+
+    /// Repository options
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub repo: RepositoryOptions,
 }
 
 impl RusticConfig {

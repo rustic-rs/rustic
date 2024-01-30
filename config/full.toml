@@ -172,7 +172,7 @@ repository = "/repo/rustic2" # Must be set
 
 [webdav]
 address = "localhost:8000"
-path-template = "[{hostname}]/[{label}]/{time}" # only relevant if no snapshot-path is given
+path-template = "[{hostname}]/[{label}]/{time}" # The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]. Only relevant if no snapshot-path is given.
 time-template = "%Y-%m-%d_%H-%M-%S" # only relevant if no snapshot-path is given
 symlinks = false
 file-access = "read" # Default: "forbidden" for hot/cold repos, else "read"

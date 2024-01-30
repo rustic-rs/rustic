@@ -177,8 +177,9 @@ the repository section.
 
 ### WebDAV Options
 
-`rustic` supports mounting snapshots via WebDAV. This is useful if you want to access your snapshots via a file manager.
-The following options are available to be used in your configuration file:
+`rustic` supports mounting snapshots via WebDAV. This is useful if you want to
+access your snapshots via a file manager. The following options are available to
+be used in your configuration file:
 
 | Attribute     | Description                                                                                                                                               | Default Value                                                                     | Example Value |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------- |

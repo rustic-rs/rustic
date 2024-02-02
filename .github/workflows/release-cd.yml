@@ -22,7 +22,7 @@ env:
 
 jobs:
   publish:
-    if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/tags/' }}
+    if: ${{ github.repository_owner == 'rustic-rs' }}
     name: Publishing ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:

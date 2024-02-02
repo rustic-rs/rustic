@@ -1,0 +1,130 @@
+name: Continuous Deployment (Release)
+
+on:
+  push:
+    tags:
+      # Run on stable releases
+      - 'v*.*.*'
+      # Run on release candidates
+      - 'v*.*.*-rc*'
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+  discussions: write
+
+env:
+  BINARY_NAME: rustic
+  BINARY_NIGHTLY_DIR: rustic
+
+jobs:
+  publish:
+    if: ${{ github.repository_owner == 'rustic-rs' }}
+    name: Publishing ${{ matrix.job.target }}
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable]
+        job:
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-msvc
+            architecture: x86_64
+            binary-postfix: ".exe"
+            use-cross: false
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-gnu
+            architecture: x86_64
+            binary-postfix: ".exe"
+            use-cross: false
+          - os: macos-latest
+            os-name: macos
+            target: x86_64-apple-darwin
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
+          - os: macos-latest
+            os-name: macos
+            target: aarch64-apple-darwin
+            architecture: arm64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: x86_64-unknown-linux-gnu
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
+          - os: ubuntu-latest
+            os-name: linux
+            target: x86_64-unknown-linux-musl
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: false
+          - os: ubuntu-latest
+            os-name: linux
+            target: aarch64-unknown-linux-gnu
+            architecture: arm64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: i686-unknown-linux-gnu
+            architecture: i686
+            binary-postfix: ""
+            use-cross: true
+          # TODO!: This needs a fix, linking `execinfo` fails
+          # - os: ubuntu-latest
+          #   os-name: netbsd
+          #   target: x86_64-unknown-netbsd
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: armv7-unknown-linux-gnueabihf
+            architecture: armv7
+            binary-postfix: ""
+            use-cross: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0 # fetch all history so that git describe works
+      - name: Create binary artifact
+        uses: rustic-rs/create-binary-artifact-action@main # dev
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.job.target }}
+          use-cross: ${{ matrix.job.use-cross }}
+          binary-postfix: ${{ matrix.job.binary-postfix }}
+          os: ${{ runner.os }}
+          binary-name: ${{ env.BINARY_NAME }}
+          package-secondary-name: ${{ matrix.job.target}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gpg-release-private-key: ${{ secrets.GPG_RELEASE_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          rsign-release-private-key: ${{ secrets.RSIGN_RELEASE_PRIVATE_KEY }}
+          rsign-passphrase: ${{ secrets.RSIGN_PASSPHRASE }}
+          github-ref: ${{ github.ref }}
+          sign-release: true
+          hash-release: true
+          use-project-version: true
+
+      - name: Creating Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          discussion_category_name: "Announcements"
+          draft: true
+          body_path: ${{ github.workspace }}/CHANGELOG.md
+          fail_on_unmatched_files: true
+          files: |
+            ${{ env.BINARY_NAME }}-${{ matrix.job.target}}.tar.gz*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

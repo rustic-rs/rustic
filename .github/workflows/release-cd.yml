@@ -3,7 +3,10 @@ name: Continuous Deployment (Release)
 on:
   push:
     tags:
+      # Run on stable releases
       - 'v*.*.*'
+      # Run on release candidates
+      - 'v*.*.*-rc*'
 
 defaults:
   run:

@@ -3168,7 +3168,7 @@ _rustic() {
             return 0
             ;;
         rustic__ls)
-            opts="-s -l -P -n -r -p -h --summary --long --numeric_uid_gid --glob --iglob --glob-file --iglob-file --recursive --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
+            opts="-s -l -P -n -r -p -h --summary --long --numeric-uid-gid --glob --iglob --glob-file --iglob-file --recursive --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

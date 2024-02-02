@@ -863,7 +863,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--summary', 'summary', [CompletionResultType]::ParameterName, 'show summary')
             [CompletionResult]::new('-l', 'l', [CompletionResultType]::ParameterName, 'show long listing')
             [CompletionResult]::new('--long', 'long', [CompletionResultType]::ParameterName, 'show long listing')
-            [CompletionResult]::new('--numeric_uid_gid', 'numeric_uid_gid', [CompletionResultType]::ParameterName, 'show uid/gid instead of user/group')
+            [CompletionResult]::new('--numeric-uid-gid', 'numeric-uid-gid', [CompletionResultType]::ParameterName, 'show uid/gid instead of user/group')
             [CompletionResult]::new('--recursive', 'recursive', [CompletionResultType]::ParameterName, 'recursively list the dir')
             [CompletionResult]::new('-n', 'n', [CompletionResultType]::ParameterName, 'Only show what would be done without modifying anything. Does not affect read-only commands')
             [CompletionResult]::new('--dry-run', 'dry-run', [CompletionResultType]::ParameterName, 'Only show what would be done without modifying anything. Does not affect read-only commands')

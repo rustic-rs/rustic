@@ -914,7 +914,7 @@ _arguments "${_arguments_options[@]}" \
 '--summary[show summary]' \
 '-l[show long listing]' \
 '--long[show long listing]' \
-'--numeric_uid_gid[show uid/gid instead of user/group]' \
+'--numeric-uid-gid[show uid/gid instead of user/group]' \
 '--recursive[recursively list the dir]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \

@@ -630,7 +630,7 @@ complete -c rustic -n "__fish_seen_subcommand_from ls" -l filter-tags -d 'Tag li
 complete -c rustic -n "__fish_seen_subcommand_from ls" -l filter-fn -d 'Function to filter snapshots' -r
 complete -c rustic -n "__fish_seen_subcommand_from ls" -s s -l summary -d 'show summary'
 complete -c rustic -n "__fish_seen_subcommand_from ls" -s l -l long -d 'show long listing'
-complete -c rustic -n "__fish_seen_subcommand_from ls" -l numeric_uid_gid -d 'show uid/gid instead of user/group'
+complete -c rustic -n "__fish_seen_subcommand_from ls" -l numeric-uid-gid -d 'show uid/gid instead of user/group'
 complete -c rustic -n "__fish_seen_subcommand_from ls" -l recursive -d 'recursively list the dir'
 complete -c rustic -n "__fish_seen_subcommand_from ls" -s n -l dry-run -d 'Only show what would be done without modifying anything. Does not affect read-only commands'
 complete -c rustic -n "__fish_seen_subcommand_from ls" -l no-progress -d 'Don\'t show any progress bar'

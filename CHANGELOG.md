@@ -14,23 +14,40 @@ All notable changes to this project will be documented in this file.
 - Remove unmaintained `actions-rs` ci actions
 - Remove unmaintained `actions-rs/cargo` ci action with cross.
 - Remove unmaintained `actions-rs/toolchain` ci action
-- Log config file logs after reading config files ([#961](https://github.com/rustic-rs/rustic/issues/961))
-- Fix progress for copy command ([#965](https://github.com/rustic-rs/rustic/issues/965))
-- Enable abscissa_core testing feature only for dev ([#976](https://github.com/rustic-rs/rustic/issues/976))
+- Log config file logs after reading config files
+  ([#961](https://github.com/rustic-rs/rustic/issues/961))
+- Fix progress for copy command
+  ([#965](https://github.com/rustic-rs/rustic/issues/965))
+- Enable abscissa_core testing feature only for dev
+  ([#976](https://github.com/rustic-rs/rustic/issues/976))
 - Update github action to download artifacts, as upload/download actions from
   nightly workflow were incompatible with each other
-- Update rust crate duct to 0.13.7 ([#991](https://github.com/rustic-rs/rustic/issues/991))
-- Update rust crate libc to 0.2.151 ([#992](https://github.com/rustic-rs/rustic/issues/992))
-- Diff: Add local: to path syntax ([#1000](https://github.com/rustic-rs/rustic/issues/1000))
-- Update rust crate libc to 0.2.152 ([#1016](https://github.com/rustic-rs/rustic/issues/1016))
-- Error handling when entering passwords ([#963](https://github.com/rustic-rs/rustic/issues/963))
+- Update rust crate duct to 0.13.7
+  ([#991](https://github.com/rustic-rs/rustic/issues/991))
+- Update rust crate libc to 0.2.151
+  ([#992](https://github.com/rustic-rs/rustic/issues/992))
+- Diff: Add local: to path syntax
+  ([#1000](https://github.com/rustic-rs/rustic/issues/1000))
+- Update rust crate libc to 0.2.152
+  ([#1016](https://github.com/rustic-rs/rustic/issues/1016))
+- Error handling when entering passwords
+  ([#963](https://github.com/rustic-rs/rustic/issues/963))
+
+### Documentation
+
+- Update changelog
+- Fix new lines in changelog
 
 ### Features
 
-- Add --quiet option to backup and forget ([#964](https://github.com/rustic-rs/rustic/issues/964))
-- Allow building without self-update feature ([#975](https://github.com/rustic-rs/rustic/issues/975))
-- Add option --numeric-uid-gid to ls ([#1019](https://github.com/rustic-rs/rustic/issues/1019))
-- Add colors to help texts ([#1007](https://github.com/rustic-rs/rustic/issues/1007))
+- Add --quiet option to backup and forget
+  ([#964](https://github.com/rustic-rs/rustic/issues/964))
+- Allow building without self-update feature
+  ([#975](https://github.com/rustic-rs/rustic/issues/975))
+- Add option --numeric-uid-gid to ls
+  ([#1019](https://github.com/rustic-rs/rustic/issues/1019))
+- Add colors to help texts
+  ([#1007](https://github.com/rustic-rs/rustic/issues/1007))
 - Add webdav command ([#1024](https://github.com/rustic-rs/rustic/issues/1024))
 
 ### Generated
@@ -67,7 +84,8 @@ All notable changes to this project will be documented in this file.
 
 ### Refactor
 
-- Adjust to changes in rustic_core for added rustic_backend ([#966](https://github.com/rustic-rs/rustic/issues/966))
+- Adjust to changes in rustic_core for added rustic_backend
+  ([#966](https://github.com/rustic-rs/rustic/issues/966))
 
 ### Testing
 

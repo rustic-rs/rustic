@@ -125,6 +125,6 @@ jobs:
           body_path: ${{ github.workspace }}/CHANGELOG.md
           fail_on_unmatched_files: true
           files: |
-            binary-${{ matrix.job.target}}/*
+            ${{ env.BINARY_NAME }}-${{ matrix.job.target}}.tar.gz*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

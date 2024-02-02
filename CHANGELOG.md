@@ -32,11 +32,13 @@ All notable changes to this project will be documented in this file.
   ([#1016](https://github.com/rustic-rs/rustic/issues/1016))
 - Error handling when entering passwords
   ([#963](https://github.com/rustic-rs/rustic/issues/963))
+- Use hyphen in cli api for numeric-uid-gid
 
 ### Documentation
 
 - Update changelog
 - Fix new lines in changelog
+- Update changelog
 
 ### Features
 

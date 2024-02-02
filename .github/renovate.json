@@ -8,6 +8,8 @@
     "separateMinorPatch": false,
     "prHourlyLimit": 1,
     "prConcurrentLimit": 1,
+    "rebaseConflictedPrs": false,
+    "rebaseStalePrs": false,
     "major": {
         "dependencyDashboardApproval": true
     },

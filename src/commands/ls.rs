@@ -44,8 +44,8 @@ pub(crate) struct LsCmd {
     long: bool,
 
     /// show uid/gid instead of user/group
-    #[clap(long)]
-    numeric_uid_gid: bool,
+    #[clap(long, long("numeric_uid_gid"))]
+    numeric_id: bool,
 
     /// Listing options
     #[clap(flatten)]
@@ -106,7 +106,7 @@ impl LsCmd {
             let (path, node) = item?;
             summary.update(&node);
             if self.long {
-                print_node(&node, &path, self.numeric_uid_gid);
+                print_node(&node, &path, self.numeric_id);
             } else {
                 println!("{path:?} ");
             }

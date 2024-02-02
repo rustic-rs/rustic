@@ -53,6 +53,7 @@ mod tests {
     fn test_completions() {
         generate_completion(shells::Bash, &mut std::io::sink());
         generate_completion(shells::Fish, &mut std::io::sink());
+        generate_completion(shells::PowerShell, &mut std::io::sink());
         generate_completion(shells::Zsh, &mut std::io::sink());
     }
 }

@@ -44,7 +44,7 @@ pub(crate) struct LsCmd {
     long: bool,
 
     /// show uid/gid instead of user/group
-    #[clap(long, long("numeric_uid_gid"))]
+    #[clap(long, long("numeric-uid-gid"))]
     numeric_id: bool,
 
     /// Listing options

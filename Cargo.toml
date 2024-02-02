@@ -109,8 +109,8 @@ libc = "0.2.153"
 
 [workspace.dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
-rustic_backend = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
-rustic_core = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
+rustic_backend = { version = "0.1", features = ["cli"] }
+rustic_core = { version = "0.2", features = ["cli"] }
 
 # logging
 log = "0.4"
@@ -159,7 +159,7 @@ dircmp = "0.2"
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]
-pkg-url = "{ repo }/releases/download/v{ version }/{ repo }-v{ version }-{ target }{ archive-suffix }"
+pkg-url = "{ repo }/releases/download/v{ version }/{ bin }-v{ version }-{ target }{ archive-suffix }"
 bin-dir = "{ bin }-{ target }/{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
 

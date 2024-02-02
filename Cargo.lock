@@ -2832,8 +2832,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_backend"
-version = "0.1.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#53a7b7295f67fd4ea2141630998696d2544f7817"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "243f76303de119d5a3b25d110b3dfc1aaddedde23ce6ee5f1f1509dfae818a14"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -2854,8 +2855,8 @@ dependencies = [
  "rustic_core",
  "serde",
  "shell-words",
- "strum 0.25.0",
- "strum_macros 0.25.3",
+ "strum 0.26.1",
+ "strum_macros 0.26.1",
  "thiserror",
  "tokio",
  "url",
@@ -2865,7 +2866,8 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#53a7b7295f67fd4ea2141630998696d2544f7817"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d74314a585eb0e1dc42b19f36ffa20135aff62efa12cae1bd8915d883d12ea8"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3677,9 +3679,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.35.1"
+version = "1.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c89b4efa943be685f629b149f53829423f8f5531ea21249408e8e2f8671ec104"
+checksum = "61285f6515fa018fb2d1e46eb21223fff441ee8db5d0f1435e8ab4f5cdb80931"
 dependencies = [
  "backtrace",
  "bytes",

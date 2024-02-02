@@ -13,7 +13,7 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 [package]
 name = "rustic-rs"
 version = { workspace = true }
-authors = ["Alexander Weiss"]
+authors = ["the rustic-rs team"]
 categories = { workspace = true }
 documentation = "https://docs.rs/rustic-rs"
 edition = { workspace = true }
@@ -109,7 +109,7 @@ libc = "0.2.153"
 
 [workspace.dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.1", features = ["cli"] }
+rustic_backend = { version = "0.1.1", features = ["cli"] }
 rustic_core = { version = "0.2", features = ["cli"] }
 
 # logging

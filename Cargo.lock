@@ -366,9 +366,9 @@ checksum = "a3e368af43e418a04d52505cf3dbc23dda4e3407ae2fa99fd0e4f308ce546acc"
 
 [[package]]
 name = "cached"
-version = "0.47.0"
+version = "0.48.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69b0116662497bc24e4b177c90eaf8870e39e2714c3fcfa296327a93f593fc21"
+checksum = "355face540df58778b96814c48abb3c2ed67c4878a8087ab1819c1fedeec505f"
 dependencies = [
  "cached_proc_macro",
  "cached_proc_macro_types",
@@ -380,9 +380,9 @@ dependencies = [
 
 [[package]]
 name = "cached_proc_macro"
-version = "0.18.1"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c878c71c2821aa2058722038a59a67583a4240524687c6028571c9b395ded61f"
+checksum = "9d52f526f7cbc875b296856ca8c964a9f6290556922c303a8a3883e3c676e6a1"
 dependencies = [
  "darling 0.14.4",
  "proc-macro2",
@@ -1973,6 +1973,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-conv"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+
+[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2685,9 +2691,9 @@ dependencies = [
 
 [[package]]
 name = "rhai"
-version = "1.17.0"
+version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a0de8df6dd1f4886ad635d7e0fc7afc086e4f6daeff129d157287b78738516b"
+checksum = "f6273372244d04a8a4b0bec080ea1e710403e88c5d9d83f9808b2bfa64f0982a"
 dependencies = [
  "ahash",
  "bitflags 2.4.2",
@@ -2703,9 +2709,9 @@ dependencies = [
 
 [[package]]
 name = "rhai_codegen"
-version = "1.17.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89789ba6e8fd0889ae70b39c09000148431c9a1d618eb9d388373f391a55c988"
+checksum = "9db7f8dc4c9d48183a17ce550574c42995252b82d267eaca3fcd1b979159856c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2827,7 +2833,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#14d1533ca98d4807d35b1bd11499dd7cca00e102"
+source = "git+https://github.com/rustic-rs/rustic_core.git#53a7b7295f67fd4ea2141630998696d2544f7817"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -2858,8 +2864,8 @@ dependencies = [
 
 [[package]]
 name = "rustic_core"
-version = "0.1.2"
-source = "git+https://github.com/rustic-rs/rustic_core.git#14d1533ca98d4807d35b1bd11499dd7cca00e102"
+version = "0.2.0"
+source = "git+https://github.com/rustic-rs/rustic_core.git#53a7b7295f67fd4ea2141630998696d2544f7817"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -2923,9 +2929,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.30"
+version = "0.38.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "322394588aaf33c24007e8bb3238ee3e4c5c09c084ab32bc73890b99ff326bca"
+checksum = "6ea3e1a662af26cd7a3ba09c0297a31af215563ecf42817c98df621387f4e949"
 dependencies = [
  "bitflags 2.4.2",
  "errno",
@@ -3614,13 +3620,14 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.31"
+version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f657ba42c3f86e7680e53c8cd3af8abbe56b5491790b46e22e19c0d57463583e"
+checksum = "fe80ced77cbfb4cb91a94bf72b378b4b6791a0d9b7f09d0be747d1bdff4e68bd"
 dependencies = [
  "deranged",
  "itoa",
  "libc",
+ "num-conv",
  "num_threads",
  "powerfmt",
  "serde",
@@ -3636,10 +3643,11 @@ checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26197e33420244aeb70c3e8c78376ca46571bc4e701e4791c2cd9f57dcb3a43f"
+checksum = "7ba3a3ef41e6672a2f0f001392bb5dcd3ff0a9992d618ca761a11c3121547774"
 dependencies = [
+ "num-conv",
  "time-core",
 ]
 

@@ -105,7 +105,7 @@ tempfile = { workspace = true }
 toml = { workspace = true }
 
 [target.'cfg(not(windows))'.dependencies]
-libc = "0.2.152"
+libc = "0.2.153"
 
 [workspace.dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
@@ -122,13 +122,13 @@ anyhow = "1"
 
 # serialization
 serde = { version = "1", features = ["serde_derive"] }
-serde_with = { version = "3.4", features = ["base64"] }
+serde_with = { version = "3.6", features = ["base64"] }
 serde_json = "1"
 
 # other dependencies
 aho-corasick = "1.1.2"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
-rhai = { version = "1.16", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+rhai = { version = "1.17", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 semver = "1"
 simplelog = "0.12"
 comfy-table = "7.1.0"

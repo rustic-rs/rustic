@@ -2,6 +2,112 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2024-02-03
+
+### Packaging
+
+- Enable RPM file build target
+  ([#951](https://github.com/rustic-rs/rustic/issues/951))
+
+### Bug Fixes
+
+- Remove unmaintained `actions-rs` ci actions
+- Remove unmaintained `actions-rs/cargo` ci action with cross.
+- Remove unmaintained `actions-rs/toolchain` ci action
+- Log config file logs after reading config files
+  ([#961](https://github.com/rustic-rs/rustic/issues/961))
+- Fix progress for copy command
+  ([#965](https://github.com/rustic-rs/rustic/issues/965))
+- Enable abscissa_core testing feature only for dev
+  ([#976](https://github.com/rustic-rs/rustic/issues/976))
+- Update github action to download artifacts, as upload/download actions from
+  nightly workflow were incompatible with each other
+- Update rust crate duct to 0.13.7
+  ([#991](https://github.com/rustic-rs/rustic/issues/991))
+- Update rust crate libc to 0.2.151
+  ([#992](https://github.com/rustic-rs/rustic/issues/992))
+- Diff: Add local: to path syntax
+  ([#1000](https://github.com/rustic-rs/rustic/issues/1000))
+- Update rust crate libc to 0.2.152
+  ([#1016](https://github.com/rustic-rs/rustic/issues/1016))
+- Error handling when entering passwords
+  ([#963](https://github.com/rustic-rs/rustic/issues/963))
+- Use hyphen in cli api for numeric-uid-gid
+
+### Documentation
+
+- Update changelog
+- Fix new lines in changelog
+- Update changelog
+
+### Features
+
+- Add --quiet option to backup and forget
+  ([#964](https://github.com/rustic-rs/rustic/issues/964))
+- Allow building without self-update feature
+  ([#975](https://github.com/rustic-rs/rustic/issues/975))
+- Add option --numeric-uid-gid to ls
+  ([#1019](https://github.com/rustic-rs/rustic/issues/1019))
+- Add colors to help texts
+  ([#1007](https://github.com/rustic-rs/rustic/issues/1007))
+- Add webdav command ([#1024](https://github.com/rustic-rs/rustic/issues/1024))
+
+### Generated
+
+- Updated Completions fixtures
+
+### Miscellaneous Tasks
+
+- Run actions that need secrets.GITHUB_TOKEN only on rustic-rs org
+- Update dtolnay/rust-toolchain
+- Update taiki-e/install-action
+- Update rustsec/audit-check
+- Netbsd nightly builds fail due to missing execinfo, so we don't build on it
+  for now
+- Upgrade dprint config
+- Activate automerge for github action digest update
+- Activate automerge for github action digest update
+- Automerge lockfile maintenance
+- Try to fix nightly build
+- Display structure of downloaded artifact files
+- Display structure of downloaded artifact files II
+- Release
+- Do not run twice on release branches
+- Remove release workflow and fix release continuous deployment
+- Run on tag push
+- Add release candidates to CD
+- Remove conditional for checking tags
+- Fix path for release files for CD
+- Fix path for release files for CD, second approach with full file name
+- Fix binstall pkg-url
+- Use tag version in directory names for automation to download new versions
+- Set `max-parallel` to 1 for build matrix
+- Replace max-parallel with an own job
+
+### Refactor
+
+- Adjust to changes in rustic_core for added rustic_backend
+  ([#966](https://github.com/rustic-rs/rustic/issues/966))
+
+### Testing
+
+- Add missing powershell profile to completions test
+
+### Build
+
+- Bump zerocopy from 0.7.25 to 0.7.31
+  ([#967](https://github.com/rustic-rs/rustic/issues/967))
+- Bump h2 from 0.3.22 to 0.3.24
+  ([#1009](https://github.com/rustic-rs/rustic/issues/1009))
+
+### Diff
+
+- Improve code (better lifetime handling)
+
+### Ls
+
+- Add alternative option name --numeric-id
+
 ## [0.6.0] - 2023-10-23
 
 ### Breaking Changes

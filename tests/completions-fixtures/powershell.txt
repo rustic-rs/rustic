@@ -72,6 +72,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('repair', 'repair', [CompletionResultType]::ParameterValue, 'Repair a snapshot/path')
             [CompletionResult]::new('repoinfo', 'repoinfo', [CompletionResultType]::ParameterValue, 'Show general information about the repository')
             [CompletionResult]::new('tag', 'tag', [CompletionResultType]::ParameterValue, 'Change tags of snapshots')
+            [CompletionResult]::new('webdav', 'webdav', [CompletionResultType]::ParameterValue, 'Start a webdav server which allows to access the repository')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
@@ -85,6 +86,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--iglob', 'iglob', [CompletionResultType]::ParameterName, 'Same as --glob pattern but ignores the casing of filenames')
             [CompletionResult]::new('--glob-file', 'glob-file', [CompletionResultType]::ParameterName, 'Read glob patterns to exclude/include from this file (can be specified multiple times)')
             [CompletionResult]::new('--iglob-file', 'iglob-file', [CompletionResultType]::ParameterName, 'Same as --glob-file ignores the casing of filenames in patterns')
+            [CompletionResult]::new('--custom-ignorefile', 'custom-ignorefile', [CompletionResultType]::ParameterName, 'Treat the provided filename like a .gitignore file (can be specified multiple times)')
             [CompletionResult]::new('--exclude-if-present', 'exclude-if-present', [CompletionResultType]::ParameterName, 'Exclude contents of directories containing this filename (can be specified multiple times)')
             [CompletionResult]::new('--exclude-larger-than', 'exclude-larger-than', [CompletionResultType]::ParameterName, 'Maximum size of files to be backed up. Larger files will be excluded')
             [CompletionResult]::new('--label', 'label', [CompletionResultType]::ParameterName, 'Label snapshot with given label')
@@ -129,8 +131,11 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--filter-fn', 'filter-fn', [CompletionResultType]::ParameterName, 'Function to filter snapshots')
             [CompletionResult]::new('--with-atime', 'with-atime', [CompletionResultType]::ParameterName, 'Save access time for files and directories')
             [CompletionResult]::new('--ignore-devid', 'ignore-devid', [CompletionResultType]::ParameterName, 'Don''t save device ID for files and directories')
+            [CompletionResult]::new('--no-scan', 'no-scan', [CompletionResultType]::ParameterName, 'Don''t scan the backup source for its size - this disables ETA estimation for backup')
             [CompletionResult]::new('--json', 'json', [CompletionResultType]::ParameterName, 'Output generated snapshot in json format')
+            [CompletionResult]::new('--quiet', 'quiet', [CompletionResultType]::ParameterName, 'Don''t show any output')
             [CompletionResult]::new('--init', 'init', [CompletionResultType]::ParameterName, 'Initialize repository, if it doesn''t exist yet')
+            [CompletionResult]::new('--skip-identical-parent', 'skip-identical-parent', [CompletionResultType]::ParameterName, 'Skip writing of snapshot if nothing changed w.r.t. the parent snapshot')
             [CompletionResult]::new('-f', 'f', [CompletionResultType]::ParameterName, 'Use no parent, read all files')
             [CompletionResult]::new('--force', 'force', [CompletionResultType]::ParameterName, 'Use no parent, read all files')
             [CompletionResult]::new('--ignore-ctime', 'ignore-ctime', [CompletionResultType]::ParameterName, 'Ignore ctime changes when checking for modified files')
@@ -539,6 +544,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--iglob', 'iglob', [CompletionResultType]::ParameterName, 'Same as --glob pattern but ignores the casing of filenames')
             [CompletionResult]::new('--glob-file', 'glob-file', [CompletionResultType]::ParameterName, 'Read glob patterns to exclude/include from this file (can be specified multiple times)')
             [CompletionResult]::new('--iglob-file', 'iglob-file', [CompletionResultType]::ParameterName, 'Same as --glob-file ignores the casing of filenames in patterns')
+            [CompletionResult]::new('--custom-ignorefile', 'custom-ignorefile', [CompletionResultType]::ParameterName, 'Treat the provided filename like a .gitignore file (can be specified multiple times)')
             [CompletionResult]::new('--exclude-if-present', 'exclude-if-present', [CompletionResultType]::ParameterName, 'Exclude contents of directories containing this filename (can be specified multiple times)')
             [CompletionResult]::new('--exclude-larger-than', 'exclude-larger-than', [CompletionResultType]::ParameterName, 'Maximum size of files to be backed up. Larger files will be excluded')
             [CompletionResult]::new('-P', 'P ', [CompletionResultType]::ParameterName, 'Config profile to use. This parses the file `<PROFILE>.toml` in the config directory. [default: "rustic"]')
@@ -659,8 +665,10 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--warm-up-command', 'warm-up-command', [CompletionResultType]::ParameterName, 'Warm up needed data pack files by running the command with %id replaced by pack id')
             [CompletionResult]::new('--warm-up-wait', 'warm-up-wait', [CompletionResultType]::ParameterName, 'Duration (e.g. 10m) to wait after warm up')
             [CompletionResult]::new('--json', 'json', [CompletionResultType]::ParameterName, 'Show infos in json format')
+            [CompletionResult]::new('--quiet', 'quiet', [CompletionResultType]::ParameterName, 'Don''t show any output')
             [CompletionResult]::new('--prune', 'prune', [CompletionResultType]::ParameterName, 'Also prune the repository')
             [CompletionResult]::new('--instant-delete', 'instant-delete', [CompletionResultType]::ParameterName, 'Delete files immediately instead of marking them. This also removes all files already marked for deletion')
+            [CompletionResult]::new('--early-delete-index', 'early-delete-index', [CompletionResultType]::ParameterName, 'Delete index files early. This allows to run prune if there is few or no space left')
             [CompletionResult]::new('--fast-repack', 'fast-repack', [CompletionResultType]::ParameterName, 'Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting')
             [CompletionResult]::new('--repack-uncompressed', 'repack-uncompressed', [CompletionResultType]::ParameterName, 'Repack packs containing uncompressed blobs. This cannot be used with --fast-repack. Implies --max-unused=0')
             [CompletionResult]::new('--repack-all', 'repack-all', [CompletionResultType]::ParameterName, 'Repack all packs. Implies --max-unused=0')
@@ -750,7 +758,9 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             break
         }
         'rustic;key;add' {
+            [CompletionResult]::new('--new-password', 'new-password', [CompletionResultType]::ParameterName, 'New password')
             [CompletionResult]::new('--new-password-file', 'new-password-file', [CompletionResultType]::ParameterName, 'File from which to read the new password')
+            [CompletionResult]::new('--new-password-command', 'new-password-command', [CompletionResultType]::ParameterName, 'Command to get the new password from')
             [CompletionResult]::new('--hostname', 'hostname', [CompletionResultType]::ParameterName, 'Set ''hostname'' in public key information')
             [CompletionResult]::new('--username', 'username', [CompletionResultType]::ParameterName, 'Set ''username'' in public key information')
             [CompletionResult]::new('-P', 'P ', [CompletionResultType]::ParameterName, 'Config profile to use. This parses the file `<PROFILE>.toml` in the config directory. [default: "rustic"]')
@@ -853,6 +863,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--summary', 'summary', [CompletionResultType]::ParameterName, 'show summary')
             [CompletionResult]::new('-l', 'l', [CompletionResultType]::ParameterName, 'show long listing')
             [CompletionResult]::new('--long', 'long', [CompletionResultType]::ParameterName, 'show long listing')
+            [CompletionResult]::new('--numeric-uid-gid', 'numeric-uid-gid', [CompletionResultType]::ParameterName, 'show uid/gid instead of user/group')
             [CompletionResult]::new('--recursive', 'recursive', [CompletionResultType]::ParameterName, 'recursively list the dir')
             [CompletionResult]::new('-n', 'n', [CompletionResultType]::ParameterName, 'Only show what would be done without modifying anything. Does not affect read-only commands')
             [CompletionResult]::new('--dry-run', 'dry-run', [CompletionResultType]::ParameterName, 'Only show what would be done without modifying anything. Does not affect read-only commands')
@@ -1027,6 +1038,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--filter-tags', 'filter-tags', [CompletionResultType]::ParameterName, 'Tag list to filter (can be specified multiple times)')
             [CompletionResult]::new('--filter-fn', 'filter-fn', [CompletionResultType]::ParameterName, 'Function to filter snapshots')
             [CompletionResult]::new('--instant-delete', 'instant-delete', [CompletionResultType]::ParameterName, 'Delete files immediately instead of marking them. This also removes all files already marked for deletion')
+            [CompletionResult]::new('--early-delete-index', 'early-delete-index', [CompletionResultType]::ParameterName, 'Delete index files early. This allows to run prune if there is few or no space left')
             [CompletionResult]::new('--fast-repack', 'fast-repack', [CompletionResultType]::ParameterName, 'Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting')
             [CompletionResult]::new('--repack-uncompressed', 'repack-uncompressed', [CompletionResultType]::ParameterName, 'Repack packs containing uncompressed blobs. This cannot be used with --fast-repack. Implies --max-unused=0')
             [CompletionResult]::new('--repack-all', 'repack-all', [CompletionResultType]::ParameterName, 'Repack all packs. Implies --max-unused=0')
@@ -1260,6 +1272,41 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('--help', 'help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
         }
+        'rustic;webdav' {
+            [CompletionResult]::new('--address', 'address', [CompletionResultType]::ParameterName, 'Address to bind the webdav server to. [default: "localhost:8000"]')
+            [CompletionResult]::new('--path-template', 'path-template', [CompletionResultType]::ParameterName, 'The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]')
+            [CompletionResult]::new('--time-template', 'time-template', [CompletionResultType]::ParameterName, 'The time template to use to display times in the path template. See https://docs.rs/chrono/latest/chrono/format/strftime/index.html for format options. [default: "%Y-%m-%d_%H-%M-%S"]')
+            [CompletionResult]::new('--file-access', 'file-access', [CompletionResultType]::ParameterName, 'How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]')
+            [CompletionResult]::new('-P', 'P ', [CompletionResultType]::ParameterName, 'Config profile to use. This parses the file `<PROFILE>.toml` in the config directory. [default: "rustic"]')
+            [CompletionResult]::new('--use-profile', 'use-profile', [CompletionResultType]::ParameterName, 'Config profile to use. This parses the file `<PROFILE>.toml` in the config directory. [default: "rustic"]')
+            [CompletionResult]::new('--log-level', 'log-level', [CompletionResultType]::ParameterName, 'Use this log level [default: info]')
+            [CompletionResult]::new('--log-file', 'log-file', [CompletionResultType]::ParameterName, 'Write log messages to the given file instead of printing them')
+            [CompletionResult]::new('--progress-interval', 'progress-interval', [CompletionResultType]::ParameterName, 'Interval to update progress bars')
+            [CompletionResult]::new('-r', 'r', [CompletionResultType]::ParameterName, 'Repository to use')
+            [CompletionResult]::new('--repository', 'repository', [CompletionResultType]::ParameterName, 'Repository to use')
+            [CompletionResult]::new('--repo-hot', 'repo-hot', [CompletionResultType]::ParameterName, 'Repository to use as hot storage')
+            [CompletionResult]::new('--password', 'password', [CompletionResultType]::ParameterName, 'Password of the repository')
+            [CompletionResult]::new('-p', 'p', [CompletionResultType]::ParameterName, 'File to read the password from')
+            [CompletionResult]::new('--password-file', 'password-file', [CompletionResultType]::ParameterName, 'File to read the password from')
+            [CompletionResult]::new('--password-command', 'password-command', [CompletionResultType]::ParameterName, 'Command to read the password from. Password is read from stdout')
+            [CompletionResult]::new('--cache-dir', 'cache-dir', [CompletionResultType]::ParameterName, 'Use this dir as cache dir instead of the standard cache dir')
+            [CompletionResult]::new('--warm-up-command', 'warm-up-command', [CompletionResultType]::ParameterName, 'Warm up needed data pack files by running the command with %id replaced by pack id')
+            [CompletionResult]::new('--warm-up-wait', 'warm-up-wait', [CompletionResultType]::ParameterName, 'Duration (e.g. 10m) to wait after warm up')
+            [CompletionResult]::new('--filter-host', 'filter-host', [CompletionResultType]::ParameterName, 'Hostname to filter (can be specified multiple times)')
+            [CompletionResult]::new('--filter-label', 'filter-label', [CompletionResultType]::ParameterName, 'Label to filter (can be specified multiple times)')
+            [CompletionResult]::new('--filter-paths', 'filter-paths', [CompletionResultType]::ParameterName, 'Path list to filter (can be specified multiple times)')
+            [CompletionResult]::new('--filter-tags', 'filter-tags', [CompletionResultType]::ParameterName, 'Tag list to filter (can be specified multiple times)')
+            [CompletionResult]::new('--filter-fn', 'filter-fn', [CompletionResultType]::ParameterName, 'Function to filter snapshots')
+            [CompletionResult]::new('--symlinks', 'symlinks', [CompletionResultType]::ParameterName, 'Use symlinks. This may not be supported by all WebDAV clients')
+            [CompletionResult]::new('-n', 'n', [CompletionResultType]::ParameterName, 'Only show what would be done without modifying anything. Does not affect read-only commands')
+            [CompletionResult]::new('--dry-run', 'dry-run', [CompletionResultType]::ParameterName, 'Only show what would be done without modifying anything. Does not affect read-only commands')
+            [CompletionResult]::new('--no-progress', 'no-progress', [CompletionResultType]::ParameterName, 'Don''t show any progress bar')
+            [CompletionResult]::new('--no-cache', 'no-cache', [CompletionResultType]::ParameterName, 'Don''t use a cache')
+            [CompletionResult]::new('--warm-up', 'warm-up', [CompletionResultType]::ParameterName, 'Warm up needed data pack files by only requesting them without processing')
+            [CompletionResult]::new('-h', 'h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', 'help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
         'rustic;help' {
             [CompletionResult]::new('backup', 'backup', [CompletionResultType]::ParameterValue, 'Backup to the repository')
             [CompletionResult]::new('cat', 'cat', [CompletionResultType]::ParameterValue, 'Show raw data of repository files and blobs')
@@ -1283,6 +1330,7 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             [CompletionResult]::new('repair', 'repair', [CompletionResultType]::ParameterValue, 'Repair a snapshot/path')
             [CompletionResult]::new('repoinfo', 'repoinfo', [CompletionResultType]::ParameterValue, 'Show general information about the repository')
             [CompletionResult]::new('tag', 'tag', [CompletionResultType]::ParameterValue, 'Change tags of snapshots')
+            [CompletionResult]::new('webdav', 'webdav', [CompletionResultType]::ParameterValue, 'Start a webdav server which allows to access the repository')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
@@ -1386,6 +1434,9 @@ Register-ArgumentCompleter -Native -CommandName 'rustic' -ScriptBlock {
             break
         }
         'rustic;help;tag' {
+            break
+        }
+        'rustic;help;webdav' {
             break
         }
         'rustic;help;help' {

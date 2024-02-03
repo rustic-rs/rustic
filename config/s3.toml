@@ -1,0 +1,10 @@
+# rustic config file to use s3 storage
+# Note that this internally uses opendal S3 service, see https://opendal.apache.org/docs/rust/opendal/services/struct.S3.html
+# where endpoint, bucket and root are extracted from the repository URL.
+[repository]
+repository = "s3:https://s3.amazonaws.com/bucket/my/repopath"
+password = "mypassword"
+
+# Other options can be given here - note that opendal also support reading config from env files or AWS config dirs, see the opendal S3 docu
+[repository.options]
+region = "us-east-1"

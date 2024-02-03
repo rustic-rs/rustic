@@ -40,8 +40,22 @@ warm-up-wait = "10min" # Default: not set
 [repository.options]
 post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
 post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set
-retry = "default" # Only rest/rclone backend; Allowed values: "false"/"off", "default" or number of retries
+retry = "default" # Only rest/rclone/all opendal backends; Allowed values: "false"/"off", "default" or number of retries
 timeout = "10min" # Only rest/rclone backend
+rclone-command = "rclone serve restic --addr localhost:0" # Only rclone; Default: not set
+use-password = "true" # Only rclone
+rest-url = "http://localhost:8000" # Only rclone; Default: determine REST URL from rclone output
+# Note that opendal backends use several service-dependent options which may be specified here, see 
+# https://opendal.apache.org/docs/rust/opendal/services/index.html
+
+
+# Additional repository options for the hot part - depending on backend. These can be only set in the config file.
+[repository.options-hot]
+# see [repository.options]
+
+# Additional repository options for the cold part - depending on backend. These can be only set in the config file.
+[repository.options-cold]
+# see [repository.options]
 
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
@@ -77,43 +91,21 @@ iglob-file = []
 git-ignore = false
 no-require-git = false
 exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
+custom-ignorefile = [".rusticignore", ".backupignore"] # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
 init = false
+no-scan = false
+quiet = false
 skip-identical-parent = false
+
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.sources]]
 source = "/path/to/source1"
 label = "label" # Default: not set
-tag = ["tag1", "tag2"]
-description = "my description" # Default: not set
-description-from = "/path/to/description.txt" # Default: not set
-delete-never = false
-delete-after = "5d" # Default: not set
-host = "manually_set_host" # Default: host name
-group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
-parent = "123abc" # Default: not set
-force = false
-ignore-ctime = false
-ignore-inode = false
-stdin-filename = "stdin" # Only for stdin source
-as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
-with-atime = false
-ignore-devid = false
-glob = []
-iglob = []
-glob-file = []
-iglob-file = []
-git-ignore = false
-no-require-git = false
-exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
-one-file-system = false
-exclude-larger-than = "100MB" # Default: not set
-json = false
-init = false
-skip-identical-parent = false
+# .. and so on. see [backup]
 
 [[backup.sources]]
 source = "/path/to/source2 /second/path" # multiple local paths are allowd within one source
@@ -176,4 +168,4 @@ path-template = "[{hostname}]/[{label}]/{time}" # The path template to use for s
 time-template = "%Y-%m-%d_%H-%M-%S" # only relevant if no snapshot-path is given
 symlinks = false
 file-access = "read" # Default: "forbidden" for hot/cold repos, else "read"
-snapshot-path = "latest:/dir" # Default: not set - this will generate a virtual tree with all snapshots using path-template
+snapshot-path = "latest:/dir" # Default: not set - if not set, generate a virtual tree with all snapshots using path-template

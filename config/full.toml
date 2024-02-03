@@ -45,9 +45,8 @@ timeout = "10min" # Only rest/rclone backend
 rclone-command = "rclone serve restic --addr localhost:0" # Only rclone; Default: not set
 use-password = "true" # Only rclone
 rest-url = "http://localhost:8000" # Only rclone; Default: determine REST URL from rclone output
-# Note that opendal backends use several service-dependent options which may be specified here, see 
+# Note that opendal backends use several service-dependent options which may be specified here, see
 # https://opendal.apache.org/docs/rust/opendal/services/index.html
-
 
 # Additional repository options for the hot part - depending on backend. These can be only set in the config file.
 [repository.options-hot]
@@ -99,7 +98,6 @@ init = false
 no-scan = false
 quiet = false
 skip-identical-parent = false
-
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.sources]]

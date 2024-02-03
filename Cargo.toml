@@ -88,7 +88,7 @@ humantime = { workspace = true }
 indicatif = { workspace = true }
 itertools = { workspace = true }
 jemallocator-global = { version = "0.3.2", optional = true }
-mimalloc = { version = "0.1.39", default_features = false, optional = true }
+mimalloc = { version = "0.1.39", default-features = false, optional = true }
 rhai = { workspace = true }
 simplelog = { workspace = true }
 tokio = { version = "1", optional = true }
@@ -100,6 +100,7 @@ aho-corasick = { workspace = true }
 dircmp = { workspace = true }
 once_cell = { workspace = true }
 pretty_assertions = { workspace = true }
+rstest.workspace = true
 rustic_testing = { path = "crates/rustic_testing" }
 tempfile = { workspace = true }
 toml = { workspace = true }

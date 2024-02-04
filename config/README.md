@@ -41,6 +41,16 @@ use different config files, e.g. `myconfig.toml` and use the `-P` option to
 specify the profile name, e.g. `rustic -P myconfig`. Examples for different
 configuration files can be found here in the [/config/](/config) directory.
 
+## Services
+
+We have collected some examples how to configure `rustic` for various services
+in the [services/](/config/services/) subdirectory. Please note that these
+examples are not complete and may not work out of the box. They are intended to
+give you a starting point for your own configuration.
+
+If you want to contribute your own configuration, please
+[open a pull request](https://rustic.cli.rs/dev-docs/contributing-to-rustic.html#submitting-pull-requests).
+
 ## Sections and Attributes
 
 ### Global Options

@@ -7,14 +7,14 @@
 //! You can run them with 'nextest':
 //! `cargo nextest run -E 'test(backup)'`.
 
-use abscissa_core::testing::prelude::*;
-
+use abscissa_core::testing::prelude::CmdRunner;
 use aho_corasick::PatternID;
 use dircmp::Comparison;
 use pretty_assertions::assert_eq;
-use rustic_testing::{get_matches, TestResult};
 use std::io::Read;
 use tempfile::{tempdir, TempDir};
+
+use rustic_testing::{get_matches, TestResult};
 
 pub fn rustic_runner(temp_dir: &TempDir) -> CmdRunner {
     let password = "test";
@@ -56,7 +56,7 @@ fn setup() -> TestResult<TempDir> {
 #[test]
 fn test_backup_and_check_passes() -> TestResult<()> {
     let temp_dir = setup()?;
-    let backup = "crates/";
+    let backup = "src/";
 
     {
         // Run `backup` for the first time
@@ -144,7 +144,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;
     let restore_dir = temp_dir.path().join("restore");
-    let backup = "crates";
+    let backup = "src/";
 
     // actual repository root to backup
     let current_dir = std::env::current_dir()?;

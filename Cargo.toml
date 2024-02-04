@@ -161,7 +161,7 @@ dircmp = "0.2"
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ bin }-v{ version }-{ target }{ archive-suffix }"
-bin-dir = "{ bin }-{ target }/{ bin }{ binary-ext }"
+bin-dir = "{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
 
 [package.metadata.binstall.signing]

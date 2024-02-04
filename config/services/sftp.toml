@@ -4,5 +4,10 @@
 # - Using sftp with password is not supported yet, use key authentication, e.g. use
 #   ssh-copy-id user@host
 [repository]
-repository = "sftp:user@host:/repo"
+repository = "opendal:sftp"
 password = "mypassword"
+
+[repository.options]
+user = "myuser"
+endpoint = "host:port"
+root = "path/to/repo"

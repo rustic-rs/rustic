@@ -11,5 +11,5 @@ access_key_id = "xxx"
 secret_access_key = "xxx"
 bucket = "bucket_name"
 endpoint = "https://s3.amazonaws.com"
-region = "auto"
+region = "auto" # Explicit region is better, else requests are delayed to determine correct region.
 root = "/path/to/repo"

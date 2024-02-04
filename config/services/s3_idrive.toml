@@ -6,6 +6,6 @@ password = "password"
 root = "/"
 bucket = "bucket_name"
 endpoint = "https://p7v1.ldn.idrivee2-40.com"
-region = "gb-ldn"
+region = "auto" # Explicit region is better, else requests are delayed to determine correct region.
 access_key_id = "xxx"
 secret_access_key = "xxx"

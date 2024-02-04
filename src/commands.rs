@@ -39,7 +39,6 @@ use crate::{
         repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
         show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
     },
-    config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
 };
 

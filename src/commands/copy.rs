@@ -14,8 +14,14 @@ use serde::Deserialize;
 
 use rustic_core::{CopySnapshot, Id, KeyOptions};
 
-/// `copy` subcommand
 #[derive(clap::Parser, Command, Debug)]
+pub struct CopyCmdSupport {
+    #[clap(flatten)]
+    we: CopyCmd,
+}
+
+/// `copy` subcommand
+#[derive(clap::Parser, Debug)]
 pub(crate) struct CopyCmd {
     /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
     #[clap(value_name = "ID")]
@@ -38,7 +44,7 @@ pub struct Targets {
     targets: Vec<AllRepositoryOptions>,
 }
 
-impl Runnable for CopyCmd {
+impl Runnable for CopyCmdSupport {
     fn run(&self) {
         if let Err(err) = self.inner_run() {
             status_err!("{}", err);
@@ -47,7 +53,7 @@ impl Runnable for CopyCmd {
     }
 }
 
-impl CopyCmd {
+impl CopyCmdSupport {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 

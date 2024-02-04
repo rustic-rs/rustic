@@ -11,7 +11,7 @@ use abscissa_core::{
 use anyhow::Result;
 
 // use crate::helpers::*;
-use crate::{commands::EntryPoint, config::RusticConfig};
+use crate::commands::EntryPoint;
 
 /// Application state
 pub static RUSTIC_APP: AppCell<RusticApp> = AppCell::new();

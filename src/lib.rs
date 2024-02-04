@@ -60,7 +60,6 @@ Application based on the [Abscissa] framework.
 
 pub mod application;
 pub(crate) mod commands;
-pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod filtering;
 pub(crate) mod helpers;
@@ -72,9 +71,6 @@ pub use abscissa_core::prelude::*;
 
 /// Application state
 pub use crate::application::RUSTIC_APP;
-
-/// Rustic config
-pub use crate::config::RusticConfig;
 
 /// Completions
 pub use crate::commands::completions::generate_completion;

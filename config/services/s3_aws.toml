@@ -7,9 +7,7 @@ password = "password"
 
 # Other options can be given here - note that opendal also support reading config from env files or AWS config dirs, see the opendal S3 docu
 [repository.options]
-access_key_id = "xxx"
-secret_access_key = "xxx"
+access_key_id = "xxx" # this can be ommited, when AWS config is used
+secret_access_key = "xxx" # this can be ommited, when AWS config is used
 bucket = "bucket_name"
-endpoint = "https://s3.amazonaws.com"
-region = "auto" # Explicit region is better, else requests are delayed to determine correct region.
 root = "/path/to/repo"

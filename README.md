@@ -35,8 +35,8 @@ The `rustic` project is split into multiple crates:
 
 - [rustic](https://crates.io/crates/rustic-rs) - the main binary
 - [rustic-core](https://crates.io/crates/rustic_core) - the core library
-
-<!-- - [rustic-testing](https://crates.io/crates/rustic_testing) - testing utilities -->
+- [rustic-backend](https://crates.io/crates/rustic_backend) - the library for
+  supporting various backends
 
 ## Features
 

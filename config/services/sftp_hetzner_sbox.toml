@@ -1,0 +1,8 @@
+[repository]
+password = "XXXXXX"
+repository = "opendal:sftp"
+
+[repository.options]
+endpoint = "ssh://XXXXX.your-storagebox.de:23"
+user = "XXXXX"
+key = "/root/.ssh/id_XXXXX_ed25519"

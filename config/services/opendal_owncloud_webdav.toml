@@ -1,0 +1,11 @@
+[repository]
+repository = "opendal:webdav"
+password = "my-backup-password"
+
+# You have to create a passcode on you owncloud instance via
+# Settings -> Security -> App passwords / tokens
+[repository.options]
+endpoint = "https://my-owncloud-server.com"
+root = "remote.php/webdav/my-folder"
+username = "owncloud-user"
+password = "owncloud-passcode"

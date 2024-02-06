@@ -2839,7 +2839,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.7.0"
+version = "0.7.0-dev"
 dependencies = [
  "abscissa_core",
  "aho-corasick",
@@ -2888,8 +2888,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "243f76303de119d5a3b25d110b3dfc1aaddedde23ce6ee5f1f1509dfae818a14"
+source = "git+https://github.com/rustic-rs/rustic_core.git#dcc7e3434fd16bfcf0df6faf343101397316f858"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -2921,8 +2920,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d74314a585eb0e1dc42b19f36ffa20135aff62efa12cae1bd8915d883d12ea8"
+source = "git+https://github.com/rustic-rs/rustic_core.git#dcc7e3434fd16bfcf0df6faf343101397316f858"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",

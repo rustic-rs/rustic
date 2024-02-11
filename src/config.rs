@@ -192,15 +192,7 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
             .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
         get_global_config_path(),
         Some(PathBuf::from(".")),
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        path.map(|mut p| {
-            p.push(filename);
-            p
-        })
-    })
-    .collect::<Vec<_>>();
+    ];
 
     #[cfg(target_os = "windows")]
     {
@@ -209,8 +201,15 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
         };
     }
 
-    #[allow(clippy::let_and_return)]
     paths
+        .into_iter()
+        .filter_map(|path| {
+            path.map(|mut p| {
+                p.push(filename);
+                p
+            })
+        })
+        .collect::<Vec<_>>()
 }
 
 /// Get the path to the home config directory.
@@ -236,11 +235,11 @@ fn get_home_config_path() -> Option<PathBuf> {
 ///
 /// If the environment variable `USERPROFILE` is not set, `None` is returned.
 #[cfg(target_os = "windows")]
-fn get_windows_portability_config_directories() -> Option<Vec<PathBuf>> {
+fn get_windows_portability_config_directories() -> Option<Vec<Option<PathBuf>>> {
     std::env::var_os("USERPROFILE").map(|path| {
         vec![
-            PathBuf::from(path.clone()).join(r".config\rustic"),
-            PathBuf::from(path).join(".rustic"),
+            Some(PathBuf::from(path.clone()).join(r".config\rustic")),
+            Some(PathBuf::from(path).join(".rustic")),
         ]
     })
 }

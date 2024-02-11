@@ -35,11 +35,39 @@ options. Therefore `commandline arguments` have the highest precedence.
 
 ## Profiles
 
-Configuration files can be placed in the user's local config directory, e.g.
-`~/.config/rustic/` or in the global config dir, e.g. `/etc/rustic/`. You can
-use different config files, e.g. `myconfig.toml` and use the `-P` option to
-specify the profile name, e.g. `rustic -P myconfig`. Examples for different
+To use different configurations for different repositories, you can use profiles.
+
+For example, you can create a profile called `myconfig` and use it with the `-P`
+option, e.g. `rustic -P myconfig`. The configuration file for the profile
+`myconfig` should be named `myconfig.toml`. Examples for different
 configuration files can be found here in the [/config/](/config) directory.
+
+### Profile Locations
+
+#### \*nix
+
+Configuration files can be placed in the user's local config directory, e.g.
+`~/.config/rustic/` or in the global config dir, e.g. `/etc/rustic/`.
+
+#### Windows
+
+On Windows, the configuration file can be placed in the user's local config
+directory, e.g. `C:\Users\username\AppData\Roaming\rustic\` or in the global
+config dir, e.g. `C:\ProgramData\rustic\config`. The global config directory is
+usually not created by the installer, so you may have to create it yourself.
+You can also use your User Profile directory, e.g. `C:\Users\username\` and place
+the configuration file in the `.rustic` or `.config\rustic` directory.
+
+#### MacOS
+
+On MacOS, the configuration file can be placed in the user's local config
+directory, e.g. `~/Library/Application Support/rustic/`.
+
+#### Custom Directory
+
+If you prefer to use your custom `rustic` directory, you can set `RUSTIC_HOME`
+environment variable to point to your custom directory. In it you can place your
+configuration file in the `config` subdirectory.
 
 ## Services
 

@@ -185,16 +185,7 @@ fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
 ///
 /// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    let mut paths = vec![];
-
-    #[cfg(target_os = "windows")]
-    {
-        if let Some(win_compatibility_paths) = get_windows_portability_config_directories() {
-            paths.extend(win_compatibility_paths);
-        };
-    }
-
-    let dirs = vec![
+    let mut paths = vec![
         get_home_config_path(),
         ProjectDirs::from("", "", "rustic")
             .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
@@ -210,7 +201,13 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
     })
     .collect::<Vec<_>>();
 
-    paths.extend(dirs);
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(win_compatibility_paths) = get_windows_portability_config_directories() {
+            paths.extend(win_compatibility_paths);
+        };
+    }
+
     paths
 }
 

@@ -93,8 +93,8 @@ fn test_backup_and_check_passes() -> TestResult<()> {
             .args(["check", "--read-data"])
             .assert()
             .success()
-            .stdout(predicate::str::contains("WARN").not())
-            .stdout(predicate::str::contains("ERROR").not());
+            .stderr(predicate::str::contains("WARN").not())
+            .stderr(predicate::str::contains("ERROR").not());
     }
 
     Ok(())

@@ -185,6 +185,7 @@ fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
 ///
 /// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
+    #[allow(unused_mut)]
     let mut paths = vec![
         get_home_config_path(),
         ProjectDirs::from("", "", "rustic")
@@ -208,6 +209,7 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
         };
     }
 
+    #[allow(clippy::let_and_return)]
     paths
 }
 

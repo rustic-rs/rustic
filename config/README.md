@@ -35,12 +35,13 @@ options. Therefore `commandline arguments` have the highest precedence.
 
 ## Profiles
 
-To use different configurations for different repositories, you can use profiles.
+To use different configurations for different repositories, you can use
+profiles.
 
 For example, you can create a profile called `myconfig` and use it with the `-P`
 option, e.g. `rustic -P myconfig`. The configuration file for the profile
-`myconfig` should be named `myconfig.toml`. Examples for different
-configuration files can be found here in the [/config/](/config) directory.
+`myconfig` should be named `myconfig.toml`. Examples for different configuration
+files can be found here in the [/config/](/config) directory.
 
 ### Profile Locations
 
@@ -54,8 +55,8 @@ Configuration files can be placed in the user's local config directory, e.g.
 On Windows, the configuration file can be placed in the user's local config
 directory, e.g. `C:\Users\username\AppData\Roaming\rustic\` or in the global
 config dir, e.g. `C:\ProgramData\rustic\config`. The global config directory is
-usually not created by the installer, so you may have to create it yourself.
-You can also use your User Profile directory, e.g. `C:\Users\username\` and place
+usually not created by the installer, so you may have to create it yourself. You
+can also use your User Profile directory, e.g. `C:\Users\username\` and place
 the configuration file in the `.rustic` or `.config\rustic` directory.
 
 #### MacOS

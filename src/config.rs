@@ -203,12 +203,7 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
 
     paths
         .into_iter()
-        .filter_map(|path| {
-            path.map(|mut p| {
-                p.push(filename);
-                p
-            })
-        })
+        .filter_map(|path| path.map(|p| p.join(filename)))
         .collect::<Vec<_>>()
 }
 

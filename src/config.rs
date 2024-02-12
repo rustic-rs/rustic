@@ -185,6 +185,9 @@ fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
 ///
 /// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
+    // we need this mut here, because we want to add data to the Vec
+    // depending on the OS. Our CI is running on Unix, and doesn't have knowledge of
+    // us mutating that vector
     #[allow(unused_mut)]
     let mut paths = vec![
         get_home_config_path(),

@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    commands::{get_repository, init::init},
+    commands::{get_repository, init::init, open_repository},
     helpers::bytes_size_to_string,
     status_err, Application, RUSTIC_APP,
 };
@@ -144,7 +144,7 @@ impl BackupCmd {
             }
             init(repo, &self.key_opts, &self.config_opts)?
         } else {
-            repo.open()?
+            open_repository(&config.repository)?
         }
         .to_indexed_ids()?;
 

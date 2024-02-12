@@ -82,7 +82,7 @@ impl CopyCmd {
                 let pass = repo_dest.password()?.unwrap();
                 repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
             } else {
-                repo_dest.open()?
+                open_repository(target_opt)?
             };
 
             info!("copying to target {}...", repo_dest.name);

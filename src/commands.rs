@@ -53,6 +53,7 @@ use clap::builder::{
     Styles,
 };
 use dialoguer::Password;
+use human_panic::setup_panic;
 use log::{log, Level};
 use rustic_core::{OpenStatus, Repository};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
@@ -159,6 +160,9 @@ pub struct EntryPoint {
 
 impl Runnable for EntryPoint {
     fn run(&self) {
+        // Set up panic hook for better error messages and logs
+        setup_panic!();
+
         self.commands.run();
         RUSTIC_APP.shutdown(Shutdown::Graceful)
     }

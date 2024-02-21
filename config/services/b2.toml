@@ -1,7 +1,7 @@
 # rustic config file to use B2 storage via Apache OpenDAL
 [repository]
 repository = "opendal:b2" # just specify the opendal service here
-password = "mypassword"
+password = "<rustic_passwd>"
 # or 
 # password-file = "/home/<username>/etc/secure/restic_passwd"
 

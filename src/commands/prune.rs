@@ -58,6 +58,9 @@ fn print_stats(stats: &PruneStats) {
     let blob_stat = stats.blobs_sum();
     let size_stat = stats.size_sum();
 
+    debug!("statistics:");
+    debug!("{:#?}", stats.debug);
+
     debug!(
         "used:   {:>10} blobs, {:>10}",
         blob_stat.used,

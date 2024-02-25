@@ -77,6 +77,7 @@ simplelog = "0.12"
 bytesize = "1"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
+convert_case = "0.6.0"
 dialoguer = "0.11.0"
 directories = "5"
 gethostname = "0.4"

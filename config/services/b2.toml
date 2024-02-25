@@ -3,7 +3,7 @@
 repository = "opendal:b2" # just specify the opendal service here
 password = "<rustic_passwd>"
 # or 
-# password-file = "/home/<username>/etc/secure/restic_passwd"
+# password-file = "/home/<username>/etc/secure/rustic_passwd"
 
 # B2 specific options
 [repository.options]

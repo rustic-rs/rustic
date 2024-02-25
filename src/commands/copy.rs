@@ -1,7 +1,7 @@
 //! `copy` subcommand
 
 use crate::{
-    commands::{get_repository, init::init_password, open_repository},
+    commands::{get_repository, init::init_password, open_repository, open_repository_indexed},
     config::AllRepositoryOptions,
     helpers::table_with_titles,
     status_err, Application, RUSTIC_APP,
@@ -56,7 +56,7 @@ impl CopyCmd {
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
-        let repo = open_repository(&config.repository)?.to_indexed()?;
+        let repo = open_repository_indexed(&config.repository)?;
         let mut snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
         } else {

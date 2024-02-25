@@ -1,7 +1,7 @@
 //! `webdav` subcommand
 use std::{net::ToSocketAddrs, str::FromStr};
 
-use crate::{commands::open_repository, status_err, Application, RusticConfig, RUSTIC_APP};
+use crate::{commands::open_repository_indexed, status_err, Application, RusticConfig, RUSTIC_APP};
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
 use anyhow::{anyhow, Result};
 use dav_server::{warp::dav_handler, DavHandler};
@@ -64,7 +64,7 @@ impl Runnable for WebDavCmd {
 impl WebDavCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?.to_indexed()?;
+        let repo = open_repository_indexed(&config.repository)?;
 
         let path_template = self
             .path_template

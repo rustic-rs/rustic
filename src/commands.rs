@@ -25,6 +25,7 @@ pub(crate) mod tag;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
 
+use std::fmt::Debug;
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -55,8 +56,8 @@ use clap::builder::{
 use convert_case::{Case, Casing};
 use dialoguer::Password;
 use human_panic::setup_panic;
-use log::{log, Level};
-use rustic_core::{OpenStatus, Repository};
+use log::{log, warn, Level};
+use rustic_core::{IndexedFull, OpenStatus, Repository};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 pub(super) mod constants {
@@ -301,6 +302,9 @@ fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<Progres
 fn open_repository(
     repo_opts: &AllRepositoryOptions,
 ) -> Result<Repository<ProgressOptions, OpenStatus>> {
+    if RUSTIC_APP.config().global.check_index {
+        warn!("Option check-index is not supported and will be ignored!");
+    }
     let repo = get_repository(repo_opts)?;
     match repo.password()? {
         // if password is given, directly return the result of find_key_in_backend and don't retry
@@ -322,6 +326,20 @@ fn open_repository(
         }
     }
     Err(anyhow!("incorrect password"))
+}
+
+/// helper function to get an opened and inedexed repo
+fn open_repository_indexed(
+    repo_opts: &AllRepositoryOptions,
+) -> Result<Repository<ProgressOptions, impl IndexedFull + Debug>> {
+    let open = open_repository(repo_opts)?;
+    let check_index = RUSTIC_APP.config().global.check_index;
+    let repo = if check_index {
+        open.to_indexed_checked()
+    } else {
+        open.to_indexed()
+    }?;
+    Ok(repo)
 }
 
 #[cfg(test)]

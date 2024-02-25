@@ -1,6 +1,6 @@
 //! `diff` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
@@ -50,7 +50,7 @@ impl Runnable for DiffCmd {
 impl DiffCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?.to_indexed()?;
+        let repo = open_repository_indexed(&config.repository)?;
 
         let (id1, path1) = arg_to_snap_path(&self.snap1, "");
         let (id2, path2) = arg_to_snap_path(&self.snap2, path1);

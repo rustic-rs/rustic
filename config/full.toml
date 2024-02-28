@@ -36,7 +36,9 @@ warm-up = false
 warm-up-command = "warmup.sh %id" # Default: not set
 warm-up-wait = "10min" # Default: not set
 
-# Additional repository options - depending on backend. These can be only set in the config file.
+# Additional repository options - depending on backend. These can be only set in the config file or using env variables.
+# For env variables use upper snake case and prefix with "RUSTIC_REPO_OPT_", e.g. `use-passwort = "true"` becomes
+# `RUSTIC_REPO_OPT_USE_PASSWORT=true`
 [repository.options]
 post-create-command = "par2create -qq -n1 -r5 %file" # Only local backend; Default: not set
 post-delete-command = "sh -c \"rm -f %file*.par2\"" # Only local backend; Default: not set
@@ -48,11 +50,15 @@ rest-url = "http://localhost:8000" # Only rclone; Default: determine REST URL fr
 # Note that opendal backends use several service-dependent options which may be specified here, see
 # https://opendal.apache.org/docs/rust/opendal/services/index.html
 
-# Additional repository options for the hot part - depending on backend. These can be only set in the config file.
+# Additional repository options for the hot part - depending on backend. These can be only set in the config file or
+# using env variables.
+# For env variables use upper snake case and prefix with "RUSTIC_REPO_OPTHOT_"
 [repository.options-hot]
 # see [repository.options]
 
-# Additional repository options for the cold part - depending on backend. These can be only set in the config file.
+# Additional repository options for the cold part - depending on backend. These can be only set in the config file or
+# using env variables.
+# For env variables use upper snake case and prefix with "RUSTIC_REPO_OPTCOLD_"
 [repository.options-cold]
 # see [repository.options]
 

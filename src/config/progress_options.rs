@@ -131,11 +131,13 @@ impl Progress for RusticProgress {
             ProgressType::Bytes => {
                 self.0.set_style(
                     ProgressStyle::default_bar()
-                        .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
-                            match (s.pos(), s.len()){
-                                (pos,Some(len)) if pos != 0 => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
+                        .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| {
+                            let _ = match (s.pos(), s.len()){
+                                // Extra checks to prevent panics from dividing by zero or subtract overflow
+                                (pos,Some(len)) if pos != 0 && len > pos => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
                                 (_, _) => write!(w,"-"),
-                            }.unwrap())
+                            };
+                        })
                         .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
                         .unwrap()
                 );

@@ -1,7 +1,7 @@
 //! `copy` subcommand
 
 use crate::{
-    commands::{get_repository, open_repository},
+    commands::{get_repository, init::init_password, open_repository},
     config::AllRepositoryOptions,
     helpers::table_with_titles,
     status_err, Application, RUSTIC_APP,
@@ -69,6 +69,7 @@ impl CopyCmd {
         for target_opt in &config.copy.targets {
             let repo_dest = get_repository(target_opt)?;
 
+            info!("copying to target {}...", repo_dest.name);
             let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
                 if config.global.dry_run {
                     error!(
@@ -79,13 +80,12 @@ impl CopyCmd {
                 }
                 let mut config_dest = repo.config().clone();
                 config_dest.id = Id::random();
-                let pass = repo_dest.password()?.unwrap();
+                let pass = init_password(&repo_dest)?;
                 repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
             } else {
-                repo_dest.open()?
+                open_repository(target_opt)?
             };
 
-            info!("copying to target {}...", repo_dest.name);
             if poly != repo_dest.config().poly()? {
                 bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
             }

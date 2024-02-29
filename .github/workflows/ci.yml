@@ -15,6 +15,10 @@ on:
   merge_group:
     types: [checks_requested]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   fmt:
     name: Rustfmt

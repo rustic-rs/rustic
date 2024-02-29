@@ -83,6 +83,11 @@ pub(crate) fn init<P, S>(
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
 ) -> Result<Repository<P, OpenStatus>> {
+    let pass = init_password(&repo)?;
+    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+}
+
+pub(crate) fn init_password<P, S>(repo: &Repository<P, S>) -> Result<String> {
     let pass = repo.password()?.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
@@ -98,5 +103,5 @@ pub(crate) fn init<P, S>(
         }
     });
 
-    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+    Ok(pass)
 }

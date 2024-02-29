@@ -52,7 +52,9 @@ use clap::builder::{
     styling::{AnsiColor, Effects},
     Styles,
 };
+use convert_case::{Case, Casing};
 use dialoguer::Password;
+use human_panic::setup_panic;
 use log::{log, Level};
 use rustic_core::{OpenStatus, Repository};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
@@ -159,6 +161,9 @@ pub struct EntryPoint {
 
 impl Runnable for EntryPoint {
     fn run(&self) {
+        // Set up panic hook for better error messages and logs
+        setup_panic!();
+
         self.commands.run();
         RUSTIC_APP.shutdown(Shutdown::Graceful)
     }
@@ -180,6 +185,23 @@ impl Configurable<RusticConfig> for EntryPoint {
         // rustic logic and merged with the CLI options.
         // That's why it says `_config`, because it's not read at all and therefore not needed.
         let mut config = self.config.clone();
+
+        // collect "RUSTIC_REPO_OPT*" and "OPENDAL_*" env variables
+        for (var, value) in std::env::vars() {
+            if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPT_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
+                _ = config.repository.be.options.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("OPENDAL_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
+                _ = config.repository.be.options.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPTHOT_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
+                _ = config.repository.be.options_hot.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPTCOLD_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
+                _ = config.repository.be.options_cold.insert(var, value);
+            }
+        }
 
         // collect logs during merging as we start the logger *after* merging
         let mut merge_logs = Vec::new();

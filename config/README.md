@@ -4,13 +4,13 @@
 
 # Rustic Configuration Specification
 
-`rustic` is a backup tool that allows users to define their backup options using
-a TOML configuration file. The configuration file consists of various sections
+`rustic` is a backup tool that allows users to define their backup options in
+profiles using TOML files. A configuration profile consists of various sections
 and attributes that control the behavior of `rustic` for different commands and
 sources.
 
 This specification covers all the available sections and attributes in the
-`rustic` configuration file and includes their corresponding environment
+`rustic` configuration profile file and includes their corresponding environment
 variable names. Users can customize their backup behavior by modifying these
 attributes according to their needs.
 
@@ -18,9 +18,9 @@ attributes according to their needs.
 
 The merge precedence for values is:
 
-    Commandline Arguments >> Environment Variables >> Configuration File
+    Commandline Arguments >> Environment Variables >> Configuration Profile
 
-Values parsed from the `configuration file` can be overwritten by
+Values parsed from the `configuration profile` can be overwritten by
 `environment variables`, which can be overwritten by `commandline arguments`
 options. Therefore `commandline arguments` have the highest precedence.
 
@@ -62,7 +62,7 @@ If you want to contribute your own configuration, please
 | log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log" | RUSTIC_LOG_FILE          |
 | no-progress       | If true, disables progress indicators.                                            | false         |                   | RUSTIC_NO_PROGRESS       |
 | progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL |
-| use-profile       | An array of profiles to use.                                                      | Empty array   |                   | RUSTIC_USE_PROFILE       |
+| use-profile       | An array of profiles to use. Allows to recursely use other profiles.              | Empty array   |                   | RUSTIC_USE_PROFILE       |
 
 ### Global Options - env variables
 
@@ -71,8 +71,8 @@ configure e.g. the `rclone`-backend or some commands which will be called by
 rustic.
 
 **Important**: Please do not forget to include environment variables set in the
-config file as a possible source of errors if you encounter problems. They could
-possibly shadow other values that you have already set.
+config profile as a possible source of errors if you encounter problems. They
+could possibly shadow other values that you have already set.
 
 ### Repository Options
 
@@ -100,90 +100,101 @@ possibly shadow other values that you have already set.
 
 | Attribute    | Description                           | Default Value   | Example Value |
 | ------------ | ------------------------------------- | --------------- | ------------- |
-| filter-fn    | Custom filter function for snapshots. | Not set         |               |
 | filter-host  | Array of hosts to filter snapshots.   | Not set         | ["myhost"]    |
 | filter-label | Array of labels to filter snapshots.  | No label filter |               |
 | filter-paths | Array of paths to filter snapshots.   | No paths filter |               |
 | filter-tags  | Array of tags to filter snapshots.    | No tags filter  |               |
+| filter-fn    | Custom filter function for snapshots. | Not set         |               |
 
 ### Backup Options
 
-**Note**: Some options are not source-specific, but if set here, they apply for
-all sources, although they can be overwritten in the source-specifc
-configuration.
+**Note**: If set here, the backup options apply for all sources, although they
+can be overwritten in the source-specifc configuration, see below.
 
-| Attribute        | Description                                               | Default Value | Example Value |
-| ---------------- | --------------------------------------------------------- | ------------- | ------------- |
-| description      | Description for the backup.                               | Not set       |               |
-| description-from | Path to a file containing the description for the backup. | Not set       |               |
-| delete-never     | If true, never delete the backup.                         | false         |               |
-| delete-after     | Time duration after which the backup will be deleted.     | Not set       |               |
+| Attribute             | Description                                                                             | Default Value         | Example Value |
+| --------------------- | --------------------------------------------------------------------------------------- | --------------------- | ------------- |
+| as-path               | Specifies the path for the backup when the source contains a single path.               | Not set               |               |
+| command               | Set the command saved in the snapshot.                                                  | The full command used |               |
+| custom-ignorefile     | Name of custom ignorefiles which will be used to exclude files.                         | Not set               |               |
+| description           | Description for the snapshot.                                                           | Not set               |               |
+| description-from      | Path to a file containing the description for the snapshot.                             | Not set               |               |
+| delete-never          | If true, never delete the snapshot.                                                     | false                 |               |
+| delete-after          | Time duration after which the snapshot be deleted.                                      | Not set               |               |
+| exclude-if-present    | Array of filenames to exclude from the backup if they are present.                      | Not set               |               |
+| force                 | If true, forces the backup even if no changes are detected.                             | false                 |               |
+| git-ignore            | If true, use .gitignore rules to exclude files from the backup in the source directory. | false                 |               |
+| glob                  | Array of globs specifying what to include/exclude in the backup.                        | Not set               |               |
+| glob-file             | Array of glob files specifying what to include/exclude in the backup.                   | Not set               |               |
+| group-by              | Grouping strategy to find parent snapshot.                                              | "host,label,paths"    |               |
+| host                  | Host name used in the snapshot.                                                         | Not set               |               |
+| iglob                 | Like glob, but apply case-insensitve                                                    | Not set               |               |
+| iglob-file            | Like glob-file, but apply case-insensitve                                               | Not set               |               |
+| ignore-devid          | If true, don't save device ID.                                                          | false                 |               |
+| ignore-ctime          | If true, ignore file change time (ctime).                                               | false                 |               |
+| ignore-inode          | If true, ignore file inode for the backup.                                              | false                 |               |
+| init                  | If true, initialize repository if it doesn't exist, yet.                                | false                 |               |
+| json                  | If true, returns output of the command as json.                                         | false                 |               |
+| label                 | Set label fot the snapshot.                                                             | Not set               |               |
+| no-require-git        | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.    | false                 |               |
+| no-scan               | Don't scan the backup source for its size (disables ETA).                               | false                 |               |
+| one-file-system       | If true, only backs up files from the same filesystem as the source.                    | false                 |               |
+| parent                | Parent snapshot ID for the backup.                                                      | Not set               |               |
+| quiet                 | Don't output backup summary.                                                            | false                 |               |
+| skip-identical-parent | Skip saving of the snapshot if it is identical to the parent.                           | false                 |               |
+| stdin-filename        | File name to be used when reading from stdin.                                           | Not set               |               |
+| tag                   | Array of tags for the backup.                                                           | Not set               |               |
+| time                  | Set the time saved in the snapshot.                                                     | Not set               |               |
+| with-atime            | If true, includes file access time (atime) in the backup.                               | false                 |               |
 
 ### Backup Sources
+
+**Note**: All of the backup options mentioned before can also be used as
+source-specific option and then only apply to this source.
 
 | Attribute | Description                          | Default Value | Example Value         |
 | --------- | ------------------------------------ | ------------- | --------------------- |
 | source    | Source directory or file to back up. | Not set       | "/tmp/dir/to_backup/" |
 
-#### Source-specific options
-
-**Note**: The following options can be specified for each source individually in
-the source-individual section, see below. If they are specified here, they
-provide default values for all sources but can still be overwritten in the
-source-individual section.
-
-| Attribute          | Description                                                                             | Default Value |
-| ------------------ | --------------------------------------------------------------------------------------- | ------------- |
-| as-path            | Specifies the path for the backup when the source contains a single path.               | Not set       |
-| exclude-if-present | Array of filenames to exclude from the backup if they are present.                      | Not set       |
-| force              | If true, forces the backup even if no changes are detected.                             | Not set       |
-| git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory. | true          |
-| glob-file          | Array of glob files specifying additional files to include in the backup.               | Not set       |
-| group-by           | Grouping strategy for the backup.                                                       | Not set       |
-| host               | Host name for the backup.                                                               | Not set       |
-| ignore-ctime       | If true, ignores file change time (ctime) for the backup.                               | Not set       |
-| ignore-inode       | If true, ignores file inode for the backup.                                             | Not set       |
-| init               | If true, initializes repository if it doesn't exist, yet.                               | Not set       |
-| json               | If true, returns output of the command as json.                                         | Not set       |
-| label              | Label for the backup.                                                                   | Not set       |
-| one-file-system    | If true, only backs up files from the same filesystem as the source.                    | Not set       |
-| parent             | Parent snapshot ID for the backup.                                                      | Not set       |
-| stdin-filename     | File name to be used when reading from stdin.                                           | Not set       |
-| tag                | Array of tags for the backup.                                                           | Not set       |
-| with-atime         | If true, includes file access time (atime) in the backup.                               | Not set       |
-
 ### Forget Options
 
-| Attribute         | Description                                                | Default Value | Example Value  |
-| ----------------- | ---------------------------------------------------------- | ------------- | -------------- |
-| filter-host       | Array of hosts to filter snapshots.                        | Not set       | ["forgethost"] |
-| keep-daily        | Number of daily backups to keep.                           | Not set       |                |
-| keep-within-daily | The time duration within which daily backups will be kept. | Not set       | "7 days"       |
-| keep-hourly       | Number of hourly backups to keep.                          | Not set       |                |
-| keep-monthly      | Number of monthly backups to keep.                         | Not set       |                |
-| keep-weekly       | Number of weekly backups to keep.                          | Not set       |                |
-| keep-yearly       | Number of yearly backups to keep.                          | Not set       |                |
-| keep-tags         | Array of tags to keep.                                     | Not set       | ["mytag"]      |
+| Attribute                  | Description                                                             | Default Value      | Example Value          |
+| -------------------------- | ----------------------------------------------------------------------- | ------------------ | ---------------------- |
+| group-by                   | Group snapshots by given criteria before appling keep policies.         | "host,label,paths" |                        |
+| keep-last                  | Number of most rescent snapshots to keep.                               | Not set            | 15                     |
+| keep-hourly                | Number of hourly snapshots to keep.                                     | Not set            |                        |
+| keep-daily                 | Number of daily snapshots to keep.                                      | Not set            | 8                      |
+| keep-weekly                | Number of weekly snapshots to keep.                                     | Not set            |                        |
+| keep-monthly               | Number of monthly snapshots to keep.                                    | Not set            |                        |
+| keep-quarter-yearly        | Number of quarter-yearly snapshots to keep.                             | Not set            |                        |
+| keep-half-yearly           | Number of half-yearly snapshots to keep.                                | Not set            |                        |
+| keep-yearly                | Number of yearly snapshots to keep.                                     | Not set            |                        |
+| keep-within-hourly         | The time duration within which hourly snapshots will be kept.           | Not set            | "1 day"                |
+| keep-within-daily          | The time duration within which daily snapshots will be kept.            | Not set            | "7 days"               |
+| keep-within-weekly         | The time duration within which weekly snapshots will be kept.           | Not set            |                        |
+| keep-within-monthly        | The time duration within which monthly snapshots will be kept.          | Not set            |                        |
+| keep-within-quarter-yearly | The time duration within which quarter-yearly snapshots will be kept.   | Not set            |                        |
+| keep-within-half-yearly    | The time duration within which half-yearly snapshots will be kept.      | Not set            |                        |
+| keep-within-yearly         | The time duration within which yearly snapshots will be kept.           | Not set            |                        |
+| keep-tag                   | Keep snapshots containing one of these tags.                            | Not set            | ["keep", "important" ] |
+| prune                      | If set to true, prune the repository after snapshots have been removed. | false              |                        |
 
 ### Copy Targets
 
 **Note**: Copy-targets are simply repositories with the same defaults as within
 the repository section.
 
-| Attribute           | Description                                                            | Default Value            | Example Value          |
-| ------------------- | ---------------------------------------------------------------------- | ------------------------ | ---------------------- |
-| cache-dir           | Path to the cache directory for the target repository.                 | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ |
-| no-cache            | If true, disables caching for the target repository.                   | false                    |                        |
-| password            | The password for the target repository.                                | Not set                  |                        |
-| password-file       | Path to a file containing the password for the target repository.      | Not set                  |                        |
-| password-command    | Command to retrieve the password for the target repository.            | Not set                  |                        |
-| post-create-command | Command to execute after creating a snapshot in the target repository. | Not set                  |                        |
-| post-delete-command | Command to execute after deleting a snapshot in the target repository. | Not set                  |                        |
-| repository          | The path or URL to the target repository.                              | Not set                  |                        |
-| repo-hot            | The path or URL to the hot target repository.                          | Not set                  |                        |
-| warm-up             | If true, warms up the target repository by file access.                | Not set                  |                        |
-| warm-up-command     | Command to warm up the target repository.                              | Not set                  |                        |
-| warm-up-wait        | The wait time for warming up the target repository.                    | Not set                  |                        |
+| Attribute        | Description                                                       | Default Value            | Example Value          |
+| ---------------- | ----------------------------------------------------------------- | ------------------------ | ---------------------- |
+| cache-dir        | Path to the cache directory for the target repository.            | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ |
+| no-cache         | If true, disables caching for the target repository.              | false                    |                        |
+| password         | The password for the target repository.                           | Not set                  |                        |
+| password-file    | Path to a file containing the password for the target repository. | Not set                  |                        |
+| password-command | Command to retrieve the password for the target repository.       | Not set                  |                        |
+| repository       | The path or URL to the target repository.                         | Not set                  |                        |
+| repo-hot         | The path or URL to the hot target repository.                     | Not set                  |                        |
+| warm-up          | If true, warms up the target repository by file access.           | Not set                  |                        |
+| warm-up-command  | Command to warm up the target repository.                         | Not set                  |                        |
+| warm-up-wait     | The wait time for warming up the target repository.               | Not set                  |                        |
 
 ### WebDAV Options
 

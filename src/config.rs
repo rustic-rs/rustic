@@ -158,6 +158,11 @@ pub struct GlobalOptions {
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE")]
     pub log_file: Option<PathBuf>,
 
+    /// Output in JSON format
+    #[clap(long, global = true, env = "RUSTIC_JSON")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub json: bool,
+
     /// Settings to customize progress bars
     #[clap(flatten)]
     #[serde(flatten)]

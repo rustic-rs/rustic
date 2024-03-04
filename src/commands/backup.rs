@@ -53,12 +53,7 @@ pub struct BackupCmd {
     /// Don't scan the backup source for its size - this disables ETA estimation for backup.
     #[clap(long)]
     #[merge(strategy = merge::bool::overwrite_false)]
-    pub no_scan: bool,
-
-    /// Output generated snapshot in json format
-    #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
-    json: bool,
+    no_scan: bool,
 
     /// Don't show any output
     #[clap(long, conflicts_with = "json")]
@@ -228,7 +223,7 @@ impl BackupCmd {
                 .dry_run(config.global.dry_run);
             let snap = repo.backup(&backup_opts, &source, opts.snap_opts.to_snapshot()?)?;
 
-            if opts.json {
+            if config.global.json {
                 let mut stdout = std::io::stdout();
                 serde_json::to_writer_pretty(&mut stdout, &snap)?;
             } else if !opts.quiet {

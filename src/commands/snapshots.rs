@@ -37,10 +37,6 @@ pub(crate) struct SnapshotCmd {
     #[arg(long)]
     long: bool,
 
-    /// Show snapshots in json format
-    #[clap(long, conflicts_with = "long")]
-    json: bool,
-
     /// Show all snapshots instead of summarizing identical follow-up snapshots
     #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
@@ -64,7 +60,7 @@ impl SnapshotCmd {
             config.snapshot_filter.matches(sn)
         })?;
 
-        if self.json {
+        if config.global.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &groups)?;
             return Ok(());

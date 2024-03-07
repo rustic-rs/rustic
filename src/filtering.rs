@@ -5,7 +5,7 @@ use rustic_core::{repofile::SnapshotFile, StringList};
 use std::{error::Error, str::FromStr};
 
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 /// A function to filter snapshots
@@ -43,7 +43,7 @@ impl SnapshotFn {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Deserialize, merge::Merge, clap::Parser)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, merge::Merge, clap::Parser)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
@@ -71,7 +71,7 @@ pub struct SnapshotFilter {
     /// Function to filter snapshots
     #[clap(long, global = true, value_name = "FUNC")]
     #[serde_as(as = "Option<DisplayFromStr>")]
-    filter_fn: Option<SnapshotFn>,
+    filter_fn: Option<String>,
 }
 
 impl SnapshotFilter {
@@ -87,7 +87,10 @@ impl SnapshotFilter {
     #[must_use]
     pub fn matches(&self, snapshot: &SnapshotFile) -> bool {
         if let Some(filter_fn) = &self.filter_fn {
-            match filter_fn.call::<bool>(snapshot) {
+            match SnapshotFn::from_str(filter_fn)
+                .unwrap()
+                .call::<bool>(snapshot)
+            {
                 Ok(result) => {
                     if !result {
                         return false;

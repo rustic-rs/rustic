@@ -6,11 +6,11 @@ use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdow
 use anyhow::{anyhow, Result};
 use dav_server::{warp::dav_handler, DavHandler};
 use merge::Merge;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 
-#[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
+#[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct WebDavCmd {
     /// Address to bind the webdav server to. [default: "localhost:8000"]

@@ -10,7 +10,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 use log::{error, info};
 use merge::Merge;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use rustic_core::{CopySnapshot, Id, KeyOptions};
 
@@ -31,7 +31,7 @@ pub(crate) struct CopyCmd {
 }
 
 /// Target repository options
-#[derive(Default, Clone, Debug, Deserialize, Merge)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize, Merge)]
 pub struct Targets {
     /// Target repositories
     #[merge(strategy = merge::vec::overwrite_empty)]

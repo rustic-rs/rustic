@@ -12,6 +12,11 @@ pub(crate) struct ShowConfigCmd {}
 impl Runnable for ShowConfigCmd {
     fn run(&self) {
         let config = RUSTIC_APP.config();
-        println!("{}", to_string_pretty(config.as_ref()).unwrap());
+        let Ok(config) = to_string_pretty(config.as_ref()) else {
+            status_err!("An error occured, config cannot be shown.");
+            PACE_APP.shutdown(Shutdown::Crash);
+        }
+        
+        println!("{config}");
     }
 }

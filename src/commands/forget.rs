@@ -26,10 +26,6 @@ pub(super) struct ForgetCmd {
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
-    /// Show infos in json format
-    #[clap(long)]
-    json: bool,
-
     /// Don't show any output
     #[clap(long, conflicts_with = "json")]
     quiet: bool,
@@ -123,7 +119,7 @@ impl ForgetCmd {
             ForgetGroups(vec![item])
         };
 
-        if self.json {
+        if config.global.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &groups)?;
         } else if !self.quiet {
@@ -132,7 +128,11 @@ impl ForgetCmd {
 
         let forget_snaps = groups.into_forget_ids();
 
-        match (forget_snaps.is_empty(), config.global.dry_run, self.json) {
+        match (
+            forget_snaps.is_empty(),
+            config.global.dry_run,
+            config.global.json,
+        ) {
             (true, _, false) => println!("nothing to remove"),
             (false, true, false) => {
                 println!("would have removed the following snapshots:\n {forget_snaps:?}");

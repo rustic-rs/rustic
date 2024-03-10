@@ -16,10 +16,6 @@ pub(super) struct MergeCmd {
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
-    /// Output generated snapshot in json format
-    #[clap(long)]
-    json: bool,
-
     /// Remove input snapshots after merging
     #[clap(long)]
     delete: bool,
@@ -53,7 +49,7 @@ impl MergeCmd {
 
         let snap = repo.merge_snapshots(&snapshots, &last_modified_node, snap)?;
 
-        if self.json {
+        if config.global.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &snap)?;
         }

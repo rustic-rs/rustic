@@ -35,7 +35,13 @@ impl PruneCmd {
 
         let pruner = repo.prune_plan(&self.opts)?;
 
-        print_stats(&pruner.stats);
+        if config.global.json {
+            let mut stdout = std::io::stdout();
+            let debug: Vec<_> = pruner.stats.debug.0.iter().collect();
+            serde_json::to_writer_pretty(&mut stdout, &debug)?;
+        } else {
+            print_stats(&pruner.stats);
+        }
 
         if config.global.dry_run {
             repo.warm_up(pruner.repack_packs().into_iter())?;

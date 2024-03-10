@@ -22,10 +22,6 @@ pub(crate) struct RepoInfoCmd {
     /// Only scan index
     #[clap(long)]
     only_index: bool,
-
-    /// Show infos in json format
-    #[clap(long)]
-    json: bool,
 }
 
 impl Runnable for RepoInfoCmd {
@@ -66,7 +62,7 @@ impl RepoInfoCmd {
                 .transpose()?,
         };
 
-        if self.json {
+        if config.global.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &infos)?;
             return Ok(());

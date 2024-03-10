@@ -60,6 +60,7 @@ If you want to contribute your own configuration, please
 | dry-run           | If true, performs a dry run without making any changes.                           | false         |                   | RUSTIC_DRY_RUN           |
 | log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                   | RUSTIC_LOG_LEVEL         |
 | log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log" | RUSTIC_LOG_FILE          |
+| json              | If true, returns output of the command as json.                                   | false         |                   | RUSTIC_JSON              |
 | no-progress       | If true, disables progress indicators.                                            | false         |                   | RUSTIC_NO_PROGRESS       |
 | progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL |
 | use-profile       | An array of profiles to use. Allows to recursely use other profiles.              | Empty array   |                   | RUSTIC_USE_PROFILE       |
@@ -133,7 +134,6 @@ can be overwritten in the source-specifc configuration, see below.
 | ignore-ctime          | If true, ignore file change time (ctime).                                               | false                 |               |
 | ignore-inode          | If true, ignore file inode for the backup.                                              | false                 |               |
 | init                  | If true, initialize repository if it doesn't exist, yet.                                | false                 |               |
-| json                  | If true, returns output of the command as json.                                         | false                 |               |
 | label                 | Set label fot the snapshot.                                                             | Not set               |               |
 | no-require-git        | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.    | false                 |               |
 | no-scan               | Don't scan the backup source for its size (disables ETA).                               | false                 |               |

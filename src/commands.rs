@@ -25,7 +25,7 @@ pub(crate) mod tag;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
 
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -232,22 +232,28 @@ impl Configurable<RusticConfig> for EntryPoint {
             )
             .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
 
-            Some(file) => CombinedLogger::init(vec![
-                TermLogger::new(
-                    level_filter.min(LevelFilter::Warn),
-                    simplelog::ConfigBuilder::new()
-                        .set_time_level(LevelFilter::Off)
-                        .build(),
-                    TerminalMode::Stderr,
-                    ColorChoice::Auto,
-                ),
-                WriteLogger::new(
-                    level_filter,
-                    simplelog::Config::default(),
-                    File::options().create(true).append(true).open(file)?,
-                ),
-            ])
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+            Some(file) => {
+                // Create needed dirs for log-file if they doesn't exist yet
+                if let Some(dir) = file.parent() {
+                    create_dir_all(dir)?;
+                }
+                CombinedLogger::init(vec![
+                    TermLogger::new(
+                        level_filter.min(LevelFilter::Warn),
+                        simplelog::ConfigBuilder::new()
+                            .set_time_level(LevelFilter::Off)
+                            .build(),
+                        TerminalMode::Stderr,
+                        ColorChoice::Auto,
+                    ),
+                    WriteLogger::new(
+                        level_filter,
+                        simplelog::Config::default(),
+                        File::options().create(true).append(true).open(file)?,
+                    ),
+                ])
+                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
+            }
         }
 
         // display logs from merging

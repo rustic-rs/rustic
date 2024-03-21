@@ -244,7 +244,16 @@ impl Configurable<RusticConfig> for EntryPoint {
                 WriteLogger::new(
                     level_filter,
                     simplelog::Config::default(),
-                    File::options().create(true).append(true).open(file)?,
+                    File::options()
+                        .create(true)
+                        .append(true)
+                        .open(file)
+                        .map_err(|e| {
+                            FrameworkErrorKind::PathError {
+                                name: Some(file.clone()),
+                            }
+                            .context(e)
+                        })?,
                 ),
             ])
             .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,

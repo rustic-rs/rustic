@@ -275,7 +275,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<ProgressOptions, ()>> {
     let po = RUSTIC_APP.config().global.progress_options;
     let backends = repo_opts.be.to_backends()?;
-    let repo = Repository::new_with_progress(&repo_opts.repo, backends, po)?;
+    let repo = Repository::new_with_progress(&repo_opts.repo, &backends, po)?;
     Ok(repo)
 }
 

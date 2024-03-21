@@ -79,7 +79,7 @@ impl WebDavCmd {
 
         let vfs = if let Some(snap) = &self.snapshot_path {
             let node = repo.node_from_snapshot_path(snap, sn_filter)?;
-            Vfs::from_dirnode(node)
+            Vfs::from_dir_node(&node)
         } else {
             let snapshots = repo.get_matching_snapshots(sn_filter)?;
             let (latest, identical) = if self.symlinks {

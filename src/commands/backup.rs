@@ -181,7 +181,7 @@ impl BackupCmd {
 
         let sources = match (self.cli_sources.is_empty(), config_opts.is_empty()) {
             (false, _) => {
-                let item = PathList::from_strings(&self.cli_sources).sanitize()?;
+                let item = PathList::from_iter(&self.cli_sources).sanitize()?;
                 vec![item]
             }
             (true, false) => {

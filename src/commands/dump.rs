@@ -1,6 +1,6 @@
 //! `dump` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -25,7 +25,8 @@ impl Runnable for DumpCmd {
 impl DumpCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?.to_indexed()?;
+        let repo = open_repository_indexed(&config.repository)?;
+
         let node =
             repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
 

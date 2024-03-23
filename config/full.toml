@@ -14,6 +14,7 @@ log-file = "/path/to/rustic.log" # Default: not set
 no-progress = false
 progress-interval = "100ms"
 dry-run = false
+check-index = false
 
 # Global env variables: These are set by rustic before calling a subcommand, e.g. rclone or commands
 # defined in the repository options.

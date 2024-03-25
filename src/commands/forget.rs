@@ -9,6 +9,7 @@ use abscissa_core::{config::Override, Shutdown};
 use abscissa_core::{Command, FrameworkError, Runnable};
 use anyhow::Result;
 
+use chrono::Local;
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
@@ -100,6 +101,7 @@ impl ForgetCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config.repository)?;
+        let now = Local::now();
 
         let group_by = config.forget.group_by.unwrap_or_default();
 
@@ -113,10 +115,26 @@ impl ForgetCmd {
                 snapshots: repo
                     .get_snapshots(&self.ids)?
                     .into_iter()
-                    .map(|sn| ForgetSnapshot {
-                        snapshot: sn,
-                        keep: false,
-                        reasons: vec!["id argument".to_string()],
+                    .map(|sn| {
+                        if sn.is_locked(now) {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: true,
+                                reasons: vec!["locked".to_string()],
+                            }
+                        } else if sn.must_keep(now) {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: true,
+                                reasons: vec!["snapshot".to_string()],
+                            }
+                        } else {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: false,
+                                reasons: vec!["id argument".to_string()],
+                            }
+                        }
                     })
                     .collect(),
             };

@@ -4,6 +4,7 @@ use log::warn;
 use rustic_core::{repofile::SnapshotFile, StringList};
 use std::{error::Error, str::FromStr};
 
+use cached::proc_macro::cached;
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -21,6 +22,17 @@ impl FromStr for SnapshotFn {
         let ast = engine.compile(s)?;
         let func = engine.eval_ast::<FnPtr>(&ast)?;
         Ok(Self(func, ast))
+    }
+}
+
+#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
+fn string_to_fn(s: &str) -> Option<SnapshotFn> {
+    match SnapshotFn::from_str(s) {
+        Ok(filter_fn) => Some(filter_fn),
+        Err(err) => {
+            warn!("Error evaluating filter-fn {s}: {err}",);
+            None
+        }
     }
 }
 
@@ -87,20 +99,19 @@ impl SnapshotFilter {
     #[must_use]
     pub fn matches(&self, snapshot: &SnapshotFile) -> bool {
         if let Some(filter_fn) = &self.filter_fn {
-            match SnapshotFn::from_str(filter_fn)
-                .unwrap()
-                .call::<bool>(snapshot)
-            {
-                Ok(result) => {
-                    if !result {
-                        return false;
+            if let Some(func) = string_to_fn(filter_fn) {
+                match func.call::<bool>(snapshot) {
+                    Ok(result) => {
+                        if !result {
+                            return false;
+                        }
                     }
-                }
-                Err(err) => {
-                    warn!(
-                        "Error evaluating filter-fn for snapshot {}: {err}",
-                        snapshot.id
-                    );
+                    Err(err) => {
+                        warn!(
+                            "Error evaluating filter-fn for snapshot {}: {err}",
+                            snapshot.id
+                        );
+                    }
                 }
             }
         }

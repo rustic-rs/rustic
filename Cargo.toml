@@ -75,6 +75,7 @@ simplelog = "0.12"
 
 # commands
 bytesize = "1"
+cached = "0.49.3"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
 convert_case = "0.6.0"
@@ -89,7 +90,6 @@ merge = "0.1"
 once_cell = "1.19"
 self_update = { version = "0.39", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] }
 toml = "0.8"
-cached = "0.49.3"
 
 [dev-dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["testing"] }

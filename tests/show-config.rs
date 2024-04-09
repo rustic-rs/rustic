@@ -41,7 +41,7 @@ fn fixtures_dir() -> PathBuf {
 
 #[test]
 fn show_config_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("empty.toml");
+    let fixture_path = fixtures_dir().join("empty.txt");
     let mut file = get_temp_file()?;
 
     {

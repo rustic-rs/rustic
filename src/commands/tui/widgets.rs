@@ -25,7 +25,7 @@ impl PopUpInput {
     }
 
     pub fn render(&self, f: &mut Frame<'_>) {
-        let area = center_area(3, f.size()); // 1 (+2 for border)
+        let area = center_area(Some(1), None, f.size());
         f.render_widget(Clear, area);
         f.render_widget(self.textarea.widget(), area);
     }
@@ -50,31 +50,79 @@ impl PopUpInput {
     }
 }
 
+pub struct PopUpParagraph {
+    p: Paragraph<'static>,
+    height: Option<u16>,
+    width: Option<u16>,
+}
+
+impl PopUpParagraph {
+    pub fn new(title: &'static str, rows: Text<'static>) -> Self {
+        let height = rows.height().try_into().ok();
+        let width = rows.width().try_into().ok();
+        let p = Paragraph::new(rows).block(Block::default().borders(Borders::ALL).title(title));
+        Self { p, height, width }
+    }
+
+    pub fn render(&self, f: &mut Frame<'_>) {
+        let area = center_area(self.height, self.width, f.size()); // +2 for block border
+        f.render_widget(Clear, area);
+        f.render_widget(&self.p, area);
+    }
+}
+
 pub struct PopUpTable {
     table: Table<'static>,
-    height: u16,
+    height: Option<u16>,
+    width: Option<u16>,
 }
 
 impl PopUpTable {
     pub fn new(title: &'static str, rows: Vec<Vec<Text<'static>>>) -> Self {
         let height = rows
             .iter()
-            .map(|row| row.iter().map(|t| t.height()).max().unwrap())
+            .map(|row| row.iter().map(Text::height).max().unwrap_or_default())
             .sum::<usize>()
             .try_into()
-            .unwrap();
+            .ok();
 
+        let widths = rows
+            .iter()
+            .map(|row| row.iter().map(Text::width).collect())
+            .reduce(|widths: Vec<usize>, row| {
+                row.iter()
+                    .zip(widths.iter())
+                    .map(|(r, w)| r.max(w))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let width = widths
+            .iter()
+            .cloned()
+            .reduce(|width, w| width + w + 1)
+            .unwrap_or_default()
+            .try_into()
+            .ok();
         let rows = rows.into_iter().map(Row::new);
         let table = Table::default()
             .block(Block::default().borders(Borders::ALL).title(title))
-            // TODO: Apply to arbitrary column count; calculate widths
-            .widths([Constraint::Length(15), Constraint::Min(0)])
+            .widths(widths.iter().map(|w| {
+                (*w).try_into()
+                    .ok()
+                    .map_or(Constraint::Min(0), Constraint::Length)
+            }))
             .rows(rows);
-        Self { table, height }
+        Self {
+            table,
+            height,
+            width,
+        }
     }
 
     pub fn render(&self, f: &mut Frame<'_>) {
-        let area = center_area(self.height, f.size()); // +2 for block border
+        let area = center_area(self.height, self.width, f.size());
         f.render_widget(Clear, area);
         f.render_widget(&self.table, area);
     }
@@ -82,6 +130,7 @@ impl PopUpTable {
 
 pub struct PopUpPrompt {
     p: Paragraph<'static>,
+    width: Option<u16>,
 }
 
 pub enum PopUpPromptResult {
@@ -92,11 +141,12 @@ pub enum PopUpPromptResult {
 
 impl PopUpPrompt {
     pub fn new(title: &'static str, text: String) -> Self {
+        let width = text.len().try_into().ok();
         let p = Paragraph::new(text).block(Block::default().borders(Borders::ALL).title(title));
-        Self { p }
+        Self { p, width }
     }
     pub fn render(&self, f: &mut Frame<'_>) {
-        let area = center_area(1, f.size());
+        let area = center_area(Some(1), self.width, f.size());
         f.render_widget(Clear, area);
         f.render_widget(&self.p, area);
     }
@@ -113,12 +163,18 @@ impl PopUpPrompt {
     }
 }
 
-fn center_area(height: u16, rect: Rect) -> Rect {
-    let layout = Layout::default().constraints([
+fn center_area(height: Option<u16>, width: Option<u16>, rect: Rect) -> Rect {
+    let layout = Layout::vertical([
         Constraint::Min(0),
-        Constraint::Length(height),
+        height.map_or(Constraint::Percentage(100), |h| Constraint::Length(h + 2)), // +2 for block border
         Constraint::Min(0),
     ]);
     let chunks = layout.split(rect);
+    let layout = Layout::horizontal([
+        Constraint::Min(1),
+        width.map_or(Constraint::Percentage(100), |h| Constraint::Length(h + 2)), // +2 for block border
+        Constraint::Min(1),
+    ]);
+    let chunks = layout.split(chunks[1]);
     chunks[1]
 }

@@ -12,16 +12,13 @@ use style::palette::tailwind;
 use crate::{
     commands::{
         snapshots::{fill_table, snap_to_table},
-        tui::widgets::{PopUpInputResult, PopUpPromptResult},
+        tui::widgets::{PopUpInputResult, PopUpParagraph, PopUpPromptResult},
     },
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
 
 use super::widgets::{PopUpInput, PopUpPrompt, PopUpTable};
-
-const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snaphots | (v) toggle view | (i) show snapshot | (?) show all shortcuts";
 
 struct TableColors {
     buffer_bg: Color,
@@ -49,7 +46,7 @@ impl TableColors {
 
 enum CurrentScreen {
     Snapshots,
-    ShowHelp(PopUpTable),
+    ShowHelp(PopUpParagraph),
     SnapshotDetails(PopUpTable),
     EnterLabel(PopUpInput),
     EnterAddTags(PopUpInput),
@@ -472,6 +469,37 @@ impl App {
     }
 }
 
+const INFO_TEXT: &str =
+    "(Esc) quit | (F5) reload snaphots | (v) toggle view | (i) show snapshot | (?) show all commands";
+
+const HELP_TEXT: &str = r#"
+General Commands:
+
+  q,Esc : exit
+     F5 : re-read all snapshots from repository
+      v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
+      i : show detailed snapshot information for selected snapshot
+      w : write modified snapshots
+      ? : show this help page
+
+Commands for marking snapshot(s):
+
+      x : toggle marking for selected snapshot
+      X : toggle markings for all snapshots
+ Ctrl-x : clear all markings
+
+Commands applied to marked snapshot(s) (selected if none marked):
+
+      l : set label for snapshot(s)
+ Ctrl-l : remove label for snapshot(s)
+      t : add tag(s) for snapshot(s)
+ Ctrl-t : remove all tags for snapshot(s)
+      s : set tag(s) for snapshot(s)
+      r : remove tag(s) for snapshot(s)
+      p : set delete protection for snapshot(s)
+ Ctrl-p : remove delete protection for snapshot(s)
+ "#;
+
 pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<()> {
     loop {
         _ = terminal.draw(|f| ui(f, &mut app))?;
@@ -502,65 +530,9 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                                 End => app.end(),
                                 F(5) => app.reread()?,
                                 Char('?') => {
-                                    let rows = vec![
-                                        vec![Text::from("Esc | q"), Text::from("exit")],
-                                        vec![Text::from("F5"), Text::from("re-read all snapshots from repository")],
-                                        vec![Text::from("v"), Text::from("toggle snapshot view [Filtered -> All -> Marked -> Modified]")],
-                                        vec![
-                                            Text::from("x"),
-                                            Text::from("toggle marking for selected snapshot"),
-                                        ],
-                                        vec![
-                                            Text::from("X"),
-                                            Text::from("toggle markings for all snapshots"),
-                                        ],
-                                        vec![
-                                            Text::from("Ctrl-x"),
-                                            Text::from("clear all markings"),
-                                        ],
-                                        vec![
-                                            Text::from("i"),
-                                            Text::from("show detailed snapshot information for selected snapshot"),
-                                        ],
-                                        vec![
-                                            Text::from("l"),
-                                            Text::from("set label for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("Ctrl-l"),
-                                            Text::from("remove label for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("t"),
-                                            Text::from("add tag(s) for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("Ctrl-t"),
-                                            Text::from("remove all tags for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("s"),
-                                            Text::from("set tag(s) for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("r"),
-                                            Text::from("remove tag(s) for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("p"),
-                                            Text::from("set delete protection for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("Ctrl-p"),
-                                            Text::from("remove delete protection for snapshot(s)"),
-                                        ],
-                                        vec![
-                                            Text::from("w"),
-                                            Text::from("write modified snapshots"),
-                                        ],
-                                    ];
-                                    app.current_screen =
-                                        CurrentScreen::ShowHelp(PopUpTable::new("help", rows));
+                                    app.current_screen = CurrentScreen::ShowHelp(
+                                        PopUpParagraph::new("help", Text::from(HELP_TEXT)),
+                                    );
                                 }
                                 Char('x') => {
                                     app.toggle_mark();
@@ -660,7 +632,8 @@ fn ui(f: &mut Frame<'_>, app: &mut App) {
 
     match &app.current_screen {
         CurrentScreen::Snapshots => {}
-        CurrentScreen::SnapshotDetails(popup) | CurrentScreen::ShowHelp(popup) => popup.render(f),
+        CurrentScreen::SnapshotDetails(popup) => popup.render(f),
+        CurrentScreen::ShowHelp(popup) => popup.render(f),
         CurrentScreen::EnterLabel(popup)
         | CurrentScreen::EnterAddTags(popup)
         | CurrentScreen::EnterSetTags(popup)

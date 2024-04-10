@@ -12,13 +12,14 @@ use style::palette::tailwind;
 use crate::{
     commands::{
         snapshots::{fill_table, snap_to_table},
-        tui::widgets::{PopUpInputResult, PopUpParagraph, PopUpPromptResult},
+        tui::widgets::{
+            Draw, PopUp, ProcessEvent, Prompt, PromptResult, SizedParagraph, SizedTable, TextInput,
+            TextInputResult, WithBlock,
+        },
     },
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
-
-use super::widgets::{PopUpInput, PopUpPrompt, PopUpTable};
 
 struct TableColors {
     buffer_bg: Color,
@@ -44,9 +45,38 @@ impl TableColors {
     }
 }
 
+type PopUpInput = PopUp<WithBlock<TextInput>>;
+fn popup_input(title: &'static str, text: &str, initial: &str) -> PopUpInput {
+    PopUp(WithBlock::new(
+        TextInput::new(text, initial),
+        Block::bordered().title(title),
+    ))
+}
+
+type PopUpText = PopUp<WithBlock<SizedParagraph>>;
+fn popup_text(title: &'static str, text: Text<'static>) -> PopUpText {
+    PopUp(WithBlock::new(
+        SizedParagraph::new(text),
+        Block::bordered().title(title),
+    ))
+}
+
+type PopUpTable = PopUp<WithBlock<SizedTable>>;
+fn popup_table(title: &'static str, content: Vec<Vec<Text<'static>>>) -> PopUpTable {
+    PopUp(WithBlock::new(
+        SizedTable::new(content),
+        Block::bordered().title(title),
+    ))
+}
+
+type PopUpPrompt = Prompt<PopUpText>;
+fn popup_prompt(title: &'static str, text: Text<'static>) -> PopUpPrompt {
+    Prompt(popup_text(title, text))
+}
+
 enum CurrentScreen {
     Snapshots,
-    ShowHelp(PopUpParagraph),
+    ShowHelp(PopUpText),
     SnapshotDetails(PopUpTable),
     EnterLabel(PopUpInput),
     EnterAddTags(PopUpInput),
@@ -290,7 +320,7 @@ impl App {
                 rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
             });
         }
-        PopUpTable::new("snapshot details", rows)
+        popup_table("snapshot details", rows)
     }
 
     pub fn count_marked_snaps(&self) -> usize {
@@ -530,9 +560,10 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                                 End => app.end(),
                                 F(5) => app.reread()?,
                                 Char('?') => {
-                                    app.current_screen = CurrentScreen::ShowHelp(
-                                        PopUpParagraph::new("help", Text::from(HELP_TEXT)),
-                                    );
+                                    app.current_screen = CurrentScreen::ShowHelp(popup_text(
+                                        "help",
+                                        HELP_TEXT.into(),
+                                    ));
                                 }
                                 Char('x') => {
                                     app.toggle_mark();
@@ -546,26 +577,29 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                                         CurrentScreen::SnapshotDetails(app.snapshot_details());
                                 }
                                 Char('l') => {
-                                    app.current_screen =
-                                        CurrentScreen::EnterLabel(PopUpInput::new(
-                                            "enter label",
-                                            "set label",
-                                            &app.get_label(),
-                                        ));
+                                    app.current_screen = CurrentScreen::EnterLabel(popup_input(
+                                        "set label",
+                                        "enter label",
+                                        &app.get_label(),
+                                    ));
                                 }
                                 Char('t') => {
-                                    app.current_screen = CurrentScreen::EnterAddTags(
-                                        PopUpInput::new("enter tags", "add tags", ""),
-                                    );
+                                    app.current_screen = CurrentScreen::EnterAddTags(popup_input(
+                                        "add tags",
+                                        "enter tags",
+                                        "",
+                                    ));
                                 }
                                 Char('s') => {
-                                    app.current_screen = CurrentScreen::EnterSetTags(
-                                        PopUpInput::new("enter tags", "set tags", &app.get_tags()),
-                                    );
+                                    app.current_screen = CurrentScreen::EnterSetTags(popup_input(
+                                        "set tags",
+                                        "enter tags",
+                                        &app.get_tags(),
+                                    ));
                                 }
                                 Char('r') => {
                                     app.current_screen = CurrentScreen::EnterRemoveTags(
-                                        PopUpInput::new("enter tags", "remove tags", ""),
+                                        popup_input("remove tags", "enter tags", ""),
                                     );
                                 }
                                 // TODO: Allow to enter delete protection option
@@ -575,9 +609,10 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                                         "Do you want to write {} modified snapshots?",
                                         app.count_modified_snaps()
                                     );
-                                    app.current_screen = CurrentScreen::PromptWrite(
-                                        PopUpPrompt::new("write snapshots", msg),
-                                    );
+                                    app.current_screen = CurrentScreen::PromptWrite(popup_prompt(
+                                        "write snapshots",
+                                        msg.into(),
+                                    ));
                                 }
                                 _ => {}
                             }
@@ -601,27 +636,28 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
             | CurrentScreen::EnterAddTags(prompt)
             | CurrentScreen::EnterSetTags(prompt)
             | CurrentScreen::EnterRemoveTags(prompt) => match prompt.input(event) {
-                PopUpInputResult::Cancel => app.current_screen = CurrentScreen::Snapshots,
-                PopUpInputResult::Input(input) => {
+                TextInputResult::Cancel => app.current_screen = CurrentScreen::Snapshots,
+                TextInputResult::Input(input) => {
                     app.apply_input(input);
                     app.current_screen = CurrentScreen::Snapshots;
                 }
-                PopUpInputResult::None => {}
+                TextInputResult::None => {}
             },
             CurrentScreen::PromptWrite(prompt) => match prompt.input(event) {
-                PopUpPromptResult::Ok => {
+                PromptResult::Ok => {
                     app.write()?;
                     app.current_screen = CurrentScreen::Snapshots;
                 }
-                PopUpPromptResult::Cancel => app.current_screen = CurrentScreen::Snapshots,
-                PopUpPromptResult::None => {}
+                PromptResult::Cancel => app.current_screen = CurrentScreen::Snapshots,
+                PromptResult::None => {}
             },
         }
     }
 }
 
 fn ui(f: &mut Frame<'_>, app: &mut App) {
-    let rects = Layout::vertical([Constraint::Min(5), Constraint::Length(1)]).split(f.size());
+    let area = f.size();
+    let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
     app.set_rows(rects[0].height.into());
     let colors = TableColors::new(&tailwind::BLUE);
@@ -630,15 +666,15 @@ fn ui(f: &mut Frame<'_>, app: &mut App) {
     render_scrollbar(f, app, rects[0]);
     render_footer(f, rects[1], &colors);
 
-    match &app.current_screen {
+    match &mut app.current_screen {
         CurrentScreen::Snapshots => {}
-        CurrentScreen::SnapshotDetails(popup) => popup.render(f),
-        CurrentScreen::ShowHelp(popup) => popup.render(f),
+        CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
+        CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
         CurrentScreen::EnterLabel(popup)
         | CurrentScreen::EnterAddTags(popup)
         | CurrentScreen::EnterSetTags(popup)
-        | CurrentScreen::EnterRemoveTags(popup) => popup.render(f),
-        CurrentScreen::PromptWrite(popup) => popup.render(f),
+        | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
+        CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
     }
 }
 

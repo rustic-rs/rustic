@@ -1,5 +1,6 @@
 mod popup;
 mod prompt;
+mod select_table;
 mod sized_paragraph;
 mod sized_table;
 mod text_input;
@@ -7,6 +8,7 @@ mod with_block;
 
 pub use popup::*;
 pub use prompt::*;
+pub use select_table::*;
 pub use sized_paragraph::*;
 pub use sized_table::*;
 pub use text_input::*;

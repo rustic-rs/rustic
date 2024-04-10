@@ -2,8 +2,8 @@ use super::*;
 use layout::Size;
 
 pub struct WithBlock<T> {
-    block: Block<'static>,
-    widget: T,
+    pub block: Block<'static>,
+    pub widget: T,
 }
 
 impl<T> WithBlock<T> {

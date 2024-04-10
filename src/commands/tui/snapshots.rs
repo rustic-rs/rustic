@@ -13,38 +13,15 @@ use crate::{
     commands::{
         snapshots::{fill_table, snap_to_table},
         tui::widgets::{
-            Draw, PopUp, ProcessEvent, Prompt, PromptResult, SizedParagraph, SizedTable, TextInput,
-            TextInputResult, WithBlock,
+            Draw, PopUp, ProcessEvent, Prompt, PromptResult, SelectTable, SizedParagraph,
+            SizedTable, TextInput, TextInputResult, WithBlock,
         },
     },
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
 
-struct TableColors {
-    buffer_bg: Color,
-    header_bg: Color,
-    header_fg: Color,
-    row_fg: Color,
-    selected_style_fg: Color,
-    normal_row_color: Color,
-    alt_row_color: Color,
-}
-
-impl TableColors {
-    fn new(color: &tailwind::Palette) -> Self {
-        Self {
-            buffer_bg: tailwind::SLATE.c950,
-            header_bg: color.c900,
-            header_fg: tailwind::SLATE.c200,
-            row_fg: tailwind::SLATE.c200,
-            selected_style_fg: color.c400,
-            normal_row_color: tailwind::SLATE.c950,
-            alt_row_color: tailwind::SLATE.c900,
-        }
-    }
-}
-
+// the widgets we are using and convenience builders
 type PopUpInput = PopUp<WithBlock<TextInput>>;
 fn popup_input(title: &'static str, text: &str, initial: &str) -> PopUpInput {
     PopUp(WithBlock::new(
@@ -74,6 +51,7 @@ fn popup_prompt(title: &'static str, text: Text<'static>) -> PopUpPrompt {
     Prompt(popup_text(title, text))
 }
 
+// the states this screen can be in
 enum CurrentScreen {
     Snapshots,
     ShowHelp(PopUpText),
@@ -106,13 +84,9 @@ enum View {
 }
 
 pub(crate) struct App {
-    state: TableState,
-    scroll_state: ScrollbarState,
-    rows: usize,
-    height: usize,
     current_screen: CurrentScreen,
     current_view: View,
-
+    table: WithBlock<SelectTable>,
     repo: Repository<ProgressOptions, OpenStatus>,
     snaps_status: Vec<SnapStatus>,
     snapshots: Vec<SnapshotFile>,
@@ -130,14 +104,17 @@ impl App {
         let mut snapshots = repo.get_all_snapshots()?;
         snapshots.sort_unstable();
 
+        let header = [
+            "", " ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
+        ]
+        .into_iter()
+        .map(Text::from)
+        .collect();
+
         let mut app = Self {
-            state: TableState::default(),
-            scroll_state: ScrollbarState::new(0),
-            rows: 5,
-            height: 1,
             current_screen: CurrentScreen::Snapshots,
             current_view: View::Filter,
-
+            table: WithBlock::new(SelectTable::new(header), Block::new()),
             repo,
             snaps_status: vec![SnapStatus::default(); snapshots.len()],
             original_snapshots: snapshots.clone(),
@@ -183,7 +160,11 @@ impl App {
 
     pub fn apply_filter(&mut self) {
         // remember current snapshot index
-        let snap_idx = self.state.selected().map(|i| self.snaps_selection[i]);
+        let snap_idx = self
+            .table
+            .widget
+            .selected()
+            .map(|i| self.snaps_selection[i]);
         // select snapshots to show
         self.snaps_selection = self
             .snapshots
@@ -202,6 +183,21 @@ impl App {
             .collect();
         let len = self.snaps_selection.len();
 
+        self.update_table();
+
+        if len != 0 {
+            // see if the current snapshot is still available and if, select it.
+            let selected = self
+                .snaps_selection
+                .iter()
+                .position(|&s| Some(s) == snap_idx)
+                .unwrap_or(len - 1);
+
+            self.table.widget.set_to(selected);
+        }
+    }
+
+    pub fn update_table(&mut self) {
         let max_tags = self
             .snaps_selection
             .iter()
@@ -214,92 +210,69 @@ impl App {
             .map(|&i| self.snapshots[i].paths.iter().count())
             .max()
             .unwrap_or(1);
-        self.height = max_tags.max(max_paths).max(1) + 1;
-
-        self.scroll_state = ScrollbarState::new(len * self.height);
-
-        if len == 0 {
-            self.state = TableState::default();
-        } else {
-            // see if the current snapshot is still available and if, select it.
-            let selected = self
-                .snaps_selection
-                .iter()
-                .position(|&s| Some(s) == snap_idx)
-                .unwrap_or(len - 1);
-
-            self.state = TableState::default().with_selected(selected);
-        }
-    }
-
-    pub fn set_to(&mut self, i: usize) {
-        self.state.select(Some(i));
-        self.scroll_state = self.scroll_state.position(i * self.height);
-    }
-
-    pub fn go_forward(&mut self, step: usize) {
-        if let Some(selected_old) = self.state.selected() {
-            let selected = (selected_old + step).min(self.snaps_selection.len() - 1);
-            self.set_to(selected);
-        }
-    }
-
-    pub fn go_back(&mut self, step: usize) {
-        if let Some(selected_old) = self.state.selected() {
-            let selected = selected_old.saturating_sub(step);
-            self.set_to(selected);
-        }
-    }
-
-    pub fn next(&mut self) {
-        self.go_forward(1);
-    }
-
-    pub fn page_down(&mut self) {
-        self.go_forward(self.rows);
-    }
-
-    pub fn previous(&mut self) {
-        self.go_back(1);
-    }
-
-    pub fn page_up(&mut self) {
-        self.go_back(self.rows);
-    }
-
-    pub fn home(&mut self) {
-        if self.state.selected().is_some() {
-            self.set_to(0);
-        }
-    }
-
-    pub fn end(&mut self) {
-        if self.state.selected().is_some() {
-            self.set_to(self.snaps_selection.len() - 1);
-        }
-    }
-
-    pub fn set_rows(&mut self, rows: usize) {
-        self.rows = rows / self.height;
+        let height = max_tags.max(max_paths).max(1) + 1;
+        let rows = self
+            .snaps_selection
+            .iter()
+            .map(|&snap_id| {
+                let status = self.snaps_status[snap_id];
+                let snap = &self.snapshots[snap_id];
+                let mark = if status.marked { "X" } else { " " };
+                once(&mark.to_string())
+                    .chain(snap_to_table(snap, 0).iter())
+                    .cloned()
+                    .enumerate()
+                    .map(|(i, mut content)| {
+                        let modified = if status.modified { "*" } else { " " };
+                        let protected = if snap.delete == DeleteOption::NotSet {
+                            ""
+                        } else {
+                            "🛡"
+                        };
+                        let description = if snap.description.is_none() {
+                            ""
+                        } else {
+                            "🗎"
+                        };
+                        if i == 1 {
+                            // ID gets modified and protected marks
+                            content = format!("{modified}{content}{protected}{description}");
+                        }
+                        Text::from(content)
+                    })
+                    .collect()
+            })
+            .collect();
+        self.table.widget.set_content(rows, height);
+        self.table.block = Block::new().borders(Borders::BOTTOM).title_bottom(format!(
+            "total: {}, marked: {}, modified: {}, view: {:?}",
+            self.snaps_selection.len(),
+            self.count_marked_snaps(),
+            self.count_modified_snaps(),
+            self.current_view,
+        ));
     }
 
     pub fn toggle_mark(&mut self) {
-        if let Some(i) = self.state.selected() {
+        if let Some(i) = self.table.widget.selected() {
             let snap_idx = self.snaps_selection[i];
             self.snaps_status[snap_idx].toggle_mark();
         }
+        self.update_table();
     }
 
     pub fn toggle_mark_all(&mut self) {
         for snap_idx in &self.snaps_selection {
             self.snaps_status[*snap_idx].toggle_mark();
         }
+        self.update_table();
     }
 
     pub fn clear_marks(&mut self) {
         for status in self.snaps_status.iter_mut() {
             status.marked = false;
         }
+        self.update_table();
     }
 
     pub fn clear_filter(&mut self) {
@@ -314,7 +287,7 @@ impl App {
 
     pub fn snapshot_details(&self) -> PopUpTable {
         let mut rows = Vec::new();
-        if let Some(selected) = self.state.selected() {
+        if let Some(selected) = self.table.widget.selected() {
             let snap = &self.snapshots[self.snaps_selection[selected]];
             fill_table(snap, |title, value| {
                 rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
@@ -356,6 +329,7 @@ impl App {
         if !has_mark {
             self.toggle_mark();
         }
+        self.apply_filter();
     }
 
     pub fn get_label(&mut self) -> String {
@@ -417,25 +391,21 @@ impl App {
     pub fn add_tags(&mut self, tags: String) {
         let tags = vec![StringList::from_str(&tags).unwrap()];
         self.process_marked_snaps(|snap| snap.add_tags(tags.clone()));
-        self.apply_filter();
     }
 
     pub fn set_tags(&mut self, tags: String) {
         let tags = vec![StringList::from_str(&tags).unwrap()];
         self.process_marked_snaps(|snap| snap.set_tags(tags.clone()));
-        self.apply_filter();
     }
 
     pub fn remove_tags(&mut self, tags: String) {
         let tags = vec![StringList::from_str(&tags).unwrap()];
         self.process_marked_snaps(|snap| snap.remove_tags(&tags));
-        self.apply_filter();
     }
 
     pub fn clear_tags(&mut self) {
         let no_tags = vec![StringList::default()];
         self.process_marked_snaps(|snap| snap.set_tags(no_tags.clone()));
-        self.apply_filter();
     }
 
     pub fn set_delete_to(&mut self, delete: DeleteOption) {
@@ -493,7 +463,7 @@ impl App {
             status.modified = false;
         }
         self.original_snapshots = self.snapshots.clone();
-        self.state.select(None);
+        self.table.widget.select(None);
         self.apply_filter();
         Ok(())
     }
@@ -552,12 +522,6 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                         } else {
                             match key.code {
                                 Char('q') | Esc => return Ok(()),
-                                Down => app.next(),
-                                Up => app.previous(),
-                                PageDown => app.page_down(),
-                                PageUp => app.page_up(),
-                                Home => app.home(),
-                                End => app.end(),
                                 F(5) => app.reread()?,
                                 Char('?') => {
                                     app.current_screen = CurrentScreen::ShowHelp(popup_text(
@@ -567,7 +531,7 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                                 }
                                 Char('x') => {
                                     app.toggle_mark();
-                                    app.next();
+                                    app.table.widget.next();
                                 }
                                 Char('X') => app.toggle_mark_all(),
                                 Char('F') => app.reset_filter(),
@@ -614,7 +578,7 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                                         msg.into(),
                                     ));
                                 }
-                                _ => {}
+                                _ => app.table.input(event),
                             }
                         }
                     }
@@ -659,13 +623,18 @@ fn ui(f: &mut Frame<'_>, app: &mut App) {
     let area = f.size();
     let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
-    app.set_rows(rects[0].height.into());
-    let colors = TableColors::new(&tailwind::BLUE);
+    // draw the table
+    app.table.draw(rects[0], f);
 
-    render_table(f, app, rects[0], &colors);
-    render_scrollbar(f, app, rects[0]);
-    render_footer(f, rects[1], &colors);
+    // draw the footer
+    let buffer_bg = tailwind::SLATE.c950;
+    let row_fg = tailwind::SLATE.c200;
+    let info_footer = Paragraph::new(Line::from(INFO_TEXT))
+        .style(Style::new().fg(row_fg).bg(buffer_bg))
+        .centered();
+    f.render_widget(info_footer, rects[1]);
 
+    // draw popups
     match &mut app.current_screen {
         CurrentScreen::Snapshots => {}
         CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
@@ -676,98 +645,4 @@ fn ui(f: &mut Frame<'_>, app: &mut App) {
         | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
         CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
     }
-}
-
-fn render_table(f: &mut Frame<'_>, app: &mut App, area: Rect, colors: &TableColors) {
-    let header_style = Style::default().fg(colors.header_fg).bg(colors.header_bg);
-    let selected_style = Style::default()
-        .add_modifier(Modifier::REVERSED)
-        .fg(colors.selected_style_fg);
-
-    let header = Row::new(vec![
-        "", " ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
-    ])
-    .style(header_style);
-    let rows = app.snaps_selection.iter().enumerate().map(|(i, &snap_id)| {
-        let color = match i % 2 {
-            0 => colors.normal_row_color,
-            _ => colors.alt_row_color,
-        };
-        let status = app.snaps_status[snap_id];
-        let snap = &app.snapshots[snap_id];
-        let mark = if status.marked { "X" } else { " " };
-        once(&mark.to_string())
-            .chain(snap_to_table(snap, 0).iter())
-            .cloned()
-            .enumerate()
-            .map(|(i, mut content)| {
-                let modified = if status.modified { "*" } else { " " };
-                let protected = if snap.delete == DeleteOption::NotSet {
-                    ""
-                } else {
-                    "🛡"
-                };
-                let description = if snap.description.is_none() {
-                    ""
-                } else {
-                    "🗎"
-                };
-                if i == 1 {
-                    // ID gets modified and protected marks
-                    content = format!("{modified}{content}{protected}{description}");
-                }
-                Cell::from(Text::from(content))
-            })
-            .collect::<Row<'_>>()
-            .style(Style::new().fg(colors.row_fg).bg(color))
-            .height(app.height.try_into().unwrap())
-    });
-    let t = Table::new(
-        rows,
-        [
-            // + 1 is for padding.
-            Constraint::Length(1 + 1),
-            Constraint::Length(10 + 1),
-            Constraint::Length(20 + 1),
-            Constraint::Min(8 + 1),
-            Constraint::Min(10 + 1),
-            Constraint::Min(10 + 1),
-            Constraint::Min(10 + 1),
-            Constraint::Min(3 + 1),
-            Constraint::Min(3 + 1),
-            Constraint::Min(8),
-        ],
-    )
-    .header(header)
-    .highlight_style(selected_style)
-    .bg(colors.buffer_bg)
-    .block(Block::new().borders(Borders::BOTTOM).title_bottom(format!(
-        "total: {}, marked: {}, modified: {}, view: {:?}",
-        app.snaps_selection.len(),
-        app.count_marked_snaps(),
-        app.count_modified_snaps(),
-        app.current_view,
-    )));
-    f.render_stateful_widget(t, area, &mut app.state);
-}
-
-fn render_scrollbar(f: &mut Frame<'_>, app: &mut App, area: Rect) {
-    f.render_stateful_widget(
-        Scrollbar::default()
-            .orientation(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(None)
-            .end_symbol(None),
-        area.inner(&Margin {
-            vertical: 1,
-            horizontal: 1,
-        }),
-        &mut app.scroll_state,
-    );
-}
-
-fn render_footer(f: &mut Frame<'_>, area: Rect, colors: &TableColors) {
-    let info_footer = Paragraph::new(Line::from(INFO_TEXT))
-        .style(Style::new().fg(colors.row_fg).bg(colors.buffer_bg))
-        .centered();
-    f.render_widget(info_footer, area);
 }

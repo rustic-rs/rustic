@@ -1,0 +1,80 @@
+[global]
+use-profile = []
+dry-run = false
+no-progress = false
+
+[global.env]
+
+[repository]
+no-cache = false
+warm-up = false
+
+[repository.options]
+
+[repository.options-hot]
+
+[repository.options-cold]
+
+[snapshot-filter]
+filter-host = []
+filter-label = []
+filter-paths = []
+filter-tags = []
+
+[backup]
+stdin-filename = ""
+with-atime = false
+ignore-devid = false
+no-scan = false
+json = false
+quiet = false
+init = false
+skip-identical-parent = false
+force = false
+ignore-ctime = false
+ignore-inode = false
+glob = []
+iglob = []
+glob-file = []
+iglob-file = []
+git-ignore = false
+no-require-git = false
+custom-ignorefile = []
+exclude-if-present = []
+one-file-system = false
+tag = []
+delete-never = false
+sources = []
+source = ""
+
+[copy]
+targets = []
+
+[forget]
+prune = false
+filter-host = []
+filter-label = []
+filter-paths = []
+filter-tags = []
+keep-tags = []
+keep-ids = []
+keep-last = 0
+keep-hourly = 0
+keep-daily = 0
+keep-weekly = 0
+keep-monthly = 0
+keep-quarter-yearly = 0
+keep-half-yearly = 0
+keep-yearly = 0
+keep-within = "0s"
+keep-within-hourly = "0s"
+keep-within-daily = "0s"
+keep-within-weekly = "0s"
+keep-within-monthly = "0s"
+keep-within-quarter-yearly = "0s"
+keep-within-half-yearly = "0s"
+keep-within-yearly = "0s"
+
+[webdav]
+symlinks = false
+

@@ -103,7 +103,7 @@ impl SelectTable {
     }
 
     pub fn select(&mut self, index: Option<usize>) {
-        self.state.select(index)
+        self.state.select(index);
     }
 
     pub fn set_to(&mut self, i: usize) {
@@ -160,7 +160,7 @@ impl SelectTable {
 
 impl ProcessEvent for SelectTable {
     type Result = ();
-    fn input(&mut self, event: Event) -> () {
+    fn input(&mut self, event: Event) {
         use KeyCode::*;
         match event {
             Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {

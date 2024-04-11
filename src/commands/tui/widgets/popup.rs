@@ -33,6 +33,6 @@ impl<T: Draw + SizedWidget> Draw for PopUp<T> {
         }
 
         f.render_widget(Clear, area);
-        self.0.draw(area, f)
+        self.0.draw(area, f);
     }
 }

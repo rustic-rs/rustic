@@ -4,8 +4,9 @@ use log::warn;
 use rustic_core::{repofile::SnapshotFile, StringList};
 use std::{error::Error, str::FromStr};
 
+use cached::proc_macro::cached;
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 /// A function to filter snapshots
@@ -21,6 +22,17 @@ impl FromStr for SnapshotFn {
         let ast = engine.compile(s)?;
         let func = engine.eval_ast::<FnPtr>(&ast)?;
         Ok(Self(func, ast))
+    }
+}
+
+#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
+fn string_to_fn(s: &str) -> Option<SnapshotFn> {
+    match SnapshotFn::from_str(s) {
+        Ok(filter_fn) => Some(filter_fn),
+        Err(err) => {
+            warn!("Error evaluating filter-fn {s}: {err}",);
+            None
+        }
     }
 }
 
@@ -43,7 +55,7 @@ impl SnapshotFn {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Deserialize, merge::Merge, clap::Parser)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, merge::Merge, clap::Parser)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
@@ -71,7 +83,7 @@ pub struct SnapshotFilter {
     /// Function to filter snapshots
     #[clap(long, global = true, value_name = "FUNC")]
     #[serde_as(as = "Option<DisplayFromStr>")]
-    filter_fn: Option<SnapshotFn>,
+    filter_fn: Option<String>,
 }
 
 impl SnapshotFilter {
@@ -87,17 +99,19 @@ impl SnapshotFilter {
     #[must_use]
     pub fn matches(&self, snapshot: &SnapshotFile) -> bool {
         if let Some(filter_fn) = &self.filter_fn {
-            match filter_fn.call::<bool>(snapshot) {
-                Ok(result) => {
-                    if !result {
-                        return false;
+            if let Some(func) = string_to_fn(filter_fn) {
+                match func.call::<bool>(snapshot) {
+                    Ok(result) => {
+                        if !result {
+                            return false;
+                        }
                     }
-                }
-                Err(err) => {
-                    warn!(
-                        "Error evaluating filter-fn for snapshot {}: {err}",
-                        snapshot.id
-                    );
+                    Err(err) => {
+                        warn!(
+                            "Error evaluating filter-fn for snapshot {}: {err}",
+                            snapshot.id
+                        );
+                    }
                 }
             }
         }

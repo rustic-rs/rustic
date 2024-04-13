@@ -36,7 +36,7 @@ use crate::{
 ///
 /// # Example
 // TODO: add example
-#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RusticConfig {
     /// Global options
@@ -69,7 +69,7 @@ pub struct RusticConfig {
     pub webdav: WebDavCmd,
 }
 
-#[derive(Clone, Default, Debug, Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct AllRepositoryOptions {
     /// Backend options
@@ -140,6 +140,11 @@ pub struct GlobalOptions {
     )]
     #[merge(strategy = merge::vec::append)]
     pub use_profile: Vec<String>,
+
+    /// Run rustic in interactive UI mode
+    #[clap(long, short, global = true, env = "RUSTIC_INTERACTIVE")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub interactive: bool,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]

@@ -22,6 +22,8 @@ pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
+#[cfg(feature = "tui")]
+pub(crate) mod tui;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
 
@@ -37,7 +39,7 @@ use crate::{
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
         init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
         repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd, tui::TuiCmd,
     },
     config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
@@ -164,7 +166,14 @@ impl Runnable for EntryPoint {
         // Set up panic hook for better error messages and logs
         setup_panic!();
 
-        self.commands.run();
+        if self.config.global.interactive {
+            if matches!(self.commands, RusticCmd::Snapshots(_) | RusticCmd::Tag(_)) {
+                let tui = TuiCmd {};
+                tui.run();
+            }
+        } else {
+            self.commands.run();
+        }
         RUSTIC_APP.shutdown(Shutdown::Graceful)
     }
 }

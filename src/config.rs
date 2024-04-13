@@ -141,6 +141,11 @@ pub struct GlobalOptions {
     #[merge(strategy = merge::vec::append)]
     pub use_profile: Vec<String>,
 
+    /// Run rustic in interactive UI mode
+    #[clap(long, short, global = true, env = "RUSTIC_INTERACTIVE")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub interactive: bool,
+
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
     #[merge(strategy = merge::bool::overwrite_false)]

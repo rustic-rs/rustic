@@ -2,7 +2,8 @@
 mod snapshots;
 mod widgets;
 
-use snapshots::{run_app, App};
+use crossterm::event;
+use snapshots::Snapshots;
 
 use crate::{Application, RUSTIC_APP};
 
@@ -33,6 +34,10 @@ impl Runnable for TuiCmd {
     }
 }
 
+struct App {
+    snapshots: Snapshots,
+}
+
 impl TuiCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
@@ -46,7 +51,8 @@ impl TuiCmd {
         let mut terminal = Terminal::new(backend)?;
 
         // create app and run it
-        let app = App::new(repo, config.snapshot_filter.clone())?;
+        let snapshots = Snapshots::new(repo, config.snapshot_filter.clone())?;
+        let app = App { snapshots };
         let res = run_app(&mut terminal, app);
 
         // restore terminal
@@ -64,4 +70,17 @@ impl TuiCmd {
 
         Ok(())
     }
+}
+
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<()> {
+    loop {
+        _ = terminal.draw(|f| ui(f, &mut app))?;
+        let event = event::read()?;
+        app.snapshots.input(event)?;
+    }
+}
+
+fn ui(f: &mut Frame<'_>, app: &mut App) {
+    let area = f.size();
+    app.snapshots.draw(area, f);
 }

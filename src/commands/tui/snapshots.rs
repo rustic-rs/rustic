@@ -1,7 +1,7 @@
 use std::{iter::once, str::FromStr};
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
@@ -63,6 +63,7 @@ enum CurrentScreen {
     PromptWrite(PopUpPrompt),
 }
 
+// status of each snapshot
 #[derive(Clone, Copy, Default)]
 struct SnapStatus {
     marked: bool,
@@ -81,6 +82,29 @@ enum View {
     All,
     Marked,
     Modified,
+}
+
+// struct to support collapsing of items
+struct Collapser(Vec<CollapserItem>);
+
+impl Collapser {
+    fn iter(&self) -> CollapserIter<'_> {
+        CollapserIter {
+            index: 0,
+            showed_extended: false,
+            c: &self.0,
+        }
+    }
+
+    fn collapse(&mut self, i: usize) {
+        self.0[i].collapsed = true;
+    }
+
+    fn extend(&mut self, i: usize) {
+        if self.0[i].child_count > 0 {
+            self.0[i].collapsed = false;
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -106,7 +130,7 @@ impl CollapseInfo {
     }
 }
 
-struct Collapser(Vec<CollapserItem>);
+// an iterator to iterator over a Collapser
 struct CollapserIter<'a> {
     index: usize,
     showed_extended: bool,
@@ -116,13 +140,6 @@ struct CollapserIter<'a> {
 impl CollapserIter<'_> {
     fn increase_index(&mut self, inc: usize) {
         self.index += inc;
-
-        // for l in self.level_open.iter_mut() {
-        //     *l -= inc;
-        // }
-        // while self.level_open.last() == Some(&0) {
-        //     _ = self.level_open.pop();
-        // }
     }
 }
 
@@ -152,27 +169,38 @@ impl Iterator for CollapserIter<'_> {
     }
 }
 
-impl Collapser {
-    fn iter(&self) -> CollapserIter<'_> {
-        CollapserIter {
-            index: 0,
-            showed_extended: false,
-            c: &self.0,
-        }
-    }
+const INFO_TEXT: &str =
+    "(Esc) quit | (F5) reload snaphots | (v) toggle view | (i) show snapshot | (?) show all commands";
 
-    fn collapse(&mut self, i: usize) {
-        self.0[i].collapsed = true;
-    }
+const HELP_TEXT: &str = r#"
+General Commands:
 
-    fn extend(&mut self, i: usize) {
-        if self.0[i].child_count > 0 {
-            self.0[i].collapsed = false;
-        }
-    }
-}
+  q,Esc : exit
+     F5 : re-read all snapshots from repository
+      v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
+      i : show detailed snapshot information for selected snapshot
+      w : write modified snapshots
+      ? : show this help page
 
-pub(crate) struct App {
+Commands for marking snapshot(s):
+
+      x : toggle marking for selected snapshot
+      X : toggle markings for all snapshots
+ Ctrl-x : clear all markings
+
+Commands applied to marked snapshot(s) (selected if none marked):
+
+      l : set label for snapshot(s)
+ Ctrl-l : remove label for snapshot(s)
+      t : add tag(s) for snapshot(s)
+ Ctrl-t : remove all tags for snapshot(s)
+      s : set tag(s) for snapshot(s)
+      r : remove tag(s) for snapshot(s)
+      p : set delete protection for snapshot(s)
+ Ctrl-p : remove delete protection for snapshot(s)
+ "#;
+
+pub(crate) struct Snapshots {
     current_screen: CurrentScreen,
     current_view: View,
     table: WithBlock<SelectTable>,
@@ -186,7 +214,7 @@ pub(crate) struct App {
     default_filter: SnapshotFilter,
 }
 
-impl App {
+impl Snapshots {
     pub fn new(
         repo: Repository<ProgressOptions, OpenStatus>,
         filter: SnapshotFilter,
@@ -644,120 +672,84 @@ impl App {
         self.apply_filter();
         Ok(())
     }
-}
 
-const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snaphots | (v) toggle view | (i) show snapshot | (?) show all commands";
-
-const HELP_TEXT: &str = r#"
-General Commands:
-
-  q,Esc : exit
-     F5 : re-read all snapshots from repository
-      v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
-      i : show detailed snapshot information for selected snapshot
-      w : write modified snapshots
-      ? : show this help page
-
-Commands for marking snapshot(s):
-
-      x : toggle marking for selected snapshot
-      X : toggle markings for all snapshots
- Ctrl-x : clear all markings
-
-Commands applied to marked snapshot(s) (selected if none marked):
-
-      l : set label for snapshot(s)
- Ctrl-l : remove label for snapshot(s)
-      t : add tag(s) for snapshot(s)
- Ctrl-t : remove all tags for snapshot(s)
-      s : set tag(s) for snapshot(s)
-      r : remove tag(s) for snapshot(s)
-      p : set delete protection for snapshot(s)
- Ctrl-p : remove delete protection for snapshot(s)
- "#;
-
-pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<()> {
-    loop {
-        _ = terminal.draw(|f| ui(f, &mut app))?;
-
-        let event = event::read()?;
+    pub fn input(&mut self, event: Event) -> Result<()> {
         use KeyCode::*;
-        match &mut app.current_screen {
+        match &mut self.current_screen {
             CurrentScreen::Snapshots => {
                 match event {
                     Event::Key(key) if key.kind == KeyEventKind::Press => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             match key.code {
-                                Char('x') => app.clear_marks(),
-                                Char('f') => app.clear_filter(),
-                                Char('l') => app.clear_label(),
-                                Char('t') => app.clear_tags(),
-                                Char('p') => app.clear_delete_protection(),
+                                Char('x') => self.clear_marks(),
+                                Char('f') => self.clear_filter(),
+                                Char('l') => self.clear_label(),
+                                Char('t') => self.clear_tags(),
+                                Char('p') => self.clear_delete_protection(),
                                 _ => {}
                             }
                         } else {
                             match key.code {
                                 Char('q') | Esc => return Ok(()),
-                                F(5) => app.reread()?,
-                                Right => app.extend(),
-                                Left => app.collapse(),
+                                F(5) => self.reread()?,
+                                Right => self.extend(),
+                                Left => self.collapse(),
                                 Char('?') => {
-                                    app.current_screen = CurrentScreen::ShowHelp(popup_text(
+                                    self.current_screen = CurrentScreen::ShowHelp(popup_text(
                                         "help",
                                         HELP_TEXT.into(),
                                     ));
                                 }
                                 Char('x') => {
-                                    app.toggle_mark();
-                                    app.table.widget.next();
+                                    self.toggle_mark();
+                                    self.table.widget.next();
                                 }
-                                Char('X') => app.toggle_mark_all(),
-                                Char('F') => app.reset_filter(),
-                                Char('v') => app.toggle_view(),
+                                Char('X') => self.toggle_mark_all(),
+                                Char('F') => self.reset_filter(),
+                                Char('v') => self.toggle_view(),
                                 Char('i') => {
-                                    app.current_screen =
-                                        CurrentScreen::SnapshotDetails(app.snapshot_details());
+                                    self.current_screen =
+                                        CurrentScreen::SnapshotDetails(self.snapshot_details());
                                 }
                                 Char('l') => {
-                                    app.current_screen = CurrentScreen::EnterLabel(popup_input(
+                                    self.current_screen = CurrentScreen::EnterLabel(popup_input(
                                         "set label",
                                         "enter label",
-                                        &app.get_label(),
+                                        &self.get_label(),
                                     ));
                                 }
                                 Char('t') => {
-                                    app.current_screen = CurrentScreen::EnterAddTags(popup_input(
+                                    self.current_screen = CurrentScreen::EnterAddTags(popup_input(
                                         "add tags",
                                         "enter tags",
                                         "",
                                     ));
                                 }
                                 Char('s') => {
-                                    app.current_screen = CurrentScreen::EnterSetTags(popup_input(
+                                    self.current_screen = CurrentScreen::EnterSetTags(popup_input(
                                         "set tags",
                                         "enter tags",
-                                        &app.get_tags(),
+                                        &self.get_tags(),
                                     ));
                                 }
                                 Char('r') => {
-                                    app.current_screen = CurrentScreen::EnterRemoveTags(
+                                    self.current_screen = CurrentScreen::EnterRemoveTags(
                                         popup_input("remove tags", "enter tags", ""),
                                     );
                                 }
                                 // TODO: Allow to enter delete protection option
-                                Char('p') => app.set_delete_protection(),
+                                Char('p') => self.set_delete_protection(),
                                 Char('w') => {
                                     let msg = format!(
                                         "Do you want to write {} modified snapshots?",
-                                        app.count_modified_snaps()
+                                        self.count_modified_snaps()
                                     );
-                                    app.current_screen = CurrentScreen::PromptWrite(popup_prompt(
+                                    self.current_screen = CurrentScreen::PromptWrite(popup_prompt(
                                         "write snapshots",
                                         msg.into(),
                                     ));
                                 }
-                                _ => app.table.input(event),
+                                _ => self.table.input(event),
                             }
                         }
                     }
@@ -770,7 +762,7 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                         key.code,
                         Char('q') | Esc | Enter | Char(' ') | Char('i') | Char('?')
                     ) {
-                        app.current_screen = CurrentScreen::Snapshots;
+                        self.current_screen = CurrentScreen::Snapshots;
                     }
                 }
                 _ => {}
@@ -779,49 +771,49 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
             | CurrentScreen::EnterAddTags(prompt)
             | CurrentScreen::EnterSetTags(prompt)
             | CurrentScreen::EnterRemoveTags(prompt) => match prompt.input(event) {
-                TextInputResult::Cancel => app.current_screen = CurrentScreen::Snapshots,
+                TextInputResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 TextInputResult::Input(input) => {
-                    app.apply_input(input);
-                    app.current_screen = CurrentScreen::Snapshots;
+                    self.apply_input(input);
+                    self.current_screen = CurrentScreen::Snapshots;
                 }
                 TextInputResult::None => {}
             },
             CurrentScreen::PromptWrite(prompt) => match prompt.input(event) {
                 PromptResult::Ok => {
-                    app.write()?;
-                    app.current_screen = CurrentScreen::Snapshots;
+                    self.write()?;
+                    self.current_screen = CurrentScreen::Snapshots;
                 }
-                PromptResult::Cancel => app.current_screen = CurrentScreen::Snapshots,
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 PromptResult::None => {}
             },
         }
+        Ok(())
     }
-}
 
-fn ui(f: &mut Frame<'_>, app: &mut App) {
-    let area = f.size();
-    let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
+    pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
+        let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
-    // draw the table
-    app.table.draw(rects[0], f);
+        // draw the table
+        self.table.draw(rects[0], f);
 
-    // draw the footer
-    let buffer_bg = tailwind::SLATE.c950;
-    let row_fg = tailwind::SLATE.c200;
-    let info_footer = Paragraph::new(Line::from(INFO_TEXT))
-        .style(Style::new().fg(row_fg).bg(buffer_bg))
-        .centered();
-    f.render_widget(info_footer, rects[1]);
+        // draw the footer
+        let buffer_bg = tailwind::SLATE.c950;
+        let row_fg = tailwind::SLATE.c200;
+        let info_footer = Paragraph::new(Line::from(INFO_TEXT))
+            .style(Style::new().fg(row_fg).bg(buffer_bg))
+            .centered();
+        f.render_widget(info_footer, rects[1]);
 
-    // draw popups
-    match &mut app.current_screen {
-        CurrentScreen::Snapshots => {}
-        CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
-        CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
-        CurrentScreen::EnterLabel(popup)
-        | CurrentScreen::EnterAddTags(popup)
-        | CurrentScreen::EnterSetTags(popup)
-        | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
-        CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
+        // draw popups
+        match &mut self.current_screen {
+            CurrentScreen::Snapshots => {}
+            CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
+            CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
+            CurrentScreen::EnterLabel(popup)
+            | CurrentScreen::EnterAddTags(popup)
+            | CurrentScreen::EnterSetTags(popup)
+            | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
+            CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
+        }
     }
 }

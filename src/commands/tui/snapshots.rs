@@ -83,6 +83,95 @@ enum View {
     Modified,
 }
 
+#[derive(Clone, Copy)]
+struct CollapserItem {
+    child_count: usize,
+    collapsed: bool,
+}
+
+struct CollapseInfo {
+    index: usize,
+    item: CollapserItem,
+}
+
+impl CollapseInfo {
+    fn indices(&self) -> impl Iterator<Item = usize> {
+        self.index..=(self.index + self.item.child_count)
+    }
+    fn collapsable(&self) -> bool {
+        !self.item.collapsed
+    }
+    fn extendable(&self) -> bool {
+        self.item.collapsed && self.item.child_count > 0
+    }
+}
+
+struct Collapser(Vec<CollapserItem>);
+struct CollapserIter<'a> {
+    index: usize,
+    showed_extended: bool,
+    c: &'a [CollapserItem],
+}
+
+impl CollapserIter<'_> {
+    fn increase_index(&mut self, inc: usize) {
+        self.index += inc;
+
+        // for l in self.level_open.iter_mut() {
+        //     *l -= inc;
+        // }
+        // while self.level_open.last() == Some(&0) {
+        //     _ = self.level_open.pop();
+        // }
+    }
+}
+
+impl Iterator for CollapserIter<'_> {
+    type Item = CollapseInfo;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.index;
+
+        let mut item = *match self.c.get(index) {
+            None => return None,
+            Some(item) => item,
+        };
+
+        if item.collapsed {
+            self.increase_index(item.child_count + 1);
+        } else if !self.showed_extended {
+            self.showed_extended = true;
+        } else {
+            self.increase_index(1);
+            self.showed_extended = false;
+            item.collapsed = false;
+            item.child_count = 0;
+        }
+
+        Some(CollapseInfo { index, item })
+    }
+}
+
+impl Collapser {
+    fn iter(&self) -> CollapserIter<'_> {
+        CollapserIter {
+            index: 0,
+            showed_extended: false,
+            c: &self.0,
+        }
+    }
+
+    fn collapse(&mut self, i: usize) {
+        self.0[i].collapsed = true;
+    }
+
+    fn extend(&mut self, i: usize) {
+        if self.0[i].child_count > 0 {
+            self.0[i].collapsed = false;
+        }
+    }
+}
+
 pub(crate) struct App {
     current_screen: CurrentScreen,
     current_view: View,
@@ -92,6 +181,7 @@ pub(crate) struct App {
     snapshots: Vec<SnapshotFile>,
     original_snapshots: Vec<SnapshotFile>,
     snaps_selection: Vec<usize>,
+    snaps_collapse: Collapser, //position in snaps_selection and count
     filter: SnapshotFilter,
     default_filter: SnapshotFilter,
 }
@@ -120,11 +210,26 @@ impl App {
             original_snapshots: snapshots.clone(),
             snapshots,
             snaps_selection: Vec::new(),
+            snaps_collapse: Collapser(Vec::new()),
             default_filter: filter.clone(),
             filter,
         };
         app.apply_filter();
         Ok(app)
+    }
+
+    fn selected_collapse_info(&self) -> Option<CollapseInfo> {
+        self.table
+            .widget
+            .selected()
+            .and_then(|selected| self.snaps_collapse.iter().nth(selected))
+    }
+
+    fn snap_idx(&self) -> Vec<usize> {
+        self.selected_collapse_info()
+            .iter()
+            .flat_map(CollapseInfo::indices)
+            .collect()
     }
 
     pub fn has_mark(&self) -> bool {
@@ -153,6 +258,7 @@ impl App {
             View::Modified => self.current_view = View::Filter,
         }
     }
+
     pub fn toggle_view(&mut self) {
         self.toggle_view_mark();
         self.apply_filter();
@@ -160,11 +266,10 @@ impl App {
 
     pub fn apply_filter(&mut self) {
         // remember current snapshot index
-        let snap_idx = self
-            .table
-            .widget
-            .selected()
-            .map(|i| self.snaps_selection[i]);
+        let snap_id = self
+            .snap_idx()
+            .first()
+            .map(|i| self.snapshots[self.snaps_selection[*i]].id);
         // select snapshots to show
         self.snaps_selection = self
             .snapshots
@@ -183,18 +288,94 @@ impl App {
             .collect();
         let len = self.snaps_selection.len();
 
+        // collapse snapshots with identical treeid
+        // we reverse iter snaps_selection as we need to count identical ids
+        let mut id = None;
+        let mut collapse = Vec::new();
+        let mut same_tree: Vec<CollapserItem> = Vec::new();
+        for i in &self.snaps_selection {
+            let tree_id = self.snapshots[*i].tree;
+            if id.is_some_and(|id| tree_id != id) {
+                same_tree[0].child_count = same_tree.len() - 1;
+                collapse.append(&mut same_tree);
+            }
+            id = Some(tree_id);
+            same_tree.push(CollapserItem {
+                child_count: 0,
+                collapsed: true,
+            });
+        }
+        same_tree[0].child_count = same_tree.len() - 1;
+        collapse.append(&mut same_tree);
+        self.snaps_collapse = Collapser(collapse);
+
         self.update_table();
 
         if len != 0 {
-            // see if the current snapshot is still available and if, select it.
             let selected = self
-                .snaps_selection
+                .snaps_collapse
                 .iter()
-                .position(|&s| Some(s) == snap_idx)
+                .position(|info| {
+                    Some(self.snapshots[self.snaps_selection[info.index]].id) == snap_id
+                })
                 .unwrap_or(len - 1);
 
             self.table.widget.set_to(selected);
         }
+    }
+
+    fn snap_row(&self, info: CollapseInfo) -> Vec<Text<'static>> {
+        let idx = info.index;
+        let snap_id = self.snaps_selection[idx];
+        let snap = &self.snapshots[snap_id];
+        let symbols = match (
+            snap.delete == DeleteOption::NotSet,
+            snap.description.is_none(),
+        ) {
+            (true, true) => "",
+            (true, false) => "🗎",
+            (false, true) => "🛡",
+            (false, false) => "🛡 🗎",
+        };
+        let mark = if info
+            .indices()
+            .all(|i| self.snaps_status[self.snaps_selection[i]].marked)
+        {
+            "X"
+        } else if info
+            .indices()
+            .all(|i| !self.snaps_status[self.snaps_selection[i]].marked)
+        {
+            " "
+        } else {
+            "*"
+        };
+        let modified = if info
+            .indices()
+            .any(|i| self.snaps_status[self.snaps_selection[i]].modified)
+        {
+            "*"
+        } else {
+            " "
+        };
+        let count = info.item.child_count;
+        let collapse = match (info.item.collapsed, info.item.child_count) {
+            (_, 0) => "",
+            (true, _) => ">",
+            (false, _) => "v",
+        };
+        once(&mark.to_string())
+            .chain(snap_to_table(snap, count).iter())
+            .cloned()
+            .enumerate()
+            .map(|(i, mut content)| {
+                if i == 1 {
+                    // ID gets modified and protected marks
+                    content = format!("{collapse}{modified}{content}{symbols}");
+                }
+                Text::from(content)
+            })
+            .collect()
     }
 
     pub fn update_table(&mut self) {
@@ -211,52 +392,30 @@ impl App {
             .max()
             .unwrap_or(1);
         let height = max_tags.max(max_paths).max(1) + 1;
-        let rows = self
-            .snaps_selection
-            .iter()
-            .map(|&snap_id| {
-                let status = self.snaps_status[snap_id];
-                let snap = &self.snapshots[snap_id];
-                let mark = if status.marked { "X" } else { " " };
-                once(&mark.to_string())
-                    .chain(snap_to_table(snap, 0).iter())
-                    .cloned()
-                    .enumerate()
-                    .map(|(i, mut content)| {
-                        let modified = if status.modified { "*" } else { " " };
-                        let protected = if snap.delete == DeleteOption::NotSet {
-                            ""
-                        } else {
-                            "🛡"
-                        };
-                        let description = if snap.description.is_none() {
-                            ""
-                        } else {
-                            "🗎"
-                        };
-                        if i == 1 {
-                            // ID gets modified and protected marks
-                            content = format!("{modified}{content}{protected}{description}");
-                        }
-                        Text::from(content)
-                    })
-                    .collect()
-            })
-            .collect();
+
+        let mut rows = Vec::new();
+        for collapse_info in self.snaps_collapse.iter() {
+            let row = self.snap_row(collapse_info);
+            rows.push(row);
+        }
+
         self.table.widget.set_content(rows, height);
-        self.table.block = Block::new().borders(Borders::BOTTOM).title_bottom(format!(
-            "total: {}, marked: {}, modified: {}, view: {:?}",
-            self.snaps_selection.len(),
-            self.count_marked_snaps(),
-            self.count_modified_snaps(),
-            self.current_view,
-        ));
+        self.table.block = Block::new()
+            .borders(Borders::BOTTOM)
+            .title_bottom(format!(
+                "{:?} view: {}, total: {}, marked: {}, modified: {}, ",
+                self.current_view,
+                self.snaps_selection.len(),
+                self.snapshots.len(),
+                self.count_marked_snaps(),
+                self.count_modified_snaps(),
+            ))
+            .title_alignment(Alignment::Center);
     }
 
     pub fn toggle_mark(&mut self) {
-        if let Some(i) = self.table.widget.selected() {
-            let snap_idx = self.snaps_selection[i];
-            self.snaps_status[snap_idx].toggle_mark();
+        for snap_idx in self.snap_idx() {
+            self.snaps_status[self.snaps_selection[snap_idx]].toggle_mark();
         }
         self.update_table();
     }
@@ -285,10 +444,28 @@ impl App {
         self.apply_filter();
     }
 
+    pub fn collapse(&mut self) {
+        if let Some(info) = self.selected_collapse_info() {
+            if info.collapsable() {
+                self.snaps_collapse.collapse(info.index);
+                self.update_table();
+            }
+        }
+    }
+
+    pub fn extend(&mut self) {
+        if let Some(info) = self.selected_collapse_info() {
+            if info.extendable() {
+                self.snaps_collapse.extend(info.index);
+                self.update_table();
+            }
+        }
+    }
+
     pub fn snapshot_details(&self) -> PopUpTable {
         let mut rows = Vec::new();
-        if let Some(selected) = self.table.widget.selected() {
-            let snap = &self.snapshots[self.snaps_selection[selected]];
+        if let Some(info) = self.selected_collapse_info() {
+            let snap = &self.snapshots[info.index];
             fill_table(snap, |title, value| {
                 rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
             });
@@ -523,6 +700,8 @@ pub(crate) fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> R
                             match key.code {
                                 Char('q') | Esc => return Ok(()),
                                 F(5) => app.reread()?,
+                                Right => app.extend(),
+                                Left => app.collapse(),
                                 Char('?') => {
                                     app.current_screen = CurrentScreen::ShowHelp(popup_text(
                                         "help",

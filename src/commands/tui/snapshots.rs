@@ -5,54 +5,28 @@ use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
-    OpenStatus, Repository, StringList,
+    IndexedFull, Repository, StringList,
 };
 use style::palette::tailwind;
 
 use crate::{
     commands::{
         snapshots::{fill_table, snap_to_table},
-        tui::widgets::{
-            Draw, PopUp, ProcessEvent, Prompt, PromptResult, SelectTable, SizedParagraph,
-            SizedTable, TextInput, TextInputResult, WithBlock,
+        tui::{
+            ls::Snapshot,
+            widgets::{
+                popup_input, popup_prompt, popup_table, popup_text, Draw, PopUpInput, PopUpPrompt,
+                PopUpTable, PopUpText, ProcessEvent, PromptResult, SelectTable, TextInputResult,
+                WithBlock,
+            },
         },
     },
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
 
-// the widgets we are using and convenience builders
-type PopUpInput = PopUp<WithBlock<TextInput>>;
-fn popup_input(title: &'static str, text: &str, initial: &str) -> PopUpInput {
-    PopUp(WithBlock::new(
-        TextInput::new(text, initial),
-        Block::bordered().title(title),
-    ))
-}
-
-type PopUpText = PopUp<WithBlock<SizedParagraph>>;
-fn popup_text(title: &'static str, text: Text<'static>) -> PopUpText {
-    PopUp(WithBlock::new(
-        SizedParagraph::new(text),
-        Block::bordered().title(title),
-    ))
-}
-
-type PopUpTable = PopUp<WithBlock<SizedTable>>;
-fn popup_table(title: &'static str, content: Vec<Vec<Text<'static>>>) -> PopUpTable {
-    PopUp(WithBlock::new(
-        SizedTable::new(content),
-        Block::bordered().title(title),
-    ))
-}
-
-type PopUpPrompt = Prompt<PopUpText>;
-fn popup_prompt(title: &'static str, text: Text<'static>) -> PopUpPrompt {
-    Prompt(popup_text(title, text))
-}
-
 // the states this screen can be in
-enum CurrentScreen {
+enum CurrentScreen<'a, S> {
     Snapshots,
     ShowHelp(PopUpText),
     SnapshotDetails(PopUpTable),
@@ -61,6 +35,7 @@ enum CurrentScreen {
     EnterSetTags(PopUpInput),
     EnterRemoveTags(PopUpInput),
     PromptWrite(PopUpPrompt),
+    Dir(Snapshot<'a, S>),
 }
 
 // status of each snapshot
@@ -170,13 +145,14 @@ impl Iterator for CollapserIter<'_> {
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snaphots | (v) toggle view | (i) show snapshot | (?) show all commands";
+    "(Esc) quit | (F5) reload snaphots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
 const HELP_TEXT: &str = r#"
 General Commands:
 
   q,Esc : exit
      F5 : re-read all snapshots from repository
+  Enter : show snapshot contents
       v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
       i : show detailed snapshot information for selected snapshot
       w : write modified snapshots
@@ -200,11 +176,11 @@ Commands applied to marked snapshot(s) (selected if none marked):
  Ctrl-p : remove delete protection for snapshot(s)
  "#;
 
-pub(crate) struct Snapshots {
-    current_screen: CurrentScreen,
+pub(crate) struct Snapshots<'a, S> {
+    current_screen: CurrentScreen<'a, S>,
     current_view: View,
     table: WithBlock<SelectTable>,
-    repo: Repository<ProgressOptions, OpenStatus>,
+    repo: &'a Repository<ProgressOptions, S>,
     snaps_status: Vec<SnapStatus>,
     snapshots: Vec<SnapshotFile>,
     original_snapshots: Vec<SnapshotFile>,
@@ -214,11 +190,8 @@ pub(crate) struct Snapshots {
     default_filter: SnapshotFilter,
 }
 
-impl Snapshots {
-    pub fn new(
-        repo: Repository<ProgressOptions, OpenStatus>,
-        filter: SnapshotFilter,
-    ) -> Result<Self> {
+impl<'a, S: IndexedFull> Snapshots<'a, S> {
+    pub fn new(repo: &'a Repository<ProgressOptions, S>, filter: SnapshotFilter) -> Result<Self> {
         let mut snapshots = repo.get_all_snapshots()?;
         snapshots.sort_unstable();
 
@@ -481,6 +454,10 @@ impl Snapshots {
         }
     }
 
+    pub fn extendable(&self) -> bool {
+        matches!(self.selected_collapse_info(), Some(info) if info.extendable())
+    }
+
     pub fn extend(&mut self) {
         if let Some(info) = self.selected_collapse_info() {
             if info.extendable() {
@@ -499,6 +476,13 @@ impl Snapshots {
             });
         }
         popup_table("snapshot details", rows)
+    }
+
+    pub fn dir(&self) -> Result<Option<Snapshot<'a, S>>> {
+        self.selected_collapse_info().map_or(Ok(None), |info| {
+            let snap = self.snapshots[self.snaps_selection[info.index]].clone();
+            Some(Snapshot::new(self.repo, snap)).transpose()
+        })
     }
 
     pub fn count_marked_snaps(&self) -> usize {
@@ -690,9 +674,19 @@ impl Snapshots {
                             }
                         } else {
                             match key.code {
-                                Char('q') | Esc => return Ok(()),
                                 F(5) => self.reread()?,
-                                Right => self.extend(),
+                                Enter => {
+                                    if let Some(dir) = self.dir()? {
+                                        self.current_screen = CurrentScreen::Dir(dir);
+                                    }
+                                }
+                                Right => {
+                                    if self.extendable() {
+                                        self.extend();
+                                    } else if let Some(dir) = self.dir()? {
+                                        self.current_screen = CurrentScreen::Dir(dir);
+                                    }
+                                }
                                 Left => self.collapse(),
                                 Char('?') => {
                                     self.current_screen = CurrentScreen::ShowHelp(popup_text(
@@ -786,11 +780,21 @@ impl Snapshots {
                 PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 PromptResult::None => {}
             },
+            CurrentScreen::Dir(dir) => {
+                if dir.input(event)? {
+                    self.current_screen = CurrentScreen::Snapshots;
+                }
+            }
         }
         Ok(())
     }
 
     pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
+        if let CurrentScreen::Dir(dir) = &mut self.current_screen {
+            dir.draw(area, f);
+            return;
+        }
+
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
         // draw the table
@@ -806,7 +810,6 @@ impl Snapshots {
 
         // draw popups
         match &mut self.current_screen {
-            CurrentScreen::Snapshots => {}
             CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::EnterLabel(popup)
@@ -814,6 +817,7 @@ impl Snapshots {
             | CurrentScreen::EnterSetTags(popup)
             | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
             CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
+            _ => {}
         }
     }
 }

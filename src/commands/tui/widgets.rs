@@ -36,3 +36,33 @@ pub trait SizedWidget {
 pub trait Draw {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>);
 }
+
+// the widgets we are using and convenience builders
+pub type PopUpInput = PopUp<WithBlock<TextInput>>;
+pub fn popup_input(title: &'static str, text: &str, initial: &str) -> PopUpInput {
+    PopUp(WithBlock::new(
+        TextInput::new(text, initial),
+        Block::bordered().title(title),
+    ))
+}
+
+pub type PopUpText = PopUp<WithBlock<SizedParagraph>>;
+pub fn popup_text(title: &'static str, text: Text<'static>) -> PopUpText {
+    PopUp(WithBlock::new(
+        SizedParagraph::new(text),
+        Block::bordered().title(title),
+    ))
+}
+
+pub type PopUpTable = PopUp<WithBlock<SizedTable>>;
+pub fn popup_table(title: &'static str, content: Vec<Vec<Text<'static>>>) -> PopUpTable {
+    PopUp(WithBlock::new(
+        SizedTable::new(content),
+        Block::bordered().title(title),
+    ))
+}
+
+pub type PopUpPrompt = Prompt<PopUpText>;
+pub fn popup_prompt(title: &'static str, text: Text<'static>) -> PopUpPrompt {
+    Prompt(popup_text(title, text))
+}

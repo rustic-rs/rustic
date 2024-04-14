@@ -17,6 +17,8 @@ use rustic_core::{
     SnapshotGroupCriterion,
 };
 
+use super::tui::TuiCmd;
+
 /// `snapshot` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct SnapshotCmd {
@@ -44,10 +46,20 @@ pub(crate) struct SnapshotCmd {
     /// Show all snapshots instead of summarizing identical follow-up snapshots
     #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
+
+    /// Run in interactive UI mode
+    #[clap(long, short)]
+    pub interactive: bool,
 }
 
 impl Runnable for SnapshotCmd {
     fn run(&self) {
+        if self.interactive {
+            let tui = TuiCmd {};
+            tui.run();
+            return;
+        }
+
         if let Err(err) = self.inner_run() {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);

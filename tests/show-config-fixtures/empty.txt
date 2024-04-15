@@ -1,6 +1,7 @@
 [global]
 use-profile = []
 dry-run = false
+check-index = false
 no-progress = false
 
 [global.env]

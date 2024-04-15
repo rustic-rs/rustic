@@ -57,6 +57,7 @@ If you want to contribute your own configuration, please
 
 | Attribute         | Description                                                                       | Default Value | Example Value     | Environment Variable     |
 | ----------------- | --------------------------------------------------------------------------------- | ------------- | ----------------- | ------------------------ |
+| check-index       | If true, check the index and read pack headers if index information is missing.   | false         |                   | RUSTIC_CHECK_INDEX       |
 | dry-run           | If true, performs a dry run without making any changes.                           | false         |                   | RUSTIC_DRY_RUN           |
 | log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                   | RUSTIC_LOG_LEVEL         |
 | log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log" | RUSTIC_LOG_FILE          |

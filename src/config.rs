@@ -146,6 +146,11 @@ pub struct GlobalOptions {
     #[merge(strategy = merge::bool::overwrite_false)]
     pub dry_run: bool,
 
+    /// Check if index matches pack files and read pack headers if neccessary
+    #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    pub check_index: bool,
+
     /// Use this log level [default: info]
     #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
     pub log_level: Option<String>,

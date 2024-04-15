@@ -65,10 +65,10 @@ impl Runnable for LsCmd {
 ///
 /// This struct is used to print a summary of the ls command.
 #[derive(Default)]
-struct Summary {
-    files: usize,
-    size: u64,
-    dirs: usize,
+pub struct Summary {
+    pub files: usize,
+    pub size: u64,
+    pub dirs: usize,
 }
 
 impl Summary {
@@ -77,13 +77,46 @@ impl Summary {
     /// # Arguments
     ///
     /// * `node` - the node to update the summary with
-    fn update(&mut self, node: &Node) {
+    pub fn update(&mut self, node: &Node) {
         if node.is_dir() {
             self.dirs += 1;
         }
         if node.is_file() {
             self.files += 1;
             self.size += node.meta.size;
+        }
+    }
+}
+
+pub trait NodeLs {
+    fn mode_str(&self) -> String;
+    fn link_str(&self) -> String;
+}
+
+impl NodeLs for Node {
+    fn mode_str(&self) -> String {
+        format!(
+            "{:>1}{:>9}",
+            match self.node_type {
+                NodeType::Dir => 'd',
+                NodeType::Symlink { .. } => 'l',
+                NodeType::Chardev { .. } => 'c',
+                NodeType::Dev { .. } => 'b',
+                NodeType::Fifo { .. } => 'p',
+                NodeType::Socket => 's',
+                _ => '-',
+            },
+            self.meta
+                .mode
+                .map(parse_permissions)
+                .unwrap_or_else(|| "?????????".to_string())
+        )
+    }
+    fn link_str(&self) -> String {
+        if let NodeType::Symlink { .. } = &self.node_type {
+            ["->", &self.node_type.to_link().to_string_lossy()].join(" ")
+        } else {
+            String::new()
         }
     }
 }
@@ -131,20 +164,8 @@ impl LsCmd {
 /// * `path` - the path of the node
 fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
     println!(
-        "{:>1}{:>9} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
-        match node.node_type {
-            NodeType::Dir => 'd',
-            NodeType::Symlink { .. } => 'l',
-            NodeType::Chardev { .. } => 'c',
-            NodeType::Dev { .. } => 'b',
-            NodeType::Fifo { .. } => 'p',
-            NodeType::Socket => 's',
-            _ => '-',
-        },
-        node.meta
-            .mode
-            .map(parse_permissions)
-            .unwrap_or_else(|| "?????????".to_string()),
+        "{:>10} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
+        node.mode_str(),
         if numeric_uid_gid {
             node.meta.uid.map(|uid| uid.to_string())
         } else {
@@ -162,11 +183,7 @@ fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
             .mtime
             .map(|t| t.format("%_d %b %H:%M").to_string())
             .unwrap_or_else(|| "?".to_string()),
-        if let NodeType::Symlink { .. } = &node.node_type {
-            ["->", &node.node_type.to_link().to_string_lossy()].join(" ")
-        } else {
-            String::new()
-        }
+        node.link_str(),
     );
 }
 

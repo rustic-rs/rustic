@@ -59,7 +59,7 @@ use convert_case::{Case, Casing};
 use dialoguer::Password;
 use human_panic::setup_panic;
 use log::{log, warn, Level};
-use rustic_core::{IndexedFull, OpenStatus, Repository};
+use rustic_core::{IndexedFull, OpenStatus, ProgressBars, Repository};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 pub(super) mod constants {
@@ -277,6 +277,20 @@ impl Configurable<RusticConfig> for EntryPoint {
         }
     }
 }
+/// Get the repository with the given options
+///
+/// # Arguments
+///
+/// * `repo_opts` - The repository options
+///
+fn get_repository_with_progress<P>(
+    repo_opts: &AllRepositoryOptions,
+    po: P,
+) -> Result<Repository<P, ()>> {
+    let backends = repo_opts.be.to_backends()?;
+    let repo = Repository::new_with_progress(&repo_opts.repo, &backends, po)?;
+    Ok(repo)
+}
 
 /// Get the repository with the given options
 ///
@@ -286,9 +300,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 ///
 fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<ProgressOptions, ()>> {
     let po = RUSTIC_APP.config().global.progress_options;
-    let backends = repo_opts.be.to_backends()?;
-    let repo = Repository::new_with_progress(&repo_opts.repo, &backends, po)?;
-    Ok(repo)
+    get_repository_with_progress(repo_opts, po)
 }
 
 /// Open the repository with the given options
@@ -310,13 +322,14 @@ fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<Progres
 /// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: crate::error::RepositoryErrorKind::PasswordCommandParsingFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 /// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
-fn open_repository(
+fn open_repository_with_progress<P: Clone>(
     repo_opts: &AllRepositoryOptions,
-) -> Result<Repository<ProgressOptions, OpenStatus>> {
+    po: P,
+) -> Result<Repository<P, OpenStatus>> {
     if RUSTIC_APP.config().global.check_index {
         warn!("Option check-index is not supported and will be ignored!");
     }
-    let repo = get_repository(repo_opts)?;
+    let repo = get_repository_with_progress(repo_opts, po)?;
     match repo.password()? {
         // if password is given, directly return the result of find_key_in_backend and don't retry
         Some(pass) => {
@@ -339,11 +352,18 @@ fn open_repository(
     Err(anyhow!("incorrect password"))
 }
 
-/// helper function to get an opened and inedexed repo
-fn open_repository_indexed(
+fn open_repository(
     repo_opts: &AllRepositoryOptions,
-) -> Result<Repository<ProgressOptions, impl IndexedFull + Debug>> {
-    let open = open_repository(repo_opts)?;
+) -> Result<Repository<ProgressOptions, OpenStatus>> {
+    let po = RUSTIC_APP.config().global.progress_options;
+    open_repository_with_progress(repo_opts, po)
+}
+/// helper function to get an opened and inedexed repo
+fn open_repository_indexed_with_progress<P: Clone + ProgressBars>(
+    repo_opts: &AllRepositoryOptions,
+    po: P,
+) -> Result<Repository<P, impl IndexedFull + Debug>> {
+    let open = open_repository_with_progress(repo_opts, po)?;
     let check_index = RUSTIC_APP.config().global.check_index;
     let repo = if check_index {
         open.to_indexed_checked()
@@ -351,6 +371,13 @@ fn open_repository_indexed(
         open.to_indexed()
     }?;
     Ok(repo)
+}
+
+fn open_repository_indexed(
+    repo_opts: &AllRepositoryOptions,
+) -> Result<Repository<ProgressOptions, impl IndexedFull + Debug>> {
+    let po = RUSTIC_APP.config().global.progress_options;
+    open_repository_indexed_with_progress(repo_opts, po)
 }
 
 #[cfg(test)]

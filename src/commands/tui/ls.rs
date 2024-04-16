@@ -5,16 +5,13 @@ use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{Node, SnapshotFile, Tree},
-    IndexedFull, Repository,
+    IndexedFull, ProgressBars, Repository,
 };
 use style::palette::tailwind;
 
-use crate::{
-    commands::{
-        ls::{NodeLs, Summary},
-        tui::widgets::{popup_text, Draw, PopUpText, ProcessEvent, SelectTable, WithBlock},
-    },
-    config::progress_options::ProgressOptions,
+use crate::commands::{
+    ls::{NodeLs, Summary},
+    tui::widgets::{popup_text, Draw, PopUpText, ProcessEvent, SelectTable, WithBlock},
 };
 
 // the states this screen can be in
@@ -37,18 +34,18 @@ General Commands:
 
  "#;
 
-pub(crate) struct Snapshot<'a, S> {
+pub(crate) struct Snapshot<'a, P, S> {
     current_screen: CurrentScreen,
     numeric: bool,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<ProgressOptions, S>,
+    repo: &'a Repository<P, S>,
     snapshot: SnapshotFile,
     path: PathBuf,
     trees: Vec<Tree>,
 }
 
-impl<'a, S: IndexedFull> Snapshot<'a, S> {
-    pub fn new(repo: &'a Repository<ProgressOptions, S>, snapshot: SnapshotFile) -> Result<Self> {
+impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
+    pub fn new(repo: &'a Repository<P, S>, snapshot: SnapshotFile) -> Result<Self> {
         let header = ["Name", "Size", "Mode", "User", "Group", "Time"]
             .into_iter()
             .map(Text::from)
@@ -98,8 +95,12 @@ impl<'a, S: IndexedFull> Snapshot<'a, S> {
     }
 
     pub fn update_table(&mut self) {
-        let old_selection = self.table.widget.selected();
         let tree = self.trees.last().unwrap();
+        let old_selection = if tree.nodes.is_empty() {
+            None
+        } else {
+            Some(self.table.widget.selected().unwrap_or_default())
+        };
         let mut rows = Vec::new();
         let mut summary = Summary::default();
         for node in &tree.nodes {
@@ -126,7 +127,7 @@ impl<'a, S: IndexedFull> Snapshot<'a, S> {
                 }
             ))
             .title_alignment(Alignment::Center);
-        self.table.widget.set_to(old_selection.unwrap_or_default());
+        self.table.widget.select(old_selection);
     }
 
     pub fn enter(&mut self) -> Result<()> {
@@ -137,6 +138,7 @@ impl<'a, S: IndexedFull> Snapshot<'a, S> {
                 self.trees.push(self.repo.get_tree(&node.subtree.unwrap())?);
             }
         }
+        self.table.widget.set_to(0);
         self.update_table();
         Ok(())
     }
@@ -145,6 +147,7 @@ impl<'a, S: IndexedFull> Snapshot<'a, S> {
         _ = self.path.pop();
         _ = self.trees.pop();
         if !self.trees.is_empty() {
+            self.table.widget.set_to(0);
             self.update_table();
         }
         self.trees.is_empty()

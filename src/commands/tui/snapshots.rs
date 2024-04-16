@@ -5,7 +5,7 @@ use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
-    IndexedFull, Repository, StringList,
+    IndexedFull, ProgressBars, Repository, StringList,
 };
 use style::palette::tailwind;
 
@@ -21,12 +21,11 @@ use crate::{
             },
         },
     },
-    config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
 
 // the states this screen can be in
-enum CurrentScreen<'a, S> {
+enum CurrentScreen<'a, P, S> {
     Snapshots,
     ShowHelp(PopUpText),
     SnapshotDetails(PopUpTable),
@@ -35,7 +34,7 @@ enum CurrentScreen<'a, S> {
     EnterSetTags(PopUpInput),
     EnterRemoveTags(PopUpInput),
     PromptWrite(PopUpPrompt),
-    Dir(Snapshot<'a, S>),
+    Dir(Snapshot<'a, P, S>),
 }
 
 // status of each snapshot
@@ -176,11 +175,11 @@ Commands applied to marked snapshot(s) (selected if none marked):
  Ctrl-p : remove delete protection for snapshot(s)
  "#;
 
-pub(crate) struct Snapshots<'a, S> {
-    current_screen: CurrentScreen<'a, S>,
+pub(crate) struct Snapshots<'a, P, S> {
+    current_screen: CurrentScreen<'a, P, S>,
     current_view: View,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<ProgressOptions, S>,
+    repo: &'a Repository<P, S>,
     snaps_status: Vec<SnapStatus>,
     snapshots: Vec<SnapshotFile>,
     original_snapshots: Vec<SnapshotFile>,
@@ -190,8 +189,8 @@ pub(crate) struct Snapshots<'a, S> {
     default_filter: SnapshotFilter,
 }
 
-impl<'a, S: IndexedFull> Snapshots<'a, S> {
-    pub fn new(repo: &'a Repository<ProgressOptions, S>, filter: SnapshotFilter) -> Result<Self> {
+impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
+    pub fn new(repo: &'a Repository<P, S>, filter: SnapshotFilter) -> Result<Self> {
         let mut snapshots = repo.get_all_snapshots()?;
         snapshots.sort_unstable();
 
@@ -478,7 +477,7 @@ impl<'a, S: IndexedFull> Snapshots<'a, S> {
         popup_table("snapshot details", rows)
     }
 
-    pub fn dir(&self) -> Result<Option<Snapshot<'a, S>>> {
+    pub fn dir(&self) -> Result<Option<Snapshot<'a, P, S>>> {
         self.selected_collapse_info().map_or(Ok(None), |info| {
             let snap = self.snapshots[self.snaps_selection[info.index]].clone();
             Some(Snapshot::new(self.repo, snap)).transpose()

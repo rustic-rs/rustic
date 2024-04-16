@@ -8,6 +8,7 @@ mod with_block;
 
 pub use popup::*;
 pub use prompt::*;
+use ratatui::widgets::block::Title;
 pub use select_table::*;
 pub use sized_paragraph::*;
 pub use sized_table::*;
@@ -47,7 +48,7 @@ pub fn popup_input(title: &'static str, text: &str, initial: &str) -> PopUpInput
 }
 
 pub type PopUpText = PopUp<WithBlock<SizedParagraph>>;
-pub fn popup_text(title: &'static str, text: Text<'static>) -> PopUpText {
+pub fn popup_text(title: impl Into<Title<'static>>, text: Text<'static>) -> PopUpText {
     PopUp(WithBlock::new(
         SizedParagraph::new(text),
         Block::bordered().title(title),

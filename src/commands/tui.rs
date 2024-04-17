@@ -1,6 +1,7 @@
 //! `tui` subcommand
 mod ls;
 mod progress;
+mod restore;
 mod snapshots;
 mod widgets;
 

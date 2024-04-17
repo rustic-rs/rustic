@@ -40,7 +40,7 @@ pub trait Draw {
 
 // the widgets we are using and convenience builders
 pub type PopUpInput = PopUp<WithBlock<TextInput>>;
-pub fn popup_input(title: &'static str, text: &str, initial: &str) -> PopUpInput {
+pub fn popup_input(title: impl Into<Title<'static>>, text: &str, initial: &str) -> PopUpInput {
     PopUp(WithBlock::new(
         TextInput::new(text, initial),
         Block::bordered().title(title),
@@ -56,7 +56,10 @@ pub fn popup_text(title: impl Into<Title<'static>>, text: Text<'static>) -> PopU
 }
 
 pub type PopUpTable = PopUp<WithBlock<SizedTable>>;
-pub fn popup_table(title: &'static str, content: Vec<Vec<Text<'static>>>) -> PopUpTable {
+pub fn popup_table(
+    title: impl Into<Title<'static>>,
+    content: Vec<Vec<Text<'static>>>,
+) -> PopUpTable {
     PopUp(WithBlock::new(
         SizedTable::new(content),
         Block::bordered().title(title),

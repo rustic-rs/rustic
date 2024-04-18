@@ -11,17 +11,21 @@ use style::palette::tailwind;
 
 use crate::commands::{
     ls::{NodeLs, Summary},
-    tui::widgets::{popup_text, Draw, PopUpText, ProcessEvent, SelectTable, WithBlock},
+    tui::{
+        restore::Restore,
+        widgets::{popup_text, Draw, PopUpText, ProcessEvent, SelectTable, WithBlock},
+    },
 };
 
 // the states this screen can be in
-enum CurrentScreen {
+enum CurrentScreen<'a, P, S> {
     Snapshot,
     ShowHelp(PopUpText),
+    Restore(Restore<'a, P, S>),
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (?) show all commands";
+    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (r) restore | (?) show all commands";
 
 const HELP_TEXT: &str = r#"
 General Commands:
@@ -29,19 +33,21 @@ General Commands:
       q,Esc : exit
       Enter : enter dir
   Backspace : return to parent dir
+          r : restore selected item
           n : toggle numeric IDs
           ? : show this help page
 
  "#;
 
 pub(crate) struct Snapshot<'a, P, S> {
-    current_screen: CurrentScreen,
+    current_screen: CurrentScreen<'a, P, S>,
     numeric: bool,
     table: WithBlock<SelectTable>,
     repo: &'a Repository<P, S>,
     snapshot: SnapshotFile,
     path: PathBuf,
     trees: Vec<Tree>,
+    tree: Tree,
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
@@ -59,7 +65,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             repo,
             snapshot,
             path: PathBuf::new(),
-            trees: vec![tree],
+            trees: Vec::new(),
+            tree,
         };
         app.update_table();
         Ok(app)
@@ -94,16 +101,19 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             .collect()
     }
 
+    pub fn selected_node(&self) -> Option<&Node> {
+        self.table.widget.selected().map(|i| &self.tree.nodes[i])
+    }
+
     pub fn update_table(&mut self) {
-        let tree = self.trees.last().unwrap();
-        let old_selection = if tree.nodes.is_empty() {
+        let old_selection = if self.tree.nodes.is_empty() {
             None
         } else {
             Some(self.table.widget.selected().unwrap_or_default())
         };
         let mut rows = Vec::new();
         let mut summary = Summary::default();
-        for node in &tree.nodes {
+        for node in &self.tree.nodes {
             summary.update(node);
             let row = self.ls_row(node);
             rows.push(row);
@@ -116,7 +126,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             .title(format!("{}:{}", self.snapshot.id, self.path.display()))
             .title_bottom(format!(
                 "total: {}, files: {}, dirs: {}, size: {} - {}",
-                tree.nodes.len(),
+                self.tree.nodes.len(),
                 summary.files,
                 summary.dirs,
                 summary.size,
@@ -132,10 +142,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
 
     pub fn enter(&mut self) -> Result<()> {
         if let Some(idx) = self.table.widget.selected() {
-            let node = &self.trees.last().unwrap().nodes[idx];
+            let node = &self.tree.nodes[idx];
             if node.is_dir() {
                 self.path.push(node.name());
-                self.trees.push(self.repo.get_tree(&node.subtree.unwrap())?);
+                let tree = self.tree.clone();
+                self.tree = self.repo.get_tree(&node.subtree.unwrap())?;
+                self.trees.push(tree);
             }
         }
         self.table.widget.set_to(0);
@@ -145,12 +157,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
 
     pub fn goback(&mut self) -> bool {
         _ = self.path.pop();
-        _ = self.trees.pop();
-        if !self.trees.is_empty() {
+        if let Some(tree) = self.trees.pop() {
+            self.tree = tree;
             self.table.widget.set_to(0);
             self.update_table();
+            false
+        } else {
+            true
         }
-        self.trees.is_empty()
     }
 
     pub fn toggle_numeric(&mut self) {
@@ -174,6 +188,17 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
+                    Char('r') => {
+                        if let Some(node) = self.selected_node() {
+                            let path = self.path.join(node.name());
+                            let restore = Restore::new(
+                                self.repo,
+                                node.clone(),
+                                format!("{}:{}", self.snapshot.id, path.display()),
+                            );
+                            self.current_screen = CurrentScreen::Restore(restore);
+                        }
+                    }
                     _ => self.table.input(event),
                 },
                 _ => {}
@@ -186,6 +211,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                 }
                 _ => {}
             },
+            CurrentScreen::Restore(restore) => {
+                if restore.input(event)? {
+                    self.current_screen = CurrentScreen::Snapshot;
+                }
+            }
         }
         Ok(false)
     }
@@ -193,20 +223,24 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
     pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
-        // draw the table
-        self.table.draw(rects[0], f);
+        if let CurrentScreen::Restore(restore) = &mut self.current_screen {
+            restore.draw(area, f);
+        } else {
+            // draw the table
+            self.table.draw(rects[0], f);
 
-        // draw the footer
-        let buffer_bg = tailwind::SLATE.c950;
-        let row_fg = tailwind::SLATE.c200;
-        let info_footer = Paragraph::new(Line::from(INFO_TEXT))
-            .style(Style::new().fg(row_fg).bg(buffer_bg))
-            .centered();
-        f.render_widget(info_footer, rects[1]);
+            // draw the footer
+            let buffer_bg = tailwind::SLATE.c950;
+            let row_fg = tailwind::SLATE.c200;
+            let info_footer = Paragraph::new(Line::from(INFO_TEXT))
+                .style(Style::new().fg(row_fg).bg(buffer_bg))
+                .centered();
+            f.render_widget(info_footer, rects[1]);
+        }
 
         // draw popups
         match &mut self.current_screen {
-            CurrentScreen::Snapshot => {}
+            CurrentScreen::Snapshot | CurrentScreen::Restore(_) => {}
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
         }
     }

@@ -152,9 +152,9 @@ can be overwritten in the source-specifc configuration, see below.
 **Note**: All of the backup options mentioned before can also be used as
 source-specific option and then only apply to this source.
 
-| Attribute | Description                          | Default Value | Example Value         |
-| --------- | ------------------------------------ | ------------- | --------------------- |
-| source    | Source directory or file to back up. | Not set       | "/tmp/dir/to_backup/" |
+| Attribute | Description                          | Default Value | Example Value               |
+| --------- | ------------------------------------ | ------------- | --------------------------- |
+| source    | Source directory or file to back up. | Not set       | "/dir" , ["/dir1", "/dir2"] |
 
 ### Forget Options
 

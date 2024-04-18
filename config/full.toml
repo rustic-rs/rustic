@@ -113,7 +113,10 @@ label = "label" # Default: not set
 # .. and so on. see [backup]
 
 [[backup.sources]]
-source = "/path/to/source2 /second/path" # multiple local paths are allowd within one source
+source = [
+  "/path/to/source2",
+  "/second/path",
+] # multiple local paths are given as array
 # ...
 
 # forget options

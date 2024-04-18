@@ -13,6 +13,7 @@ use anyhow::{bail, Context, Result};
 use log::{debug, info, warn};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, OneOrMany};
 
 use rustic_core::{
     BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
@@ -20,6 +21,7 @@ use rustic_core::{
 };
 
 /// `backup` subcommand
+#[serde_as]
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 // Note: using cli_sources, sources and source within this struct is a hack to support serde(deny_unknown_fields)
@@ -105,7 +107,8 @@ pub struct BackupCmd {
     /// Backup source, used within config file
     #[clap(skip)]
     #[merge(skip)]
-    source: String,
+    #[serde_as(deserialize_as = "OneOrMany<_>")]
+    source: Vec<String>,
 }
 
 /// Merge backup sources
@@ -163,10 +166,13 @@ impl BackupCmd {
         let config_sources: Vec<_> = config_opts
             .iter()
             .map(|opt| -> Result<_> {
-                Ok(PathList::from_string(&opt.source)?
+                Ok(PathList::from_iter(&opt.source)
                     .sanitize()
                     .with_context(|| {
-                        format!("error sanitizing source=\"{}\" in config file", opt.source)
+                        format!(
+                            "error sanitizing source=\"{:?}\" in config file",
+                            opt.source
+                        )
                     })?
                     .merge())
             })
@@ -208,7 +214,7 @@ impl BackupCmd {
                 }
                 // merge Options from config file using as_path, if given
                 if let Some(path) = path.as_os_str().to_str() {
-                    if let Some(idx) = config_opts.iter().position(|opt| opt.source == path) {
+                    if let Some(idx) = config_opts.iter().position(|opt| opt.source == vec![path]) {
                         info!("merging source=\"{path}\" section from config file");
                         opts.merge(config_opts[idx].clone());
                     }

@@ -46,7 +46,7 @@ one-file-system = false
 tag = []
 delete-never = false
 sources = []
-source = ""
+source = []
 
 [copy]
 targets = []

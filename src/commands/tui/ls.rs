@@ -46,7 +46,7 @@ pub(crate) struct Snapshot<'a, P, S> {
     repo: &'a Repository<P, S>,
     snapshot: SnapshotFile,
     path: PathBuf,
-    trees: Vec<Tree>,
+    trees: Vec<(Tree, usize)>, // Stack of parent trees with position
     tree: Tree,
 }
 
@@ -147,7 +147,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                 self.path.push(node.name());
                 let tree = self.tree.clone();
                 self.tree = self.repo.get_tree(&node.subtree.unwrap())?;
-                self.trees.push(tree);
+                self.trees.push((tree, idx));
             }
         }
         self.table.widget.set_to(0);
@@ -157,9 +157,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
 
     pub fn goback(&mut self) -> bool {
         _ = self.path.pop();
-        if let Some(tree) = self.trees.pop() {
+        if let Some((tree, idx)) = self.trees.pop() {
             self.tree = tree;
-            self.table.widget.set_to(0);
+            self.table.widget.set_to(idx);
             self.update_table();
             false
         } else {

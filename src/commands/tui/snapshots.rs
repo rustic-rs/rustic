@@ -2,10 +2,11 @@ use std::{iter::once, str::FromStr};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
+use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
-    IndexedFull, ProgressBars, Repository, StringList,
+    IndexedFull, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion, StringList,
 };
 use style::palette::tailwind;
 
@@ -14,6 +15,7 @@ use crate::{
         snapshots::{fill_table, snap_to_table},
         tui::{
             ls::Snapshot,
+            tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
                 popup_input, popup_prompt, popup_table, popup_text, Draw, PopUpInput, PopUpPrompt,
                 PopUpTable, PopUpText, ProcessEvent, PromptResult, SelectTable, TextInputResult,
@@ -58,89 +60,10 @@ enum View {
     Modified,
 }
 
-// struct to support collapsing of items
-struct Collapser(Vec<CollapserItem>);
-
-impl Collapser {
-    fn iter(&self) -> CollapserIter<'_> {
-        CollapserIter {
-            index: 0,
-            showed_extended: false,
-            c: &self.0,
-        }
-    }
-
-    fn collapse(&mut self, i: usize) {
-        self.0[i].collapsed = true;
-    }
-
-    fn extend(&mut self, i: usize) {
-        if self.0[i].child_count > 0 {
-            self.0[i].collapsed = false;
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-struct CollapserItem {
-    child_count: usize,
-    collapsed: bool,
-}
-
-struct CollapseInfo {
-    index: usize,
-    item: CollapserItem,
-}
-
-impl CollapseInfo {
-    fn indices(&self) -> impl Iterator<Item = usize> {
-        self.index..=(self.index + self.item.child_count)
-    }
-    fn collapsable(&self) -> bool {
-        !self.item.collapsed
-    }
-    fn extendable(&self) -> bool {
-        self.item.collapsed && self.item.child_count > 0
-    }
-}
-
-// an iterator to iterator over a Collapser
-struct CollapserIter<'a> {
-    index: usize,
-    showed_extended: bool,
-    c: &'a [CollapserItem],
-}
-
-impl CollapserIter<'_> {
-    fn increase_index(&mut self, inc: usize) {
-        self.index += inc;
-    }
-}
-
-impl Iterator for CollapserIter<'_> {
-    type Item = CollapseInfo;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index = self.index;
-
-        let mut item = *match self.c.get(index) {
-            None => return None,
-            Some(item) => item,
-        };
-
-        if item.collapsed {
-            self.increase_index(item.child_count + 1);
-        } else if !self.showed_extended {
-            self.showed_extended = true;
-        } else {
-            self.increase_index(1);
-            self.showed_extended = false;
-            item.collapsed = false;
-            item.child_count = 0;
-        }
-
-        Some(CollapseInfo { index, item })
-    }
+#[derive(PartialEq, Eq)]
+enum SnapshotNode {
+    Group(SnapshotGroup),
+    Snap(usize),
 }
 
 const INFO_TEXT: &str =
@@ -183,17 +106,19 @@ pub(crate) struct Snapshots<'a, P, S> {
     snaps_status: Vec<SnapStatus>,
     snapshots: Vec<SnapshotFile>,
     original_snapshots: Vec<SnapshotFile>,
-    snaps_selection: Vec<usize>,
-    snaps_collapse: Collapser, //position in snaps_selection and count
+    filtered_snapshots: Vec<usize>,
+    tree: Tree<SnapshotNode, usize>,
     filter: SnapshotFilter,
     default_filter: SnapshotFilter,
+    group_by: SnapshotGroupCriterion,
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
-    pub fn new(repo: &'a Repository<P, S>, filter: SnapshotFilter) -> Result<Self> {
-        let mut snapshots = repo.get_all_snapshots()?;
-        snapshots.sort_unstable();
-
+    pub fn new(
+        repo: &'a Repository<P, S>,
+        filter: SnapshotFilter,
+        group_by: SnapshotGroupCriterion,
+    ) -> Result<Self> {
         let header = [
             "", " ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
         ]
@@ -206,30 +131,50 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             current_view: View::Filter,
             table: WithBlock::new(SelectTable::new(header), Block::new()),
             repo,
-            snaps_status: vec![SnapStatus::default(); snapshots.len()],
-            original_snapshots: snapshots.clone(),
-            snapshots,
-            snaps_selection: Vec::new(),
-            snaps_collapse: Collapser(Vec::new()),
+            snaps_status: Vec::new(),
+            original_snapshots: Vec::new(),
+            snapshots: Vec::new(),
+            filtered_snapshots: Vec::new(),
+            tree: Tree::Leaf(0),
             default_filter: filter.clone(),
             filter,
+            group_by,
         };
-        app.apply_filter();
+        app.reread()?;
         Ok(app)
     }
 
-    fn selected_collapse_info(&self) -> Option<CollapseInfo> {
+    fn selected_tree(&self) -> Option<TreeIterItem<'_, SnapshotNode, usize>> {
         self.table
             .widget
             .selected()
-            .and_then(|selected| self.snaps_collapse.iter().nth(selected))
+            .and_then(|selected| self.tree.iter_open().nth(selected))
+    }
+
+    fn selected_tree_mut(&mut self) -> Option<&mut Tree<SnapshotNode, usize>> {
+        self.table
+            .widget
+            .selected()
+            .and_then(|selected| self.tree.nth_mut(selected))
     }
 
     fn snap_idx(&self) -> Vec<usize> {
-        self.selected_collapse_info()
+        self.selected_tree()
             .iter()
-            .flat_map(CollapseInfo::indices)
+            .flat_map(|item| item.tree.iter().map(|item| item.tree))
+            .filter_map(|tree| tree.leaf_data().copied())
             .collect()
+    }
+
+    fn selected_snapshot(&self) -> Option<&SnapshotFile> {
+        self.selected_tree().map(|tree_info| match tree_info.tree {
+            Tree::Leaf(index)
+            | Tree::Node(TreeNode {
+                data: SnapshotNode::Snap(index),
+                ..
+            }) => Some(&self.snapshots[*index]),
+            _ => None,
+        })?
     }
 
     pub fn has_mark(&self) -> bool {
@@ -261,17 +206,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn toggle_view(&mut self) {
         self.toggle_view_mark();
-        self.apply_filter();
+        self.apply_view();
     }
 
-    pub fn apply_filter(&mut self) {
-        // remember current snapshot index
-        let snap_id = self
-            .snap_idx()
-            .first()
-            .map(|i| self.snapshots[self.snaps_selection[*i]].id);
+    pub fn apply_view(&mut self) {
         // select snapshots to show
-        self.snaps_selection = self
+        self.filtered_snapshots = self
             .snapshots
             .iter()
             .enumerate()
@@ -286,118 +226,168 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 .then_some(i)
             })
             .collect();
-        let len = self.snaps_selection.len();
-
-        // collapse snapshots with identical treeid
-        // we reverse iter snaps_selection as we need to count identical ids
-        let mut id = None;
-        let mut collapse = Vec::new();
-        let mut same_tree: Vec<CollapserItem> = Vec::new();
-        for i in &self.snaps_selection {
-            let tree_id = self.snapshots[*i].tree;
-            if id.is_some_and(|id| tree_id != id) {
-                same_tree[0].child_count = same_tree.len() - 1;
-                collapse.append(&mut same_tree);
-            }
-            id = Some(tree_id);
-            same_tree.push(CollapserItem {
-                child_count: 0,
-                collapsed: true,
-            });
-        }
-        same_tree[0].child_count = same_tree.len() - 1;
-        collapse.append(&mut same_tree);
-        self.snaps_collapse = Collapser(collapse);
-
-        self.update_table();
-
-        if len != 0 {
-            let selected = self
-                .snaps_collapse
-                .iter()
-                .position(|info| {
-                    Some(self.snapshots[self.snaps_selection[info.index]].id) == snap_id
-                })
-                .unwrap_or(len - 1);
-
-            self.table.widget.set_to(selected);
-        }
+        self.create_tree();
     }
 
-    fn snap_row(&self, info: CollapseInfo) -> Vec<Text<'static>> {
-        let idx = info.index;
-        let snap_id = self.snaps_selection[idx];
-        let snap = &self.snapshots[snap_id];
-        let symbols = match (
-            snap.delete == DeleteOption::NotSet,
-            snap.description.is_none(),
-        ) {
-            (true, true) => "",
-            (true, false) => "🗎",
-            (false, true) => "🛡",
-            (false, false) => "🛡 🗎",
-        };
-        let mark = if info
-            .indices()
-            .all(|i| self.snaps_status[self.snaps_selection[i]].marked)
+    pub fn create_tree(&mut self) {
+        // remember current snapshot index
+        let old_tree = self.selected_tree().map(|t| t.tree);
+
+        let mut result = Vec::new();
+        for (group, snaps) in &self
+            .filtered_snapshots
+            .iter()
+            .group_by(|i| SnapshotGroup::from_snapshot(&self.snapshots[**i], self.group_by))
         {
-            "X"
-        } else if info
-            .indices()
-            .all(|i| !self.snaps_status[self.snaps_selection[i]].marked)
-        {
-            " "
-        } else {
-            "*"
-        };
-        let modified = if info
-            .indices()
-            .any(|i| self.snaps_status[self.snaps_selection[i]].modified)
-        {
-            "*"
-        } else {
-            " "
-        };
-        let count = info.item.child_count;
-        let collapse = match (info.item.collapsed, info.item.child_count) {
-            (_, 0) => "",
-            (true, _) => ">",
-            (false, _) => "v",
-        };
-        once(&mark.to_string())
-            .chain(snap_to_table(snap, count).iter())
-            .cloned()
-            .enumerate()
-            .map(|(i, mut content)| {
-                if i == 1 {
-                    // ID gets modified and protected marks
-                    content = format!("{collapse}{modified}{content}{symbols}");
+            let mut same_id_group = Vec::new();
+            for (_, s) in &snaps.into_iter().group_by(|i| self.snapshots[**i].tree) {
+                let leafs: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
+                let first = leafs[0].leaf_data().unwrap(); // Cannot be None as leafs[0] is a leaf!
+                if leafs.len() == 1 {
+                    same_id_group.push(Tree::leaf(*first));
+                } else {
+                    same_id_group.push(Tree::node(SnapshotNode::Snap(*first), false, leafs));
                 }
-                Text::from(content)
-            })
-            .collect()
+            }
+            result.push(Tree::node(SnapshotNode::Group(group), false, same_id_group));
+        }
+        let tree = Tree::node(SnapshotNode::Snap(0), true, result);
+
+        let len = tree.iter_open().count();
+        let selected = if len == 0 {
+            None
+        } else {
+            Some(
+                tree.iter()
+                    .position(|info| Some(info.tree) == old_tree)
+                    .unwrap_or(len - 1),
+            )
+        };
+
+        self.tree = tree;
+        self.update_table();
+        self.table.widget.select(selected);
+    }
+
+    fn table_row(&self, info: TreeIterItem<'_, SnapshotNode, usize>) -> Vec<Text<'static>> {
+        let (has_mark, has_not_mark, has_modified) = info
+            .tree
+            .iter()
+            .filter_map(|item| item.leaf_data().copied())
+            .fold((false, false, false), |(mut a, mut b, mut c), i| {
+                if self.snaps_status[i].marked {
+                    a = true;
+                } else {
+                    b = true;
+                }
+
+                if self.snaps_status[i].modified {
+                    c = true;
+                }
+                (a, b, c)
+            });
+
+        let mark = match (has_mark, has_not_mark) {
+            (false, _) => " ",
+            (true, true) => "*",
+            (true, false) => "X",
+        };
+        let modified = if has_modified { "*" } else { " " };
+        let mut collapse = "  ".repeat(info.depth);
+        collapse.push_str(match info.tree {
+            Tree::Leaf(_) => "",
+            Tree::Node(TreeNode { open: false, .. }) => "\u{25b6} ", // Arrow to right
+            Tree::Node(TreeNode { open: true, .. }) => "\u{25bc} ",  // Arrow down
+        });
+
+        match info.tree {
+            Tree::Leaf(index)
+            | Tree::Node(TreeNode {
+                data: SnapshotNode::Snap(index),
+                ..
+            }) => {
+                let snap = &self.snapshots[*index];
+                let symbols = match (
+                    snap.delete == DeleteOption::NotSet,
+                    snap.description.is_none(),
+                ) {
+                    (true, true) => "",
+                    (true, false) => "🗎",
+                    (false, true) => "🛡",
+                    (false, false) => "🛡 🗎",
+                };
+                let count = info.tree.child_count();
+                once(&mark.to_string())
+                    .chain(snap_to_table(snap, count).iter())
+                    .cloned()
+                    .enumerate()
+                    .map(|(i, mut content)| {
+                        if i == 1 {
+                            // ID gets modified and protected marks
+                            content = format!("{collapse}{modified}{content}{symbols}");
+                        }
+                        Text::from(content)
+                    })
+                    .collect()
+            }
+            Tree::Node(TreeNode {
+                data: SnapshotNode::Group(group),
+                ..
+            }) => {
+                let host = group
+                    .hostname
+                    .as_ref()
+                    .map(String::from)
+                    .unwrap_or_default();
+                let label = group.label.as_ref().map(String::from).unwrap_or_default();
+
+                let paths = group
+                    .paths
+                    .as_ref()
+                    .map_or_else(String::default, |p| p.formatln());
+                let tags = group
+                    .tags
+                    .as_ref()
+                    .map_or_else(String::default, |t| t.formatln());
+                [
+                    mark.to_string(),
+                    format!("{collapse}{modified}group"),
+                    String::default(),
+                    host,
+                    label,
+                    tags,
+                    paths,
+                    String::default(),
+                    String::default(),
+                    String::default(),
+                ]
+                .into_iter()
+                .map(Text::from)
+                .collect()
+            }
+        }
     }
 
     pub fn update_table(&mut self) {
         let max_tags = self
-            .snaps_selection
+            .filtered_snapshots
             .iter()
             .map(|&i| self.snapshots[i].tags.iter().count())
             .max()
             .unwrap_or(1);
         let max_paths = self
-            .snaps_selection
+            .filtered_snapshots
             .iter()
             .map(|&i| self.snapshots[i].paths.iter().count())
             .max()
             .unwrap_or(1);
         let height = max_tags.max(max_paths).max(1) + 1;
 
-        let mut rows = Vec::new();
-        for collapse_info in self.snaps_collapse.iter() {
-            let row = self.snap_row(collapse_info);
-            rows.push(row);
-        }
+        let rows = self
+            .tree
+            .iter_open()
+            .map(|tree| self.table_row(tree))
+            .collect();
 
         self.table.widget.set_content(rows, height);
         self.table.block = Block::new()
@@ -405,7 +395,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .title_bottom(format!(
                 "{:?} view: {}, total: {}, marked: {}, modified: {}, ",
                 self.current_view,
-                self.snaps_selection.len(),
+                self.filtered_snapshots.len(),
                 self.snapshots.len(),
                 self.count_marked_snaps(),
                 self.count_modified_snaps(),
@@ -415,13 +405,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn toggle_mark(&mut self) {
         for snap_idx in self.snap_idx() {
-            self.snaps_status[self.snaps_selection[snap_idx]].toggle_mark();
+            self.snaps_status[snap_idx].toggle_mark();
         }
         self.update_table();
     }
 
     pub fn toggle_mark_all(&mut self) {
-        for snap_idx in &self.snaps_selection {
+        for snap_idx in &self.filtered_snapshots {
             self.snaps_status[*snap_idx].toggle_mark();
         }
         self.update_table();
@@ -436,40 +426,35 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn clear_filter(&mut self) {
         self.filter = SnapshotFilter::default();
-        self.apply_filter();
+        self.apply_view();
     }
 
     pub fn reset_filter(&mut self) {
         self.filter = self.default_filter.clone();
-        self.apply_filter();
+        self.apply_view();
     }
 
     pub fn collapse(&mut self) {
-        if let Some(info) = self.selected_collapse_info() {
-            if info.collapsable() {
-                self.snaps_collapse.collapse(info.index);
-                self.update_table();
-            }
+        if let Some(tree) = self.selected_tree_mut() {
+            tree.close();
+            self.update_table();
         }
     }
 
     pub fn extendable(&self) -> bool {
-        matches!(self.selected_collapse_info(), Some(info) if info.extendable())
+        matches!(self.selected_tree(), Some(tree_info) if tree_info.tree.openable())
     }
 
     pub fn extend(&mut self) {
-        if let Some(info) = self.selected_collapse_info() {
-            if info.extendable() {
-                self.snaps_collapse.extend(info.index);
-                self.update_table();
-            }
+        if let Some(tree) = self.selected_tree_mut() {
+            tree.open();
+            self.update_table();
         }
     }
 
     pub fn snapshot_details(&self) -> PopUpTable {
         let mut rows = Vec::new();
-        if let Some(info) = self.selected_collapse_info() {
-            let snap = &self.snapshots[info.index];
+        if let Some(snap) = self.selected_snapshot() {
             fill_table(snap, |title, value| {
                 rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
             });
@@ -478,9 +463,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn dir(&self) -> Result<Option<Snapshot<'a, P, S>>> {
-        self.selected_collapse_info().map_or(Ok(None), |info| {
-            let snap = self.snapshots[self.snaps_selection[info.index]].clone();
-            Some(Snapshot::new(self.repo, snap)).transpose()
+        self.selected_snapshot().map_or(Ok(None), |snap| {
+            Some(Snapshot::new(self.repo, snap.clone())).transpose()
         })
     }
 
@@ -509,15 +493,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         {
             if status.marked && process(snap) {
                 // Note that snap impls Eq, but only by comparing the time!
-                status.modified = serde_json::to_string(snap).unwrap()
-                    != serde_json::to_string(original_snap).unwrap();
+                status.modified =
+                    serde_json::to_string(snap).ok() != serde_json::to_string(original_snap).ok();
             }
         }
 
         if !has_mark {
             self.toggle_mark();
         }
-        self.apply_filter();
+        self.update_table();
     }
 
     pub fn get_label(&mut self) -> String {
@@ -646,13 +630,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     // re-read all snapshots
     pub fn reread(&mut self) -> Result<()> {
         self.snapshots = self.repo.get_all_snapshots()?;
-        self.snapshots.sort_unstable();
-        for status in self.snaps_status.iter_mut() {
-            status.modified = false;
-        }
+        self.snapshots
+            .sort_unstable_by(|sn1, sn2| sn1.cmp_group(self.group_by, sn2).then(sn1.cmp(sn2)));
+        self.snaps_status = vec![SnapStatus::default(); self.snapshots.len()];
         self.original_snapshots = self.snapshots.clone();
         self.table.widget.select(None);
-        self.apply_filter();
+        self.apply_view();
         Ok(())
     }
 

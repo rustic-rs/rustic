@@ -17,7 +17,7 @@ use rustic_core::{
     SnapshotGroupCriterion,
 };
 
-use super::tui::TuiCmd;
+use super::tui;
 
 /// `snapshot` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -54,12 +54,6 @@ pub(crate) struct SnapshotCmd {
 
 impl Runnable for SnapshotCmd {
     fn run(&self) {
-        if self.interactive {
-            let tui = TuiCmd {};
-            tui.run();
-            return;
-        }
-
         if let Err(err) = self.inner_run() {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -69,6 +63,10 @@ impl Runnable for SnapshotCmd {
 
 impl SnapshotCmd {
     fn inner_run(&self) -> Result<()> {
+        if self.interactive {
+            return tui::run(self.group_by);
+        }
+
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config.repository)?;
 

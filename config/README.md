@@ -55,15 +55,15 @@ If you want to contribute your own configuration, please
 
 ### Global Options
 
-| Attribute         | Description                                                                       | Default Value | Example Value     | Environment Variable     |
-| ----------------- | --------------------------------------------------------------------------------- | ------------- | ----------------- | ------------------------ |
-| check-index       | If true, check the index and read pack headers if index information is missing.   | false         |                   | RUSTIC_CHECK_INDEX       |
-| dry-run           | If true, performs a dry run without making any changes.                           | false         |                   | RUSTIC_DRY_RUN           |
-| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                   | RUSTIC_LOG_LEVEL         |
-| log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log" | RUSTIC_LOG_FILE          |
-| no-progress       | If true, disables progress indicators.                                            | false         |                   | RUSTIC_NO_PROGRESS       |
-| progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL |
-| use-profile       | An array of profiles to use. Allows to recursely use other profiles.              | Empty array   |                   | RUSTIC_USE_PROFILE       |
+| Attribute         | Description                                                                       | Default Value | Example Value            | Environment Variable     |
+| ----------------- | --------------------------------------------------------------------------------- | ------------- | ------------------------ | ------------------------ |
+| check-index       | If true, check the index and read pack headers if index information is missing.   | false         |                          | RUSTIC_CHECK_INDEX       |
+| dry-run           | If true, performs a dry run without making any changes.                           | false         |                          | RUSTIC_DRY_RUN           |
+| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                          | RUSTIC_LOG_LEVEL         |
+| log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log"        | RUSTIC_LOG_FILE          |
+| no-progress       | If true, disables progress indicators.                                            | false         |                          | RUSTIC_NO_PROGRESS       |
+| progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"                     | RUSTIC_PROGRESS_INTERVAL |
+| use-profile       | Profile or array of profiles to use. Allows to recursely use other profiles.      | Empty array   | "other" , ["2nd", "3rd"] | RUSTIC_USE_PROFILE       |
 
 ### Global Options - env variables
 
@@ -99,13 +99,13 @@ could possibly shadow other values that you have already set.
 
 ### Snapshot-Filter Options
 
-| Attribute    | Description                           | Default Value   | Example Value |
-| ------------ | ------------------------------------- | --------------- | ------------- |
-| filter-host  | Array of hosts to filter snapshots.   | Not set         | ["myhost"]    |
-| filter-label | Array of labels to filter snapshots.  | No label filter |               |
-| filter-paths | Array of paths to filter snapshots.   | No paths filter |               |
-| filter-tags  | Array of tags to filter snapshots.    | No tags filter  |               |
-| filter-fn    | Custom filter function for snapshots. | Not set         |               |
+| Attribute    | Description                                    | Default Value | Example Value                |
+| ------------ | ---------------------------------------------- | ------------- | ---------------------------- |
+| filter-host  | Array or string of hosts to filter snapshots.  | Not set       | ["myhost", "host2"] / "host" |
+| filter-label | Array or string of labels to filter snapshots. | Not set       |                              |
+| filter-paths | Array or string of paths to filter snapshots.  | Not set       |                              |
+| filter-tags  | Array or string of tags to filter snapshots.   | Not set       |                              |
+| filter-fn    | Custom filter function for snapshots.          | Not set       |                              |
 
 ### Backup Options
 
@@ -125,7 +125,7 @@ can be overwritten in the source-specifc configuration, see below.
 | force                 | If true, forces the backup even if no changes are detected.                             | false                 |               |
 | git-ignore            | If true, use .gitignore rules to exclude files from the backup in the source directory. | false                 |               |
 | glob                  | Array of globs specifying what to include/exclude in the backup.                        | Not set               |               |
-| glob-file             | Array of glob files specifying what to include/exclude in the backup.                   | Not set               |               |
+| glob-file             | Array or string of glob files specifying what to include/exclude in the backup.         | Not set               |               |
 | group-by              | Grouping strategy to find parent snapshot.                                              | "host,label,paths"    |               |
 | host                  | Host name used in the snapshot.                                                         | Not set               |               |
 | iglob                 | Like glob, but apply case-insensitve                                                    | Not set               |               |

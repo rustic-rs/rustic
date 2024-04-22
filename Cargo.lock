@@ -3151,7 +3151,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git#7535ea3b63ebebfffc3323d751eccc35b44ce3d2"
+source = "git+https://github.com/rustic-rs/rustic_core.git#4798228c5c92df9dd29f7a17b1842a1878cb0b2f"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3184,7 +3184,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#7535ea3b63ebebfffc3323d751eccc35b44ce3d2"
+source = "git+https://github.com/rustic-rs/rustic_core.git#4798228c5c92df9dd29f7a17b1842a1878cb0b2f"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3230,7 +3230,6 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sha2",
- "shell-words",
  "strum 0.26.2",
  "thiserror",
  "walkdir",
@@ -3241,7 +3240,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.1.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#7535ea3b63ebebfffc3323d751eccc35b44ce3d2"
+source = "git+https://github.com/rustic-rs/rustic_core.git#4798228c5c92df9dd29f7a17b1842a1878cb0b2f"
 dependencies = [
  "aho-corasick",
  "anyhow",

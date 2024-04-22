@@ -37,7 +37,7 @@ pub(crate) struct AddCmd {
 
     /// Command to get the new password from
     #[clap(long)]
-    pub(crate) new_password_command: Option<String>,
+    pub(crate) new_password_command: Vec<String>,
 
     /// Key options
     #[clap(flatten)]

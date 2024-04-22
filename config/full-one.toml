@@ -1,5 +1,8 @@
 # Full rustic config file containing all options which are available through the config file.
 #
+# It uses short notations for options which allow multiple entries in an array but are also possible as single line
+# For notations using arrays, see full.toml
+#
 # This file should be placed in the user's local config dir (~/.config/rustic/) or in the global
 # config dir (/etc/rustic).
 # If you save it under NAME.toml, use "rustic -P NAME" to access this profile.
@@ -29,12 +32,12 @@ repo-hot = "/my/hot/repo" # Default: not set
 # one of the three password options must be set
 password = "mySecretPassword"
 password-file = "/my/password.txt"
-password-command = ["my_command.sh"]
+password-command = "my_command.sh"
 no-cache = false
 cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g. ~/.cache/rustic
 # use either warm-up (warm-up by file access) or warm-up-command to specify warming up
 warm-up = false
-warm-up-command = ["warmup.sh", "%id"] # Default: not set
+warm-up-command = "warmup.sh" # Default: not set
 warm-up-wait = "10min" # Default: not set
 
 # Additional repository options - depending on backend. These can be only set in the config file or using env variables.
@@ -65,17 +68,17 @@ rest-url = "http://localhost:8000" # Only rclone; Default: determine REST URL fr
 
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
-filter-host = ["host2", "host2"] # Default: no host filter
-filter-label = ["label1", "label2"] # Default: no label filter
-filter-tags = ["tag1,tag2", "tag3"] # Default: no tags filger
-filter-paths = ["path1", "path2,path3"] # Default: no paths filter
+filter-host = "host2" # Default: no host filter
+filter-label = "label1" # Default: no label filter
+filter-tags = "tag1,tag2" # Default: no tags filger
+filter-paths = "path1" # Default: no paths filter
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 
 # Backup options: These options are used for all sources when calling the backup command.
 # They can be overwritten by source-specific options (see below) or command line options.
 [backup]
 label = "label" # Default: not set
-tag = ["tag1", "tag2"]
+tag = "tag1" # Default: not set
 description = "my description" # Default: not set
 description-from = "/path/to/description.txt" # Default: not set
 delete-never = false
@@ -90,14 +93,14 @@ stdin-filename = "stdin" # Only for stdin source
 as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
 with-atime = false
 ignore-devid = false
-glob = []
-iglob = []
-glob-file = []
-iglob-file = []
+glob = "*.txt" # Default: not set
+iglob = "*.txt" # Default: not set
+glob-file = "glob-file.txt" # Default: not set
+iglob-file = "glob-file.txt" # Default: not set
 git-ignore = false
 no-require-git = false
-exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
-custom-ignorefile = [".rusticignore", ".backupignore"] # Default: not set
+exclude-if-present = ".nobackup" # Default: not set
+custom-ignorefile = ".rusticignore" # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set
 json = false
@@ -112,29 +115,19 @@ source = "/path/to/source1"
 label = "label" # Default: not set
 # .. and so on. see [backup]
 
-[[backup.sources]]
-source = [
-  "/path/to/source2",
-  "/second/path",
-] # multiple local paths are given as array
-# ...
-
 # forget options
 [forget]
 prune = false
 group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
 # The following filter options can be also defined here and then overwrite the options for the forget command
-filter-host = ["host2", "host2"] # Default: no host filter
-filter-label = ["label1", "label2"] # Default: no label filter
-filter-tags = ["tag1,tag2", "tag3"] # Default: no tags filger
-filter-paths = ["path1", "path2,path3"] # Default: no paths filter
+filter-host = "host2" # Default: no host filter
+filter-label = "label1" # Default: no label filter
+filter-tags = "tag1,tag2" # Default: no tags filger
+filter-paths = "path1" # Default: no paths filter
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 # The retention options follow. All of these are not set by default.
-keep-tags = ["tag1", "tag2,tag3"] # Default: not set
-keep-ids = [
-  "123abc",
-  "11122233",
-] # Keep all snapshots whose ID starts with any of these strings, default: not set
+keep-tags = "tag1" # Default: not set
+keep-ids = "123abc" # Keep all snapshots whose ID starts with any of these strings, default: not set
 keep-last = 0
 keep-daily = 3
 keep-weekly = 0

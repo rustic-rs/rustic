@@ -107,7 +107,7 @@ pub struct BackupCmd {
     /// Backup source, used within config file
     #[clap(skip)]
     #[merge(skip)]
-    #[serde_as(deserialize_as = "OneOrMany<_>")]
+    #[serde_as(as = "OneOrMany<_>")]
     source: Vec<String>,
 }
 

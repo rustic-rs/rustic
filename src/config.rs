@@ -8,19 +8,18 @@ pub(crate) mod progress_options;
 
 use std::{collections::HashMap, path::PathBuf};
 
-use directories::ProjectDirs;
-
-use merge::Merge;
-
 use abscissa_core::config::Config;
 use abscissa_core::path::AbsPathBuf;
 use abscissa_core::FrameworkError;
 use clap::Parser;
+use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
+use merge::Merge;
 use rustic_backend::BackendOptions;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, OneOrMany};
 
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
@@ -126,6 +125,7 @@ impl RusticConfig {
 /// Global options
 ///
 /// These options are available for all commands.
+#[serde_as]
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
@@ -139,6 +139,7 @@ pub struct GlobalOptions {
         env = "RUSTIC_USE_PROFILE"
     )]
     #[merge(strategy = merge::vec::append)]
+    #[serde_as(as = "OneOrMany<_>")]
     pub use_profile: Vec<String>,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands.

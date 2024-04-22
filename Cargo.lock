@@ -3151,7 +3151,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git#fb291dc9ea085a8622207a6ed74747d2497e6854"
+source = "git+https://github.com/rustic-rs/rustic_core.git#7535ea3b63ebebfffc3323d751eccc35b44ce3d2"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3184,7 +3184,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#fb291dc9ea085a8622207a6ed74747d2497e6854"
+source = "git+https://github.com/rustic-rs/rustic_core.git#7535ea3b63ebebfffc3323d751eccc35b44ce3d2"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3241,7 +3241,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.1.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#fb291dc9ea085a8622207a6ed74747d2497e6854"
+source = "git+https://github.com/rustic-rs/rustic_core.git#7535ea3b63ebebfffc3323d751eccc35b44ce3d2"
 dependencies = [
  "aho-corasick",
  "anyhow",

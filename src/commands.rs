@@ -224,42 +224,44 @@ impl Configurable<RusticConfig> for EntryPoint {
                 .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
             None => LevelFilter::Info,
         };
+        let term_config = simplelog::ConfigBuilder::new()
+            .set_time_level(LevelFilter::Off)
+            .build();
         match &config.global.log_file {
             None => TermLogger::init(
                 level_filter,
-                simplelog::ConfigBuilder::new()
-                    .set_time_level(LevelFilter::Off)
-                    .build(),
+                term_config,
                 TerminalMode::Stderr,
                 ColorChoice::Auto,
             )
             .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
 
-            Some(file) => CombinedLogger::init(vec![
-                TermLogger::new(
+            Some(file) => {
+                let file_config = simplelog::ConfigBuilder::new()
+                    .set_time_format_rfc3339()
+                    .build();
+                let file = File::options()
+                    .create(true)
+                    .append(true)
+                    .open(file)
+                    .map_err(|e| {
+                        FrameworkErrorKind::PathError {
+                            name: Some(file.clone()),
+                        }
+                        .context(e)
+                    })?;
+                let term_logger = TermLogger::new(
                     level_filter.min(LevelFilter::Warn),
-                    simplelog::ConfigBuilder::new()
-                        .set_time_level(LevelFilter::Off)
-                        .build(),
+                    term_config,
                     TerminalMode::Stderr,
                     ColorChoice::Auto,
-                ),
-                WriteLogger::new(
-                    level_filter,
-                    simplelog::Config::default(),
-                    File::options()
-                        .create(true)
-                        .append(true)
-                        .open(file)
-                        .map_err(|e| {
-                            FrameworkErrorKind::PathError {
-                                name: Some(file.clone()),
-                            }
-                            .context(e)
-                        })?,
-                ),
-            ])
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+                );
+                CombinedLogger::init(vec![
+                    term_logger,
+                    WriteLogger::new(level_filter, file_config, file),
+                ])
+                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
+            }
         }
 
         // display logs from merging

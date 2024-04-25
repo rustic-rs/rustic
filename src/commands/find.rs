@@ -36,6 +36,10 @@ pub(crate) struct FindCmd {
     #[clap(long)]
     all: bool,
 
+    /// Also show snapshots which don't contain the searched path.
+    #[clap(long)]
+    show_misses: bool,
+
     /// Show long listing
     #[clap(long, short = 'l')]
     long: bool,
@@ -74,21 +78,24 @@ impl FindCmd {
                 .zip(snapshots.iter())
                 .group_by(|(idx, _)| *idx)
             {
-                if let Some(idx) = idx {
+                let not = if idx.is_none() { "not " } else { "" };
+                if self.show_misses || idx.is_some() {
                     if self.all {
                         for (_, sn) in g {
                             let time = sn.time.format("%Y-%m-%d %H:%M:%S");
-                            println!("found in {} from {time}", sn.id);
+                            println!("{not}found in {} from {time}", sn.id);
                         }
                     } else {
                         let (_, sn) = g.next().unwrap();
                         let count = g.count();
                         let time = sn.time.format("%Y-%m-%d %H:%M:%S");
                         match count {
-                            0 => println!("found in {} from {time}", sn.id),
-                            count => println!("found in {} from {time} (+{count})", sn.id),
+                            0 => println!("{not}found in {} from {time}", sn.id),
+                            count => println!("{not}found in {} from {time} (+{count})", sn.id),
                         };
                     }
+                }
+                if let Some(idx) = idx {
                     print_node(&nodes[*idx], &self.path, self.numeric_id);
                 }
             }

@@ -36,7 +36,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
     pub fn new(repo: &'a Repository<P, S>, node: Node, source: String) -> Self {
         let opts = RestoreOptions::default();
         let title = format!("restore {} to:", source);
-        let popup = popup_input(title, "enter restore destination", "");
+        let popup = popup_input(title, "enter restore destination", "", 1);
         Self {
             current_screen: CurrentScreen::GetDestination(popup),
             node,

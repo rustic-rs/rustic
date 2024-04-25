@@ -14,7 +14,7 @@ use crate::{
     commands::{
         snapshots::{fill_table, snap_to_table},
         tui::{
-            ls::Snapshot,
+            ls::{Snapshot, SnapshotResult},
             tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
                 popup_input, popup_prompt, popup_table, popup_text, Draw, PopUpInput, PopUpPrompt,
@@ -32,6 +32,7 @@ enum CurrentScreen<'a, P, S> {
     ShowHelp(PopUpText),
     SnapshotDetails(PopUpTable),
     EnterLabel(PopUpInput),
+    EnterDescription(PopUpInput),
     EnterAddTags(PopUpInput),
     EnterSetTags(PopUpInput),
     EnterRemoveTags(PopUpInput),
@@ -90,6 +91,8 @@ Commands applied to marked snapshot(s) (selected if none marked):
 
       l : set label for snapshot(s)
  Ctrl-l : remove label for snapshot(s)
+      d : set description for snapshot(s)
+ Ctrl-d : remove description for snapshot(s)
       t : add tag(s) for snapshot(s)
  Ctrl-t : remove all tags for snapshot(s)
       s : set tag(s) for snapshot(s)
@@ -504,46 +507,37 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.update_table();
     }
 
-    pub fn get_label(&mut self) -> String {
+    pub fn get_snap_entity(&mut self, f: impl Fn(&SnapshotFile) -> String) -> String {
         let has_mark = self.has_mark();
 
         if !has_mark {
             self.toggle_mark();
         }
 
-        let label = self
+        let entity = self
             .snapshots
             .iter()
             .zip(self.snaps_status.iter())
-            .filter_map(|(snap, status)| status.marked.then_some(snap.label.clone()))
-            .reduce(|label, l| if label == l { l } else { String::new() })
+            .filter_map(|(snap, status)| status.marked.then_some(f(snap)))
+            .reduce(|entity, e| if entity == e { e } else { String::new() })
             .unwrap_or_default();
 
         if !has_mark {
             self.toggle_mark();
         }
-        label
+        entity
+    }
+
+    pub fn get_label(&mut self) -> String {
+        self.get_snap_entity(|snap| snap.label.clone())
     }
 
     pub fn get_tags(&mut self) -> String {
-        let has_mark = self.has_mark();
+        self.get_snap_entity(|snap| snap.tags.formatln())
+    }
 
-        if !has_mark {
-            self.toggle_mark();
-        }
-
-        let label = self
-            .snapshots
-            .iter()
-            .zip(self.snaps_status.iter())
-            .filter_map(|(snap, status)| status.marked.then_some(snap.tags.formatln()))
-            .reduce(|tags, t| if tags == t { t } else { String::new() })
-            .unwrap_or_default();
-
-        if !has_mark {
-            self.toggle_mark();
-        }
-        label
+    pub fn get_description(&mut self) -> String {
+        self.get_snap_entity(|snap| snap.description.clone().unwrap_or_default())
     }
 
     pub fn set_label(&mut self, label: String) {
@@ -558,6 +552,21 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn clear_label(&mut self) {
         self.set_label(String::new());
+    }
+
+    pub fn set_description(&mut self, desc: String) {
+        let desc = if desc.is_empty() { None } else { Some(desc) };
+        self.process_marked_snaps(|snap| {
+            if snap.description == desc {
+                return false;
+            }
+            snap.description = desc.clone();
+            true
+        });
+    }
+
+    pub fn clear_description(&mut self) {
+        self.set_description(String::new());
     }
 
     pub fn add_tags(&mut self, tags: String) {
@@ -593,6 +602,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     pub fn apply_input(&mut self, input: String) {
         match self.current_screen {
             CurrentScreen::EnterLabel(_) => self.set_label(input),
+            CurrentScreen::EnterDescription(_) => self.set_description(input),
             CurrentScreen::EnterAddTags(_) => self.add_tags(input),
             CurrentScreen::EnterSetTags(_) => self.set_tags(input),
             CurrentScreen::EnterRemoveTags(_) => self.remove_tags(input),
@@ -639,7 +649,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         Ok(())
     }
 
-    pub fn input(&mut self, event: Event) -> Result<()> {
+    pub fn input(&mut self, event: Event) -> Result<bool> {
         use KeyCode::*;
         match &mut self.current_screen {
             CurrentScreen::Snapshots => {
@@ -650,12 +660,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                 Char('x') => self.clear_marks(),
                                 Char('f') => self.clear_filter(),
                                 Char('l') => self.clear_label(),
+                                Char('d') => self.clear_description(),
                                 Char('t') => self.clear_tags(),
                                 Char('p') => self.clear_delete_protection(),
                                 _ => {}
                             }
                         } else {
                             match key.code {
+                                Esc | Char('q') => return Ok(true),
                                 F(5) => self.reread()?,
                                 Enter => {
                                     if let Some(dir) = self.dir()? {
@@ -692,13 +704,24 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                         "set label",
                                         "enter label",
                                         &self.get_label(),
+                                        1,
                                     ));
+                                }
+                                Char('d') => {
+                                    self.current_screen =
+                                        CurrentScreen::EnterDescription(popup_input(
+                                            "set description (Ctrl-s to confirm)",
+                                            "enter description",
+                                            &self.get_description(),
+                                            5,
+                                        ));
                                 }
                                 Char('t') => {
                                     self.current_screen = CurrentScreen::EnterAddTags(popup_input(
                                         "add tags",
                                         "enter tags",
                                         "",
+                                        1,
                                     ));
                                 }
                                 Char('s') => {
@@ -706,11 +729,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                         "set tags",
                                         "enter tags",
                                         &self.get_tags(),
+                                        1,
                                     ));
                                 }
                                 Char('r') => {
                                     self.current_screen = CurrentScreen::EnterRemoveTags(
-                                        popup_input("remove tags", "enter tags", ""),
+                                        popup_input("remove tags", "enter tags", "", 1),
                                     );
                                 }
                                 // TODO: Allow to enter delete protection option
@@ -744,6 +768,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 _ => {}
             },
             CurrentScreen::EnterLabel(prompt)
+            | CurrentScreen::EnterDescription(prompt)
             | CurrentScreen::EnterAddTags(prompt)
             | CurrentScreen::EnterSetTags(prompt)
             | CurrentScreen::EnterRemoveTags(prompt) => match prompt.input(event) {
@@ -762,13 +787,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 PromptResult::None => {}
             },
-            CurrentScreen::Dir(dir) => {
-                if dir.input(event)? {
-                    self.current_screen = CurrentScreen::Snapshots;
-                }
-            }
+            CurrentScreen::Dir(dir) => match dir.input(event)? {
+                SnapshotResult::Exit => return Ok(true),
+                SnapshotResult::Return => self.current_screen = CurrentScreen::Snapshots,
+                SnapshotResult::None => {}
+            },
         }
-        Ok(())
+        Ok(false)
     }
 
     pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
@@ -795,6 +820,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::EnterLabel(popup)
+            | CurrentScreen::EnterDescription(popup)
             | CurrentScreen::EnterAddTags(popup)
             | CurrentScreen::EnterSetTags(popup)
             | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),

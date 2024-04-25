@@ -40,9 +40,14 @@ pub trait Draw {
 
 // the widgets we are using and convenience builders
 pub type PopUpInput = PopUp<WithBlock<TextInput>>;
-pub fn popup_input(title: impl Into<Title<'static>>, text: &str, initial: &str) -> PopUpInput {
+pub fn popup_input(
+    title: impl Into<Title<'static>>,
+    text: &str,
+    initial: &str,
+    lines: u16,
+) -> PopUpInput {
     PopUp(WithBlock::new(
-        TextInput::new(text, initial),
+        TextInput::new(text, initial, lines),
         Block::bordered().title(title),
     ))
 }

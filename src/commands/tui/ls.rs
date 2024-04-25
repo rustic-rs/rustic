@@ -50,6 +50,12 @@ pub(crate) struct Snapshot<'a, P, S> {
     tree: Tree,
 }
 
+pub enum SnapshotResult {
+    Exit,
+    Return,
+    None,
+}
+
 impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
     pub fn new(repo: &'a Repository<P, S>, snapshot: SnapshotFile) -> Result<Self> {
         let header = ["Name", "Size", "Mode", "User", "Group", "Time"]
@@ -172,7 +178,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         self.update_table();
     }
 
-    pub fn input(&mut self, event: Event) -> Result<bool> {
+    pub fn input(&mut self, event: Event) -> Result<SnapshotResult> {
         use KeyCode::*;
         match &mut self.current_screen {
             CurrentScreen::Snapshot => match event {
@@ -180,8 +186,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     Enter | Right => self.enter()?,
                     Backspace | Left => {
                         if self.goback() {
-                            return Ok(true);
+                            return Ok(SnapshotResult::Return);
                         }
+                    }
+                    Esc | Char('q') => {
+                        return Ok(SnapshotResult::Exit);
                     }
                     Char('?') => {
                         self.current_screen =
@@ -217,7 +226,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                 }
             }
         }
-        Ok(false)
+        Ok(SnapshotResult::None)
     }
 
     pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {

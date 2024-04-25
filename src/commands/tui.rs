@@ -6,6 +6,7 @@ mod snapshots;
 mod tree;
 mod widgets;
 
+use crossterm::event::{KeyEvent, KeyModifiers};
 use progress::TuiProgressBars;
 use snapshots::Snapshots;
 
@@ -74,14 +75,18 @@ fn run_app<B: Backend, P: ProgressBars, S: IndexedFull>(
         let event = event::read()?;
         use KeyCode::*;
 
-        match event {
-            Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
-                Char('q') | Esc => return Ok(()),
-                _ => {}
-            },
-            _ => {}
+        if let Event::Key(KeyEvent {
+            code: Char('c'),
+            modifiers: KeyModifiers::CONTROL,
+            kind: KeyEventKind::Press,
+            ..
+        }) = event
+        {
+            return Ok(());
         }
-        app.snapshots.input(event)?;
+        if app.snapshots.input(event)? {
+            return Ok(());
+        }
     }
 }
 

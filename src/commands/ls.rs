@@ -162,7 +162,7 @@ impl LsCmd {
 ///
 /// * `node` - the node to print
 /// * `path` - the path of the node
-fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
+pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
     println!(
         "{:>10} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
         node.mode_str(),

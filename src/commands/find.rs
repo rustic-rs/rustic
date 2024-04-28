@@ -1,25 +1,30 @@
 //! `find` subcommand
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use globset::{Glob, GlobSetBuilder};
 use itertools::Itertools;
 
-use rustic_core::SnapshotGroupCriterion;
+use rustic_core::{repofile::Node, SnapshotGroupCriterion};
 
 use super::ls::print_node;
 
 /// `ls` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct FindCmd {
-    /// Snapshot/path to list
-    #[clap(value_name = "PATH")]
-    path: PathBuf,
+    /// pattern to find (can be specified multiple times)
+    #[clap(long, value_name = "PATTERN")]
+    patterns: Vec<String>,
 
-    /// Snapshots to show. If none is given, use filter options to filter from all snapshots
+    /// exact path to find
+    #[clap(long, value_name = "PATH", conflicts_with = "patterns")]
+    path: Option<PathBuf>,
+
+    /// Snapshots to serach in. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
@@ -36,7 +41,7 @@ pub(crate) struct FindCmd {
     #[clap(long)]
     all: bool,
 
-    /// Also show snapshots which don't contain the searched path.
+    /// Also show snapshots which don't contain a search result.
     #[clap(long)]
     show_misses: bool,
 
@@ -72,31 +77,69 @@ impl FindCmd {
                 println!("\nsearching in snapshots group {group}");
             }
             let ids = snapshots.iter().map(|sn| sn.tree);
-            let (nodes, results) = repo.find_nodes_from_path(ids, &self.path)?;
-            for (idx, mut g) in &results
-                .iter()
-                .zip(snapshots.iter())
-                .group_by(|(idx, _)| *idx)
-            {
-                let not = if idx.is_none() { "not " } else { "" };
-                if self.show_misses || idx.is_some() {
-                    if self.all {
-                        for (_, sn) in g {
+            if let Some(path) = &self.path {
+                let (nodes, results) = repo.find_nodes_from_path(ids, path)?;
+                for (idx, mut g) in &results
+                    .iter()
+                    .zip(snapshots.iter())
+                    .group_by(|(idx, _)| *idx)
+                {
+                    let not = if idx.is_none() { "not " } else { "" };
+                    if self.show_misses || idx.is_some() {
+                        if self.all {
+                            for (_, sn) in g {
+                                let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+                                println!("{not}found in {} from {time}", sn.id);
+                            }
+                        } else {
+                            let (_, sn) = g.next().unwrap();
+                            let count = g.count();
                             let time = sn.time.format("%Y-%m-%d %H:%M:%S");
-                            println!("{not}found in {} from {time}", sn.id);
+                            match count {
+                                0 => println!("{not}found in {} from {time}", sn.id),
+                                count => println!("{not}found in {} from {time} (+{count})", sn.id),
+                            };
                         }
-                    } else {
-                        let (_, sn) = g.next().unwrap();
-                        let count = g.count();
-                        let time = sn.time.format("%Y-%m-%d %H:%M:%S");
-                        match count {
-                            0 => println!("{not}found in {} from {time}", sn.id),
-                            count => println!("{not}found in {} from {time} (+{count})", sn.id),
-                        };
+                    }
+                    if let Some(idx) = idx {
+                        print_node(&nodes[*idx], path, self.numeric_id);
                     }
                 }
-                if let Some(idx) = idx {
-                    print_node(&nodes[*idx], &self.path, self.numeric_id);
+            } else {
+                let mut builder = GlobSetBuilder::new();
+                for pattern in &self.patterns {
+                    _ = builder.add(Glob::new(pattern)?);
+                }
+                let globset = builder.build()?;
+                let matches = |path: &Path, _: &Node| {
+                    globset.is_match(path) || path.file_name().is_some_and(|f| globset.is_match(f))
+                };
+                let (paths, nodes, results) = repo.find_matching_nodes(ids, &matches)?;
+                for (idx, mut g) in &results
+                    .iter()
+                    .zip(snapshots.iter())
+                    .group_by(|(idx, _)| *idx)
+                {
+                    let not = if idx.is_empty() { "not " } else { "" };
+                    if self.show_misses || !idx.is_empty() {
+                        if self.all {
+                            for (_, sn) in g {
+                                let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+                                println!("{not}found in {} from {time}", sn.id);
+                            }
+                        } else {
+                            let (_, sn) = g.next().unwrap();
+                            let count = g.count();
+                            let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+                            match count {
+                                0 => println!("{not}found in {} from {time}", sn.id),
+                                count => println!("{not}found in {} from {time} (+{count})", sn.id),
+                            };
+                        }
+                    }
+                    for (path_idx, node_idx) in idx {
+                        print_node(&nodes[*node_idx], &paths[*path_idx], self.numeric_id);
+                    }
                 }
             }
         }

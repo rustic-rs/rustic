@@ -3140,6 +3140,7 @@ dependencies = [
  "directories",
  "displaydoc",
  "gethostname",
+ "globset",
  "human-panic",
  "humantime",
  "indicatif",
@@ -3158,7 +3159,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.2.0 (git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path)",
  "rustic_testing",
  "self_update",
  "semver",
@@ -3177,7 +3178,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path#703e4e8ca8ff723f347cb9b8201ba5de4efd1697"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3195,7 +3196,7 @@ dependencies = [
  "rand",
  "rayon",
  "reqwest",
- "rustic_core",
+ "rustic_core 0.2.0 (git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path)",
  "semver",
  "serde",
  "shell-words",
@@ -3210,7 +3211,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path#703e4e8ca8ff723f347cb9b8201ba5de4efd1697"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3264,6 +3265,58 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustic_core"
+version = "0.2.0"
+source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "anyhow",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "chrono",
+ "crossbeam-channel",
+ "derivative",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "enum-map",
+ "enum-map-derive",
+ "enumset",
+ "filetime",
+ "gethostname",
+ "hex",
+ "humantime",
+ "ignore",
+ "integer-sqrt",
+ "itertools",
+ "log",
+ "nix",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand",
+ "rayon",
+ "runtime-format",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "strum",
+ "thiserror",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
 name = "rustic_testing"
 version = "0.1.0"
 source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
@@ -3273,7 +3326,7 @@ dependencies = [
  "bytes",
  "enum-map",
  "once_cell",
- "rustic_core",
+ "rustic_core 0.2.0 (git+https://github.com/rustic-rs/rustic_core.git)",
  "tempfile",
 ]
 
@@ -3546,9 +3599,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "3.8.0"
+version = "3.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c85f8e96d1d6857f13768fcbd895fcb06225510022a2774ed8b5150581847b0"
+checksum = "0ad483d2ab0149d5a5ebcd9972a3852711e0153d863bf5a5d0391d28883c4a20"
 dependencies = [
  "base64 0.22.0",
  "chrono",
@@ -3564,9 +3617,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "3.8.0"
+version = "3.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8b3a576c4eb2924262d5951a3b737ccaf16c931e39a2810c36f9a7e25575557"
+checksum = "65569b702f41443e8bc8bbb1c5779bd0450bbe723b56198980e80ec45780bce2"
 dependencies = [
  "darling 0.20.8",
  "proc-macro2",

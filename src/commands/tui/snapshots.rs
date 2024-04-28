@@ -1,6 +1,7 @@
 use std::{iter::once, str::FromStr};
 
 use anyhow::Result;
+use chrono::Local;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
@@ -45,6 +46,7 @@ enum CurrentScreen<'a, P, S> {
 struct SnapStatus {
     marked: bool,
     modified: bool,
+    to_delete: bool,
 }
 
 impl SnapStatus {
@@ -70,36 +72,36 @@ enum SnapshotNode {
 const INFO_TEXT: &str =
     "(Esc) quit | (F5) reload snaphots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
-const HELP_TEXT: &str = r#"
-General Commands:
-
-  q,Esc : exit
-     F5 : re-read all snapshots from repository
-  Enter : show snapshot contents
-      v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
-      i : show detailed snapshot information for selected snapshot
-      w : write modified snapshots
-      ? : show this help page
-
-Commands for marking snapshot(s):
-
-      x : toggle marking for selected snapshot
-      X : toggle markings for all snapshots
- Ctrl-x : clear all markings
-
-Commands applied to marked snapshot(s) (selected if none marked):
-
-      l : set label for snapshot(s)
- Ctrl-l : remove label for snapshot(s)
-      d : set description for snapshot(s)
- Ctrl-d : remove description for snapshot(s)
-      t : add tag(s) for snapshot(s)
- Ctrl-t : remove all tags for snapshot(s)
-      s : set tag(s) for snapshot(s)
-      r : remove tag(s) for snapshot(s)
-      p : set delete protection for snapshot(s)
- Ctrl-p : remove delete protection for snapshot(s)
- "#;
+const HELP_TEXT: &str = r#"General Commands:
+  q, Esc : exit
+      F5 : re-read all snapshots from repository
+   Enter : show snapshot contents
+       v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
+       i : show detailed snapshot information for selected snapshot
+       w : write modified snapshots and delete snapshots to-delete
+       ? : show this help page
+ 
+ Commands for marking snapshot(s):
+ 
+       x : toggle marking for selected snapshot
+       X : toggle markings for all snapshots
+  Ctrl-x : clear all markings
+ 
+ Commands applied to marked snapshot(s) (selected if none marked):
+ 
+     Del : toggle to-delete for snapshot(s)
+Ctrl-Del : clear to-delete for snapshot(s)
+       l : set label for snapshot(s)
+  Ctrl-l : remove label for snapshot(s)
+       d : set description for snapshot(s)
+  Ctrl-d : remove description for snapshot(s)
+       t : add tag(s) for snapshot(s)
+  Ctrl-t : remove all tags for snapshot(s)
+       s : set tag(s) for snapshot(s)
+       r : remove tag(s) for snapshot(s)
+       p : set delete protection for snapshot(s)
+  Ctrl-p : remove delete protection for snapshot(s)
+"#;
 
 pub(crate) struct Snapshots<'a, P, S> {
     current_screen: CurrentScreen<'a, P, S>,
@@ -273,22 +275,30 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     fn table_row(&self, info: TreeIterItem<'_, SnapshotNode, usize>) -> Vec<Text<'static>> {
-        let (has_mark, has_not_mark, has_modified) = info
+        let (has_mark, has_not_mark, has_modified, has_to_delete) = info
             .tree
             .iter()
             .filter_map(|item| item.leaf_data().copied())
-            .fold((false, false, false), |(mut a, mut b, mut c), i| {
-                if self.snaps_status[i].marked {
-                    a = true;
-                } else {
-                    b = true;
-                }
+            .fold(
+                (false, false, false, false),
+                |(mut a, mut b, mut c, mut d), i| {
+                    if self.snaps_status[i].marked {
+                        a = true;
+                    } else {
+                        b = true;
+                    }
 
-                if self.snaps_status[i].modified {
-                    c = true;
-                }
-                (a, b, c)
-            });
+                    if self.snaps_status[i].modified {
+                        c = true;
+                    }
+
+                    if self.snaps_status[i].to_delete {
+                        d = true;
+                    }
+
+                    (a, b, c, d)
+                },
+            );
 
         let mark = match (has_mark, has_not_mark) {
             (false, _) => " ",
@@ -296,6 +306,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             (true, false) => "X",
         };
         let modified = if has_modified { "*" } else { " " };
+        let del = if has_to_delete { "🗑" } else { "" };
         let mut collapse = "  ".repeat(info.depth);
         collapse.push_str(match info.tree {
             Tree::Leaf(_) => "",
@@ -327,7 +338,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     .map(|(i, mut content)| {
                         if i == 1 {
                             // ID gets modified and protected marks
-                            content = format!("{collapse}{modified}{content}{symbols}");
+                            content = format!("{collapse}{modified}{del}{content}{symbols}");
                         }
                         Text::from(content)
                     })
@@ -354,7 +365,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     .map_or_else(String::default, |t| t.formatln());
                 [
                     mark.to_string(),
-                    format!("{collapse}{modified}group"),
+                    format!("{collapse}{modified}{del}group"),
                     String::default(),
                     host,
                     label,
@@ -396,12 +407,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.table.block = Block::new()
             .borders(Borders::BOTTOM)
             .title_bottom(format!(
-                "{:?} view: {}, total: {}, marked: {}, modified: {}, ",
+                "{:?} view: {}, total: {}, marked: {}, modified: {}, to delete: {}",
                 self.current_view,
                 self.filtered_snapshots.len(),
                 self.snapshots.len(),
                 self.count_marked_snaps(),
                 self.count_modified_snaps(),
+                self.count_delete_snaps()
             ))
             .title_alignment(Alignment::Center);
     }
@@ -477,6 +489,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn count_modified_snaps(&self) -> usize {
         self.snaps_status.iter().filter(|s| s.modified).count()
+    }
+
+    pub fn count_delete_snaps(&self) -> usize {
+        self.snaps_status.iter().filter(|s| s.to_delete).count()
     }
 
     // process marked snapshots (or the current one if none is marked)
@@ -589,7 +605,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.process_marked_snaps(|snap| snap.set_tags(no_tags.clone()));
     }
 
-    pub fn set_delete_to(&mut self, delete: DeleteOption) {
+    pub fn set_delete_protection_to(&mut self, delete: DeleteOption) {
         self.process_marked_snaps(|snap| {
             if snap.delete == delete {
                 return false;
@@ -597,6 +613,37 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             snap.delete = delete;
             true
         });
+    }
+
+    pub fn toggle_to_delete(&mut self) {
+        let has_mark = self.has_mark();
+
+        if !has_mark {
+            self.toggle_mark();
+        }
+
+        let now = Local::now();
+        for (snap, status) in self.snapshots.iter_mut().zip(self.snaps_status.iter_mut()) {
+            if status.marked {
+                if status.to_delete {
+                    status.to_delete = false;
+                } else if !snap.must_keep(now) {
+                    status.to_delete = true;
+                }
+            }
+        }
+
+        if !has_mark {
+            self.toggle_mark();
+        }
+        self.update_table();
+    }
+
+    pub fn clear_to_delete(&mut self) {
+        for status in self.snaps_status.iter_mut() {
+            status.to_delete = false;
+        }
+        self.update_table();
     }
 
     pub fn apply_input(&mut self, input: String) {
@@ -611,15 +658,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn set_delete_protection(&mut self) {
-        self.set_delete_to(DeleteOption::Never);
+        self.set_delete_protection_to(DeleteOption::Never);
     }
 
     pub fn clear_delete_protection(&mut self) {
-        self.set_delete_to(DeleteOption::NotSet);
+        self.set_delete_protection_to(DeleteOption::NotSet);
     }
 
     pub fn write(&mut self) -> Result<()> {
-        if !self.has_modified() {
+        if !self.has_modified() && self.count_delete_snaps() == 0 {
             return Ok(());
         };
 
@@ -630,9 +677,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .filter_map(|(snap, status)| status.modified.then_some(snap))
             .cloned()
             .collect();
-        let old_snap_ids: Vec<_> = save_snaps.iter().map(|sn| sn.id).collect();
+        let old_snap_ids = save_snaps.iter().map(|sn| sn.id);
+        let snap_ids_to_delete = self
+            .snapshots
+            .iter()
+            .zip(self.snaps_status.iter())
+            .filter_map(|(snap, status)| status.to_delete.then_some(snap.id));
+        let delete_ids: Vec<_> = old_snap_ids.chain(snap_ids_to_delete).collect();
         self.repo.save_snapshots(save_snaps)?;
-        self.repo.delete_snapshots(&old_snap_ids)?;
+        self.repo.delete_snapshots(&delete_ids)?;
         // re-read snapshots
         self.reread()
     }
@@ -657,6 +710,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     Event::Key(key) if key.kind == KeyEventKind::Press => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             match key.code {
+                                Delete => self.clear_to_delete(),
                                 Char('x') => self.clear_marks(),
                                 Char('f') => self.clear_filter(),
                                 Char('l') => self.clear_label(),
@@ -668,6 +722,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                         } else {
                             match key.code {
                                 Esc | Char('q') => return Ok(true),
+                                Delete => self.toggle_to_delete(),
                                 F(5) => self.reread()?,
                                 Enter => {
                                     if let Some(dir) = self.dir()? {
@@ -741,8 +796,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                 Char('p') => self.set_delete_protection(),
                                 Char('w') => {
                                     let msg = format!(
-                                        "Do you want to write {} modified snapshots?",
-                                        self.count_modified_snaps()
+                                        "Do you want to write {} modified and remove {} snapshots?",
+                                        self.count_modified_snaps(),
+                                        self.count_delete_snaps()
                                     );
                                     self.current_screen = CurrentScreen::PromptWrite(popup_prompt(
                                         "write snapshots",

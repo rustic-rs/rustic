@@ -795,7 +795,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                 Char('p') => self.set_delete_protection(),
                                 Char('w') => {
                                     let msg = format!(
-                                        "Do you want to write {} modified and remove {} snapshots?",
+                                        "Do you want to write {} modified and remove {} snapshots? (y/n)",
                                         self.count_modified_snaps(),
                                         self.count_forget_snaps()
                                     );

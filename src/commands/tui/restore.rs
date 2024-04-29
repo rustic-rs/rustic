@@ -33,10 +33,10 @@ pub(crate) struct Restore<'a, P, S> {
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
-    pub fn new(repo: &'a Repository<P, S>, node: Node, source: String) -> Self {
+    pub fn new(repo: &'a Repository<P, S>, node: Node, source: String, path: &str) -> Self {
         let opts = RestoreOptions::default();
         let title = format!("restore {} to:", source);
-        let popup = popup_input(title, "enter restore destination", "", 1);
+        let popup = popup_input(title, "enter restore destination", path, 1);
         Self {
             current_screen: CurrentScreen::GetDestination(popup),
             node,
@@ -47,7 +47,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
         }
     }
 
-    pub fn compute_plan(&mut self, dest: String, dry_run: bool) -> Result<RestorePlan> {
+    pub fn compute_plan(&mut self, mut dest: String, dry_run: bool) -> Result<RestorePlan> {
+        if dest.is_empty() {
+            dest = ".".to_string();
+        }
         self.dest = dest;
         let dest = LocalDestination::new(&self.dest, true, !self.node.is_dir())?;
         // for restore, always recurse into tree

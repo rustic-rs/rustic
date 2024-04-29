@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
@@ -199,11 +199,23 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     Char('n') => self.toggle_numeric(),
                     Char('r') => {
                         if let Some(node) = self.selected_node() {
+                            let is_absolute = self
+                                .snapshot
+                                .paths
+                                .iter()
+                                .any(|p| Path::new(p).is_absolute());
                             let path = self.path.join(node.name());
+                            let path = path.display();
+                            let default_targt = if is_absolute {
+                                format!("/{path}")
+                            } else {
+                                format!("{path}")
+                            };
                             let restore = Restore::new(
                                 self.repo,
                                 node.clone(),
-                                format!("{}:{}", self.snapshot.id, path.display()),
+                                format!("{}:/{path}", self.snapshot.id),
+                                &default_targt,
                             );
                             self.current_screen = CurrentScreen::Restore(restore);
                         }

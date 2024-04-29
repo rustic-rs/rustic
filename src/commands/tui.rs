@@ -33,11 +33,15 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     let config = RUSTIC_APP.config();
 
     // setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let terminal = Arc::new(RwLock::new(Terminal::new(backend)?));
+    let terminal = init_terminal()?;
+    let terminal = Arc::new(RwLock::new(terminal));
+
+    let original_hook = std::panic::take_hook();
+
+    std::panic::set_hook(Box::new(move |panic| {
+        reset_terminal().unwrap();
+        original_hook(panic);
+    }));
 
     let progress = TuiProgressBars {
         terminal: terminal.clone(),
@@ -46,23 +50,35 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     // create app and run it
     let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
     let app = App { snapshots };
-    let res = run_app(terminal.clone(), app);
+    let res = run_app(terminal, app);
 
     // restore terminal
-    disable_raw_mode()?;
-    let mut terminal = terminal.write().unwrap();
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-    drop(terminal);
+    reset_terminal()?;
 
     if let Err(err) = res {
         println!("{err:?}");
     }
 
+    Ok(())
+}
+
+/// Initializes the terminal.
+fn init_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
+    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
+    enable_raw_mode()?;
+
+    let backend = CrosstermBackend::new(io::stdout());
+
+    let mut terminal = Terminal::new(backend)?;
+    terminal.hide_cursor()?;
+
+    Ok(terminal)
+}
+
+/// Resets the terminal.
+fn reset_terminal() -> Result<()> {
+    disable_raw_mode()?;
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
     Ok(())
 }
 

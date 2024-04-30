@@ -1304,9 +1304,9 @@ checksum = "cdeb3aa5e95cf9aabc17f060cfa0ced7b83f042390760ca53bf09df9968acaa1"
 
 [[package]]
 name = "flate2"
-version = "1.0.29"
+version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4556222738635b7a3417ae6130d8f52201e45a0c4d1a907f0826383adb5f85e7"
+checksum = "5f54427cfd1c7829e2a139fcefea601bf088ebca651d2bf53ebc600eac295dae"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -1945,9 +1945,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.153"
+version = "0.2.154"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
+checksum = "ae743338b92ff9146ce83992f766a31066a91a8c84a45e0e9f21e7cf6de6d346"
 
 [[package]]
 name = "libm"
@@ -3140,6 +3140,7 @@ dependencies = [
  "directories",
  "displaydoc",
  "gethostname",
+ "globset",
  "human-panic",
  "humantime",
  "indicatif",
@@ -3177,7 +3178,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+source = "git+https://github.com/rustic-rs/rustic_core.git#f3ad6e95ac8761b9d037fcbfe4e7a483cde4b34a"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3210,7 +3211,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+source = "git+https://github.com/rustic-rs/rustic_core.git#f3ad6e95ac8761b9d037fcbfe4e7a483cde4b34a"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3266,7 +3267,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.1.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+source = "git+https://github.com/rustic-rs/rustic_core.git#f3ad6e95ac8761b9d037fcbfe4e7a483cde4b34a"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3546,9 +3547,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "3.8.0"
+version = "3.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c85f8e96d1d6857f13768fcbd895fcb06225510022a2774ed8b5150581847b0"
+checksum = "0ad483d2ab0149d5a5ebcd9972a3852711e0153d863bf5a5d0391d28883c4a20"
 dependencies = [
  "base64 0.22.0",
  "chrono",
@@ -3564,9 +3565,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "3.8.0"
+version = "3.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8b3a576c4eb2924262d5951a3b737ccaf16c931e39a2810c36f9a7e25575557"
+checksum = "65569b702f41443e8bc8bbb1c5779bd0450bbe723b56198980e80ec45780bce2"
 dependencies = [
  "darling 0.20.8",
  "proc-macro2",
@@ -3722,9 +3723,9 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ffd9c0a93b7543e062e759284fcf5f5e3b098501104bfbdde4d404db792871"
+checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",

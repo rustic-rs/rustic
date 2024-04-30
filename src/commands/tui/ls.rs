@@ -13,7 +13,10 @@ use crate::commands::{
     ls::{NodeLs, Summary},
     tui::{
         restore::Restore,
-        widgets::{popup_text, Draw, PopUpText, ProcessEvent, SelectTable, WithBlock},
+        widgets::{
+            popup_prompt, popup_text, Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult,
+            SelectTable, WithBlock,
+        },
     },
 };
 
@@ -22,6 +25,7 @@ enum CurrentScreen<'a, P, S> {
     Snapshot,
     ShowHelp(PopUpText),
     Restore(Restore<'a, P, S>),
+    PromptExit(PopUpPrompt),
 }
 
 const INFO_TEXT: &str =
@@ -190,7 +194,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                         }
                     }
                     Esc | Char('q') => {
-                        return Ok(SnapshotResult::Exit);
+                        self.current_screen = CurrentScreen::PromptExit(popup_prompt(
+                            "exit rustic",
+                            "do you want to exit? (y/n)".into(),
+                        ));
                     }
                     Char('?') => {
                         self.current_screen =
@@ -237,6 +244,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     self.current_screen = CurrentScreen::Snapshot;
                 }
             }
+            CurrentScreen::PromptExit(prompt) => match prompt.input(event) {
+                PromptResult::Ok => return Ok(SnapshotResult::Exit),
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
+                PromptResult::None => {}
+            },
         }
         Ok(SnapshotResult::None)
     }
@@ -263,6 +275,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         match &mut self.current_screen {
             CurrentScreen::Snapshot | CurrentScreen::Restore(_) => {}
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
+            CurrentScreen::PromptExit(popup) => popup.draw(area, f),
         }
     }
 }

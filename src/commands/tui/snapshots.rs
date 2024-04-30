@@ -38,6 +38,7 @@ enum CurrentScreen<'a, P, S> {
     EnterSetTags(PopUpInput),
     EnterRemoveTags(PopUpInput),
     PromptWrite(PopUpPrompt),
+    PromptExit(PopUpPrompt),
     Dir(Snapshot<'a, P, S>),
 }
 
@@ -715,7 +716,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                             }
                         } else {
                             match key.code {
-                                Esc | Char('q') => return Ok(true),
+                                Esc | Char('q') => {
+                                    self.current_screen = CurrentScreen::PromptExit(popup_prompt(
+                                        "exit rustic",
+                                        "do you want to exit? (y/n)".into(),
+                                    ));
+                                }
                                 Char('f') => self.toggle_to_forget(),
                                 F(5) => self.reread()?,
                                 Enter => {
@@ -842,6 +848,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 PromptResult::None => {}
             },
+            CurrentScreen::PromptExit(prompt) => match prompt.input(event) {
+                PromptResult::Ok => return Ok(true),
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
+                PromptResult::None => {}
+            },
             CurrentScreen::Dir(dir) => match dir.input(event)? {
                 SnapshotResult::Exit => return Ok(true),
                 SnapshotResult::Return => self.current_screen = CurrentScreen::Snapshots,
@@ -879,7 +890,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             | CurrentScreen::EnterAddTags(popup)
             | CurrentScreen::EnterSetTags(popup)
             | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
-            CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
+            CurrentScreen::PromptWrite(popup) | CurrentScreen::PromptExit(popup) => {
+                popup.draw(area, f);
+            }
             _ => {}
         }
     }

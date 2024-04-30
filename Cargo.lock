@@ -3159,7 +3159,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core 0.2.0 (git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path)",
+ "rustic_core",
  "rustic_testing",
  "self_update",
  "semver",
@@ -3178,7 +3178,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.1.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path#a0cd1e039b52588b53f20538e41410e260c16f2b"
+source = "git+https://github.com/rustic-rs/rustic_core.git#f3ad6e95ac8761b9d037fcbfe4e7a483cde4b34a"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3196,7 +3196,7 @@ dependencies = [
  "rand",
  "rayon",
  "reqwest",
- "rustic_core 0.2.0 (git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path)",
+ "rustic_core",
  "semver",
  "serde",
  "shell-words",
@@ -3211,7 +3211,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git?branch=find-nodes-from-path#a0cd1e039b52588b53f20538e41410e260c16f2b"
+source = "git+https://github.com/rustic-rs/rustic_core.git#f3ad6e95ac8761b9d037fcbfe4e7a483cde4b34a"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3265,68 +3265,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustic_core"
-version = "0.2.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
-dependencies = [
- "aes256ctr_poly1305aes",
- "anyhow",
- "binrw",
- "bytes",
- "bytesize",
- "cached",
- "cachedir",
- "chrono",
- "crossbeam-channel",
- "derivative",
- "derive_more",
- "derive_setters",
- "dirs",
- "displaydoc",
- "dunce",
- "enum-map",
- "enum-map-derive",
- "enumset",
- "filetime",
- "gethostname",
- "hex",
- "humantime",
- "ignore",
- "integer-sqrt",
- "itertools",
- "log",
- "nix",
- "pariter",
- "path-dedot",
- "quick_cache",
- "rand",
- "rayon",
- "runtime-format",
- "scrypt",
- "serde",
- "serde-aux",
- "serde_derive",
- "serde_json",
- "serde_with",
- "sha2",
- "strum",
- "thiserror",
- "walkdir",
- "xattr",
- "zstd",
-]
-
-[[package]]
 name = "rustic_testing"
 version = "0.1.0"
-source = "git+https://github.com/rustic-rs/rustic_core.git#649567404e16a84a8ebbbbbaf969e32b51608137"
+source = "git+https://github.com/rustic-rs/rustic_core.git#f3ad6e95ac8761b9d037fcbfe4e7a483cde4b34a"
 dependencies = [
  "aho-corasick",
  "anyhow",
  "bytes",
  "enum-map",
  "once_cell",
- "rustic_core 0.2.0 (git+https://github.com/rustic-rs/rustic_core.git)",
+ "rustic_core",
  "tempfile",
 ]
 

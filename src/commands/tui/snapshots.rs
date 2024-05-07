@@ -557,7 +557,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             if snap.label == label {
                 return false;
             }
-            snap.label = label.clone();
+            snap.label.clone_from(&label);
             true
         });
     }
@@ -572,7 +572,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             if snap.description == desc {
                 return false;
             }
-            snap.description = desc.clone();
+            snap.description.clone_from(&desc);
             true
         });
     }
@@ -692,7 +692,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.snapshots
             .sort_unstable_by(|sn1, sn2| sn1.cmp_group(self.group_by, sn2).then(sn1.cmp(sn2)));
         self.snaps_status = vec![SnapStatus::default(); self.snapshots.len()];
-        self.original_snapshots = self.snapshots.clone();
+        self.original_snapshots.clone_from(&self.snapshots);
         self.table.widget.select(None);
         self.apply_view();
         Ok(())

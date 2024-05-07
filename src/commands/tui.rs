@@ -23,7 +23,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::*;
-use rustic_core::{IndexedFull, ProgressBars, SnapshotGroupCriterion};
+use rustic_core::{IndexedFull, Progress, ProgressBars, SnapshotGroupCriterion};
 
 struct App<'a, P, S> {
     snapshots: Snapshots<'a, P, S>,
@@ -46,7 +46,9 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     let progress = TuiProgressBars {
         terminal: terminal.clone(),
     };
+    let p = progress.progress_spinner("starting rustic in interactive mode...");
     let repo = open_repository_indexed_with_progress(&config.repository, progress)?;
+    p.finish();
     // create app and run it
     let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
     let app = App { snapshots };

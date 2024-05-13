@@ -1,6 +1,7 @@
 mod popup;
 mod prompt;
 mod select_table;
+mod sized_gauge;
 mod sized_paragraph;
 mod sized_table;
 mod text_input;
@@ -10,6 +11,7 @@ pub use popup::*;
 pub use prompt::*;
 use ratatui::widgets::block::Title;
 pub use select_table::*;
+pub use sized_gauge::*;
 pub use sized_paragraph::*;
 pub use sized_table::*;
 pub use text_input::*;
@@ -74,4 +76,16 @@ pub fn popup_table(
 pub type PopUpPrompt = Prompt<PopUpText>;
 pub fn popup_prompt(title: &'static str, text: Text<'static>) -> PopUpPrompt {
     Prompt(popup_text(title, text))
+}
+
+pub type PopUpGauge = PopUp<WithBlock<SizedGauge>>;
+pub fn popup_gauge(
+    title: impl Into<Title<'static>>,
+    text: Span<'static>,
+    ratio: f64,
+) -> PopUpGauge {
+    PopUp(WithBlock::new(
+        SizedGauge::new(text, ratio),
+        Block::bordered().title(title),
+    ))
 }

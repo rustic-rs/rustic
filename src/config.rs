@@ -191,20 +191,61 @@ fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
 ///
 /// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    [
+    // we need this mut here, because we want to add data to the Vec
+    // depending on the OS. Our CI is running on Unix, and doesn't have knowledge of
+    // us mutating that vector
+    #[allow(unused_mut)]
+    let mut paths = vec![
+        get_home_config_path(),
         ProjectDirs::from("", "", "rustic")
             .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
         get_global_config_path(),
         Some(PathBuf::from(".")),
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        path.map(|mut p| {
-            p.push(filename);
-            p
-        })
+    ];
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(win_compatibility_paths) = get_windows_portability_config_directories() {
+            paths.extend(win_compatibility_paths);
+        };
+    }
+
+    paths
+        .into_iter()
+        .filter_map(|path| path.map(|p| p.join(filename)))
+        .collect::<Vec<_>>()
+}
+
+/// Get the path to the home config directory.
+///
+/// # Returns
+///
+/// The path to the home config directory.
+///
+/// # Note
+///
+/// If the environment variable `RUSTIC_HOME` is not set, `None` is returned.
+fn get_home_config_path() -> Option<PathBuf> {
+    std::env::var_os("RUSTIC_HOME").map(|home_dir| PathBuf::from(home_dir).join("config"))
+}
+
+/// Get the paths to the user profile config directories on Windows.
+///
+/// # Returns
+///
+/// A collection of possible paths to the user profile config directory on Windows.
+///
+/// # Note
+///
+/// If the environment variable `USERPROFILE` is not set, `None` is returned.
+#[cfg(target_os = "windows")]
+fn get_windows_portability_config_directories() -> Option<Vec<Option<PathBuf>>> {
+    std::env::var_os("USERPROFILE").map(|path| {
+        vec![
+            Some(PathBuf::from(path.clone()).join(r".config\rustic")),
+            Some(PathBuf::from(path).join(".rustic")),
+        ]
     })
-    .collect()
 }
 
 /// Get the path to the global config directory on Windows.
@@ -215,11 +256,8 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
 /// If the environment variable `PROGRAMDATA` is not set, `None` is returned.
 #[cfg(target_os = "windows")]
 fn get_global_config_path() -> Option<PathBuf> {
-    std::env::var_os("PROGRAMDATA").map(|program_data| {
-        let mut path = PathBuf::from(program_data);
-        path.push(r"rustic\config");
-        path
-    })
+    std::env::var_os("PROGRAMDATA")
+        .map(|program_data| PathBuf::from(program_data).join(r"rustic\config"))
 }
 
 /// Get the path to the global config directory on ios and wasm targets.

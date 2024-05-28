@@ -3,13 +3,14 @@
 use std::path::PathBuf;
 
 use crate::{
-    commands::{get_repository, init::init, open_repository},
-    helpers::bytes_size_to_string,
+    commands::{get_repository, init::init, open_repository, snapshots::fill_table},
+    helpers::{bold_cell, bytes_size_to_string, table},
     status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Context, Result};
+use comfy_table::Cell;
 use log::{debug, info, warn};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
@@ -62,8 +63,13 @@ pub struct BackupCmd {
     #[merge(strategy = merge::bool::overwrite_false)]
     json: bool,
 
-    /// Don't show any output
+    /// Show detailed information about generated snapshot
     #[clap(long, conflicts_with = "json")]
+    #[merge(strategy = merge::bool::overwrite_false)]
+    long: bool,
+
+    /// Don't show any output
+    #[clap(long, conflicts_with_all = ["json", "long"])]
     #[merge(strategy = merge::bool::overwrite_false)]
     quiet: bool,
 
@@ -237,6 +243,15 @@ impl BackupCmd {
             if opts.json {
                 let mut stdout = std::io::stdout();
                 serde_json::to_writer_pretty(&mut stdout, &snap)?;
+            } else if opts.long {
+                let mut table = table();
+
+                let add_entry = |title: &str, value: String| {
+                    _ = table.add_row([bold_cell(title), Cell::new(value)]);
+                };
+                fill_table(&snap, add_entry);
+
+                println!("{table}");
             } else if !opts.quiet {
                 let summary = snap.summary.unwrap();
                 println!(

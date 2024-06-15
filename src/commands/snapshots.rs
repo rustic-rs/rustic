@@ -16,7 +16,7 @@ use itertools::Itertools;
 use serde::Serialize;
 
 use rustic_core::{
-    Progress, ProgressBars, SnapshotGroup, SnapshotGroupCriterion,
+    Progress, ProgressBars, SnapshotGroup,
     repofile::{DeleteOption, SnapshotFile},
 };
 
@@ -29,15 +29,6 @@ pub(crate) struct SnapshotCmd {
     /// Snapshots to show. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
     ids: Vec<String>,
-
-    /// Group snapshots by any combination of host,label,paths,tags
-    #[clap(
-        long,
-        short = 'g',
-        value_name = "CRITERION",
-        default_value = "host,label,paths"
-    )]
-    group_by: SnapshotGroupCriterion,
 
     /// Show detailed information about snapshots
     #[arg(long)]
@@ -85,7 +76,7 @@ impl SnapshotCmd {
                         let snapshots = tui::Snapshots::new(
                             &repo,
                             config.snapshot_filter.clone(),
-                            self.group_by,
+                            config.global.group_by.unwrap_or_default(),
                         )?;
                         tui::run_app(progress.terminal, snapshots)
                     })
@@ -94,9 +85,11 @@ impl SnapshotCmd {
 
         let config = RUSTIC_APP.config();
 
-        let groups = repo.get_snapshot_group(&self.ids, self.group_by, |sn| {
-            config.snapshot_filter.matches(sn)
-        })?;
+        let groups = repo.get_snapshot_group(
+            &self.ids,
+            config.global.group_by.unwrap_or_default(),
+            |sn| config.snapshot_filter.matches(sn),
+        )?;
 
         if self.json {
             #[derive(Serialize, From)]

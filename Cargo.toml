@@ -113,6 +113,8 @@ toml = "0.8"
 
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2.153"
+fuse_mt = { version = "0.6" }
+
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]

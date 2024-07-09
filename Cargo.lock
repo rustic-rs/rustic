@@ -3231,6 +3231,7 @@ dependencies = [
  "rustic_backend",
  "rustic_core",
  "rustic_testing",
+ "scopeguard",
  "self_update",
  "semver",
  "serde",

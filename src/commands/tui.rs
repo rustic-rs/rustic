@@ -8,6 +8,7 @@ mod widgets;
 
 use crossterm::event::{KeyEvent, KeyModifiers};
 use progress::TuiProgressBars;
+use scopeguard::defer;
 use snapshots::Snapshots;
 
 use std::io;
@@ -36,12 +37,10 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     let terminal = init_terminal()?;
     let terminal = Arc::new(RwLock::new(terminal));
 
-    let original_hook = std::panic::take_hook();
-
-    std::panic::set_hook(Box::new(move |panic| {
+    // restore terminal (even when leaving through ?, early return, or panic)
+    defer! {
         reset_terminal().unwrap();
-        original_hook(panic);
-    }));
+    }
 
     let progress = TuiProgressBars {
         terminal: terminal.clone(),
@@ -53,9 +52,6 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
     let app = App { snapshots };
     let res = run_app(terminal, app);
-
-    // restore terminal
-    reset_terminal()?;
 
     if let Err(err) = res {
         println!("{err:?}");

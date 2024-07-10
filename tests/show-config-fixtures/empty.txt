@@ -30,6 +30,7 @@ with-atime = false
 ignore-devid = false
 no-scan = false
 json = false
+long = false
 quiet = false
 init = false
 skip-identical-parent = false

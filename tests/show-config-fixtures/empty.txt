@@ -51,7 +51,7 @@ sources = []
 source = []
 
 [copy]
-targets = []
+target = []
 
 [forget]
 prune = false

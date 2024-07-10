@@ -181,21 +181,11 @@ source-specific option and then only apply to this source.
 
 ### Copy Targets
 
-**Note**: Copy-targets are simply repositories with the same defaults as within
-the repository section.
+**Note**: Copy-targets must be defined in their own config profile files.
 
-| Attribute        | Description                                                       | Default Value            | Example Value          |
-| ---------------- | ----------------------------------------------------------------- | ------------------------ | ---------------------- |
-| cache-dir        | Path to the cache directory for the target repository.            | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ |
-| no-cache         | If true, disables caching for the target repository.              | false                    |                        |
-| password         | The password for the target repository.                           | Not set                  |                        |
-| password-file    | Path to a file containing the password for the target repository. | Not set                  |                        |
-| password-command | Command to retrieve the password for the target repository.       | Not set                  |                        |
-| repository       | The path or URL to the target repository.                         | Not set                  |                        |
-| repo-hot         | The path or URL to the hot target repository.                     | Not set                  |                        |
-| warm-up          | If true, warms up the target repository by file access.           | Not set                  |                        |
-| warm-up-command  | Command to warm up the target repository.                         | Not set                  |                        |
-| warm-up-wait     | The wait time for warming up the target repository.               | Not set                  |                        |
+| Attribute | Description        | Default Value | Example Value                            |
+| --------- | ------------------ | ------------- | ---------------------------------------- |
+| target    | One or more target | Not set       | "remote_host" / ["profile1", "profile2"] |
 
 ### WebDAV Options
 

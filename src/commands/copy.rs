@@ -2,40 +2,58 @@
 
 use crate::{
     commands::{get_repository, init::init_password, open_repository, open_repository_indexed},
-    config::AllRepositoryOptions,
     helpers::table_with_titles,
-    status_err, Application, RUSTIC_APP,
+    status_err, Application, RusticConfig, RUSTIC_APP,
 };
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
 use anyhow::{bail, Result};
-use log::{error, info};
+use log::{error, info, log, Level};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, OneOrMany};
 
 use rustic_core::{CopySnapshot, Id, KeyOptions};
 
 /// `copy` subcommand
-#[derive(clap::Parser, Command, Debug)]
-pub(crate) struct CopyCmd {
+#[serde_as]
+#[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
+pub struct CopyCmd {
     /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
     #[clap(value_name = "ID")]
+    #[serde(skip)]
+    #[merge(skip)]
     ids: Vec<String>,
 
     /// Initialize non-existing target repositories
     #[clap(long)]
+    #[serde(skip)]
+    #[merge(skip)]
     init: bool,
+
+    /// Target repository (can be specified multiple times)
+    #[clap(long)]
+    #[merge(strategy = merge::vec::overwrite_empty)]
+    #[serde_as(as = "OneOrMany<_>")]
+    target: Vec<String>,
 
     /// Key options (when using --init)
     #[clap(flatten, next_help_heading = "Key options (when using --init)")]
+    #[serde(skip)]
+    #[merge(skip)]
     key_opts: KeyOptions,
 }
 
-/// Target repository options
-#[derive(Default, Clone, Debug, Serialize, Deserialize, Merge)]
-pub struct Targets {
-    /// Target repositories
-    #[merge(strategy = merge::vec::overwrite_empty)]
-    targets: Vec<AllRepositoryOptions>,
+impl Override<RusticConfig> for CopyCmd {
+    // Process the given command line options, overriding settings from
+    // a configuration file using explicit flags taken from command-line
+    // arguments.
+    fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
+        let mut self_config = self.clone();
+        // merge "webdav" section from config file, if given
+        self_config.merge(config.copy);
+        config.copy = self_config;
+        Ok(config)
+    }
 }
 
 impl Runnable for CopyCmd {
@@ -51,8 +69,8 @@ impl CopyCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        if config.copy.targets.is_empty() {
-            status_err!("no [[copy.targets]] section in config file found!");
+        if config.copy.target.is_empty() {
+            status_err!("please specify at least 1 target!");
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
@@ -66,7 +84,16 @@ impl CopyCmd {
         snapshots.sort_unstable();
 
         let poly = repo.config().poly()?;
-        for target_opt in &config.copy.targets {
+        for target in &config.copy.target {
+            let mut merge_logs = Vec::new();
+            let mut target_config = RusticConfig::default();
+            target_config.merge_profile(target, &mut merge_logs, Level::Warn)?;
+            // display logs from merging
+            for (level, merge_log) in merge_logs {
+                log!(level, "{}", merge_log);
+            }
+            let target_opt = &target_config.repository;
+
             let repo_dest = get_repository(target_opt)?;
 
             info!("copying to target {}...", repo_dest.name);

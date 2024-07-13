@@ -4,7 +4,10 @@ use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_A
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Context, Result};
 
@@ -184,6 +187,57 @@ fn identical_content_local<P, S: IndexedFull>(
     Ok(true)
 }
 
+/// Statistics about the differences listed with the [`DiffCmd`] command
+#[derive(Default)]
+struct DiffStatistics {
+    files_added: usize,
+    files_removed: usize,
+    files_changed: usize,
+    directories_added: usize,
+    directories_removed: usize,
+    others_added: usize,
+    others_removed: usize,
+}
+
+impl DiffStatistics {
+    fn removed_node(&mut self, node_type: &NodeType) {
+        match node_type {
+            NodeType::File => self.files_removed += 1,
+            NodeType::Dir => self.directories_removed += 1,
+            _ => self.others_removed += 1,
+        }
+    }
+
+    fn added_node(&mut self, node_type: &NodeType) {
+        match node_type {
+            NodeType::File => self.files_added += 1,
+            NodeType::Dir => self.directories_added += 1,
+            _ => self.others_added += 1,
+        }
+    }
+
+    fn changed_file(&mut self) {
+        self.files_changed += 1;
+    }
+}
+
+impl Display for DiffStatistics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "Files:\t{} new,\t{} removed, \t{} changed\n",
+            self.files_added, self.files_removed, self.files_changed
+        ))?;
+        f.write_fmt(format_args!(
+            "Dirs:\t{} new,\t{} removed\n",
+            self.directories_added, self.directories_removed
+        ))?;
+        f.write_fmt(format_args!(
+            "Others:\t{} new,\t{} removed",
+            self.others_added, self.others_removed
+        ))
+    }
+}
+
 /// Compare two streams of nodes and print the differences
 ///
 /// # Arguments
@@ -207,23 +261,29 @@ fn diff(
     let mut item1 = tree_streamer1.next().transpose()?;
     let mut item2 = tree_streamer2.next().transpose()?;
 
+    let mut diff_statistics = DiffStatistics::default();
+
     loop {
         match (&item1, &item2) {
             (None, None) => break,
             (Some(i1), None) => {
                 println!("-    {:?}", i1.0);
+                diff_statistics.removed_node(&i1.1.node_type);
                 item1 = tree_streamer1.next().transpose()?;
             }
             (None, Some(i2)) => {
                 println!("+    {:?}", i2.0);
+                diff_statistics.added_node(&i2.1.node_type);
                 item2 = tree_streamer2.next().transpose()?;
             }
             (Some(i1), Some(i2)) if i1.0 < i2.0 => {
                 println!("-    {:?}", i1.0);
+                diff_statistics.removed_node(&i1.1.node_type);
                 item1 = tree_streamer1.next().transpose()?;
             }
             (Some(i1), Some(i2)) if i1.0 > i2.0 => {
                 println!("+    {:?}", i2.0);
+                diff_statistics.added_node(&i2.1.node_type);
                 item2 = tree_streamer2.next().transpose()?;
             }
             (Some(i1), Some(i2)) => {
@@ -231,16 +291,23 @@ fn diff(
                 let node1 = &i1.1;
                 let node2 = &i2.1;
                 match &node1.node_type {
-                    tpe if tpe != &node2.node_type => println!("T    {path:?}"), // type was changed
+                    tpe if tpe != &node2.node_type => {
+                        // type was changed
+                        println!("T    {path:?}");
+                        diff_statistics.changed_file();
+                    }
                     NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
                         println!("M    {path:?}");
+                        diff_statistics.changed_file();
                     }
                     NodeType::File if metadata && node1.meta != node2.meta => {
                         println!("U    {path:?}");
+                        diff_statistics.changed_file();
                     }
                     NodeType::Symlink { .. } => {
                         if node1.node_type.to_link() != node1.node_type.to_link() {
                             println!("U    {path:?}");
+                            diff_statistics.changed_file();
                         }
                     }
                     _ => {} // no difference to show
@@ -250,6 +317,6 @@ fn diff(
             }
         }
     }
-
+    println!("{diff_statistics}");
     Ok(())
 }

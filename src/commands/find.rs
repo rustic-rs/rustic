@@ -31,7 +31,7 @@ pub(crate) struct FindCmd {
     #[clap(long, value_name = "PATH")]
     path: Option<PathBuf>,
 
-    /// Snapshots to serach in. If none is given, use filter options to filter from all snapshots
+    /// Snapshots to search in. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 

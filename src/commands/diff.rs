@@ -2,7 +2,7 @@
 
 use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{tracing::warn, Command, Runnable, Shutdown};
 
 use std::{
     fmt::Display,
@@ -197,6 +197,11 @@ struct DiffStatistics {
     directories_removed: usize,
     others_added: usize,
     others_removed: usize,
+    node_type_changed: usize,
+    metadata_changed: usize,
+    symlink_added: usize,
+    symlink_removed: usize,
+    symlink_changed: usize,
 }
 
 impl DiffStatistics {
@@ -204,6 +209,7 @@ impl DiffStatistics {
         match node_type {
             NodeType::File => self.files_removed += 1,
             NodeType::Dir => self.directories_removed += 1,
+            NodeType::Symlink { .. } => self.symlink_removed += 1,
             _ => self.others_removed += 1,
         }
     }
@@ -212,6 +218,7 @@ impl DiffStatistics {
         match node_type {
             NodeType::File => self.files_added += 1,
             NodeType::Dir => self.directories_added += 1,
+            NodeType::Symlink { .. } => self.symlink_added += 1,
             _ => self.others_added += 1,
         }
     }
@@ -219,22 +226,60 @@ impl DiffStatistics {
     fn changed_file(&mut self) {
         self.files_changed += 1;
     }
+
+    fn changed_node_type(&mut self) {
+        self.node_type_changed += 1;
+    }
+
+    fn changed_metadata(&mut self) {
+        self.metadata_changed += 1;
+    }
+
+    fn changed_symlink(&mut self) {
+        self.symlink_changed += 1;
+    }
 }
 
 impl Display for DiffStatistics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "Files:\t{} new,\t{} removed, \t{} changed\n",
+            "Files   :\t{} new,\t{} removed,\t{} changed\n",
             self.files_added, self.files_removed, self.files_changed
         ))?;
+        // symlink
+        if self.symlink_added != 0 || self.symlink_removed != 0 || self.symlink_changed != 0 {
+            f.write_fmt(format_args!(
+                "Symlinks:\t{} new,\t{} removed,\t{} changed\n",
+                self.symlink_added, self.symlink_removed, self.symlink_changed
+            ))?;
+        }
         f.write_fmt(format_args!(
-            "Dirs:\t{} new,\t{} removed\n",
+            "Dirs    :\t{} new,\t{} removed\n",
             self.directories_added, self.directories_removed
         ))?;
-        f.write_fmt(format_args!(
-            "Others:\t{} new,\t{} removed",
-            self.others_added, self.others_removed
-        ))
+        if self.others_added != 0 || self.others_removed != 0 {
+            f.write_fmt(format_args!(
+                "Others  :\t{} new,\t{} removed\n",
+                self.others_added, self.others_removed
+            ))?;
+        }
+
+        // node type
+        if self.node_type_changed != 0 {
+            f.write_fmt(format_args!(
+                "NodeType:\t{} changed\n",
+                self.node_type_changed
+            ))?;
+        }
+
+        // metadata
+        if self.metadata_changed != 0 {
+            f.write_fmt(format_args!(
+                "Metadata:\t{} changed\n",
+                self.metadata_changed
+            ))?;
+        }
+        Ok(())
     }
 }
 
@@ -290,11 +335,17 @@ fn diff(
                 let path = &i1.0;
                 let node1 = &i1.1;
                 let node2 = &i2.1;
+
+                let are_both_symlink = matches!(&node1.node_type, NodeType::Symlink { .. })
+                    && matches!(&node2.node_type, NodeType::Symlink { .. });
                 match &node1.node_type {
-                    tpe if tpe != &node2.node_type => {
+                    // if node1.node_type != node2.node_type, they could be different symlinks,
+                    // for this reason we check:
+                    // that their type is different AND that they are not both symlinks
+                    tpe if tpe != &node2.node_type && !are_both_symlink => {
                         // type was changed
                         println!("T    {path:?}");
-                        diff_statistics.changed_file();
+                        diff_statistics.changed_node_type();
                     }
                     NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
                         println!("M    {path:?}");
@@ -302,12 +353,12 @@ fn diff(
                     }
                     NodeType::File if metadata && node1.meta != node2.meta => {
                         println!("U    {path:?}");
-                        diff_statistics.changed_file();
+                        diff_statistics.changed_metadata();
                     }
                     NodeType::Symlink { .. } => {
-                        if node1.node_type.to_link() != node1.node_type.to_link() {
+                        if node1.node_type.to_link() != node2.node_type.to_link() {
                             println!("U    {path:?}");
-                            diff_statistics.changed_file();
+                            diff_statistics.changed_symlink();
                         }
                     }
                     _ => {} // no difference to show

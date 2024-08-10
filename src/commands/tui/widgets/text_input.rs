@@ -32,7 +32,7 @@ impl SizedWidget for TextInput {
 
 impl Draw for TextInput {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
-        f.render_widget(self.textarea.widget(), area);
+        f.render_widget(&self.textarea, area);
     }
 }
 

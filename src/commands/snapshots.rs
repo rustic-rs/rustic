@@ -110,7 +110,7 @@ impl SnapshotCmd {
 
                 let snapshots: Vec<_> = snapshots
                     .into_iter()
-                    .group_by(|sn| if self.all { sn.id } else { sn.tree })
+                    .chunk_by(|sn| if self.all { sn.id } else { sn.tree })
                     .into_iter()
                     .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count()))
                     .collect();

@@ -105,6 +105,6 @@ fn run_app<B: Backend, P: ProgressBars, S: IndexedFull>(
 }
 
 fn ui<P: ProgressBars, S: IndexedFull>(f: &mut Frame<'_>, app: &mut App<'_, P, S>) {
-    let area = f.size();
+    let area = f.area();
     app.snapshots.draw(area, f);
 }

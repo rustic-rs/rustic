@@ -1,5 +1,5 @@
 # Improve build speed with cached deps
-ARG RUST_VERSION=1.70.0
+ARG RUST_VERSION=1.76.0
 FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION} AS chef
 WORKDIR /app
 

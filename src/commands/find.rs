@@ -85,7 +85,7 @@ impl FindCmd {
                 for (idx, g) in &matches
                     .iter()
                     .zip(snapshots.iter())
-                    .group_by(|(idx, _)| *idx)
+                    .chunk_by(|(idx, _)| *idx)
                 {
                     self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
                     if let Some(idx) = idx {
@@ -112,7 +112,7 @@ impl FindCmd {
                 for (idx, g) in &matches
                     .iter()
                     .zip(snapshots.iter())
-                    .group_by(|(idx, _)| *idx)
+                    .chunk_by(|(idx, _)| *idx)
                 {
                     self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
                     for (path_idx, node_idx) in idx {

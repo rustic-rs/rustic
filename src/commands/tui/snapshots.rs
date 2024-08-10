@@ -243,10 +243,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         for (group, snaps) in &self
             .filtered_snapshots
             .iter()
-            .group_by(|i| SnapshotGroup::from_snapshot(&self.snapshots[**i], self.group_by))
+            .chunk_by(|i| SnapshotGroup::from_snapshot(&self.snapshots[**i], self.group_by))
         {
             let mut same_id_group = Vec::new();
-            for (_, s) in &snaps.into_iter().group_by(|i| self.snapshots[**i].tree) {
+            for (_, s) in &snaps.into_iter().chunk_by(|i| self.snapshots[**i].tree) {
                 let leafs: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
                 let first = leafs[0].leaf_data().unwrap(); // Cannot be None as leafs[0] is a leaf!
                 if leafs.len() == 1 {

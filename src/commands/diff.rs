@@ -2,7 +2,7 @@
 
 use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
-use abscissa_core::{tracing::warn, Command, Runnable, Shutdown};
+use abscissa_core::{Command, Runnable, Shutdown};
 
 use std::{
     fmt::Display,

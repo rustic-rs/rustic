@@ -108,7 +108,7 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.22"
-rustic_testing = "0.1.0"
+rustic_testing = "0.2.0"
 tempfile = "3.12"
 toml = "0.8"
 

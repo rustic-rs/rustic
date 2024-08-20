@@ -41,8 +41,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
-rustic_backend = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
-rustic_core = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
+rustic_backend = { version = "0.2.0", features = ["cli"] }
+rustic_core = { version = "0.3.0", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -108,12 +108,12 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.22"
-rustic_testing = { git = "https://github.com/rustic-rs/rustic_core.git" }
+rustic_testing = "0.2.0"
 tempfile = "3.12"
 toml = "0.8"
 
 [target.'cfg(not(windows))'.dependencies]
-libc = "0.2.155"
+libc = "0.2.157"
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]

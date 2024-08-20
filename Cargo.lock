@@ -3503,9 +3503,18 @@ dependencies = [
 
 [[package]]
 name = "rustic_testing"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15555c52f5324087e757f67c01ecefaa12e7477de1d03125bc69200107b939c1"
+checksum = "3cb6ed6aec35bc76ec3b66cf07aaa49080e05052a9eceaf277ab0216f8b24ece"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "bytes",
+ "enum-map",
+ "once_cell",
+ "rustic_core",
+ "tempfile",
+]
 
 [[package]]
 name = "rustix"

@@ -14,7 +14,7 @@ _rustic() {
     fi
 
     local context curcontext="$curcontext" state line
-    _arguments "${_arguments_options[@]}" \
+    _arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -37,6 +37,7 @@ _rustic() {
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -54,7 +55,7 @@ _rustic() {
         curcontext="${curcontext%:*:*}:rustic-command-$line[1]:"
         case $line[1] in
             (backup)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--stdin-filename=[Set filename to be used when backing up from stdin]:FILENAME: ' \
 '--as-path=[Manually set backup path in snapshot]:PATH:_files' \
 '-g+[Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default\: host,label,paths)]:CRITERION: ' \
@@ -79,14 +80,16 @@ _arguments "${_arguments_options[@]}" \
 '--username=[Set '\''username'\'' in public key information]:USERNAME: ' \
 '--set-compression=[Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https\://facebook.github.io/zstd/>. Note that 0 equals to no compression]:LEVEL: ' \
 '--set-version=[Set repository version. Allowed versions\: 1,2]:VERSION: ' \
+'--set-append-only=[Set append-only mode. Note that only append-only commands work once this is set. \`forget\`, \`prune\` or \`config\` won'\''t work any longer]:SET_APPEND_ONLY:(true false)' \
 '--set-treepack-size=[Set default packsize for tree packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to \`4 MiB\` if not set]:SIZE: ' \
-'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
+'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
 '--set-treepack-growfactor=[Set grow factor for tree packs. The default packsize grows by the square root of the total size of all tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total treesize in GiB. Defaults to \`32\` (= 1MB per square root of total treesize in GiB) if not set]:FACTOR: ' \
 '--set-datapack-size=[Set default packsize for data packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to \`32 MiB\` if not set]:SIZE: ' \
 '--set-datapack-growfactor=[Set grow factor for data packs. The default packsize grows by the square root of the total size of all data packs multiplied with this factor. This means 32 kiB times this factor per square root of total datasize in GiB. Defaults to \`32\` (= 1MB per square root of total datasize in GiB) if not set]:FACTOR: ' \
-'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
+'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
 '--set-min-packsize-tolerate-percent=[Set minimum tolerated packsize in percent of the targeted packsize. Defaults to \`30\` if not set]:PERCENT: ' \
 '--set-max-packsize-tolerate-percent=[Set maximum tolerated packsize in percent of the targeted packsize A value of \`0\` means packs larger than the targeted packsize are always tolerated. Default if not set\: larger packfiles are always tolerated]:PERCENT: ' \
+'--set-extra-verify=[Do an extra verification by decompressing/decrypting all data before uploading to the repository. Default\: true]:SET_EXTRA_VERIFY:(true false)' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -126,6 +129,7 @@ _arguments "${_arguments_options[@]}" \
 '--with-created[Add '\''created'\'' date in public key information]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -135,7 +139,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (cat)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -158,6 +162,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -174,7 +179,7 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-cat-command-$line[1]:"
         case $line[1] in
             (tree-blob)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -197,6 +202,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -206,7 +212,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (data-blob)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -229,6 +235,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -238,7 +245,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -261,6 +268,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -269,7 +277,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (index)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -292,6 +300,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -301,7 +310,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (snapshot)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -324,6 +333,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -333,7 +343,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (tree)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -356,6 +366,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -365,7 +376,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__cat__help_commands" \
 "*::: :->help" \
 && ret=0
@@ -377,31 +388,31 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-cat-help-command-$line[1]:"
         case $line[1] in
             (tree-blob)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (data-blob)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (index)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (snapshot)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (tree)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -413,17 +424,19 @@ esac
 esac
 ;;
 (config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--set-compression=[Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https\://facebook.github.io/zstd/>. Note that 0 equals to no compression]:LEVEL: ' \
 '--set-version=[Set repository version. Allowed versions\: 1,2]:VERSION: ' \
+'--set-append-only=[Set append-only mode. Note that only append-only commands work once this is set. \`forget\`, \`prune\` or \`config\` won'\''t work any longer]:SET_APPEND_ONLY:(true false)' \
 '--set-treepack-size=[Set default packsize for tree packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to \`4 MiB\` if not set]:SIZE: ' \
-'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
+'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
 '--set-treepack-growfactor=[Set grow factor for tree packs. The default packsize grows by the square root of the total size of all tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total treesize in GiB. Defaults to \`32\` (= 1MB per square root of total treesize in GiB) if not set]:FACTOR: ' \
 '--set-datapack-size=[Set default packsize for data packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to \`32 MiB\` if not set]:SIZE: ' \
 '--set-datapack-growfactor=[Set grow factor for data packs. The default packsize grows by the square root of the total size of all data packs multiplied with this factor. This means 32 kiB times this factor per square root of total datasize in GiB. Defaults to \`32\` (= 1MB per square root of total datasize in GiB) if not set]:FACTOR: ' \
-'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
+'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
 '--set-min-packsize-tolerate-percent=[Set minimum tolerated packsize in percent of the targeted packsize. Defaults to \`30\` if not set]:PERCENT: ' \
 '--set-max-packsize-tolerate-percent=[Set maximum tolerated packsize in percent of the targeted packsize A value of \`0\` means packs larger than the targeted packsize are always tolerated. Default if not set\: larger packfiles are always tolerated]:PERCENT: ' \
+'--set-extra-verify=[Do an extra verification by decompressing/decrypting all data before uploading to the repository. Default\: true]:SET_EXTRA_VERIFY:(true false)' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -446,6 +459,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -454,7 +468,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (completions)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -477,6 +491,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -486,7 +501,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (check)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -511,6 +526,7 @@ _arguments "${_arguments_options[@]}" \
 '--read-data[Read all data blobs]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -519,7 +535,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (copy)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--hostname=[Set '\''hostname'\'' in public key information]:HOSTNAME: ' \
 '--username=[Set '\''username'\'' in public key information]:USERNAME: ' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
@@ -546,6 +562,7 @@ _arguments "${_arguments_options[@]}" \
 '--with-created[Add '\''created'\'' date in public key information]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -555,7 +572,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (diff)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
 '*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
 '*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
@@ -591,6 +608,7 @@ _arguments "${_arguments_options[@]}" \
 '--one-file-system[Exclude other file systems, don'\''t cross filesystem boundaries and subvolumes]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -601,7 +619,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (dump)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -624,6 +642,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -632,8 +651,49 @@ _arguments "${_arguments_options[@]}" \
 ':snap -- file from snapshot to dump:' \
 && ret=0
 ;;
+(find)
+_arguments "${_arguments_options[@]}" : \
+'(--path)*--glob=[pattern to find (can be specified multiple times)]:PATTERN: ' \
+'(--path)*--iglob=[pattern to find case-insensitive (can be specified multiple times)]:PATTERN: ' \
+'--path=[exact path to find]:PATH:_files' \
+'-g+[Group snapshots by any combination of host,label,paths,tags]:CRITERION: ' \
+'--group-by=[Group snapshots by any combination of host,label,paths,tags]:CRITERION: ' \
+'*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
+'--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
+'--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
+'(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
+'-r+[Repository to use]:REPOSITORY: ' \
+'--repository=[Repository to use]:REPOSITORY: ' \
+'--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
+'--password=[Password of the repository]:PASSWORD: ' \
+'(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
+'(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
+'--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
+'*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
+'*--filter-label=[Label to filter (can be specified multiple times)]:LABEL: ' \
+'*--filter-paths=[Path list to filter (can be specified multiple times)]:PATH[,PATH,..]: ' \
+'*--filter-tags=[Tag list to filter (can be specified multiple times)]:TAG[,TAG,..]: ' \
+'--filter-fn=[Function to filter snapshots]:FUNC: ' \
+'--all[Show all snapshots instead of summarizing snapshots with identical search results]' \
+'--show-misses[Also show snapshots which don'\''t contain a search result]' \
+'--numeric-uid-gid[Show uid/gid instead of user/group]' \
+'-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
+'--no-progress[Don'\''t show any progress bar]' \
+'--no-cache[Don'\''t use a cache]' \
+'--warm-up[Warm up needed data pack files by only requesting them without processing]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'*::ids -- Snapshots to search in. If none is given, use filter options to filter from all snapshots:' \
+&& ret=0
+;;
 (forget)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '-g+[Group snapshots by any combination of host,label,paths,tags (default\: "host,label,paths")]:CRITERION: ' \
 '--group-by=[Group snapshots by any combination of host,label,paths,tags (default\: "host,label,paths")]:CRITERION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -688,6 +748,7 @@ _arguments "${_arguments_options[@]}" \
 '--json[Show infos in json format]' \
 '(--json)--quiet[Don'\''t show any output]' \
 '--prune[Also prune the repository]' \
+'--keep-none[Allow to keep no snapshot]' \
 '--instant-delete[Delete files immediately instead of marking them. This also removes all files already marked for deletion]' \
 '--early-delete-index[Delete index files early. This allows to run prune if there is few or no space left]' \
 '--fast-repack[Simply copy blobs when repacking instead of decrypting; possibly compressing; encrypting]' \
@@ -696,6 +757,7 @@ _arguments "${_arguments_options[@]}" \
 '--no-resize[Do not repack packs which only needs to be resized]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -705,19 +767,21 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (init)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--hostname=[Set '\''hostname'\'' in public key information]:HOSTNAME: ' \
 '--username=[Set '\''username'\'' in public key information]:USERNAME: ' \
 '--set-compression=[Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https\://facebook.github.io/zstd/>. Note that 0 equals to no compression]:LEVEL: ' \
 '--set-version=[Set repository version. Allowed versions\: 1,2]:VERSION: ' \
+'--set-append-only=[Set append-only mode. Note that only append-only commands work once this is set. \`forget\`, \`prune\` or \`config\` won'\''t work any longer]:SET_APPEND_ONLY:(true false)' \
 '--set-treepack-size=[Set default packsize for tree packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to \`4 MiB\` if not set]:SIZE: ' \
-'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
+'--set-treepack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
 '--set-treepack-growfactor=[Set grow factor for tree packs. The default packsize grows by the square root of the total size of all tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total treesize in GiB. Defaults to \`32\` (= 1MB per square root of total treesize in GiB) if not set]:FACTOR: ' \
 '--set-datapack-size=[Set default packsize for data packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor. Defaults to \`32 MiB\` if not set]:SIZE: ' \
 '--set-datapack-growfactor=[Set grow factor for data packs. The default packsize grows by the square root of the total size of all data packs multiplied with this factor. This means 32 kiB times this factor per square root of total datasize in GiB. Defaults to \`32\` (= 1MB per square root of total datasize in GiB) if not set]:FACTOR: ' \
-'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get up to some MiBs larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
+'--set-datapack-size-limit=[Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger. If not set, pack sizes can grow up to approximately \`4 GiB\`]:SIZE: ' \
 '--set-min-packsize-tolerate-percent=[Set minimum tolerated packsize in percent of the targeted packsize. Defaults to \`30\` if not set]:PERCENT: ' \
 '--set-max-packsize-tolerate-percent=[Set maximum tolerated packsize in percent of the targeted packsize A value of \`0\` means packs larger than the targeted packsize are always tolerated. Default if not set\: larger packfiles are always tolerated]:PERCENT: ' \
+'--set-extra-verify=[Do an extra verification by decompressing/decrypting all data before uploading to the repository. Default\: true]:SET_EXTRA_VERIFY:(true false)' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -741,6 +805,7 @@ _arguments "${_arguments_options[@]}" \
 '--with-created[Add '\''created'\'' date in public key information]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -749,7 +814,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (key)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -772,6 +837,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -788,10 +854,10 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-key-command-$line[1]:"
         case $line[1] in
             (add)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--new-password=[New password]:NEW_PASSWORD: ' \
 '--new-password-file=[File from which to read the new password]:NEW_PASSWORD_FILE:_files' \
-'--new-password-command=[Command to get the new password from]:NEW_PASSWORD_COMMAND: ' \
+'*--new-password-command=[Command to get the new password from]:NEW_PASSWORD_COMMAND: ' \
 '--hostname=[Set '\''hostname'\'' in public key information]:HOSTNAME: ' \
 '--username=[Set '\''username'\'' in public key information]:USERNAME: ' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
@@ -817,6 +883,7 @@ _arguments "${_arguments_options[@]}" \
 '--with-created[Add '\''created'\'' date in public key information]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -825,7 +892,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__key__help_commands" \
 "*::: :->help" \
 && ret=0
@@ -837,11 +904,11 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-key-help-command-$line[1]:"
         case $line[1] in
             (add)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -853,7 +920,7 @@ esac
 esac
 ;;
 (list)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -876,6 +943,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -885,7 +953,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (ls)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
 '*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
 '*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
@@ -918,6 +986,7 @@ _arguments "${_arguments_options[@]}" \
 '--recursive[recursively list the dir]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -927,7 +996,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (merge)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--label=[Label snapshot with given label]:LABEL: ' \
 '*--tag=[Tags to add to snapshot (can be specified multiple times)]:TAG[,TAG,..]: ' \
 '--description=[Add description to snapshot]:DESCRIPTION: ' \
@@ -961,6 +1030,7 @@ _arguments "${_arguments_options[@]}" \
 '(--delete-after)--delete-never[Mark snapshot as uneraseable]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -970,7 +1040,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (snapshots)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '-g+[Group snapshots by any combination of host,label,paths,tags]:CRITERION: ' \
 '--group-by=[Group snapshots by any combination of host,label,paths,tags]:CRITERION: ' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
@@ -996,8 +1066,11 @@ _arguments "${_arguments_options[@]}" \
 '--long[Show detailed information about snapshots]' \
 '(--long)--json[Show snapshots in json format]' \
 '(--long --json)--all[Show all snapshots instead of summarizing identical follow-up snapshots]' \
+'-i[Run in interactive UI mode]' \
+'--interactive[Run in interactive UI mode]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1007,7 +1080,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (show-config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -1030,6 +1103,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1038,7 +1112,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (self-update)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -1062,6 +1136,7 @@ _arguments "${_arguments_options[@]}" \
 '(-n --dry-run)--force[Do not ask before processing the self-update]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1070,7 +1145,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (prune)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--max-repack=[Define maximum data to repack in % of reposize or as size (e.g. '\''5b'\'', '\''2 kB'\'', '\''3M'\'', '\''4TiB'\'') or '\''unlimited'\'']:LIMIT: ' \
 '--max-unused=[Tolerate limit of unused data in % of reposize after pruning or as size (e.g. '\''5b'\'', '\''2 kB'\'', '\''3M'\'', '\''4TiB'\'') or '\''unlimited'\'']:LIMIT: ' \
 '--keep-pack=[Minimum duration (e.g. 90d) to keep packs before repacking or removing. More recently created packs won'\''t be repacked or marked for deletion within this prune run]:DURATION: ' \
@@ -1104,6 +1179,7 @@ _arguments "${_arguments_options[@]}" \
 '--no-resize[Do not repack packs which only needs to be resized]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1112,7 +1188,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (restore)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*--glob=[Glob pattern to exclude/include (can be specified multiple times)]:GLOB: ' \
 '*--iglob=[Same as --glob pattern but ignores the casing of filenames]:GLOB: ' \
 '*--glob-file=[Read glob patterns to exclude/include from this file (can be specified multiple times)]:FILE: ' \
@@ -1144,6 +1220,7 @@ _arguments "${_arguments_options[@]}" \
 '--recursive[recursively list the dir]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1154,7 +1231,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (repair)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -1177,6 +1254,7 @@ _arguments "${_arguments_options[@]}" \
 '--filter-fn=[Function to filter snapshots]:FUNC: ' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1193,7 +1271,7 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-repair-command-$line[1]:"
         case $line[1] in
             (index)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -1217,6 +1295,7 @@ _arguments "${_arguments_options[@]}" \
 '--read-all[Read all data packs, i.e. completely re-create the index]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1225,7 +1304,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (snapshots)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--suffix=[Append this suffix to repaired directory or file name]:SUFFIX: ' \
 '*--tag=[Tag list to set on repaired snapshots (can be specified multiple times)]:TAG[,TAG,..]: ' \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
@@ -1251,6 +1330,7 @@ _arguments "${_arguments_options[@]}" \
 '--delete[Also remove defect snapshots]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1260,7 +1340,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__repair__help_commands" \
 "*::: :->help" \
 && ret=0
@@ -1272,15 +1352,15 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-repair-help-command-$line[1]:"
         case $line[1] in
             (index)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (snapshots)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -1292,7 +1372,7 @@ esac
 esac
 ;;
 (repoinfo)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '*-P+[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '*--use-profile=[Config profile to use. This parses the file \`<PROFILE>.toml\` in the config directory. \[default\: "rustic"\]]:PROFILE: ' \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
@@ -1318,6 +1398,7 @@ _arguments "${_arguments_options[@]}" \
 '--json[Show infos in json format]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1326,7 +1407,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (tag)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '(--remove)*--add=[Tags to add (can be specified multiple times)]:TAG[,TAG,..]: ' \
 '*--remove=[Tags to remove (can be specified multiple times)]:TAG[,TAG,..]: ' \
 '(--remove)*--set=[Tag list to set (can be specified multiple times)]:TAG[,TAG,..]: ' \
@@ -1355,6 +1436,7 @@ _arguments "${_arguments_options[@]}" \
 '(--set-delete-after)--set-delete-never[Mark snapshot as uneraseable]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1364,7 +1446,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (webdav)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 '--address=[Address to bind the webdav server to. \[default\: "localhost\:8000"\]]:ADDRESS: ' \
 '--path-template=[The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. \[default\: "\[{hostname}\]/\[{label}\]/{time}"\]]:PATH_TEMPLATE: ' \
 '--time-template=[The time template to use to display times in the path template. See https\://docs.rs/chrono/latest/chrono/format/strftime/index.html for format options. \[default\: "%Y-%m-%d_%H-%M-%S"\]]:TIME_TEMPLATE: ' \
@@ -1392,6 +1474,7 @@ _arguments "${_arguments_options[@]}" \
 '--symlinks[Use symlinks. This may not be supported by all WebDAV clients]' \
 '-n[Only show what would be done without modifying anything. Does not affect read-only commands]' \
 '--dry-run[Only show what would be done without modifying anything. Does not affect read-only commands]' \
+'--check-index[Check if index matches pack files and read pack headers if neccessary]' \
 '--no-progress[Don'\''t show any progress bar]' \
 '--no-cache[Don'\''t use a cache]' \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
@@ -1401,7 +1484,7 @@ _arguments "${_arguments_options[@]}" \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__help_commands" \
 "*::: :->help" \
 && ret=0
@@ -1413,11 +1496,11 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-help-command-$line[1]:"
         case $line[1] in
             (backup)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (cat)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__help__cat_commands" \
 "*::: :->cat" \
 && ret=0
@@ -1429,27 +1512,27 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-help-cat-command-$line[1]:"
         case $line[1] in
             (tree-blob)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (data-blob)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (index)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (snapshot)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (tree)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -1457,39 +1540,43 @@ _arguments "${_arguments_options[@]}" \
 esac
 ;;
 (config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (completions)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (check)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (copy)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (diff)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (dump)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(find)
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (forget)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (init)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (key)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__help__key_commands" \
 "*::: :->key" \
 && ret=0
@@ -1501,7 +1588,7 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-help-key-command-$line[1]:"
         case $line[1] in
             (add)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -1509,39 +1596,39 @@ _arguments "${_arguments_options[@]}" \
 esac
 ;;
 (list)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (ls)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (merge)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (snapshots)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (show-config)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (self-update)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (prune)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (restore)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (repair)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 ":: :_rustic__help__repair_commands" \
 "*::: :->repair" \
 && ret=0
@@ -1553,11 +1640,11 @@ _arguments "${_arguments_options[@]}" \
         curcontext="${curcontext%:*:*}:rustic-help-repair-command-$line[1]:"
         case $line[1] in
             (index)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (snapshots)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -1565,19 +1652,19 @@ _arguments "${_arguments_options[@]}" \
 esac
 ;;
 (repoinfo)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (tag)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (webdav)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (help)
-_arguments "${_arguments_options[@]}" \
+_arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
         esac
@@ -1600,6 +1687,7 @@ _rustic_commands() {
 'copy:Copy snapshots to other repositories. Note\: The target repositories must be given in the config file!' \
 'diff:Compare two snapshots/paths Note that the exclude options only apply for comparison with a local path' \
 'dump:dump the contents of a file in a snapshot to stdout' \
+'find:Find in given snapshots' \
 'forget:Remove snapshots from the repository' \
 'init:Initialize a new repository' \
 'key:Manage keys' \
@@ -1619,30 +1707,10 @@ _rustic_commands() {
     )
     _describe -t commands 'rustic commands' commands "$@"
 }
-(( $+functions[_rustic__help__key__add_commands] )) ||
-_rustic__help__key__add_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help key add commands' commands "$@"
-}
-(( $+functions[_rustic__key__add_commands] )) ||
-_rustic__key__add_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic key add commands' commands "$@"
-}
-(( $+functions[_rustic__key__help__add_commands] )) ||
-_rustic__key__help__add_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic key help add commands' commands "$@"
-}
 (( $+functions[_rustic__backup_commands] )) ||
 _rustic__backup_commands() {
     local commands; commands=()
     _describe -t commands 'rustic backup commands' commands "$@"
-}
-(( $+functions[_rustic__help__backup_commands] )) ||
-_rustic__help__backup_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help backup commands' commands "$@"
 }
 (( $+functions[_rustic__cat_commands] )) ||
 _rustic__cat_commands() {
@@ -1657,117 +1725,15 @@ _rustic__cat_commands() {
     )
     _describe -t commands 'rustic cat commands' commands "$@"
 }
-(( $+functions[_rustic__help__cat_commands] )) ||
-_rustic__help__cat_commands() {
-    local commands; commands=(
-'tree-blob:Display a tree blob' \
-'data-blob:Display a data blob' \
-'config:Display the config file' \
-'index:Display an index file' \
-'snapshot:Display a snapshot file' \
-'tree:Display a tree within a snapshot' \
-    )
-    _describe -t commands 'rustic help cat commands' commands "$@"
-}
-(( $+functions[_rustic__check_commands] )) ||
-_rustic__check_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic check commands' commands "$@"
-}
-(( $+functions[_rustic__help__check_commands] )) ||
-_rustic__help__check_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help check commands' commands "$@"
-}
-(( $+functions[_rustic__completions_commands] )) ||
-_rustic__completions_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic completions commands' commands "$@"
-}
-(( $+functions[_rustic__help__completions_commands] )) ||
-_rustic__help__completions_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help completions commands' commands "$@"
-}
 (( $+functions[_rustic__cat__config_commands] )) ||
 _rustic__cat__config_commands() {
     local commands; commands=()
     _describe -t commands 'rustic cat config commands' commands "$@"
 }
-(( $+functions[_rustic__cat__help__config_commands] )) ||
-_rustic__cat__help__config_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat help config commands' commands "$@"
-}
-(( $+functions[_rustic__config_commands] )) ||
-_rustic__config_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic config commands' commands "$@"
-}
-(( $+functions[_rustic__help__cat__config_commands] )) ||
-_rustic__help__cat__config_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help cat config commands' commands "$@"
-}
-(( $+functions[_rustic__help__config_commands] )) ||
-_rustic__help__config_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help config commands' commands "$@"
-}
-(( $+functions[_rustic__copy_commands] )) ||
-_rustic__copy_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic copy commands' commands "$@"
-}
-(( $+functions[_rustic__help__copy_commands] )) ||
-_rustic__help__copy_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help copy commands' commands "$@"
-}
 (( $+functions[_rustic__cat__data-blob_commands] )) ||
 _rustic__cat__data-blob_commands() {
     local commands; commands=()
     _describe -t commands 'rustic cat data-blob commands' commands "$@"
-}
-(( $+functions[_rustic__cat__help__data-blob_commands] )) ||
-_rustic__cat__help__data-blob_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat help data-blob commands' commands "$@"
-}
-(( $+functions[_rustic__help__cat__data-blob_commands] )) ||
-_rustic__help__cat__data-blob_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help cat data-blob commands' commands "$@"
-}
-(( $+functions[_rustic__diff_commands] )) ||
-_rustic__diff_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic diff commands' commands "$@"
-}
-(( $+functions[_rustic__help__diff_commands] )) ||
-_rustic__help__diff_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help diff commands' commands "$@"
-}
-(( $+functions[_rustic__dump_commands] )) ||
-_rustic__dump_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic dump commands' commands "$@"
-}
-(( $+functions[_rustic__help__dump_commands] )) ||
-_rustic__help__dump_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help dump commands' commands "$@"
-}
-(( $+functions[_rustic__forget_commands] )) ||
-_rustic__forget_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic forget commands' commands "$@"
-}
-(( $+functions[_rustic__help__forget_commands] )) ||
-_rustic__help__forget_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help forget commands' commands "$@"
 }
 (( $+functions[_rustic__cat__help_commands] )) ||
 _rustic__cat__help_commands() {
@@ -1782,10 +1748,100 @@ _rustic__cat__help_commands() {
     )
     _describe -t commands 'rustic cat help commands' commands "$@"
 }
+(( $+functions[_rustic__cat__help__config_commands] )) ||
+_rustic__cat__help__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help config commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__data-blob_commands] )) ||
+_rustic__cat__help__data-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help data-blob commands' commands "$@"
+}
 (( $+functions[_rustic__cat__help__help_commands] )) ||
 _rustic__cat__help__help_commands() {
     local commands; commands=()
     _describe -t commands 'rustic cat help help commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__index_commands] )) ||
+_rustic__cat__help__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help index commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__snapshot_commands] )) ||
+_rustic__cat__help__snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help snapshot commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__tree_commands] )) ||
+_rustic__cat__help__tree_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help tree commands' commands "$@"
+}
+(( $+functions[_rustic__cat__help__tree-blob_commands] )) ||
+_rustic__cat__help__tree-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat help tree-blob commands' commands "$@"
+}
+(( $+functions[_rustic__cat__index_commands] )) ||
+_rustic__cat__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat index commands' commands "$@"
+}
+(( $+functions[_rustic__cat__snapshot_commands] )) ||
+_rustic__cat__snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat snapshot commands' commands "$@"
+}
+(( $+functions[_rustic__cat__tree_commands] )) ||
+_rustic__cat__tree_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat tree commands' commands "$@"
+}
+(( $+functions[_rustic__cat__tree-blob_commands] )) ||
+_rustic__cat__tree-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic cat tree-blob commands' commands "$@"
+}
+(( $+functions[_rustic__check_commands] )) ||
+_rustic__check_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic check commands' commands "$@"
+}
+(( $+functions[_rustic__completions_commands] )) ||
+_rustic__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic completions commands' commands "$@"
+}
+(( $+functions[_rustic__config_commands] )) ||
+_rustic__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic config commands' commands "$@"
+}
+(( $+functions[_rustic__copy_commands] )) ||
+_rustic__copy_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic copy commands' commands "$@"
+}
+(( $+functions[_rustic__diff_commands] )) ||
+_rustic__diff_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic diff commands' commands "$@"
+}
+(( $+functions[_rustic__dump_commands] )) ||
+_rustic__dump_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic dump commands' commands "$@"
+}
+(( $+functions[_rustic__find_commands] )) ||
+_rustic__find_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic find commands' commands "$@"
+}
+(( $+functions[_rustic__forget_commands] )) ||
+_rustic__forget_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic forget commands' commands "$@"
 }
 (( $+functions[_rustic__help_commands] )) ||
 _rustic__help_commands() {
@@ -1798,6 +1854,7 @@ _rustic__help_commands() {
 'copy:Copy snapshots to other repositories. Note\: The target repositories must be given in the config file!' \
 'diff:Compare two snapshots/paths Note that the exclude options only apply for comparison with a local path' \
 'dump:dump the contents of a file in a snapshot to stdout' \
+'find:Find in given snapshots' \
 'forget:Remove snapshots from the repository' \
 'init:Initialize a new repository' \
 'key:Manage keys' \
@@ -1817,10 +1874,205 @@ _rustic__help_commands() {
     )
     _describe -t commands 'rustic help commands' commands "$@"
 }
+(( $+functions[_rustic__help__backup_commands] )) ||
+_rustic__help__backup_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help backup commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat_commands] )) ||
+_rustic__help__cat_commands() {
+    local commands; commands=(
+'tree-blob:Display a tree blob' \
+'data-blob:Display a data blob' \
+'config:Display the config file' \
+'index:Display an index file' \
+'snapshot:Display a snapshot file' \
+'tree:Display a tree within a snapshot' \
+    )
+    _describe -t commands 'rustic help cat commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__config_commands] )) ||
+_rustic__help__cat__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat config commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__data-blob_commands] )) ||
+_rustic__help__cat__data-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat data-blob commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__index_commands] )) ||
+_rustic__help__cat__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat index commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__snapshot_commands] )) ||
+_rustic__help__cat__snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat snapshot commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__tree_commands] )) ||
+_rustic__help__cat__tree_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat tree commands' commands "$@"
+}
+(( $+functions[_rustic__help__cat__tree-blob_commands] )) ||
+_rustic__help__cat__tree-blob_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help cat tree-blob commands' commands "$@"
+}
+(( $+functions[_rustic__help__check_commands] )) ||
+_rustic__help__check_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help check commands' commands "$@"
+}
+(( $+functions[_rustic__help__completions_commands] )) ||
+_rustic__help__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help completions commands' commands "$@"
+}
+(( $+functions[_rustic__help__config_commands] )) ||
+_rustic__help__config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help config commands' commands "$@"
+}
+(( $+functions[_rustic__help__copy_commands] )) ||
+_rustic__help__copy_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help copy commands' commands "$@"
+}
+(( $+functions[_rustic__help__diff_commands] )) ||
+_rustic__help__diff_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help diff commands' commands "$@"
+}
+(( $+functions[_rustic__help__dump_commands] )) ||
+_rustic__help__dump_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help dump commands' commands "$@"
+}
+(( $+functions[_rustic__help__find_commands] )) ||
+_rustic__help__find_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help find commands' commands "$@"
+}
+(( $+functions[_rustic__help__forget_commands] )) ||
+_rustic__help__forget_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help forget commands' commands "$@"
+}
 (( $+functions[_rustic__help__help_commands] )) ||
 _rustic__help__help_commands() {
     local commands; commands=()
     _describe -t commands 'rustic help help commands' commands "$@"
+}
+(( $+functions[_rustic__help__init_commands] )) ||
+_rustic__help__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help init commands' commands "$@"
+}
+(( $+functions[_rustic__help__key_commands] )) ||
+_rustic__help__key_commands() {
+    local commands; commands=(
+'add:Add a new key to the repository' \
+    )
+    _describe -t commands 'rustic help key commands' commands "$@"
+}
+(( $+functions[_rustic__help__key__add_commands] )) ||
+_rustic__help__key__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help key add commands' commands "$@"
+}
+(( $+functions[_rustic__help__list_commands] )) ||
+_rustic__help__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help list commands' commands "$@"
+}
+(( $+functions[_rustic__help__ls_commands] )) ||
+_rustic__help__ls_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help ls commands' commands "$@"
+}
+(( $+functions[_rustic__help__merge_commands] )) ||
+_rustic__help__merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help merge commands' commands "$@"
+}
+(( $+functions[_rustic__help__prune_commands] )) ||
+_rustic__help__prune_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help prune commands' commands "$@"
+}
+(( $+functions[_rustic__help__repair_commands] )) ||
+_rustic__help__repair_commands() {
+    local commands; commands=(
+'index:Repair the repository index' \
+'snapshots:Repair snapshots' \
+    )
+    _describe -t commands 'rustic help repair commands' commands "$@"
+}
+(( $+functions[_rustic__help__repair__index_commands] )) ||
+_rustic__help__repair__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help repair index commands' commands "$@"
+}
+(( $+functions[_rustic__help__repair__snapshots_commands] )) ||
+_rustic__help__repair__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help repair snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__help__repoinfo_commands] )) ||
+_rustic__help__repoinfo_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help repoinfo commands' commands "$@"
+}
+(( $+functions[_rustic__help__restore_commands] )) ||
+_rustic__help__restore_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help restore commands' commands "$@"
+}
+(( $+functions[_rustic__help__self-update_commands] )) ||
+_rustic__help__self-update_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help self-update commands' commands "$@"
+}
+(( $+functions[_rustic__help__show-config_commands] )) ||
+_rustic__help__show-config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help show-config commands' commands "$@"
+}
+(( $+functions[_rustic__help__snapshots_commands] )) ||
+_rustic__help__snapshots_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__help__tag_commands] )) ||
+_rustic__help__tag_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help tag commands' commands "$@"
+}
+(( $+functions[_rustic__help__webdav_commands] )) ||
+_rustic__help__webdav_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic help webdav commands' commands "$@"
+}
+(( $+functions[_rustic__init_commands] )) ||
+_rustic__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic init commands' commands "$@"
+}
+(( $+functions[_rustic__key_commands] )) ||
+_rustic__key_commands() {
+    local commands; commands=(
+'add:Add a new key to the repository' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic key commands' commands "$@"
+}
+(( $+functions[_rustic__key__add_commands] )) ||
+_rustic__key__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic key add commands' commands "$@"
 }
 (( $+functions[_rustic__key__help_commands] )) ||
 _rustic__key__help_commands() {
@@ -1830,10 +2082,44 @@ _rustic__key__help_commands() {
     )
     _describe -t commands 'rustic key help commands' commands "$@"
 }
+(( $+functions[_rustic__key__help__add_commands] )) ||
+_rustic__key__help__add_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic key help add commands' commands "$@"
+}
 (( $+functions[_rustic__key__help__help_commands] )) ||
 _rustic__key__help__help_commands() {
     local commands; commands=()
     _describe -t commands 'rustic key help help commands' commands "$@"
+}
+(( $+functions[_rustic__list_commands] )) ||
+_rustic__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic list commands' commands "$@"
+}
+(( $+functions[_rustic__ls_commands] )) ||
+_rustic__ls_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic ls commands' commands "$@"
+}
+(( $+functions[_rustic__merge_commands] )) ||
+_rustic__merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic merge commands' commands "$@"
+}
+(( $+functions[_rustic__prune_commands] )) ||
+_rustic__prune_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic prune commands' commands "$@"
+}
+(( $+functions[_rustic__repair_commands] )) ||
+_rustic__repair_commands() {
+    local commands; commands=(
+'index:Repair the repository index' \
+'snapshots:Repair snapshots' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'rustic repair commands' commands "$@"
 }
 (( $+functions[_rustic__repair__help_commands] )) ||
 _rustic__repair__help_commands() {
@@ -1849,242 +2135,55 @@ _rustic__repair__help__help_commands() {
     local commands; commands=()
     _describe -t commands 'rustic repair help help commands' commands "$@"
 }
-(( $+functions[_rustic__cat__help__index_commands] )) ||
-_rustic__cat__help__index_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat help index commands' commands "$@"
-}
-(( $+functions[_rustic__cat__index_commands] )) ||
-_rustic__cat__index_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat index commands' commands "$@"
-}
-(( $+functions[_rustic__help__cat__index_commands] )) ||
-_rustic__help__cat__index_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help cat index commands' commands "$@"
-}
-(( $+functions[_rustic__help__repair__index_commands] )) ||
-_rustic__help__repair__index_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help repair index commands' commands "$@"
-}
 (( $+functions[_rustic__repair__help__index_commands] )) ||
 _rustic__repair__help__index_commands() {
     local commands; commands=()
     _describe -t commands 'rustic repair help index commands' commands "$@"
-}
-(( $+functions[_rustic__repair__index_commands] )) ||
-_rustic__repair__index_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic repair index commands' commands "$@"
-}
-(( $+functions[_rustic__help__init_commands] )) ||
-_rustic__help__init_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help init commands' commands "$@"
-}
-(( $+functions[_rustic__init_commands] )) ||
-_rustic__init_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic init commands' commands "$@"
-}
-(( $+functions[_rustic__help__key_commands] )) ||
-_rustic__help__key_commands() {
-    local commands; commands=(
-'add:Add a new key to the repository' \
-    )
-    _describe -t commands 'rustic help key commands' commands "$@"
-}
-(( $+functions[_rustic__key_commands] )) ||
-_rustic__key_commands() {
-    local commands; commands=(
-'add:Add a new key to the repository' \
-'help:Print this message or the help of the given subcommand(s)' \
-    )
-    _describe -t commands 'rustic key commands' commands "$@"
-}
-(( $+functions[_rustic__help__list_commands] )) ||
-_rustic__help__list_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help list commands' commands "$@"
-}
-(( $+functions[_rustic__list_commands] )) ||
-_rustic__list_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic list commands' commands "$@"
-}
-(( $+functions[_rustic__help__ls_commands] )) ||
-_rustic__help__ls_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help ls commands' commands "$@"
-}
-(( $+functions[_rustic__ls_commands] )) ||
-_rustic__ls_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic ls commands' commands "$@"
-}
-(( $+functions[_rustic__help__merge_commands] )) ||
-_rustic__help__merge_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help merge commands' commands "$@"
-}
-(( $+functions[_rustic__merge_commands] )) ||
-_rustic__merge_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic merge commands' commands "$@"
-}
-(( $+functions[_rustic__help__prune_commands] )) ||
-_rustic__help__prune_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help prune commands' commands "$@"
-}
-(( $+functions[_rustic__prune_commands] )) ||
-_rustic__prune_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic prune commands' commands "$@"
-}
-(( $+functions[_rustic__help__repair_commands] )) ||
-_rustic__help__repair_commands() {
-    local commands; commands=(
-'index:Repair the repository index' \
-'snapshots:Repair snapshots' \
-    )
-    _describe -t commands 'rustic help repair commands' commands "$@"
-}
-(( $+functions[_rustic__repair_commands] )) ||
-_rustic__repair_commands() {
-    local commands; commands=(
-'index:Repair the repository index' \
-'snapshots:Repair snapshots' \
-'help:Print this message or the help of the given subcommand(s)' \
-    )
-    _describe -t commands 'rustic repair commands' commands "$@"
-}
-(( $+functions[_rustic__help__repoinfo_commands] )) ||
-_rustic__help__repoinfo_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help repoinfo commands' commands "$@"
-}
-(( $+functions[_rustic__repoinfo_commands] )) ||
-_rustic__repoinfo_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic repoinfo commands' commands "$@"
-}
-(( $+functions[_rustic__help__restore_commands] )) ||
-_rustic__help__restore_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help restore commands' commands "$@"
-}
-(( $+functions[_rustic__restore_commands] )) ||
-_rustic__restore_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic restore commands' commands "$@"
-}
-(( $+functions[_rustic__help__self-update_commands] )) ||
-_rustic__help__self-update_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help self-update commands' commands "$@"
-}
-(( $+functions[_rustic__self-update_commands] )) ||
-_rustic__self-update_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic self-update commands' commands "$@"
-}
-(( $+functions[_rustic__help__show-config_commands] )) ||
-_rustic__help__show-config_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help show-config commands' commands "$@"
-}
-(( $+functions[_rustic__show-config_commands] )) ||
-_rustic__show-config_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic show-config commands' commands "$@"
-}
-(( $+functions[_rustic__cat__help__snapshot_commands] )) ||
-_rustic__cat__help__snapshot_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat help snapshot commands' commands "$@"
-}
-(( $+functions[_rustic__cat__snapshot_commands] )) ||
-_rustic__cat__snapshot_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat snapshot commands' commands "$@"
-}
-(( $+functions[_rustic__help__cat__snapshot_commands] )) ||
-_rustic__help__cat__snapshot_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help cat snapshot commands' commands "$@"
-}
-(( $+functions[_rustic__help__repair__snapshots_commands] )) ||
-_rustic__help__repair__snapshots_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help repair snapshots commands' commands "$@"
-}
-(( $+functions[_rustic__help__snapshots_commands] )) ||
-_rustic__help__snapshots_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help snapshots commands' commands "$@"
 }
 (( $+functions[_rustic__repair__help__snapshots_commands] )) ||
 _rustic__repair__help__snapshots_commands() {
     local commands; commands=()
     _describe -t commands 'rustic repair help snapshots commands' commands "$@"
 }
+(( $+functions[_rustic__repair__index_commands] )) ||
+_rustic__repair__index_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repair index commands' commands "$@"
+}
 (( $+functions[_rustic__repair__snapshots_commands] )) ||
 _rustic__repair__snapshots_commands() {
     local commands; commands=()
     _describe -t commands 'rustic repair snapshots commands' commands "$@"
+}
+(( $+functions[_rustic__repoinfo_commands] )) ||
+_rustic__repoinfo_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic repoinfo commands' commands "$@"
+}
+(( $+functions[_rustic__restore_commands] )) ||
+_rustic__restore_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic restore commands' commands "$@"
+}
+(( $+functions[_rustic__self-update_commands] )) ||
+_rustic__self-update_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic self-update commands' commands "$@"
+}
+(( $+functions[_rustic__show-config_commands] )) ||
+_rustic__show-config_commands() {
+    local commands; commands=()
+    _describe -t commands 'rustic show-config commands' commands "$@"
 }
 (( $+functions[_rustic__snapshots_commands] )) ||
 _rustic__snapshots_commands() {
     local commands; commands=()
     _describe -t commands 'rustic snapshots commands' commands "$@"
 }
-(( $+functions[_rustic__help__tag_commands] )) ||
-_rustic__help__tag_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help tag commands' commands "$@"
-}
 (( $+functions[_rustic__tag_commands] )) ||
 _rustic__tag_commands() {
     local commands; commands=()
     _describe -t commands 'rustic tag commands' commands "$@"
-}
-(( $+functions[_rustic__cat__help__tree_commands] )) ||
-_rustic__cat__help__tree_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat help tree commands' commands "$@"
-}
-(( $+functions[_rustic__cat__tree_commands] )) ||
-_rustic__cat__tree_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat tree commands' commands "$@"
-}
-(( $+functions[_rustic__help__cat__tree_commands] )) ||
-_rustic__help__cat__tree_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help cat tree commands' commands "$@"
-}
-(( $+functions[_rustic__cat__help__tree-blob_commands] )) ||
-_rustic__cat__help__tree-blob_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat help tree-blob commands' commands "$@"
-}
-(( $+functions[_rustic__cat__tree-blob_commands] )) ||
-_rustic__cat__tree-blob_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic cat tree-blob commands' commands "$@"
-}
-(( $+functions[_rustic__help__cat__tree-blob_commands] )) ||
-_rustic__help__cat__tree-blob_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help cat tree-blob commands' commands "$@"
-}
-(( $+functions[_rustic__help__webdav_commands] )) ||
-_rustic__help__webdav_commands() {
-    local commands; commands=()
-    _describe -t commands 'rustic help webdav commands' commands "$@"
 }
 (( $+functions[_rustic__webdav_commands] )) ||
 _rustic__webdav_commands() {

@@ -17,6 +17,7 @@ use rustic_core::{
     SnapshotGroupCriterion,
 };
 
+#[cfg(feature = "tui")]
 use super::tui;
 
 /// `snapshot` subcommand
@@ -47,6 +48,7 @@ pub(crate) struct SnapshotCmd {
     #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
 
+    #[cfg(feature = "tui")]
     /// Run in interactive UI mode
     #[clap(long, short)]
     pub interactive: bool,
@@ -63,6 +65,7 @@ impl Runnable for SnapshotCmd {
 
 impl SnapshotCmd {
     fn inner_run(&self) -> Result<()> {
+        #[cfg(feature = "tui")]
         if self.interactive {
             return tui::run(self.group_by);
         }

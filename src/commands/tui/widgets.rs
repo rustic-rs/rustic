@@ -49,7 +49,18 @@ pub fn popup_input(
     lines: u16,
 ) -> PopUpInput {
     PopUp(WithBlock::new(
-        TextInput::new(text, initial, lines),
+        TextInput::new(Some(text), initial, lines, false),
+        Block::bordered().title(title),
+    ))
+}
+
+pub fn popup_scrollable_text(
+    title: impl Into<Title<'static>>,
+    text: &str,
+    lines: u16,
+) -> PopUpInput {
+    PopUp(WithBlock::new(
+        TextInput::new(None, text, lines, false),
         Block::bordered().title(title),
     ))
 }

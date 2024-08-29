@@ -1,11 +1,12 @@
 use super::*;
 
 use crossterm::event::KeyModifiers;
-use tui_textarea::TextArea;
+use tui_textarea::{CursorMove, TextArea};
 
 pub struct TextInput {
     textarea: TextArea<'static>,
     lines: u16,
+    changeable: bool,
 }
 
 pub enum TextInputResult {
@@ -15,12 +16,21 @@ pub enum TextInputResult {
 }
 
 impl TextInput {
-    pub fn new(text: &str, initial: &str, lines: u16) -> Self {
+    pub fn new(text: Option<&str>, initial: &str, lines: u16, changeable: bool) -> Self {
         let mut textarea = TextArea::default();
         textarea.set_style(Style::default());
-        textarea.set_placeholder_text(text);
+        if let Some(text) = text {
+            textarea.set_placeholder_text(text);
+        }
         _ = textarea.insert_str(initial);
-        Self { textarea, lines }
+        if !changeable {
+            textarea.move_cursor(CursorMove::Top)
+        }
+        Self {
+            textarea,
+            lines,
+            changeable,
+        }
     }
 }
 
@@ -40,22 +50,29 @@ impl ProcessEvent for TextInput {
     type Result = TextInputResult;
     fn input(&mut self, event: Event) -> TextInputResult {
         if let Event::Key(key) = event {
+            let KeyEvent {
+                code, modifiers, ..
+            } = key;
             use KeyCode::*;
-            match key {
-                KeyEvent { code: Esc, .. } => return TextInputResult::Cancel,
-                KeyEvent { code: Enter, .. } if self.lines == 1 => {
+            match (code, modifiers) {
+                (Esc, _) => return TextInputResult::Cancel,
+                (Char('q') | Char('x'), _) if !self.changeable => return TextInputResult::Cancel,
+                (Enter, _) if self.lines == 1 => {
                     return TextInputResult::Input(self.textarea.lines().join("\n"));
                 }
-                KeyEvent {
-                    code: Char('s'),
-                    modifiers: KeyModifiers::CONTROL,
-                    ..
-                } => {
+                (Char('s'), KeyModifiers::CONTROL) => {
                     return TextInputResult::Input(self.textarea.lines().join("\n"));
                 }
-                key => {
+                (Home, _) if !self.changeable => {
+                    self.textarea.move_cursor(CursorMove::Top);
+                }
+                (End, _) if !self.changeable => {
+                    self.textarea.move_cursor(CursorMove::Bottom);
+                }
+                (code, _) if self.changeable | matches!(code, PageDown | PageUp | Up | Down) => {
                     _ = self.textarea.input(key);
                 }
+                _ => {}
             }
         }
         TextInputResult::None

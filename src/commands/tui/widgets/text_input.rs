@@ -24,7 +24,7 @@ impl TextInput {
         }
         _ = textarea.insert_str(initial);
         if !changeable {
-            textarea.move_cursor(CursorMove::Top)
+            textarea.move_cursor(CursorMove::Top);
         }
         Self {
             textarea,

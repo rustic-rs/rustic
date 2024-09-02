@@ -1,11 +1,11 @@
 //! Rustic Abscissa Application
-use std::env;
+use std::{env, process};
 
 use abscissa_core::{
-    application::{self, AppCell},
+    application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
     terminal::component::Terminal,
-    Application, Component, FrameworkError, StandardPaths,
+    Application, Component, FrameworkError, Shutdown, StandardPaths,
 };
 
 use anyhow::Result;
@@ -98,5 +98,25 @@ impl Application for RusticApp {
         self.config.set_once(config);
 
         Ok(())
+    }
+
+    /// Shut down this application gracefully
+    fn shutdown(&self, shutdown: Shutdown) -> ! {
+        let exit_code = match shutdown {
+            Shutdown::Crash => 1,
+            _ => 0,
+        };
+        self.shutdown_with_exitcode(shutdown, exit_code)
+    }
+}
+
+impl RusticApp {
+    /// Shut down this application gracefully, exiting with given exit code.
+    fn shutdown_with_exitcode(&self, shutdown: Shutdown, exit_code: i32) -> ! {
+        if let Err(e) = self.state().components().shutdown(self, shutdown) {
+            fatal_error(self, &e)
+        }
+
+        process::exit(exit_code);
     }
 }

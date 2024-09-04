@@ -14,6 +14,10 @@ use rustic_core::{ConfigOptions, CredentialOptions, Credentials, KeyOptions};
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct InitCmd {
+    /// initialize hot repository for existing cold repository
+    #[clap(long)]
+    hot_only: bool,
+
     /// Key options
     #[clap(flatten, next_help_heading = "Key options")]
     key_opts: KeyOptions,
@@ -40,18 +44,33 @@ impl InitCmd {
     fn inner_run(&self, repo: Repo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        // Note: This is again checked in init(), however we want to inform
-        // users before they are prompted to enter a password
-        if repo.config_id()?.is_some() {
-            bail!("Config file already exists. Aborting.");
-        }
-
         // Handle dry-run mode
         if config.global.dry_run {
             bail!(
                 "cannot initialize repository {} in dry-run mode!",
                 repo.name
             );
+        }
+
+        if self.hot_only {
+            if config.repository.be.repo_hot.is_none() {
+                bail!("please specify a hot repository");
+            }
+            let repo = repo
+                .open_with(&config.repository.credential_opts, |repo, credentials| {
+                    repo.open_only_cold(credentials)
+                })?;
+            repo.init_hot()?;
+            repo.repair_hotcold_except_packs(config.global.dry_run)?;
+            repo.repair_hotcold_packs(config.global.dry_run)?;
+
+            return Ok(());
+        }
+
+        // Note: This is again checked in init(), however we want to inform
+        // users before they are prompted to enter a password
+        if repo.config_id()?.is_some() {
+            bail!("Config file already exists. Aborting.");
         }
 
         let _ = init(

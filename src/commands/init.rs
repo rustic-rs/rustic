@@ -8,6 +8,8 @@ use crate::{commands::get_repository, Application, RUSTIC_APP};
 
 use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 
+use super::handle_password;
+
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct InitCmd {
@@ -18,6 +20,10 @@ pub(crate) struct InitCmd {
     /// Config options
     #[clap(flatten, next_help_heading = "Config options")]
     config_opts: ConfigOptions,
+
+    /// initialize hot repository for existing cold repository
+    #[clap(long)]
+    hot_only: bool,
 }
 
 impl Runnable for InitCmd {
@@ -32,20 +38,31 @@ impl Runnable for InitCmd {
 impl InitCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+
+        // Handle dry-run mode
+        if config.global.dry_run {
+            bail!("cannot initialize repository in dry-run mode!");
+        }
+
         let repo = get_repository(&config.repository)?;
+        if self.hot_only {
+            if config.repository.be.repo_hot.is_none() {
+                bail!("please specify a hot repository");
+            }
+            repo.repair_hotcold_except_packs(false)?;
+            let repo = handle_password(repo.password()?, |pass| {
+                repo.clone().open_with_password_only_cold(pass)
+            })?;
+            repo.init_hot()?;
+            repo.repair_hotcold_packs(false)?;
+
+            return Ok(());
+        }
 
         // Note: This is again checked in repo.init_with_password(), however we want to inform
         // users before they are prompted to enter a password
         if repo.config_id()?.is_some() {
             bail!("Config file already exists. Aborting.");
-        }
-
-        // Handle dry-run mode
-        if config.global.dry_run {
-            bail!(
-                "cannot initialize repository {} in dry-run mode!",
-                repo.name
-            );
         }
 
         let _ = init(repo, &self.key_opts, &self.config_opts)?;

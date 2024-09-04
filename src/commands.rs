@@ -60,7 +60,7 @@ use convert_case::{Case, Casing};
 use dialoguer::Password;
 use human_panic::setup_panic;
 use log::{log, warn, Level};
-use rustic_core::{IndexedFull, OpenStatus, ProgressBars, Repository};
+use rustic_core::{IndexedFull, OpenStatus, ProgressBars, Repository, RusticResult};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 use self::find::FindCmd;
@@ -338,10 +338,19 @@ fn open_repository_with_progress<P: Clone>(
         warn!("Option check-index is not supported and will be ignored!");
     }
     let repo = get_repository_with_progress(repo_opts, po)?;
-    match repo.password()? {
+    handle_password(repo.password()?, |pass| {
+        repo.clone().open_with_password(pass)
+    })
+}
+
+fn handle_password<P: Clone>(
+    pass: Option<String>,
+    open: impl Fn(&str) -> RusticResult<Repository<P, OpenStatus>>,
+) -> Result<Repository<P, OpenStatus>> {
+    match pass {
         // if password is given, directly return the result of find_key_in_backend and don't retry
         Some(pass) => {
-            return Ok(repo.open_with_password(&pass)?);
+            return Ok(open(&pass)?);
         }
         None => {
             for _ in 0..constants::MAX_PASSWORD_RETRIES {
@@ -349,7 +358,7 @@ fn open_repository_with_progress<P: Clone>(
                     .with_prompt("enter repository password")
                     .allow_empty_password(true)
                     .interact()?;
-                match repo.clone().open_with_password(&pass) {
+                match open(&pass) {
                     Ok(repo) => return Ok(repo),
                     Err(err) if err.is_incorrect_password() => continue,
                     Err(err) => return Err(err.into()),

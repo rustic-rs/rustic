@@ -6,6 +6,7 @@ use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_A
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use clap::ValueHint;
 use globset::{Glob, GlobBuilder, GlobSetBuilder};
 use itertools::Itertools;
 
@@ -28,7 +29,7 @@ pub(crate) struct FindCmd {
     iglob: Vec<String>,
 
     /// exact path to find
-    #[clap(long, value_name = "PATH")]
+    #[clap(long, value_name = "PATH", value_hint = ValueHint::AnyPath)]
     path: Option<PathBuf>,
 
     /// Snapshots to search in. If none is given, use filter options to filter from all snapshots

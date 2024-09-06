@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
-      - uses: EmbarkStudios/cargo-deny-action@2fad0807be2b6f4402fd9dd4225aa4e91b9ad879 # v1
+      - uses: EmbarkStudios/cargo-deny-action@3f4a782664881cf5725d0ffd23969fcce89fd868 # v1
         with:
           command: check bans licenses sources
 

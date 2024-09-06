@@ -113,8 +113,8 @@ impl Application for RusticApp {
 impl RusticApp {
     /// Shut down this application gracefully, exiting with given exit code.
     fn shutdown_with_exitcode(&self, shutdown: Shutdown, exit_code: i32) -> ! {
-        let result = self.state().components().shutdown(self, shutdown) {
-        if let Err(e) = result
+        let result = self.state().components().shutdown(self, shutdown);
+        if let Err(e) = result {
             fatal_error(self, &e)
         }
 

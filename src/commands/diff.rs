@@ -3,6 +3,7 @@
 use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
+use clap::ValueHint;
 
 use std::{
     fmt::Display,
@@ -25,7 +26,7 @@ pub(crate) struct DiffCmd {
     snap1: String,
 
     /// New snapshot/path or local path [default for PATH2: PATH1]
-    #[clap(value_name = "SNAPSHOT2[:PATH2]|PATH2")]
+    #[clap(value_name = "SNAPSHOT2[:PATH2]|PATH2", value_hint = ValueHint::AnyPath)]
     snap2: String,
 
     /// show differences in metadata

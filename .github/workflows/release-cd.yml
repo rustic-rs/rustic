@@ -131,7 +131,7 @@ jobs:
           fetch-depth: 0 # fetch all history so that git describe works
 
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
 
       - name: Creating Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1

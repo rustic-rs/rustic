@@ -41,7 +41,7 @@ General Commands:
       q,Esc : exit
       Enter : enter dir
   Backspace : return to parent dir
-          v : view file contents (up to 1MiB)
+          v : view file contents (text files only, up to 1MiB)
           r : restore selected item
           n : toggle numeric IDs
           ? : show this help page
@@ -217,18 +217,20 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                                     if let Ok(data) = OpenFile::from_node(self.repo, node).read_at(
                                         self.repo,
                                         0,
-                                        node.meta.size.min(1000000).try_into().unwrap(),
+                                        node.meta.size.min(1_000_000).try_into().unwrap(),
                                     ) {
-                                        let content = String::from_utf8_lossy(&data);
-                                        let lines = content.lines().count();
-                                        let path = self.path.join(node.name());
-                                        let path = path.display();
-                                        self.current_screen =
-                                            CurrentScreen::ShowFile(popup_scrollable_text(
-                                                format!("{}:/{path}", self.snapshot.id),
-                                                &content,
-                                                (lines + 1).min(40).try_into().unwrap(),
-                                            ));
+                                        // viewing is only supported for text files
+                                        if let Ok(content) = String::from_utf8(data.to_vec()) {
+                                            let lines = content.lines().count();
+                                            let path = self.path.join(node.name());
+                                            let path = path.display();
+                                            self.current_screen =
+                                                CurrentScreen::ShowFile(popup_scrollable_text(
+                                                    format!("{}:/{path}", self.snapshot.id),
+                                                    &content,
+                                                    (lines + 1).min(40).try_into().unwrap(),
+                                                ));
+                                        }
                                     }
                                 }
                             }

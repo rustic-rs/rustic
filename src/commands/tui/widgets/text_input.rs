@@ -54,25 +54,33 @@ impl ProcessEvent for TextInput {
                 code, modifiers, ..
             } = key;
             use KeyCode::*;
-            match (code, modifiers) {
-                (Esc, _) => return TextInputResult::Cancel,
-                (Char('q') | Char('x'), _) if !self.changeable => return TextInputResult::Cancel,
-                (Enter, _) if self.lines == 1 => {
-                    return TextInputResult::Input(self.textarea.lines().join("\n"));
+            if self.changeable {
+                match (code, modifiers) {
+                    (Esc, _) => return TextInputResult::Cancel,
+                    (Enter, _) if self.lines == 1 => {
+                        return TextInputResult::Input(self.textarea.lines().join("\n"));
+                    }
+                    (Char('s'), KeyModifiers::CONTROL) => {
+                        return TextInputResult::Input(self.textarea.lines().join("\n"));
+                    }
+                    _ => {
+                        _ = self.textarea.input(key);
+                    }
                 }
-                (Char('s'), KeyModifiers::CONTROL) => {
-                    return TextInputResult::Input(self.textarea.lines().join("\n"));
+            } else {
+                match (code, modifiers) {
+                    (Esc | Enter | Char('q') | Char('x'), _) => return TextInputResult::Cancel,
+                    (Home, _) => {
+                        self.textarea.move_cursor(CursorMove::Top);
+                    }
+                    (End, _) => {
+                        self.textarea.move_cursor(CursorMove::Bottom);
+                    }
+                    (code, _) if matches!(code, PageDown | PageUp | Up | Down) => {
+                        _ = self.textarea.input(key);
+                    }
+                    _ => {}
                 }
-                (Home, _) if !self.changeable => {
-                    self.textarea.move_cursor(CursorMove::Top);
-                }
-                (End, _) if !self.changeable => {
-                    self.textarea.move_cursor(CursorMove::Bottom);
-                }
-                (code, _) if self.changeable | matches!(code, PageDown | PageUp | Up | Down) => {
-                    _ = self.textarea.input(key);
-                }
-                _ => {}
             }
         }
         TextInputResult::None

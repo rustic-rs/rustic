@@ -49,7 +49,7 @@ pub fn popup_input(
     lines: u16,
 ) -> PopUpInput {
     PopUp(WithBlock::new(
-        TextInput::new(Some(text), initial, lines, false),
+        TextInput::new(Some(text), initial, lines, true),
         Block::bordered().title(title),
     ))
 }

@@ -555,8 +555,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.get_snap_entity(|snap| snap.description.clone().unwrap_or_default())
     }
 
-    pub fn get_filter(&self) -> String {
-        toml::to_string_pretty(&self.filter).unwrap()
+    pub fn get_filter(&self) -> Result<String> {
+        Ok(toml::to_string_pretty(&self.filter)?)
     }
 
     pub fn set_filter(&mut self, filter: String) {
@@ -774,7 +774,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                     self.current_screen = CurrentScreen::EnterFilter(popup_input(
                                         "set filter (Ctrl-s to confirm)",
                                         "enter filter in TOML format",
-                                        &self.get_filter(),
+                                        &self.get_filter()?,
                                         15,
                                     ));
                                 }

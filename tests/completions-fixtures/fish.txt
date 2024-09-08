@@ -28,12 +28,12 @@ complete -c rustic -n "__fish_rustic_needs_command" -s P -l use-profile -d 'Conf
 complete -c rustic -n "__fish_rustic_needs_command" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_needs_command" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_needs_command" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_needs_command" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_needs_command" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_needs_command" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_needs_command" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_needs_command" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_needs_command" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_needs_command" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_needs_command" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_needs_command" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_needs_command" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_needs_command" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -73,8 +73,8 @@ complete -c rustic -n "__fish_rustic_needs_command" -f -a "repoinfo" -d 'Show ge
 complete -c rustic -n "__fish_rustic_needs_command" -f -a "tag" -d 'Change tags of snapshots'
 complete -c rustic -n "__fish_rustic_needs_command" -f -a "webdav" -d 'Start a webdav server which allows to access the repository'
 complete -c rustic -n "__fish_rustic_needs_command" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c rustic -n "__fish_rustic_using_subcommand backup" -l stdin-filename -d 'Set filename to be used when backing up from stdin' -r
-complete -c rustic -n "__fish_rustic_using_subcommand backup" -l as-path -d 'Manually set backup path in snapshot' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand backup" -l stdin-filename -d 'Set filename to be used when backing up from stdin' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand backup" -l as-path -d 'Manually set backup path in snapshot' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -s g -l group-by -d 'Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default: host,label,paths)' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l parent -d 'Snapshot to use as parent' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l glob -d 'Glob pattern to exclude/include (can be specified multiple times)' -r
@@ -110,12 +110,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand backup" -s P -l use-profil
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand backup" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand backup" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand backup" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand backup" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand backup" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -148,12 +148,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_s
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and not __fish_seen_subcommand_from tree-blob data-blob config index snapshot tree help" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -178,12 +178,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree-blob" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -201,12 +201,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from data-blob" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -224,12 +224,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from config" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -247,12 +247,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from index" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -270,12 +270,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from snapshot" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -293,12 +293,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand cat; and __fish_seen_subcommand_from tree" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -335,12 +335,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand config" -s P -l use-profil
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand config" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand config" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand config" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand config" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand config" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand config" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -358,12 +358,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand completions" -s P -l use-p
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand completions" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand completions" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand completions" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand completions" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand completions" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -381,12 +381,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand check" -s P -l use-profile
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand check" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand check" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand check" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand check" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand check" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand check" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -408,12 +408,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand copy" -s P -l use-profile 
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand copy" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand copy" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand copy" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand copy" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand copy" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -440,12 +440,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand diff" -s P -l use-profile 
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand diff" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand diff" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand diff" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand diff" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand diff" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -468,12 +468,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand dump" -s P -l use-profile 
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand dump" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand dump" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand dump" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand dump" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand dump" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -495,12 +495,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand find" -s P -l use-profile 
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand find" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand find" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand find" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand find" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand find" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand find" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -550,12 +550,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand forget" -s P -l use-profil
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand forget" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand forget" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand forget" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand forget" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand forget" -l json -d 'Show infos in json format'
@@ -592,12 +592,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand init" -s P -l use-profile 
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand init" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand init" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand init" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand init" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand init" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand init" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -616,12 +616,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_s
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and not __fish_seen_subcommand_from add help" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -646,12 +646,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subco
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand key; and __fish_seen_subcommand_from add" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -672,12 +672,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand list" -s P -l use-profile 
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand list" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand list" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand list" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand list" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand list" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand list" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -699,12 +699,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand ls" -s P -l use-profile -d
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand ls" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand ls" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand ls" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand ls" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand ls" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -734,12 +734,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand merge" -s P -l use-profile
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand merge" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand merge" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand merge" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand merge" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand merge" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -761,12 +761,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -s P -l use-pro
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand snapshots" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -788,12 +788,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand show-config" -s P -l use-p
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand show-config" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand show-config" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand show-config" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -811,12 +811,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand self-update" -s P -l use-p
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand self-update" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand self-update" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand self-update" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -840,12 +840,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand prune" -s P -l use-profile
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand prune" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand prune" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand prune" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand prune" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand prune" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -878,12 +878,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand restore" -s P -l use-profi
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand restore" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand restore" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand restore" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand restore" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand restore" -l delete -d 'Remove all files/dirs in destination which are not contained in snapshot'
@@ -901,12 +901,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_see
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and not __fish_seen_subcommand_from index snapshots help" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -927,12 +927,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_su
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from index" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -953,12 +953,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_su
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repair; and __fish_seen_subcommand_from snapshots" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -980,12 +980,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -s P -l use-prof
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand repoinfo" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -1010,12 +1010,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand tag" -s P -l use-profile -
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand tag" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand tag" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand tag" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand tag" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand tag" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r
@@ -1039,12 +1039,12 @@ complete -c rustic -n "__fish_rustic_using_subcommand webdav" -s P -l use-profil
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l log-level -d 'Use this log level [default: info]' -r
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l log-file -d 'Write log messages to the given file instead of printing them' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l progress-interval -d 'Interval to update progress bars' -r
-complete -c rustic -n "__fish_rustic_using_subcommand webdav" -s r -l repository -d 'Repository to use' -r
+complete -c rustic -n "__fish_rustic_using_subcommand webdav" -s r -l repository -l repo -d 'Repository to use' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l repo-hot -d 'Repository to use as hot storage' -r
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l password -d 'Password of the repository' -r
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -s p -l password-file -d 'File to read the password from' -r -F
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l password-command -d 'Command to read the password from. Password is read from stdout' -r
-complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -F
+complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l cache-dir -d 'Use this dir as cache dir instead of the standard cache dir' -r -f -a "(__fish_complete_directories)"
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l warm-up-command -d 'Warm up needed data pack files by running the command with %id replaced by pack id' -r
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l warm-up-wait -d 'Duration (e.g. 10m) to wait after warm up' -r
 complete -c rustic -n "__fish_rustic_using_subcommand webdav" -l filter-host -d 'Hostname to filter (can be specified multiple times)' -r

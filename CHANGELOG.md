@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2024-09-08
+
+### Bug Fixes
+
+- Allow to compile without tui feature
+  ([#1208](https://github.com/rustic-rs/rustic/issues/1208))
+- Use cargo --locked in CI pipeline
+  ([#1207](https://github.com/rustic-rs/rustic/issues/1207))
+- Return exitcode ([#1220](https://github.com/rustic-rs/rustic/issues/1220))
+- "Incorrect Password" error is now only shown if password is really incorrect.
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+- Group by now works as expected
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+- A bug in `keep-tags` and `filter-tags` has been fixed.
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+- Building OpenBSD platform target is now possible again
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+
+### Documentation
+
+- Update config profile readme
+  ([#1221](https://github.com/rustic-rs/rustic/issues/1221))
+
+### Features
+
+- Add autocompletion hints
+  ([#1225](https://github.com/rustic-rs/rustic/issues/1225))
+- Allow to modify filters
+  ([#1210](https://github.com/rustic-rs/rustic/issues/1210))
+- Allow to view text files
+  ([#1216](https://github.com/rustic-rs/rustic/issues/1216))
+
+### Generated
+
+- Updated Completions fixtures
+
+### Miscellaneous Tasks
+
+- Bump quinn-proto from 0.11.6 to 0.11.8
+  ([#1223](https://github.com/rustic-rs/rustic/issues/1223))
+- Dependency updates ([#1227](https://github.com/rustic-rs/rustic/issues/1227))
+
 ## [0.8.0] - 2024-08-21
 
 ### Bug Fixes

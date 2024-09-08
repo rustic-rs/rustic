@@ -76,7 +76,7 @@ impl ProcessEvent for TextInput {
                     (End, _) => {
                         self.textarea.move_cursor(CursorMove::Bottom);
                     }
-                    (code, _) if matches!(code, PageDown | PageUp | Up | Down) => {
+                    (PageDown | PageUp | Up | Down, _) => {
                         _ = self.textarea.input(key);
                     }
                     _ => {}

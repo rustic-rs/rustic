@@ -5,6 +5,7 @@ use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{Node, SnapshotFile, Tree},
+    vfs::OpenFile,
     IndexedFull, ProgressBars, Repository,
 };
 use style::palette::tailwind;
@@ -14,11 +15,13 @@ use crate::commands::{
     tui::{
         restore::Restore,
         widgets::{
-            popup_prompt, popup_text, Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult,
-            SelectTable, WithBlock,
+            popup_prompt, popup_scrollable_text, popup_text, Draw, PopUpPrompt, PopUpText,
+            ProcessEvent, PromptResult, SelectTable, TextInputResult, WithBlock,
         },
     },
 };
+
+use super::widgets::PopUpInput;
 
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
@@ -26,10 +29,11 @@ enum CurrentScreen<'a, P, S> {
     ShowHelp(PopUpText),
     Restore(Restore<'a, P, S>),
     PromptExit(PopUpPrompt),
+    ShowFile(PopUpInput),
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (r) restore | (?) show all commands";
+    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
 
 const HELP_TEXT: &str = r#"
 General Commands:
@@ -37,6 +41,7 @@ General Commands:
       q,Esc : exit
       Enter : enter dir
   Backspace : return to parent dir
+          v : view file contents (text files only, up to 1MiB)
           r : restore selected item
           n : toggle numeric IDs
           ? : show this help page
@@ -204,6 +209,33 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
+                    Char('v') => {
+                        // viewing is not supported on cold repositories
+                        if self.repo.config().is_hot != Some(true) {
+                            if let Some(node) = self.selected_node() {
+                                if node.is_file() {
+                                    if let Ok(data) = OpenFile::from_node(self.repo, node).read_at(
+                                        self.repo,
+                                        0,
+                                        node.meta.size.min(1_000_000).try_into().unwrap(),
+                                    ) {
+                                        // viewing is only supported for text files
+                                        if let Ok(content) = String::from_utf8(data.to_vec()) {
+                                            let lines = content.lines().count();
+                                            let path = self.path.join(node.name());
+                                            let path = path.display();
+                                            self.current_screen =
+                                                CurrentScreen::ShowFile(popup_scrollable_text(
+                                                    format!("{}:/{path}", self.snapshot.id),
+                                                    &content,
+                                                    (lines + 1).min(40).try_into().unwrap(),
+                                                ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Char('r') => {
                         if let Some(node) = self.selected_node() {
                             let is_absolute = self
@@ -230,6 +262,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     _ => self.table.input(event),
                 },
                 _ => {}
+            },
+            CurrentScreen::ShowFile(prompt) => match prompt.input(event) {
+                TextInputResult::Cancel | TextInputResult::Input(_) => {
+                    self.current_screen = CurrentScreen::Snapshot;
+                }
+                TextInputResult::None => {}
             },
             CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
@@ -276,6 +314,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             CurrentScreen::Snapshot | CurrentScreen::Restore(_) => {}
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::PromptExit(popup) => popup.draw(area, f),
+            CurrentScreen::ShowFile(popup) => popup.draw(area, f),
         }
     }
 }

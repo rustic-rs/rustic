@@ -72,7 +72,7 @@ enum SnapshotNode {
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snaphots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
+    "(Esc) quit | (F5) reload snapshots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
 const HELP_TEXT: &str = r#"General Commands:
   q, Esc : exit

@@ -8,6 +8,7 @@ pub(crate) mod config;
 pub(crate) mod copy;
 pub(crate) mod diff;
 pub(crate) mod dump;
+pub(crate) mod find;
 pub(crate) mod forget;
 pub(crate) mod init;
 pub(crate) mod key;
@@ -62,6 +63,8 @@ use log::{log, warn, Level};
 use rustic_core::{IndexedFull, OpenStatus, ProgressBars, Repository};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
+use self::find::FindCmd;
+
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
 }
@@ -94,6 +97,9 @@ enum RusticCmd {
 
     /// dump the contents of a file in a snapshot to stdout
     Dump(DumpCmd),
+
+    /// Find in given snapshots
+    Find(FindCmd),
 
     /// Remove snapshots from the repository
     Forget(ForgetCmd),

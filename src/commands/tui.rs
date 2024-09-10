@@ -8,6 +8,7 @@ mod widgets;
 
 use crossterm::event::{KeyEvent, KeyModifiers};
 use progress::TuiProgressBars;
+use scopeguard::defer;
 use snapshots::Snapshots;
 
 use std::io;
@@ -23,7 +24,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::*;
-use rustic_core::{IndexedFull, ProgressBars, SnapshotGroupCriterion};
+use rustic_core::{IndexedFull, Progress, ProgressBars, SnapshotGroupCriterion};
 
 struct App<'a, P, S> {
     snapshots: Snapshots<'a, P, S>,
@@ -33,36 +34,49 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     let config = RUSTIC_APP.config();
 
     // setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let terminal = Arc::new(RwLock::new(Terminal::new(backend)?));
+    let terminal = init_terminal()?;
+    let terminal = Arc::new(RwLock::new(terminal));
+
+    // restore terminal (even when leaving through ?, early return, or panic)
+    defer! {
+        reset_terminal().unwrap();
+    }
 
     let progress = TuiProgressBars {
         terminal: terminal.clone(),
     };
+    let p = progress.progress_spinner("starting rustic in interactive mode...");
     let repo = open_repository_indexed_with_progress(&config.repository, progress)?;
+    p.finish();
     // create app and run it
     let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
     let app = App { snapshots };
-    let res = run_app(terminal.clone(), app);
-
-    // restore terminal
-    disable_raw_mode()?;
-    let mut terminal = terminal.write().unwrap();
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-    drop(terminal);
+    let res = run_app(terminal, app);
 
     if let Err(err) = res {
         println!("{err:?}");
     }
 
+    Ok(())
+}
+
+/// Initializes the terminal.
+fn init_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
+    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
+    enable_raw_mode()?;
+
+    let backend = CrosstermBackend::new(io::stdout());
+
+    let mut terminal = Terminal::new(backend)?;
+    terminal.hide_cursor()?;
+
+    Ok(terminal)
+}
+
+/// Resets the terminal.
+fn reset_terminal() -> Result<()> {
+    disable_raw_mode()?;
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
     Ok(())
 }
 
@@ -91,6 +105,6 @@ fn run_app<B: Backend, P: ProgressBars, S: IndexedFull>(
 }
 
 fn ui<P: ProgressBars, S: IndexedFull>(f: &mut Frame<'_>, app: &mut App<'_, P, S>) {
-    let area = f.size();
+    let area = f.area();
     app.snapshots.draw(area, f);
 }

@@ -1,10 +1,11 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 use rustic_core::{
     repofile::{Node, SnapshotFile, Tree},
+    vfs::OpenFile,
     IndexedFull, ProgressBars, Repository,
 };
 use style::palette::tailwind;
@@ -13,19 +14,26 @@ use crate::commands::{
     ls::{NodeLs, Summary},
     tui::{
         restore::Restore,
-        widgets::{popup_text, Draw, PopUpText, ProcessEvent, SelectTable, WithBlock},
+        widgets::{
+            popup_prompt, popup_scrollable_text, popup_text, Draw, PopUpPrompt, PopUpText,
+            ProcessEvent, PromptResult, SelectTable, TextInputResult, WithBlock,
+        },
     },
 };
+
+use super::widgets::PopUpInput;
 
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
     Snapshot,
     ShowHelp(PopUpText),
     Restore(Restore<'a, P, S>),
+    PromptExit(PopUpPrompt),
+    ShowFile(PopUpInput),
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (r) restore | (?) show all commands";
+    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
 
 const HELP_TEXT: &str = r#"
 General Commands:
@@ -33,6 +41,7 @@ General Commands:
       q,Esc : exit
       Enter : enter dir
   Backspace : return to parent dir
+          v : view file contents (text files only, up to 1MiB)
           r : restore selected item
           n : toggle numeric IDs
           ? : show this help page
@@ -190,20 +199,62 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                         }
                     }
                     Esc | Char('q') => {
-                        return Ok(SnapshotResult::Exit);
+                        self.current_screen = CurrentScreen::PromptExit(popup_prompt(
+                            "exit rustic",
+                            "do you want to exit? (y/n)".into(),
+                        ));
                     }
                     Char('?') => {
                         self.current_screen =
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
+                    Char('v') => {
+                        // viewing is not supported on cold repositories
+                        if self.repo.config().is_hot != Some(true) {
+                            if let Some(node) = self.selected_node() {
+                                if node.is_file() {
+                                    if let Ok(data) = OpenFile::from_node(self.repo, node).read_at(
+                                        self.repo,
+                                        0,
+                                        node.meta.size.min(1_000_000).try_into().unwrap(),
+                                    ) {
+                                        // viewing is only supported for text files
+                                        if let Ok(content) = String::from_utf8(data.to_vec()) {
+                                            let lines = content.lines().count();
+                                            let path = self.path.join(node.name());
+                                            let path = path.display();
+                                            self.current_screen =
+                                                CurrentScreen::ShowFile(popup_scrollable_text(
+                                                    format!("{}:/{path}", self.snapshot.id),
+                                                    &content,
+                                                    (lines + 1).min(40).try_into().unwrap(),
+                                                ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Char('r') => {
                         if let Some(node) = self.selected_node() {
+                            let is_absolute = self
+                                .snapshot
+                                .paths
+                                .iter()
+                                .any(|p| Path::new(p).is_absolute());
                             let path = self.path.join(node.name());
+                            let path = path.display();
+                            let default_targt = if is_absolute {
+                                format!("/{path}")
+                            } else {
+                                format!("{path}")
+                            };
                             let restore = Restore::new(
                                 self.repo,
                                 node.clone(),
-                                format!("{}:{}", self.snapshot.id, path.display()),
+                                format!("{}:/{path}", self.snapshot.id),
+                                &default_targt,
                             );
                             self.current_screen = CurrentScreen::Restore(restore);
                         }
@@ -211,6 +262,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     _ => self.table.input(event),
                 },
                 _ => {}
+            },
+            CurrentScreen::ShowFile(prompt) => match prompt.input(event) {
+                TextInputResult::Cancel | TextInputResult::Input(_) => {
+                    self.current_screen = CurrentScreen::Snapshot;
+                }
+                TextInputResult::None => {}
             },
             CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
@@ -225,6 +282,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     self.current_screen = CurrentScreen::Snapshot;
                 }
             }
+            CurrentScreen::PromptExit(prompt) => match prompt.input(event) {
+                PromptResult::Ok => return Ok(SnapshotResult::Exit),
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
+                PromptResult::None => {}
+            },
         }
         Ok(SnapshotResult::None)
     }
@@ -251,6 +313,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         match &mut self.current_screen {
             CurrentScreen::Snapshot | CurrentScreen::Restore(_) => {}
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
+            CurrentScreen::PromptExit(popup) => popup.draw(area, f),
+            CurrentScreen::ShowFile(popup) => popup.draw(area, f),
         }
     }
 }

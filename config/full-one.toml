@@ -51,6 +51,8 @@ timeout = "10min" # Only rest/rclone backend
 rclone-command = "rclone serve restic --addr localhost:0" # Only rclone; Default: not set
 use-password = "true" # Only rclone
 rest-url = "http://localhost:8000" # Only rclone; Default: determine REST URL from rclone output
+connections = "20" # Only opendal backends; Default: Not set
+throttle = "10kB,10MB" # limit and burst per second; only opendal backends; Default: Not set
 # Note that opendal backends use several service-dependent options which may be specified here, see
 # https://opendal.apache.org/docs/rust/opendal/services/index.html
 

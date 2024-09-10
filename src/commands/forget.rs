@@ -9,6 +9,7 @@ use abscissa_core::{config::Override, Shutdown};
 use abscissa_core::{Command, FrameworkError, Runnable};
 use anyhow::Result;
 
+use chrono::Local;
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -108,15 +109,26 @@ impl ForgetCmd {
                 config.forget.filter.matches(sn)
             })?
         } else {
+            let now = Local::now();
             let item = ForgetGroup {
                 group: SnapshotGroup::default(),
                 snapshots: repo
                     .get_snapshots(&self.ids)?
                     .into_iter()
-                    .map(|sn| ForgetSnapshot {
-                        snapshot: sn,
-                        keep: false,
-                        reasons: vec!["id argument".to_string()],
+                    .map(|sn| {
+                        if sn.must_keep(now) {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: true,
+                                reasons: vec!["snapshot".to_string()],
+                            }
+                        } else {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: false,
+                                reasons: vec!["id argument".to_string()],
+                            }
+                        }
                     })
                     .collect(),
             };

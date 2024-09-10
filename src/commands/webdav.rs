@@ -1,4 +1,8 @@
 //! `webdav` subcommand
+
+// ignore markdown clippy lints as we use doc-comments to generate clap help texts
+#![allow(clippy::doc_markdown)]
+
 use std::{net::ToSocketAddrs, str::FromStr};
 
 use crate::{commands::open_repository_indexed, status_err, Application, RusticConfig, RUSTIC_APP};

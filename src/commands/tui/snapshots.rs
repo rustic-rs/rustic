@@ -1,6 +1,7 @@
 use std::{iter::once, str::FromStr};
 
 use anyhow::Result;
+use chrono::Local;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
@@ -36,7 +37,9 @@ enum CurrentScreen<'a, P, S> {
     EnterAddTags(PopUpInput),
     EnterSetTags(PopUpInput),
     EnterRemoveTags(PopUpInput),
+    EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
+    PromptExit(PopUpPrompt),
     Dir(Snapshot<'a, P, S>),
 }
 
@@ -45,6 +48,7 @@ enum CurrentScreen<'a, P, S> {
 struct SnapStatus {
     marked: bool,
     modified: bool,
+    to_forget: bool,
 }
 
 impl SnapStatus {
@@ -68,38 +72,40 @@ enum SnapshotNode {
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snaphots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
+    "(Esc) quit | (F5) reload snapshots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
-const HELP_TEXT: &str = r#"
-General Commands:
-
-  q,Esc : exit
-     F5 : re-read all snapshots from repository
-  Enter : show snapshot contents
-      v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
-      i : show detailed snapshot information for selected snapshot
-      w : write modified snapshots
-      ? : show this help page
-
-Commands for marking snapshot(s):
-
-      x : toggle marking for selected snapshot
-      X : toggle markings for all snapshots
- Ctrl-x : clear all markings
-
-Commands applied to marked snapshot(s) (selected if none marked):
-
-      l : set label for snapshot(s)
- Ctrl-l : remove label for snapshot(s)
-      d : set description for snapshot(s)
- Ctrl-d : remove description for snapshot(s)
-      t : add tag(s) for snapshot(s)
- Ctrl-t : remove all tags for snapshot(s)
-      s : set tag(s) for snapshot(s)
-      r : remove tag(s) for snapshot(s)
-      p : set delete protection for snapshot(s)
- Ctrl-p : remove delete protection for snapshot(s)
- "#;
+const HELP_TEXT: &str = r#"General Commands:
+  q, Esc : exit
+      F5 : re-read all snapshots from repository
+   Enter : show snapshot contents
+       v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
+       V : modify filter to use     
+  Ctrl-v : reset filter
+       i : show detailed snapshot information for selected snapshot
+       w : write modified snapshots and delete snapshots to-forget
+       ? : show this help page
+ 
+ Commands for marking snapshot(s):
+ 
+       x : toggle marking for selected snapshot
+       X : toggle markings for all snapshots
+  Ctrl-x : clear all markings
+ 
+ Commands applied to marked snapshot(s) (selected if none marked):
+ 
+       f : toggle to-forget for snapshot(s)
+  Ctrl-f : clear to-forget for snapshot(s)
+       l : set label for snapshot(s)
+  Ctrl-l : remove label for snapshot(s)
+       d : set description for snapshot(s)
+  Ctrl-d : remove description for snapshot(s)
+       t : add tag(s) for snapshot(s)
+  Ctrl-t : remove all tags for snapshot(s)
+       s : set tag(s) for snapshot(s)
+       r : remove tag(s) for snapshot(s)
+       p : set delete protection for snapshot(s)
+  Ctrl-p : remove delete protection for snapshot(s)
+"#;
 
 pub(crate) struct Snapshots<'a, P, S> {
     current_screen: CurrentScreen<'a, P, S>,
@@ -240,10 +246,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         for (group, snaps) in &self
             .filtered_snapshots
             .iter()
-            .group_by(|i| SnapshotGroup::from_snapshot(&self.snapshots[**i], self.group_by))
+            .chunk_by(|i| SnapshotGroup::from_snapshot(&self.snapshots[**i], self.group_by))
         {
             let mut same_id_group = Vec::new();
-            for (_, s) in &snaps.into_iter().group_by(|i| self.snapshots[**i].tree) {
+            for (_, s) in &snaps.into_iter().chunk_by(|i| self.snapshots[**i].tree) {
                 let leafs: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
                 let first = leafs[0].leaf_data().unwrap(); // Cannot be None as leafs[0] is a leaf!
                 if leafs.len() == 1 {
@@ -273,22 +279,30 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     fn table_row(&self, info: TreeIterItem<'_, SnapshotNode, usize>) -> Vec<Text<'static>> {
-        let (has_mark, has_not_mark, has_modified) = info
+        let (has_mark, has_not_mark, has_modified, has_to_forget) = info
             .tree
             .iter()
             .filter_map(|item| item.leaf_data().copied())
-            .fold((false, false, false), |(mut a, mut b, mut c), i| {
-                if self.snaps_status[i].marked {
-                    a = true;
-                } else {
-                    b = true;
-                }
+            .fold(
+                (false, false, false, false),
+                |(mut a, mut b, mut c, mut d), i| {
+                    if self.snaps_status[i].marked {
+                        a = true;
+                    } else {
+                        b = true;
+                    }
 
-                if self.snaps_status[i].modified {
-                    c = true;
-                }
-                (a, b, c)
-            });
+                    if self.snaps_status[i].modified {
+                        c = true;
+                    }
+
+                    if self.snaps_status[i].to_forget {
+                        d = true;
+                    }
+
+                    (a, b, c, d)
+                },
+            );
 
         let mark = match (has_mark, has_not_mark) {
             (false, _) => " ",
@@ -296,6 +310,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             (true, false) => "X",
         };
         let modified = if has_modified { "*" } else { " " };
+        let del = if has_to_forget { "🗑" } else { "" };
         let mut collapse = "  ".repeat(info.depth);
         collapse.push_str(match info.tree {
             Tree::Leaf(_) => "",
@@ -327,7 +342,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     .map(|(i, mut content)| {
                         if i == 1 {
                             // ID gets modified and protected marks
-                            content = format!("{collapse}{modified}{content}{symbols}");
+                            content = format!("{collapse}{modified}{del}{content}{symbols}");
                         }
                         Text::from(content)
                     })
@@ -354,7 +369,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     .map_or_else(String::default, |t| t.formatln());
                 [
                     mark.to_string(),
-                    format!("{collapse}{modified}group"),
+                    format!("{collapse}{modified}{del}group"),
                     String::default(),
                     host,
                     label,
@@ -396,12 +411,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.table.block = Block::new()
             .borders(Borders::BOTTOM)
             .title_bottom(format!(
-                "{:?} view: {}, total: {}, marked: {}, modified: {}, ",
+                "{:?} view: {}, total: {}, marked: {}, modified: {}, to forget: {}",
                 self.current_view,
                 self.filtered_snapshots.len(),
                 self.snapshots.len(),
                 self.count_marked_snaps(),
                 self.count_modified_snaps(),
+                self.count_forget_snaps()
             ))
             .title_alignment(Alignment::Center);
     }
@@ -425,11 +441,6 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             status.marked = false;
         }
         self.update_table();
-    }
-
-    pub fn clear_filter(&mut self) {
-        self.filter = SnapshotFilter::default();
-        self.apply_view();
     }
 
     pub fn reset_filter(&mut self) {
@@ -477,6 +488,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn count_modified_snaps(&self) -> usize {
         self.snaps_status.iter().filter(|s| s.modified).count()
+    }
+
+    pub fn count_forget_snaps(&self) -> usize {
+        self.snaps_status.iter().filter(|s| s.to_forget).count()
     }
 
     // process marked snapshots (or the current one if none is marked)
@@ -540,12 +555,23 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.get_snap_entity(|snap| snap.description.clone().unwrap_or_default())
     }
 
+    pub fn get_filter(&self) -> Result<String> {
+        Ok(toml::to_string_pretty(&self.filter)?)
+    }
+
+    pub fn set_filter(&mut self, filter: String) {
+        if let Ok(filter) = toml::from_str::<SnapshotFilter>(&filter) {
+            self.filter = filter;
+            self.apply_view();
+        }
+    }
+
     pub fn set_label(&mut self, label: String) {
         self.process_marked_snaps(|snap| {
             if snap.label == label {
                 return false;
             }
-            snap.label = label.clone();
+            snap.label.clone_from(&label);
             true
         });
     }
@@ -560,7 +586,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             if snap.description == desc {
                 return false;
             }
-            snap.description = desc.clone();
+            snap.description.clone_from(&desc);
             true
         });
     }
@@ -589,7 +615,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.process_marked_snaps(|snap| snap.set_tags(no_tags.clone()));
     }
 
-    pub fn set_delete_to(&mut self, delete: DeleteOption) {
+    pub fn set_delete_protection_to(&mut self, delete: DeleteOption) {
         self.process_marked_snaps(|snap| {
             if snap.delete == delete {
                 return false;
@@ -599,6 +625,37 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         });
     }
 
+    pub fn toggle_to_forget(&mut self) {
+        let has_mark = self.has_mark();
+
+        if !has_mark {
+            self.toggle_mark();
+        }
+
+        let now = Local::now();
+        for (snap, status) in self.snapshots.iter_mut().zip(self.snaps_status.iter_mut()) {
+            if status.marked {
+                if status.to_forget {
+                    status.to_forget = false;
+                } else if !snap.must_keep(now) {
+                    status.to_forget = true;
+                }
+            }
+        }
+
+        if !has_mark {
+            self.toggle_mark();
+        }
+        self.update_table();
+    }
+
+    pub fn clear_to_forget(&mut self) {
+        for status in self.snaps_status.iter_mut() {
+            status.to_forget = false;
+        }
+        self.update_table();
+    }
+
     pub fn apply_input(&mut self, input: String) {
         match self.current_screen {
             CurrentScreen::EnterLabel(_) => self.set_label(input),
@@ -606,20 +663,21 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             CurrentScreen::EnterAddTags(_) => self.add_tags(input),
             CurrentScreen::EnterSetTags(_) => self.set_tags(input),
             CurrentScreen::EnterRemoveTags(_) => self.remove_tags(input),
+            CurrentScreen::EnterFilter(_) => self.set_filter(input),
             _ => {}
         }
     }
 
     pub fn set_delete_protection(&mut self) {
-        self.set_delete_to(DeleteOption::Never);
+        self.set_delete_protection_to(DeleteOption::Never);
     }
 
     pub fn clear_delete_protection(&mut self) {
-        self.set_delete_to(DeleteOption::NotSet);
+        self.set_delete_protection_to(DeleteOption::NotSet);
     }
 
     pub fn write(&mut self) -> Result<()> {
-        if !self.has_modified() {
+        if !self.has_modified() && self.count_forget_snaps() == 0 {
             return Ok(());
         };
 
@@ -630,9 +688,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .filter_map(|(snap, status)| status.modified.then_some(snap))
             .cloned()
             .collect();
-        let old_snap_ids: Vec<_> = save_snaps.iter().map(|sn| sn.id).collect();
+        let old_snap_ids = save_snaps.iter().map(|sn| sn.id);
+        let snap_ids_to_forget = self
+            .snapshots
+            .iter()
+            .zip(self.snaps_status.iter())
+            .filter_map(|(snap, status)| status.to_forget.then_some(snap.id));
+        let delete_ids: Vec<_> = old_snap_ids.chain(snap_ids_to_forget).collect();
         self.repo.save_snapshots(save_snaps)?;
-        self.repo.delete_snapshots(&old_snap_ids)?;
+        self.repo.delete_snapshots(&delete_ids)?;
         // re-read snapshots
         self.reread()
     }
@@ -643,7 +707,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.snapshots
             .sort_unstable_by(|sn1, sn2| sn1.cmp_group(self.group_by, sn2).then(sn1.cmp(sn2)));
         self.snaps_status = vec![SnapStatus::default(); self.snapshots.len()];
-        self.original_snapshots = self.snapshots.clone();
+        self.original_snapshots.clone_from(&self.snapshots);
         self.table.widget.select(None);
         self.apply_view();
         Ok(())
@@ -657,17 +721,24 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     Event::Key(key) if key.kind == KeyEventKind::Press => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             match key.code {
+                                Char('f') => self.clear_to_forget(),
                                 Char('x') => self.clear_marks(),
-                                Char('f') => self.clear_filter(),
                                 Char('l') => self.clear_label(),
                                 Char('d') => self.clear_description(),
                                 Char('t') => self.clear_tags(),
                                 Char('p') => self.clear_delete_protection(),
+                                Char('v') => self.reset_filter(),
                                 _ => {}
                             }
                         } else {
                             match key.code {
-                                Esc | Char('q') => return Ok(true),
+                                Esc | Char('q') => {
+                                    self.current_screen = CurrentScreen::PromptExit(popup_prompt(
+                                        "exit rustic",
+                                        "do you want to exit? (y/n)".into(),
+                                    ));
+                                }
+                                Char('f') => self.toggle_to_forget(),
                                 F(5) => self.reread()?,
                                 Enter => {
                                     if let Some(dir) = self.dir()? {
@@ -681,7 +752,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                         self.current_screen = CurrentScreen::Dir(dir);
                                     }
                                 }
-                                Left => self.collapse(),
+                                Char('+') => {
+                                    if self.extendable() {
+                                        self.extend();
+                                    }
+                                }
+                                Left | Char('-') => self.collapse(),
                                 Char('?') => {
                                     self.current_screen = CurrentScreen::ShowHelp(popup_text(
                                         "help",
@@ -693,8 +769,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                     self.table.widget.next();
                                 }
                                 Char('X') => self.toggle_mark_all(),
-                                Char('F') => self.reset_filter(),
                                 Char('v') => self.toggle_view(),
+                                Char('V') => {
+                                    self.current_screen = CurrentScreen::EnterFilter(popup_input(
+                                        "set filter (Ctrl-s to confirm)",
+                                        "enter filter in TOML format",
+                                        &self.get_filter()?,
+                                        15,
+                                    ));
+                                }
                                 Char('i') => {
                                     self.current_screen =
                                         CurrentScreen::SnapshotDetails(self.snapshot_details());
@@ -741,8 +824,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                 Char('p') => self.set_delete_protection(),
                                 Char('w') => {
                                     let msg = format!(
-                                        "Do you want to write {} modified snapshots?",
-                                        self.count_modified_snaps()
+                                        "Do you want to write {} modified and remove {} snapshots? (y/n)",
+                                        self.count_modified_snaps(),
+                                        self.count_forget_snaps()
                                     );
                                     self.current_screen = CurrentScreen::PromptWrite(popup_prompt(
                                         "write snapshots",
@@ -771,7 +855,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             | CurrentScreen::EnterDescription(prompt)
             | CurrentScreen::EnterAddTags(prompt)
             | CurrentScreen::EnterSetTags(prompt)
-            | CurrentScreen::EnterRemoveTags(prompt) => match prompt.input(event) {
+            | CurrentScreen::EnterRemoveTags(prompt)
+            | CurrentScreen::EnterFilter(prompt) => match prompt.input(event) {
                 TextInputResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 TextInputResult::Input(input) => {
                     self.apply_input(input);
@@ -784,6 +869,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     self.write()?;
                     self.current_screen = CurrentScreen::Snapshots;
                 }
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
+                PromptResult::None => {}
+            },
+            CurrentScreen::PromptExit(prompt) => match prompt.input(event) {
+                PromptResult::Ok => return Ok(true),
                 PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 PromptResult::None => {}
             },
@@ -823,8 +913,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             | CurrentScreen::EnterDescription(popup)
             | CurrentScreen::EnterAddTags(popup)
             | CurrentScreen::EnterSetTags(popup)
-            | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
-            CurrentScreen::PromptWrite(popup) => popup.draw(area, f),
+            | CurrentScreen::EnterRemoveTags(popup)
+            | CurrentScreen::EnterFilter(popup) => popup.draw(area, f),
+            CurrentScreen::PromptWrite(popup) | CurrentScreen::PromptExit(popup) => {
+                popup.draw(area, f);
+            }
             _ => {}
         }
     }

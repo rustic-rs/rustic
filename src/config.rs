@@ -11,7 +11,7 @@ use std::{collections::HashMap, path::PathBuf};
 use abscissa_core::config::Config;
 use abscissa_core::path::AbsPathBuf;
 use abscissa_core::FrameworkError;
-use clap::Parser;
+use clap::{Parser, ValueHint};
 use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
@@ -161,7 +161,7 @@ pub struct GlobalOptions {
     /// # Note
     ///
     /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
-    #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE")]
+    #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
     pub log_file: Option<PathBuf>,
 
     /// Settings to customize progress bars

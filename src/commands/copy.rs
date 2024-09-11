@@ -70,8 +70,7 @@ impl CopyCmd {
         let config = RUSTIC_APP.config();
 
         if config.copy.target.is_empty() {
-            status_err!("please specify at least 1 target!");
-            RUSTIC_APP.shutdown(Shutdown::Crash);
+            bail!("No target given. Please specify at least 1 target either in the profile or using --target!");
         }
 
         let repo = open_repository_indexed(&config.repository)?;
@@ -87,7 +86,7 @@ impl CopyCmd {
         for target in &config.copy.target {
             let mut merge_logs = Vec::new();
             let mut target_config = RusticConfig::default();
-            target_config.merge_profile(target, &mut merge_logs, Level::Warn)?;
+            target_config.merge_profile(target, &mut merge_logs, Level::Error)?;
             // display logs from merging
             for (level, merge_log) in merge_logs {
                 log!(level, "{}", merge_log);

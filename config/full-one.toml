@@ -146,7 +146,7 @@ keep-withing-half-yearly = "1 year"
 keep-within-yearly = "10 years"
 
 [copy]
-targets = ["target_profile"] # Default: not set
+targets = ["target_profile"] # Default: []
 
 [webdav]
 address = "localhost:8000"

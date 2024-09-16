@@ -7,7 +7,7 @@ use std::{error::Error, str::FromStr};
 use cached::proc_macro::cached;
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr, OneOrMany};
+use serde_with::{serde_as, DisplayFromStr};
 
 /// A function to filter snapshots
 ///
@@ -61,24 +61,22 @@ pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "HOSTNAME")]
     #[merge(strategy=merge::vec::overwrite_empty)]
-    #[serde_as(as = "OneOrMany<_>")]
     filter_host: Vec<String>,
 
     /// Label to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "LABEL")]
     #[merge(strategy=merge::vec::overwrite_empty)]
-    #[serde_as(as = "OneOrMany<_>")]
     filter_label: Vec<String>,
 
     /// Path list to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "PATH[,PATH,..]")]
-    #[serde_as(as = "OneOrMany<DisplayFromStr>")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_paths: Vec<StringList>,
 
     /// Tag list to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "TAG[,TAG,..]")]
-    #[serde_as(as = "OneOrMany<DisplayFromStr>")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_tags: Vec<StringList>,
 

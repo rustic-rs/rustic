@@ -19,7 +19,6 @@ use merge::Merge;
 use rustic_backend::BackendOptions;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, OneOrMany};
 
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
@@ -104,7 +103,7 @@ impl RusticConfig {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
             let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
-            for profile in &config.global.use_profile.clone() {
+            for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, merge_logs, Level::Warn)?;
             }
             self.merge(config);
@@ -125,7 +124,6 @@ impl RusticConfig {
 /// Global options
 ///
 /// These options are available for all commands.
-#[serde_as]
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
@@ -133,14 +131,13 @@ pub struct GlobalOptions {
     /// [default: "rustic"]
     #[clap(
         short = 'P',
-        long,
+        long = "use-profile",
         global = true,
         value_name = "PROFILE",
         env = "RUSTIC_USE_PROFILE"
     )]
     #[merge(strategy = merge::vec::append)]
-    #[serde_as(as = "OneOrMany<_>")]
-    pub use_profile: Vec<String>,
+    pub use_profiles: Vec<String>,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]

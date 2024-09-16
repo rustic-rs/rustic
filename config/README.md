@@ -206,9 +206,9 @@ source-specific option and then only apply to this source.
 
 **Note**: Copy-targets must be defined in their own config profile files.
 
-| Attribute | Description        | Default Value | Example Value                            |
-| --------- | ------------------ | ------------- | ---------------------------------------- |
-| target    | One or more target | Not set       | "remote_host" / ["profile1", "profile2"] |
+| Attribute | Description        | Default Value | Example Value            |
+| --------- | ------------------ | ------------- | ------------------------ |
+| targets   | Targets to copy to | []            | ["profile1", "profile2"] |
 
 ### WebDAV Options `[webdav]`
 

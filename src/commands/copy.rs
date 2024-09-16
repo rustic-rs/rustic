@@ -10,12 +10,10 @@ use anyhow::{bail, Result};
 use log::{error, info, log, Level};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, OneOrMany};
 
 use rustic_core::{CopySnapshot, Id, KeyOptions};
 
 /// `copy` subcommand
-#[serde_as]
 #[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
 pub struct CopyCmd {
     /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
@@ -31,10 +29,9 @@ pub struct CopyCmd {
     init: bool,
 
     /// Target repository (can be specified multiple times)
-    #[clap(long)]
+    #[clap(long = "target", value_name = "TARGET")]
     #[merge(strategy = merge::vec::overwrite_empty)]
-    #[serde_as(as = "OneOrMany<_>")]
-    target: Vec<String>,
+    targets: Vec<String>,
 
     /// Key options (when using --init)
     #[clap(flatten, next_help_heading = "Key options (when using --init)")]
@@ -69,7 +66,7 @@ impl CopyCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        if config.copy.target.is_empty() {
+        if config.copy.targets.is_empty() {
             bail!("No target given. Please specify at least 1 target either in the profile or using --target!");
         }
 
@@ -83,7 +80,7 @@ impl CopyCmd {
         snapshots.sort_unstable();
 
         let poly = repo.config().poly()?;
-        for target in &config.copy.target {
+        for target in &config.copy.targets {
             let mut merge_logs = Vec::new();
             let mut target_config = RusticConfig::default();
             target_config.merge_profile(target, &mut merge_logs, Level::Error)?;

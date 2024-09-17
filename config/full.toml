@@ -109,13 +109,13 @@ quiet = false
 skip-identical-parent = false
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
-[[backup.sources]]
-source = "/path/to/source1"
+[[backup.snapshots]]
+sources = ["/path/to/source1"]
 label = "label" # Default: not set
 # .. and so on. see [backup]
 
-[[backup.sources]]
-source = [
+[[backup.snapshots]]
+sources = [
   "/path/to/source2",
   "/second/path",
 ] # multiple local paths are given as array

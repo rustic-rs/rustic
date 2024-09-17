@@ -29,11 +29,11 @@ git-ignore = true
 #
 # Note that if you call "rustic backup" without any source, all sources from this config
 # file will be processed.
-[[backup.sources]]
-source = "/data/dir"
+[[backup.snapshots]]
+sources = ["/data/dir"]
 
-[[backup.sources]]
-source = "/home"
+[[backup.snapshots]]
+sources = ["/home"]
 glob = ["!/home/*/Downloads/*"]
 
 # forget options

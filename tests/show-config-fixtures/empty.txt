@@ -1,5 +1,5 @@
 [global]
-use-profile = []
+use-profiles = []
 dry-run = false
 check-index = false
 no-progress = false
@@ -47,8 +47,8 @@ exclude-if-present = []
 one-file-system = false
 tag = []
 delete-never = false
+snapshots = []
 sources = []
-source = []
 
 [copy]
 targets = []

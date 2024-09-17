@@ -98,6 +98,9 @@ impl Runnable for ForgetCmd {
 }
 
 impl ForgetCmd {
+    /// be careful about self VS RUSTIC_APP.config() usage
+    /// only the RUSTIC_APP.config() involves the TOML and ENV merged configurations
+    /// see https://github.com/rustic-rs/rustic/issues/1242
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config.repository)?;

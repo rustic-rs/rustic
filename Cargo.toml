@@ -1,6 +1,6 @@
 [package]
 name = "rustic-rs"
-version = "0.7.0-dev"
+version = "0.8.1-dev"
 authors = ["the rustic-rs team"]
 categories = ["command-line-utilities"]
 documentation = "https://docs.rs/rustic-rs"
@@ -12,13 +12,13 @@ license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/rustic-rs/rustic"
 resolver = "2"
-rust-version = "1.70.0"
+rust-version = "1.76.0"
 description = """
 rustic - fast, encrypted, deduplicated backups powered by Rust
 """
 
 [features]
-default = ["self-update", "tui", "webdav"]
+default = ["tui", "webdav"]
 mimalloc = ["dep:mimalloc"]
 jemallocator = ["dep:jemallocator-global"]
 self-update = ["dep:self_update", "dep:semver"]
@@ -41,78 +41,79 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
-rustic_backend = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
-rustic_core = { git = "https://github.com/rustic-rs/rustic_core.git", features = ["cli"] }
+rustic_backend = { version = "0.2.1", features = ["cli"] }
+rustic_core = { version = "0.3.1", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
-mimalloc = { version = "0.1.39", default-features = false, optional = true }
+mimalloc = { version = "0.1.43", default-features = false, optional = true }
 
 # webdav
-dav-server = { version = "0.5.8", default-features = false, features = ["warp-compat"], optional = true }
+dav-server = { version = "0.7.0", default-features = false, features = ["warp-compat"], optional = true }
 tokio = { version = "1", optional = true }
-warp = { version = "0.3.6", optional = true }
+warp = { version = "0.3.7", optional = true }
 
 # tui
-crossterm = { version = "0.27", optional = true }
-ratatui = { version = "0.26.1", optional = true }
-tui-textarea = { version = "0.4.0", optional = true }
+crossterm = { version = "0.28", optional = true }
+ratatui = { version = "0.28.1", optional = true }
+tui-textarea = { version = "0.6.1", optional = true }
 
 # logging
 log = "0.4"
 
 # errors
 anyhow = "1"
-displaydoc = "0.2.4"
+displaydoc = "0.2.5"
 thiserror = "1"
 
 # serialization
 serde = { version = "1", features = ["serde_derive"] }
 serde_json = "1"
-serde_with = { version = "3.6", features = ["base64"] }
+serde_with = { version = "3.9", features = ["base64"] }
 
 # other dependencies
-aho-corasick = "1.1.2"
+aho-corasick = "1.1.3"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
-comfy-table = "7.1.0"
-rhai = { version = "1.17", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+comfy-table = "7.1.1"
+rhai = { version = "1.19", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+scopeguard = "1.2"
 semver = { version = "1", optional = true }
 simplelog = "0.12"
 
 # commands
 bytesize = "1"
-cached = "0.49.3"
+cached = "0.53.1"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
 convert_case = "0.6.0"
 dialoguer = "0.11.0"
 directories = "5"
-gethostname = "0.4"
+gethostname = "0.5"
 globset = "0.4.14"
-human-panic = "1.2.3"
+human-panic = "2.0.1"
 humantime = "2"
 indicatif = "0.17"
-itertools = "0.12"
+itertools = "0.13"
 merge = "0.1"
 once_cell = "1.19"
-self_update = { version = "0.39", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] }
+self_update = { version = "0.41", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] }
 toml = "0.8"
 
 [dev-dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["testing"] }
-assert_cmd = "2.0.13"
+assert_cmd = "2.0.16"
 dircmp = "0.2"
-predicates = "3.1.0"
+predicates = "3.1.2"
 pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
-rstest = "0.18"
-rustic_testing = { git = "https://github.com/rustic-rs/rustic_core.git" }
-tempfile = "3.9"
+rstest = "0.22"
+rustic_testing = "0.2.1"
+tempfile = "3.12"
 toml = "0.8"
 
 [target.'cfg(not(windows))'.dependencies]
-libc = "0.2.153"
+libc = "0.2.158"
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]

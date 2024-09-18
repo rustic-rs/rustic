@@ -136,7 +136,7 @@ impl TuiProgress {
         let mut terminal = self.terminal.write().unwrap();
         _ = terminal
             .draw(|f| {
-                let area = f.size();
+                let area = f.area();
                 match self.progress_type {
                     TuiProgressType::Hidden => {}
                     TuiProgressType::Spinner => {

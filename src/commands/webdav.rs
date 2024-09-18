@@ -66,27 +66,32 @@ impl Runnable for WebDavCmd {
 }
 
 impl WebDavCmd {
+    /// be careful about self VS RUSTIC_APP.config() usage
+    /// only the RUSTIC_APP.config() involves the TOML and ENV merged configurations
+    /// see https://github.com/rustic-rs/rustic/issues/1242
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = open_repository_indexed(&config.repository)?;
 
-        let path_template = self
+        let path_template = config
+            .webdav
             .path_template
             .clone()
             .unwrap_or_else(|| "[{hostname}]/[{label}]/{time}".to_string());
-        let time_template = self
+        let time_template = config
+            .webdav
             .time_template
             .clone()
             .unwrap_or_else(|| "%Y-%m-%d_%H-%M-%S".to_string());
 
         let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
 
-        let vfs = if let Some(snap) = &self.snapshot_path {
+        let vfs = if let Some(snap) = &config.webdav.snapshot_path {
             let node = repo.node_from_snapshot_path(snap, sn_filter)?;
             Vfs::from_dir_node(&node)
         } else {
             let snapshots = repo.get_matching_snapshots(sn_filter)?;
-            let (latest, identical) = if self.symlinks {
+            let (latest, identical) = if config.webdav.symlinks {
                 (Latest::AsLink, IdenticalSnapshot::AsLink)
             } else {
                 (Latest::AsDir, IdenticalSnapshot::AsDir)
@@ -94,7 +99,8 @@ impl WebDavCmd {
             Vfs::from_snapshots(snapshots, &path_template, &time_template, latest, identical)?
         };
 
-        let addr = self
+        let addr = config
+            .webdav
             .address
             .clone()
             .unwrap_or_else(|| "localhost:8000".to_string())
@@ -102,7 +108,7 @@ impl WebDavCmd {
             .next()
             .ok_or_else(|| anyhow!("no address given"))?;
 
-        let file_access = self.file_access.as_ref().map_or_else(
+        let file_access = config.webdav.file_access.as_ref().map_or_else(
             || {
                 if repo.config().is_hot == Some(true) {
                     Ok(FilePolicy::Forbidden)

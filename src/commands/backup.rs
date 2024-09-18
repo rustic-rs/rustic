@@ -10,6 +10,7 @@ use crate::{
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Context, Result};
+use clap::ValueHint;
 use comfy_table::Cell;
 use log::{debug, info, warn};
 use merge::Merge;
@@ -34,18 +35,18 @@ use rustic_core::{
 pub struct BackupCmd {
     /// Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all
     /// sources defined in the config file
-    #[clap(value_name = "SOURCE")]
+    #[clap(value_name = "SOURCE", value_hint = ValueHint::AnyPath)]
     #[merge(skip)]
     #[serde(skip)]
     cli_sources: Vec<String>,
 
     /// Set filename to be used when backing up from stdin
-    #[clap(long, value_name = "FILENAME", default_value = "stdin")]
+    #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
     #[merge(skip)]
     stdin_filename: String,
 
     /// Manually set backup path in snapshot
-    #[clap(long, value_name = "PATH")]
+    #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
     as_path: Option<PathBuf>,
 
     /// Ignore save options

@@ -6,6 +6,7 @@ use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_A
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use clap::ValueHint;
 use globset::{Glob, GlobBuilder, GlobSetBuilder};
 use itertools::Itertools;
 
@@ -28,10 +29,10 @@ pub(crate) struct FindCmd {
     iglob: Vec<String>,
 
     /// exact path to find
-    #[clap(long, value_name = "PATH")]
+    #[clap(long, value_name = "PATH", value_hint = ValueHint::AnyPath)]
     path: Option<PathBuf>,
 
-    /// Snapshots to serach in. If none is given, use filter options to filter from all snapshots
+    /// Snapshots to search in. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
@@ -85,7 +86,7 @@ impl FindCmd {
                 for (idx, g) in &matches
                     .iter()
                     .zip(snapshots.iter())
-                    .group_by(|(idx, _)| *idx)
+                    .chunk_by(|(idx, _)| *idx)
                 {
                     self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
                     if let Some(idx) = idx {
@@ -112,7 +113,7 @@ impl FindCmd {
                 for (idx, g) in &matches
                     .iter()
                     .zip(snapshots.iter())
-                    .group_by(|(idx, _)| *idx)
+                    .chunk_by(|(idx, _)| *idx)
                 {
                     self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
                     for (path_idx, node_idx) in idx {

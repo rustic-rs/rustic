@@ -59,14 +59,14 @@ impl SnapshotFn {
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
-    #[clap(long, global = true, value_name = "HOSTNAME")]
+    #[clap(long = "filter-host", global = true, value_name = "HOSTNAME")]
     #[merge(strategy=merge::vec::overwrite_empty)]
-    filter_host: Vec<String>,
+    filter_hosts: Vec<String>,
 
     /// Label to filter (can be specified multiple times)
-    #[clap(long, global = true, value_name = "LABEL")]
+    #[clap(long = "filter-label", global = true, value_name = "LABEL")]
     #[merge(strategy=merge::vec::overwrite_empty)]
-    filter_label: Vec<String>,
+    filter_labels: Vec<String>,
 
     /// Path list to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "PATH[,PATH,..]")]
@@ -118,7 +118,7 @@ impl SnapshotFilter {
 
         snapshot.paths.matches(&self.filter_paths)
             && snapshot.tags.matches(&self.filter_tags)
-            && (self.filter_host.is_empty() || self.filter_host.contains(&snapshot.hostname))
-            && (self.filter_label.is_empty() || self.filter_label.contains(&snapshot.label))
+            && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
+            && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
     }
 }

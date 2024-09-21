@@ -37,6 +37,10 @@ pub(crate) struct DiffCmd {
     #[clap(long)]
     no_content: bool,
 
+    /// only show differences for identical files, this can be used for a bitrot test on the local path
+    #[clap(long, conflicts_with = "no_content")]
+    only_identical: bool,
+
     /// Ignore options
     #[clap(flatten)]
     ignore_opts: LocalSourceFilterOptions,
@@ -108,13 +112,21 @@ impl DiffCmd {
                     Ok((path, node))
                 });
 
-                diff(
-                    repo.ls(&node1, &LsOptions::default())?,
-                    src,
-                    self.no_content,
-                    |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
-                    self.metadata,
-                )?;
+                if self.only_identical {
+                    diff_identical(
+                        repo.ls(&node1, &LsOptions::default())?,
+                        src,
+                        |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
+                    )?;
+                } else {
+                    diff(
+                        repo.ls(&node1, &LsOptions::default())?,
+                        src,
+                        self.no_content,
+                        |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
+                        self.metadata,
+                    )?;
+                }
             }
             (None, _) => {
                 bail!("cannot use local path as first argument");
@@ -370,5 +382,53 @@ fn diff(
         }
     }
     println!("{diff_statistics}");
+    Ok(())
+}
+
+fn diff_identical(
+    mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
+) -> Result<()> {
+    let mut item1 = tree_streamer1.next().transpose()?;
+    let mut item2 = tree_streamer2.next().transpose()?;
+
+    let mut checked: usize = 0;
+
+    loop {
+        match (&item1, &item2) {
+            (None, None) => break,
+            (Some(_i1), None) => {
+                item1 = tree_streamer1.next().transpose()?;
+            }
+            (None, Some(_i2)) => {
+                item2 = tree_streamer2.next().transpose()?;
+            }
+            (Some(i1), Some(i2)) if i1.0 < i2.0 => {
+                item1 = tree_streamer1.next().transpose()?;
+            }
+            (Some(i1), Some(i2)) if i1.0 > i2.0 => {
+                item2 = tree_streamer2.next().transpose()?;
+            }
+            (Some(i1), Some(i2)) => {
+                let path = &i1.0;
+                let node1 = &i1.1;
+                let node2 = &i2.1;
+
+                if matches!(&node1.node_type, NodeType::File)
+                    && matches!(&node2.node_type, NodeType::File)
+                    && node1.meta == node2.meta
+                {
+                    checked += 1;
+                    if !file_identical(path, node1, node2)? {
+                        println!("M    {path:?}");
+                    }
+                }
+                item1 = tree_streamer1.next().transpose()?;
+                item2 = tree_streamer2.next().transpose()?;
+            }
+        }
+    }
+    println!("checked {checked} files.");
     Ok(())
 }

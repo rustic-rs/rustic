@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, OneOrMany};
 
 use rustic_core::{
-    BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    ParentOptions, PathList, SnapshotOptions,
+    BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, ParentOptions, PathList, SnapshotOptions,
 };
 
 /// `backup` subcommand
@@ -44,6 +44,10 @@ pub struct BackupCmd {
     #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
     #[merge(skip)]
     stdin_filename: String,
+
+    /// Start the given command and use its output as stdin
+    #[clap(long, value_name = "COMMAND")]
+    stdin_command: Option<CommandInput>,
 
     /// Manually set backup path in snapshot
     #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
@@ -233,6 +237,7 @@ impl BackupCmd {
 
             let backup_opts = BackupOptions::default()
                 .stdin_filename(opts.stdin_filename)
+                .stdin_command(opts.stdin_command)
                 .as_path(opts.as_path)
                 .parent_opts(opts.parent_opts)
                 .ignore_save_opts(opts.ignore_save_opts)

@@ -403,13 +403,12 @@ dependencies = [
 
 [[package]]
 name = "backon"
-version = "0.4.4"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d67782c3f868daa71d3533538e98a8e13713231969def7536e8039606fc46bf0"
+checksum = "e4fa97bb310c33c811334143cf64c5bb2b7b3c06e453db6b095d7061eff8f113"
 dependencies = [
  "fastrand",
- "futures-core",
- "pin-project",
+ "gloo-timers",
  "tokio",
 ]
 
@@ -2684,9 +2683,9 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "opendal"
-version = "0.49.2"
+version = "0.50.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b04d09b9822c2f75a1d2fc513a2c1279c70e91e7407936fffdf6a6976ec530a"
+checksum = "36e44fc43be9ffe18dad3e3ef9d61c1ae01991ee6f1c8c026978c35777a711bf"
 dependencies = [
  "anyhow",
  "async-tls",
@@ -2722,9 +2721,9 @@ dependencies = [
 
 [[package]]
 name = "openssh"
-version = "0.10.5"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "330f4b61092456dc0aaa0cf9a205d956cae07d8127a69ffeff6760a72549c77f"
+checksum = "cf397b60b682d691bf2c6125b848304ef0df2023a657aa0fc006fd6769c3d8fa"
 dependencies = [
  "libc",
  "once_cell",
@@ -2732,14 +2731,13 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tokio-pipe",
 ]
 
 [[package]]
 name = "openssh-sftp-client"
-version = "0.14.6"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f472c9c38ea60bc161f8b5df4d04c79057003cdc12572eaad7f6dcc74e6fca5"
+checksum = "7cb57886c859b298b785e20c9cbcd6681fe9106aa4fd19c0e7e8ecd801948e1e"
 dependencies = [
  "bytes",
  "derive_destructure2",
@@ -2758,9 +2756,9 @@ dependencies = [
 
 [[package]]
 name = "openssh-sftp-client-lowlevel"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a84f1a52761901fcf5b10885544085348a872e57294531ec9188145d9a83042"
+checksum = "12a5728cca10461b3842f715fb3d8acd7ef11e2635a0aff0eb5eceab2e1f1e4a"
 dependencies = [
  "awaitable",
  "bytes",
@@ -2775,9 +2773,9 @@ dependencies = [
 
 [[package]]
 name = "openssh-sftp-error"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61a5aea093d714df10186f481a6003e3f906f6fc8360c026737a841f4f182996"
+checksum = "87ee6d9ea97e1fd08435222dd1eab26aa6a86674f0ff1a9583b48c98d1ef4801"
 dependencies = [
  "awaitable-error",
  "openssh",
@@ -3703,7 +3701,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.3.1 (git+https://github.com/rustic-rs/rustic_core.git)",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -3723,8 +3721,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4be83b3d9b405ab553d21a77a244a2979609d70b064061b7940b4835b815ab28"
+source = "git+https://github.com/rustic-rs/rustic_core.git#43fffbe18c0620572da685792f86d5fac52f8116"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3743,10 +3740,9 @@ dependencies = [
  "rand",
  "rayon",
  "reqwest",
- "rustic_core",
+ "rustic_core 0.3.1 (git+https://github.com/rustic-rs/rustic_core.git)",
  "semver",
  "serde",
- "shell-words",
  "strum",
  "strum_macros",
  "thiserror",
@@ -3760,6 +3756,58 @@ name = "rustic_core"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d03fc568dbd01c9db6cb971ee93320bed6156e42dfd463b3b58869d6457a6d4"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "anyhow",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "chrono",
+ "crossbeam-channel",
+ "derivative",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "enum-map",
+ "enum-map-derive",
+ "enumset",
+ "filetime",
+ "gethostname",
+ "hex",
+ "humantime",
+ "ignore",
+ "integer-sqrt",
+ "itertools",
+ "log",
+ "nix",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand",
+ "rayon",
+ "runtime-format",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "strum",
+ "thiserror",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
+name = "rustic_core"
+version = "0.3.1"
+source = "git+https://github.com/rustic-rs/rustic_core.git#43fffbe18c0620572da685792f86d5fac52f8116"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3824,7 +3872,7 @@ dependencies = [
  "bytes",
  "enum-map",
  "once_cell",
- "rustic_core",
+ "rustic_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
 ]
 
@@ -4683,16 +4731,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.77",
-]
-
-[[package]]
-name = "tokio-pipe"
-version = "0.2.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f213a84bffbd61b8fa0ba8a044b4bbe35d471d0b518867181e82bd5c15542784"
-dependencies = [
- "libc",
- "tokio",
 ]
 
 [[package]]

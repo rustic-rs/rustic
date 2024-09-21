@@ -7,10 +7,8 @@ no-progress = false
 [global.env]
 
 [repository]
-password-command = []
 no-cache = false
 warm-up = false
-warm-up-command = []
 
 [repository.options]
 

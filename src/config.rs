@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
-    commands::{backup::BackupCmd, copy::Targets, forget::ForgetOptions},
+    commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
@@ -55,7 +55,7 @@ pub struct RusticConfig {
 
     /// Copy options
     #[clap(skip)]
-    pub copy: Targets,
+    pub copy: CopyCmd,
 
     /// Forget options
     #[clap(skip)]

@@ -4,6 +4,7 @@ use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_A
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
+use log::debug;
 
 use std::{
     fmt::Display,
@@ -398,16 +399,24 @@ fn diff_identical(
     loop {
         match (&item1, &item2) {
             (None, None) => break,
-            (Some(_i1), None) => {
+            (Some(i1), None) => {
+                let path = &i1.0;
+                debug!("not checking {}: not present in target", path.display());
                 item1 = tree_streamer1.next().transpose()?;
             }
-            (None, Some(_i2)) => {
+            (None, Some(i2)) => {
+                let path = &i2.0;
+                debug!("not checking {}: not present in source", path.display());
                 item2 = tree_streamer2.next().transpose()?;
             }
             (Some(i1), Some(i2)) if i1.0 < i2.0 => {
+                let path = &i1.0;
+                debug!("not checking {}: not present in target", path.display());
                 item1 = tree_streamer1.next().transpose()?;
             }
             (Some(i1), Some(i2)) if i1.0 > i2.0 => {
+                let path = &i2.0;
+                debug!("not checking {}: not present in source", path.display());
                 item2 = tree_streamer2.next().transpose()?;
             }
             (Some(i1), Some(i2)) => {
@@ -419,10 +428,13 @@ fn diff_identical(
                     && matches!(&node2.node_type, NodeType::File)
                     && node1.meta == node2.meta
                 {
+                    debug!("checking {}", path.display());
                     checked += 1;
                     if !file_identical(path, node1, node2)? {
                         println!("M    {path:?}");
                     }
+                } else {
+                    debug!("not checking {}: metadata changed", path.display());
                 }
                 item1 = tree_streamer1.next().transpose()?;
                 item2 = tree_streamer2.next().transpose()?;

@@ -155,7 +155,7 @@ impl LsCmd {
             } else if self.long {
                 print_node(&node, &path, self.numeric_id);
             } else {
-                println!("{path:?} ");
+                println!("{}", path.display());
             }
             first_item = false;
         }

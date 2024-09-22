@@ -183,7 +183,7 @@ impl LsCmd {
 /// * `path` - the path of the node
 pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
     println!(
-        "{:>10} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
+        "{:>10} {:>8} {:>8} {:>9} {:>17} {path:?} {}",
         node.mode_str(),
         if numeric_uid_gid {
             node.meta.uid.map(|uid| uid.to_string())
@@ -200,7 +200,7 @@ pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
         node.meta.size,
         node.meta
             .mtime
-            .map(|t| t.format("%_d %b %H:%M").to_string())
+            .map(|t| t.format("%_d %b %Y %H:%M").to_string())
             .unwrap_or_else(|| "?".to_string()),
         node.link_str(),
     );

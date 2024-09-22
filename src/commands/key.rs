@@ -9,7 +9,7 @@ use anyhow::Result;
 use dialoguer::Password;
 use log::info;
 
-use rustic_core::{KeyOptions, RepositoryOptions};
+use rustic_core::{CommandInput, KeyOptions, RepositoryOptions};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -37,7 +37,7 @@ pub(crate) struct AddCmd {
 
     /// Command to get the new password from
     #[clap(long)]
-    pub(crate) new_password_command: Vec<String>,
+    pub(crate) new_password_command: Option<CommandInput>,
 
     /// Key options
     #[clap(flatten)]

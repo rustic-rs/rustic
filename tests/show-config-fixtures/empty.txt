@@ -1,5 +1,5 @@
 [global]
-use-profile = []
+use-profiles = []
 dry-run = false
 check-index = false
 no-progress = false
@@ -7,10 +7,8 @@ no-progress = false
 [global.env]
 
 [repository]
-password-command = []
 no-cache = false
 warm-up = false
-warm-up-command = []
 
 [repository.options]
 
@@ -19,8 +17,8 @@ warm-up-command = []
 [repository.options-cold]
 
 [snapshot-filter]
-filter-host = []
-filter-label = []
+filter-hosts = []
+filter-labels = []
 filter-paths = []
 filter-tags = []
 
@@ -37,27 +35,27 @@ skip-identical-parent = false
 force = false
 ignore-ctime = false
 ignore-inode = false
-glob = []
-iglob = []
-glob-file = []
-iglob-file = []
+globs = []
+iglobs = []
+glob-files = []
+iglob-files = []
 git-ignore = false
 no-require-git = false
-custom-ignorefile = []
+custom-ignorefiles = []
 exclude-if-present = []
 one-file-system = false
-tag = []
+tags = []
 delete-never = false
+snapshots = []
 sources = []
-source = []
 
 [copy]
 targets = []
 
 [forget]
 prune = false
-filter-host = []
-filter-label = []
+filter-hosts = []
+filter-labels = []
 filter-paths = []
 filter-tags = []
 

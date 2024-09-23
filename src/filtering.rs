@@ -7,7 +7,7 @@ use std::{error::Error, str::FromStr};
 use cached::proc_macro::cached;
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr, OneOrMany};
+use serde_with::{serde_as, DisplayFromStr};
 
 /// A function to filter snapshots
 ///
@@ -59,26 +59,24 @@ impl SnapshotFn {
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SnapshotFilter {
     /// Hostname to filter (can be specified multiple times)
-    #[clap(long, global = true, value_name = "HOSTNAME")]
+    #[clap(long = "filter-host", global = true, value_name = "HOSTNAME")]
     #[merge(strategy=merge::vec::overwrite_empty)]
-    #[serde_as(as = "OneOrMany<_>")]
-    filter_host: Vec<String>,
+    filter_hosts: Vec<String>,
 
     /// Label to filter (can be specified multiple times)
-    #[clap(long, global = true, value_name = "LABEL")]
+    #[clap(long = "filter-label", global = true, value_name = "LABEL")]
     #[merge(strategy=merge::vec::overwrite_empty)]
-    #[serde_as(as = "OneOrMany<_>")]
-    filter_label: Vec<String>,
+    filter_labels: Vec<String>,
 
     /// Path list to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "PATH[,PATH,..]")]
-    #[serde_as(as = "OneOrMany<DisplayFromStr>")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_paths: Vec<StringList>,
 
     /// Tag list to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "TAG[,TAG,..]")]
-    #[serde_as(as = "OneOrMany<DisplayFromStr>")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=merge::vec::overwrite_empty)]
     filter_tags: Vec<StringList>,
 
@@ -120,7 +118,7 @@ impl SnapshotFilter {
 
         snapshot.paths.matches(&self.filter_paths)
             && snapshot.tags.matches(&self.filter_tags)
-            && (self.filter_host.is_empty() || self.filter_host.contains(&snapshot.hostname))
-            && (self.filter_label.is_empty() || self.filter_label.contains(&snapshot.label))
+            && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
+            && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
     }
 }

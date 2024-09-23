@@ -20,15 +20,15 @@ keep-yearly = 10
 
 [backup]
 exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
-glob-file = ["/root/rustic-ovh.glob"]
+glob-files = ["/root/rustic-ovh.glob"]
 one-file-system = true
 
-[[backup.sources]]
-source = "/home"
+[[backup.snapshots]]
+sources = ["/home"]
 git-ignore = true
 
-[[backup.sources]]
-source = "/etc"
+[[backup.snapshots]]
+sources = ["/etc"]
 
-[[backup.sources]]
-source = "/root"
+[[backup.snapshots]]
+sources = ["/root"]

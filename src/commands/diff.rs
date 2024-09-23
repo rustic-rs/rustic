@@ -14,7 +14,7 @@ use std::{
 use anyhow::{bail, Context, Result};
 
 use rustic_core::{
-    repofile::{BlobType, Node, NodeType},
+    repofile::{Node, NodeType},
     IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
     LsOptions, ReadSource, ReadSourceEntry, Repository, RusticResult,
 };
@@ -192,7 +192,7 @@ fn identical_content_local<P, S: IndexedFull>(
     };
 
     for id in node.content.iter().flatten() {
-        let ie = repo.get_index_entry(BlobType::Data, id)?;
+        let ie = repo.get_index_entry(id)?;
         let length = ie.data_length();
         if !id.blob_matches_reader(length as usize, &mut open_file) {
             return Ok(false);

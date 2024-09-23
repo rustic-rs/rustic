@@ -111,13 +111,19 @@ impl SnapshotCmd {
                     ],
                 );
 
-                let snapshots: Vec<_> = snapshots
-                    .into_iter()
-                    .chunk_by(|sn| if self.all { sn.id } else { sn.tree })
-                    .into_iter()
-                    .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count()))
-                    .collect();
-                _ = table.add_rows(snapshots);
+                if self.all {
+                    // Add all snapshots to output table
+                    _ = table.add_rows(snapshots.into_iter().map(|sn| snap_to_table(&sn, 0)));
+                } else {
+                    // Group snapshts by treeid and output into table
+                    _ = table.add_rows(
+                        snapshots
+                            .into_iter()
+                            .chunk_by(|sn| sn.tree)
+                            .into_iter()
+                            .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count())),
+                    );
+                }
                 println!("{table}");
             }
             println!("{count} snapshot(s)");

@@ -6,7 +6,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::{bail, Result};
 
-use rustic_core::repofile::{FileType, IndexFile};
+use rustic_core::repofile::{IndexFile, IndexId, KeyId, PackId, SnapshotId};
 
 /// `list` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -30,7 +30,7 @@ impl ListCmd {
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config.repository)?;
 
-        let tpe = match self.tpe.as_str() {
+        match self.tpe.as_str() {
             // special treatment for listing blobs: read the index and display it
             "blobs" => {
                 for item in repo.stream_files::<IndexFile>()? {
@@ -41,20 +41,31 @@ impl ListCmd {
                         }
                     });
                 }
-                return Ok(());
             }
-            "index" => FileType::Index,
-            "packs" => FileType::Pack,
-            "snapshots" => FileType::Snapshot,
-            "keys" => FileType::Key,
+            "index" => {
+                for id in repo.list::<IndexId>()? {
+                    println!("{id:?}");
+                }
+            }
+            "packs" => {
+                for id in repo.list::<PackId>()? {
+                    println!("{id:?}");
+                }
+            }
+            "snapshots" => {
+                for id in repo.list::<SnapshotId>()? {
+                    println!("{id:?}");
+                }
+            }
+            "keys" => {
+                for id in repo.list::<KeyId>()? {
+                    println!("{id:?}");
+                }
+            }
             t => {
                 bail!("invalid type: {}", t);
             }
         };
-
-        for id in repo.list(tpe)? {
-            println!("{id:?}");
-        }
 
         Ok(())
     }

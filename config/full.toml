@@ -29,7 +29,7 @@ repo-hot = "/my/hot/repo" # Default: not set
 # one of the three password options must be set
 password = "mySecretPassword"
 password-file = "/my/password.txt"
-password-command = ["my_command.sh"]
+password-command = "my_command.sh"
 no-cache = false
 cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g. ~/.cache/rustic
 # use either warm-up (warm-up by file access) or warm-up-command to specify warming up

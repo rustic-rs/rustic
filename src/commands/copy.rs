@@ -102,7 +102,7 @@ impl CopyCmd {
                     continue;
                 }
                 let mut config_dest = repo.config().clone();
-                config_dest.id = Id::random();
+                config_dest.id = Id::random().into();
                 let pass = init_password(&repo_dest)?;
                 repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
             } else {

@@ -65,7 +65,7 @@ impl RestoreCmd {
 
         let dest = LocalDestination::new(&self.dest, true, !node.is_dir())?;
 
-        let restore_infos = repo.prepare_restore(&self.opts, ls.clone(), &dest, dry_run)?;
+        let restore_infos = repo.prepare_restore(&self.opts, ls, &dest, dry_run)?;
 
         let fs = restore_infos.stats.files;
         println!(
@@ -95,6 +95,10 @@ impl RestoreCmd {
         if dry_run {
             repo.warm_up(restore_infos.to_packs().into_iter())?;
         } else {
+            // save some memory
+            let repo = repo.drop_data_from_index();
+
+            let ls = repo.ls(&node, &ls_opts)?;
             repo.restore(restore_infos, &self.opts, ls, &dest)?;
             println!("restore done.");
         }

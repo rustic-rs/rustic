@@ -685,7 +685,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .snapshots
             .iter()
             .zip(self.snaps_status.iter())
-            .filter_map(|(snap, status)| status.modified.then_some(snap))
+            .filter_map(|(snap, status)| (status.modified && !status.to_forget).then_some(snap))
             .cloned()
             .collect();
         let old_snap_ids = save_snaps.iter().map(|sn| sn.id);

@@ -3029,9 +3029,9 @@ dependencies = [
 
 [[package]]
 name = "pkg-config"
-version = "0.3.30"
+version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
+checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
 name = "polling"
@@ -3721,7 +3721,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.2.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git#e7edd4d030e6807511a9bd8a160763a1c3eaf3ea"
+source = "git+https://github.com/rustic-rs/rustic_core.git#59bd3e598988f019e79b58c6520244224835bfcb"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3807,7 +3807,7 @@ dependencies = [
 [[package]]
 name = "rustic_core"
 version = "0.3.1"
-source = "git+https://github.com/rustic-rs/rustic_core.git#e7edd4d030e6807511a9bd8a160763a1c3eaf3ea"
+source = "git+https://github.com/rustic-rs/rustic_core.git#59bd3e598988f019e79b58c6520244224835bfcb"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",

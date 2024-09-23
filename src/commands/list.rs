@@ -60,10 +60,10 @@ impl ListCmd {
                                 pack.blob_type(),
                                 pack.id,
                                 pack.pack_size(),
-                                pack.time.map_or_else(
-                                    || String::new(),
-                                    |time| format!("{}", time.format("%Y-%m-%d %H:%M:%S"))
-                                )
+                                pack.time.map_or_else(String::new, |time| format!(
+                                    "{}",
+                                    time.format("%Y-%m-%d %H:%M:%S")
+                                ))
                             ),
                             t => {
                                 bail!("invalid type: {}", t);

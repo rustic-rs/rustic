@@ -36,12 +36,16 @@ pub(crate) struct LsCmd {
     snap: String,
 
     /// show summary
-    #[clap(long, short = 's')]
+    #[clap(long, short = 's', conflicts_with = "json")]
     summary: bool,
 
     /// show long listing
-    #[clap(long, short = 'l')]
+    #[clap(long, short = 'l', conflicts_with = "json")]
     long: bool,
+
+    /// show listing in json
+    #[clap(long, conflicts_with_all = ["summary", "long"])]
+    json: bool,
 
     /// show uid/gid instead of user/group
     #[clap(long, long("numeric-uid-gid"))]
@@ -135,14 +139,29 @@ impl LsCmd {
 
         let mut summary = Summary::default();
 
+        if self.json {
+            print!("[");
+        }
+
+        let mut first_item = true;
         for item in repo.ls(&node, &ls_opts)? {
             let (path, node) = item?;
             summary.update(&node);
-            if self.long {
+            if self.json {
+                if !first_item {
+                    print!(",");
+                }
+                print!("{}", serde_json::to_string(&path)?);
+            } else if self.long {
                 print_node(&node, &path, self.numeric_id);
             } else {
                 println!("{}", path.display());
             }
+            first_item = false;
+        }
+
+        if self.json {
+            println!("]");
         }
 
         if self.summary {
@@ -164,7 +183,7 @@ impl LsCmd {
 /// * `path` - the path of the node
 pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
     println!(
-        "{:>10} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
+        "{:>10} {:>8} {:>8} {:>9} {:>17} {path:?} {}",
         node.mode_str(),
         if numeric_uid_gid {
             node.meta.uid.map(|uid| uid.to_string())
@@ -181,7 +200,7 @@ pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
         node.meta.size,
         node.meta
             .mtime
-            .map(|t| t.format("%_d %b %H:%M").to_string())
+            .map(|t| t.format("%_d %b %Y %H:%M").to_string())
             .unwrap_or_else(|| "?".to_string()),
         node.link_str(),
     );

@@ -15,7 +15,7 @@ use comfy_table::Cell;
 use log::{debug, info, warn};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, OneOrMany};
+use serde_with::serde_as;
 
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalSourceFilterOptions,
@@ -110,16 +110,15 @@ pub struct BackupCmd {
     #[merge(skip)]
     config_opts: ConfigOptions,
 
-    /// Backup sources
+    /// Backup snapshots to generate
     #[clap(skip)]
     #[merge(strategy = merge_sources)]
-    sources: Vec<BackupCmd>,
+    snapshots: Vec<BackupCmd>,
 
     /// Backup source, used within config file
     #[clap(skip)]
     #[merge(skip)]
-    #[serde_as(as = "OneOrMany<_>")]
-    source: Vec<String>,
+    sources: Vec<String>,
 }
 
 /// Merge backup sources
@@ -131,8 +130,8 @@ pub struct BackupCmd {
 /// * `left` - Vector of backup sources
 pub(crate) fn merge_sources(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCmd>) {
     left.append(&mut right);
-    left.sort_by(|opt1, opt2| opt1.source.cmp(&opt2.source));
-    left.dedup_by(|opt1, opt2| opt1.source == opt2.source);
+    left.sort_by(|opt1, opt2| opt1.sources.cmp(&opt2.sources));
+    left.dedup_by(|opt1, opt2| opt1.sources == opt2.sources);
 }
 
 impl Runnable for BackupCmd {
@@ -163,26 +162,26 @@ impl BackupCmd {
         .to_indexed_ids()?;
 
         // manually check for a "source" field, check is not done by serde, see above.
-        if !config.backup.source.is_empty() {
+        if !config.backup.sources.is_empty() {
             bail!("key \"source\" is not valid in the [backup] section!");
         }
 
-        let config_opts = &config.backup.sources;
+        let snapshot_opts = &config.backup.snapshots;
 
         // manually check for a "sources" field, check is not done by serde, see above.
-        if config_opts.iter().any(|opt| !opt.sources.is_empty()) {
+        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
             bail!("key \"sources\" is not valid in a [[backup.sources]] section!");
         }
 
-        let config_sources: Vec<_> = config_opts
+        let config_snapshot_sources: Vec<_> = snapshot_opts
             .iter()
             .map(|opt| -> Result<_> {
-                Ok(PathList::from_iter(&opt.source)
+                Ok(PathList::from_iter(&opt.sources)
                     .sanitize()
                     .with_context(|| {
                         format!(
                             "error sanitizing source=\"{:?}\" in config file",
-                            opt.source
+                            opt.sources
                         )
                     })?
                     .merge())
@@ -196,38 +195,41 @@ impl BackupCmd {
             })
             .collect();
 
-        let sources = match (self.cli_sources.is_empty(), config_opts.is_empty()) {
+        let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
             (false, _) => {
                 let item = PathList::from_iter(&self.cli_sources).sanitize()?;
                 vec![item]
             }
             (true, false) => {
                 info!("using all backup sources from config file.");
-                config_sources.clone()
+                config_snapshot_sources.clone()
             }
             (true, true) => {
                 bail!("no backup source given.");
             }
         };
 
-        for source in sources {
+        for sources in snapshot_sources {
             let mut opts = self.clone();
 
             // merge Options from config file, if given
-            if let Some(idx) = config_sources.iter().position(|s| s == &source) {
-                info!("merging source={source} section from config file");
-                opts.merge(config_opts[idx].clone());
+            if let Some(idx) = config_snapshot_sources.iter().position(|s| s == &sources) {
+                info!("merging source={sources} section from config file");
+                opts.merge(snapshot_opts[idx].clone());
             }
             if let Some(path) = &opts.as_path {
                 // as_path only works in combination with a single target
-                if source.len() > 1 {
+                if sources.len() > 1 {
                     bail!("as-path only works with a single target!");
                 }
                 // merge Options from config file using as_path, if given
                 if let Some(path) = path.as_os_str().to_str() {
-                    if let Some(idx) = config_opts.iter().position(|opt| opt.source == vec![path]) {
+                    if let Some(idx) = snapshot_opts
+                        .iter()
+                        .position(|opt| opt.sources == vec![path])
+                    {
                         info!("merging source=\"{path}\" section from config file");
-                        opts.merge(config_opts[idx].clone());
+                        opts.merge(snapshot_opts[idx].clone());
                     }
                 }
             }
@@ -244,7 +246,7 @@ impl BackupCmd {
                 .ignore_filter_opts(opts.ignore_filter_opts)
                 .no_scan(opts.no_scan)
                 .dry_run(config.global.dry_run);
-            let snap = repo.backup(&backup_opts, &source, opts.snap_opts.to_snapshot()?)?;
+            let snap = repo.backup(&backup_opts, &sources, opts.snap_opts.to_snapshot()?)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();
@@ -284,7 +286,7 @@ impl BackupCmd {
                 println!("snapshot {} successfully saved.", snap.id);
             }
 
-            info!("backup of {source} done.");
+            info!("backup of {sources} done.");
         }
 
         Ok(())

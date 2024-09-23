@@ -10,7 +10,7 @@ use crate::{
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::ValueHint;
 use comfy_table::Cell;
 use log::{debug, error, info, warn};
@@ -151,6 +151,19 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+
+        // manually check for a "source" field, check is not done by serde, see above.
+        if !config.backup.sources.is_empty() {
+            bail!("key \"sources\" is not valid in the [backup] section!");
+        }
+
+        let snapshot_opts = &config.backup.snapshots;
+
+        // manually check for a "sources" field, check is not done by serde, see above.
+        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
+            bail!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
+        }
+
         let repo = get_repository(&config.repository)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
@@ -165,18 +178,6 @@ impl BackupCmd {
             open_repository(&config.repository)?
         }
         .to_indexed_ids()?;
-
-        // manually check for a "snapshots" field, check is not done by serde, see above.
-        if !config.backup.sources.is_empty() {
-            bail!("key \"sources\" is not valid in the [backup] section!");
-        }
-
-        let snapshot_opts = &config.backup.snapshots;
-
-        // manually check for a "sources" field, check is not done by serde, see above.
-        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
-            bail!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
-        }
 
         let config_snapshot_sources: Vec<_> = snapshot_opts
             .iter()
@@ -213,43 +214,32 @@ impl BackupCmd {
                 bail!("no backup source given.");
             }
         };
+        if snapshot_sources.is_empty() {
+            return Ok(());
+        }
 
-        let has_sources = !snapshot_sources.is_empty();
         let hooks = config.backup.hooks.with_context("backup");
-        if has_sources {
-            hooks.run_before()?;
-        }
+        hooks.use_with(|| -> Result<_> {
+            let mut is_err = false;
+            for sources in snapshot_sources {
+                let mut opts = self.clone();
 
-        let mut is_err = false;
-        for sources in snapshot_sources {
-            let mut opts = self.clone();
-
-            // merge Options from config file, if given
-            if let Some(idx) = config_snapshot_sources.iter().position(|s| s == &sources) {
-                info!("merging sources={sources} section from config file");
-                opts.merge(snapshot_opts[idx].clone());
+                // merge Options from config file, if given
+                if let Some(idx) = config_snapshot_sources.iter().position(|s| s == &sources) {
+                    info!("merging sources={sources} section from config file");
+                    opts.merge(snapshot_opts[idx].clone());
+                }
+                if let Err(err) = opts.backup_snapshot(sources.clone(), &repo) {
+                    error!("error backing up {sources}: {err}");
+                    is_err = true;
+                }
             }
-
-            if let Err(err) = opts.backup_snapshot(sources.clone(), &repo) {
-                error!("error backing up {sources:?}: {err}");
-                is_err = true;
-            }
-        }
-
-        if has_sources {
             if is_err {
-                hooks.run_failed()?;
+                Err(anyhow!("Not all sources were successfully backuped!"))
             } else {
-                hooks.run_after()?;
+                Ok(())
             }
-        }
-        hooks.run_finally()?;
-
-        if is_err {
-            bail!("Not all sources were successfully backuped!")
-        }
-
-        Ok(())
+        })
     }
 
     fn backup_snapshot<P: ProgressBars, S: IndexedIds>(
@@ -278,7 +268,6 @@ impl BackupCmd {
 
         // use the correct source-specific hooks
         let hooks = self.hooks.with_context(&format!("backup {source}"));
-        hooks.run_before()?;
 
         // merge "backup" section from config file, if given
         self.merge(config.backup.clone());
@@ -292,20 +281,9 @@ impl BackupCmd {
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);
 
-        let run_backup = || -> Result<_> {
+        let snap = hooks.use_with(|| -> Result<_> {
             Ok(repo.backup(&backup_opts, &source, self.snap_opts.to_snapshot()?)?)
-        };
-        let snap = match run_backup() {
-            Ok(snap) => {
-                hooks.run_after()?;
-                snap
-            }
-            Err(err) => {
-                hooks.run_failed()?;
-                return Err(err);
-            }
-        };
-        hooks.run_finally()?;
+        })?;
 
         if self.json {
             let mut stdout = std::io::stdout();

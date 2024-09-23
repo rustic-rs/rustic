@@ -294,4 +294,20 @@ impl Hooks {
     pub fn run_finally(&self) -> RusticResult<()> {
         Self::run_all(&self.run_finally, &self.context, "run-finally")
     }
+
+    pub fn use_with<T>(&self, f: impl FnOnce() -> anyhow::Result<T>) -> anyhow::Result<T> {
+        self.run_before()?;
+        let result = match f() {
+            Ok(result) => {
+                self.run_after()?;
+                result
+            }
+            Err(err) => {
+                self.run_failed()?;
+                return Err(err);
+            }
+        };
+        self.run_finally()?;
+        Ok(result)
+    }
 }

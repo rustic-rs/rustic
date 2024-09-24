@@ -3662,7 +3662,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.8.1-dev"
+version = "0.8.1"
 dependencies = [
  "abscissa_core",
  "aho-corasick",

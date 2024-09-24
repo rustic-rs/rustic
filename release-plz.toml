@@ -1,0 +1,9 @@
+# configuration spec can be found here https://release-plz.ieni.dev/docs/config
+
+[workspace]
+pr_draft = true
+dependencies_update = true
+# changelog_config = "cliff.toml" # Don't use this for now, as it will override the default changelog config
+
+[changelog]
+protect_breaking_commits = true

@@ -4,6 +4,12 @@ dry-run = false
 check-index = false
 no-progress = false
 
+[global.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
 [global.env]
 
 [repository]
@@ -48,6 +54,12 @@ tags = []
 delete-never = false
 snapshots = []
 sources = []
+
+[backup.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
 
 [copy]
 targets = []

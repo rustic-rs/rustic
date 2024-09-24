@@ -35,13 +35,15 @@ fn cmd_runner() -> CmdRunner {
     LAZY_RUNNER.clone()
 }
 
-fn fixtures_dir() -> PathBuf {
-    ["tests", "show-config-fixtures"].iter().collect()
+fn fixture() -> PathBuf {
+    ["tests", "show-config-fixtures", "empty.txt"]
+        .iter()
+        .collect()
 }
 
 #[test]
 fn show_config_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("empty.txt");
+    let fixture_file = fixture();
     let mut file = get_temp_file()?;
 
     {
@@ -56,8 +58,8 @@ fn show_config_passes() -> TestResult<()> {
         cmd.wait()?.expect_success();
     }
 
-    if files_differ(fixture_path, file.path())? {
-        panic!("generated completions for bash shell differ, breaking change!");
+    if files_differ(fixture_file, file.path())? {
+        panic!("generated empty.txt differs, breaking change!");
     }
 
     Ok(())

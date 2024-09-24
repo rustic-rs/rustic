@@ -16,6 +16,16 @@ progress-interval = "100ms"
 dry-run = false
 check-index = false
 
+# Global hooks: The given commands are called for every command
+[global.hooks]
+run-before = [
+  # long form giving command and args explicitely and allow to specify failure behavior
+  { command = "echo", args = ["before"], on-failure = "warn" }, # allowed values for on-failure: "error" (default), "warn", "ignore"
+] # Default: []
+run-after = ["echo after"] # Run after if successful, short version, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
+
 # Global env variables: These are set by rustic before calling a subcommand, e.g. rclone or commands
 # defined in the repository options.
 [global.env]
@@ -108,11 +118,25 @@ no-scan = false
 quiet = false
 skip-identical-parent = false
 
+# Backup hooks: The given commands are called for the `backup` command
+[backup.hooks]
+run-before = ["echo before"] # Default: []
+run-after = ["echo after"] # Run after if successful, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
+
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.snapshots]]
 sources = ["/path/to/source1"]
 label = "label" # Default: not set
 # .. and so on. see [backup]
+
+# Source-specific hooks: The given commands when backing up the defined source
+[backup.snapshots.hooks]
+run-before = ["echo before"] # Default: []
+run-after = ["echo after"] # Run after if successful, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
 
 [[backup.snapshots]]
 sources = [

@@ -2,16 +2,19 @@
 
 use crate::{
     commands::{get_repository, init::init_password, open_repository, open_repository_indexed},
+    config::{AllRepositoryOptions, Hooks},
     helpers::table_with_titles,
     status_err, Application, RusticConfig, RUSTIC_APP,
 };
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use log::{error, info, log, Level};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 
-use rustic_core::{CopySnapshot, Id, KeyOptions};
+use rustic_core::{
+    repofile::SnapshotFile, CopySnapshot, Id, IndexedFull, KeyOptions, ProgressBars, Repository,
+};
 
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
@@ -79,7 +82,6 @@ impl CopyCmd {
         // sort for nicer output
         snapshots.sort_unstable();
 
-        let poly = repo.config().poly()?;
         for target in &config.copy.targets {
             let mut merge_logs = Vec::new();
             let mut target_config = RusticConfig::default();
@@ -89,69 +91,88 @@ impl CopyCmd {
                 log!(level, "{}", merge_log);
             }
             let target_opt = &target_config.repository;
-
-            let repo_dest = get_repository(target_opt)?;
-
-            info!("copying to target {}...", repo_dest.name);
-            let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
-                if config.global.dry_run {
-                    error!(
-                        "cannot initialize target {} in dry-run mode!",
-                        repo_dest.name
-                    );
-                    continue;
-                }
-                let mut config_dest = repo.config().clone();
-                config_dest.id = Id::random().into();
-                let pass = init_password(&repo_dest)?;
-                repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
-            } else {
-                open_repository(target_opt)?
-            };
-
-            if poly != repo_dest.config().poly()? {
-                bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
+            let hooks = target_config.global.hooks.with_context("target");
+            if let Err(err) = self.copy(&repo, target_opt, &snapshots, &hooks) {
+                error!("error copying to target: {err}");
+                hooks.run_failed()?;
             }
-
-            let snaps = repo_dest.relevant_copy_snapshots(
-                |sn| !self.ids.is_empty() || config.snapshot_filter.matches(sn),
-                &snapshots,
-            )?;
-
-            let mut table =
-                table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);
-            for CopySnapshot { relevant, sn } in snaps.iter() {
-                let tags = sn.tags.formatln();
-                let paths = sn.paths.formatln();
-                let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
-                _ = table.add_row([
-                    &sn.id.to_string(),
-                    &time,
-                    &sn.hostname,
-                    &sn.label,
-                    &tags,
-                    &paths,
-                    &(if *relevant { "to copy" } else { "existing" }).to_string(),
-                ]);
-            }
-            println!("{table}");
-
-            let count = snaps.iter().filter(|sn| sn.relevant).count();
-            if count > 0 {
-                if config.global.dry_run {
-                    info!("would have copied {count} snapshots.");
-                } else {
-                    repo.copy(
-                        &repo_dest.to_indexed_ids()?,
-                        snaps
-                            .iter()
-                            .filter_map(|CopySnapshot { relevant, sn }| relevant.then_some(sn)),
-                    )?;
-                }
-            } else {
-                info!("nothing to copy.");
-            }
+            hooks.run_finally()?;
         }
+        Ok(())
+    }
+
+    fn copy<P: ProgressBars>(
+        &self,
+        repo: &Repository<P, impl IndexedFull>,
+        target_opt: &AllRepositoryOptions,
+        snapshots: &[SnapshotFile],
+        hooks: &Hooks,
+    ) -> Result<()> {
+        hooks.run_before()?;
+        let config = RUSTIC_APP.config();
+        let repo_dest = get_repository(target_opt)?;
+
+        info!("copying to target {}...", repo_dest.name);
+        let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
+            if config.global.dry_run {
+                let error = anyhow!(
+                    "cannot initialize target {} in dry-run mode!",
+                    repo_dest.name
+                );
+                error!("{error}");
+                return Err(error);
+            }
+            let mut config_dest = repo.config().clone();
+            config_dest.id = Id::random().into();
+            let pass = init_password(&repo_dest)?;
+            repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
+        } else {
+            open_repository(target_opt)?
+        };
+
+        if repo.config().poly()? != repo_dest.config().poly()? {
+            bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
+        }
+
+        let snaps = repo_dest.relevant_copy_snapshots(
+            |sn| !self.ids.is_empty() || config.snapshot_filter.matches(sn),
+            snapshots,
+        )?;
+
+        let mut table =
+            table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);
+        for CopySnapshot { relevant, sn } in snaps.iter() {
+            let tags = sn.tags.formatln();
+            let paths = sn.paths.formatln();
+            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+            _ = table.add_row([
+                &sn.id.to_string(),
+                &time,
+                &sn.hostname,
+                &sn.label,
+                &tags,
+                &paths,
+                &(if *relevant { "to copy" } else { "existing" }).to_string(),
+            ]);
+        }
+        println!("{table}");
+
+        let count = snaps.iter().filter(|sn| sn.relevant).count();
+        if count > 0 {
+            if config.global.dry_run {
+                info!("would have copied {count} snapshots.");
+            } else {
+                repo.copy(
+                    &repo_dest.to_indexed_ids()?,
+                    snaps
+                        .iter()
+                        .filter_map(|CopySnapshot { relevant, sn }| relevant.then_some(sn)),
+                )?;
+            }
+        } else {
+            info!("nothing to copy.");
+        }
+        hooks.run_after()?;
         Ok(())
     }
 }

@@ -286,6 +286,7 @@ impl Configurable<RusticConfig> for EntryPoint {
         }
     }
 }
+
 /// Get the repository with the given options
 ///
 /// # Arguments

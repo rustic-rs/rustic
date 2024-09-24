@@ -6,6 +6,7 @@
 
 pub(crate) mod progress_options;
 
+use std::fmt::Debug;
 use std::{collections::HashMap, path::PathBuf};
 
 use abscissa_core::config::Config;
@@ -17,7 +18,7 @@ use itertools::Itertools;
 use log::Level;
 use merge::Merge;
 use rustic_backend::BackendOptions;
-use rustic_core::RepositoryOptions;
+use rustic_core::{CommandInput, RepositoryOptions, RusticResult};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "webdav")]
@@ -166,6 +167,10 @@ pub struct GlobalOptions {
     #[serde(flatten)]
     pub progress_options: ProgressOptions,
 
+    /// Hooks
+    #[clap(skip)]
+    pub hooks: Hooks,
+
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
     #[merge(strategy = extend)]
@@ -238,4 +243,55 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[cfg(not(any(target_os = "windows", target_os = "ios", target_arch = "wasm32")))]
 fn get_global_config_path() -> Option<PathBuf> {
     Some(PathBuf::from("/etc/rustic"))
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Merge)]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+pub struct Hooks {
+    /// Call this command before every rustic operation
+    #[merge(strategy = merge::vec::append)]
+    pub run_before: Vec<CommandInput>,
+
+    /// Call this command after every successful rustic operation
+    #[merge(strategy = merge::vec::append)]
+    pub run_after: Vec<CommandInput>,
+
+    /// Call this command after every failed rustic operation
+    #[merge(strategy = merge::vec::append)]
+    pub run_failed: Vec<CommandInput>,
+
+    /// Call this command after every rustic operation
+    #[merge(strategy = merge::vec::append)]
+    pub run_finally: Vec<CommandInput>,
+
+    #[serde(skip)]
+    #[merge(skip)]
+    pub context: String,
+}
+
+impl Hooks {
+    pub fn with_context(&self, context: &str) -> Self {
+        let mut hooks = self.clone();
+        hooks.context = context.to_string();
+        hooks
+    }
+    fn run_all(cmds: &[CommandInput], context: &str, what: &str) -> RusticResult<()> {
+        for cmd in cmds {
+            cmd.run(context, what)?;
+        }
+        Ok(())
+    }
+
+    pub fn run_before(&self) -> RusticResult<()> {
+        Self::run_all(&self.run_before, &self.context, "run-before")
+    }
+    pub fn run_after(&self) -> RusticResult<()> {
+        Self::run_all(&self.run_after, &self.context, "run-after")
+    }
+    pub fn run_failed(&self) -> RusticResult<()> {
+        Self::run_all(&self.run_failed, &self.context, "run-failed")
+    }
+    pub fn run_finally(&self) -> RusticResult<()> {
+        Self::run_all(&self.run_finally, &self.context, "run-finally")
+    }
 }

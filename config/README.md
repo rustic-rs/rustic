@@ -65,6 +65,17 @@ If you want to contribute your own configuration, please
 | progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"                     | RUSTIC_PROGRESS_INTERVAL |
 | use-profile       | Profile or array of profiles to use. Allows to recursely use other profiles.      | Empty array   | "other" , ["2nd", "3rd"] | RUSTIC_USE_PROFILE       |
 
+### Global Hooks `[global.hooks]`
+
+These external commands are before and after each commands, respectively.
+
+| Attribute   | Description                                      | Default Value | Example Value                 | Environment Variable |
+| ----------- | ------------------------------------------------ | ------------- | ----------------------------- | -------------------- |
+| run-before  | Run the given command before execution           | not set       | "echo test", ["echo", "test"] |                      |
+| run-after   | Run the given command after successful execution | not set       | "echo test", ["echo", "test"] |                      |
+| run-failed  | Run the given command after failed execution     | not set       | "echo test", ["echo", "test"] |                      |
+| run-finally | Run the given command after every execution      | not set       | "echo test", ["echo", "test"] |                      |
+
 ### Global Options - env variables `[global.env]`
 
 All given environment variables are set before processing. This is handy to
@@ -166,10 +177,25 @@ can be overwritten in the source-specifc configuration, see below.
 | time                  | Set the time saved in the snapshot.                                                     | Not set               |               |
 | with-atime            | If true, includes file access time (atime) in the backup.                               | false                 |               |
 
+### Backup Hooks `[backup.hooks]`
+
+These external commands are before and after each backup, respectively. Note
+that global hooks are run additionaly.
+
+| Attribute   | Description                                      | Default Value | Example Value                 | Environment Variable |
+| ----------- | ------------------------------------------------ | ------------- | ----------------------------- | -------------------- |
+| run-before  | Run the given command before execution           | not set       | "echo test", ["echo", "test"] |                      |
+| run-after   | Run the given command after successful execution | not set       | "echo test", ["echo", "test"] |                      |
+| run-failed  | Run the given command after failed execution     | not set       | "echo test", ["echo", "test"] |                      |
+| run-finally | Run the given command after every execution      | not set       | "echo test", ["echo", "test"] |                      |
+
 ### Backup Sources `[[backup.sources]]`
 
 **Note**: All of the backup options mentioned before can also be used as
 source-specific option and then only apply to this source.
+
+Source-specific hooks are called when backup up the defined source, additionally
+to global and backup hooks. only apply
 
 | Attribute | Description                          | Default Value | Example Value               |
 | --------- | ------------------------------------ | ------------- | --------------------------- |

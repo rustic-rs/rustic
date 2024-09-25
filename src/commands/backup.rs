@@ -238,7 +238,7 @@ impl BackupCmd {
                 }
             }
             if is_err {
-                Err(anyhow!("Not all sources were successfully backuped!"))
+                Err(anyhow!("Not all snapshots were successfully generated!"))
             } else {
                 Ok(())
             }

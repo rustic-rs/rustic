@@ -117,7 +117,7 @@ jobs:
           hash-release: true
           use-project-version: true
           use-tag-version: true # IMPORTANT: this is being used to make sure the tag that is built is in the archive filename, so automation can download the correct version
-          extra-cargo-build-args: "--features self-update"
+          extra-cargo-build-args: --features self-update
 
   create-release:
     name: Creating release with artifacts
@@ -134,7 +134,7 @@ jobs:
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
 
       - name: Creating Release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2
         with:
           discussion_category_name: "Announcements"
           draft: true

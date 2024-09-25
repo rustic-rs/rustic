@@ -117,7 +117,7 @@ jobs:
           hash-release: true
           use-project-version: true
           use-tag-version: true # IMPORTANT: this is being used to make sure the tag that is built is in the archive filename, so automation can download the correct version
-          extra-cargo-build-args: "--features self-update"
+          extra-cargo-build-args: --features self-update
 
   create-release:
     name: Creating release with artifacts

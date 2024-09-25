@@ -3,9 +3,10 @@
 use std::path::PathBuf;
 
 use crate::{
-    commands::{get_repository, init::init, open_repository, snapshots::fill_table},
+    commands::{init::init, snapshots::fill_table},
     config::Hooks,
     helpers::{bold_cell, bytes_size_to_string, table},
+    repository::CliRepo,
     status_err, Application, RUSTIC_APP,
 };
 
@@ -141,7 +142,21 @@ pub(crate) fn merge_snapshots(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCm
 
 impl Runnable for BackupCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        let config = RUSTIC_APP.config();
+
+        // manually check for a "source" field, check is not done by serde, see above.
+        if !config.backup.sources.is_empty() {
+            status_err!("key \"sources\" is not valid in the [backup] section!");
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        }
+
+        let snapshot_opts = &config.backup.snapshots;
+        // manually check for a "sources" field, check is not done by serde, see above.
+        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
+            status_err!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        }
+        if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -149,22 +164,10 @@ impl Runnable for BackupCmd {
 }
 
 impl BackupCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        // manually check for a "source" field, check is not done by serde, see above.
-        if !config.backup.sources.is_empty() {
-            bail!("key \"sources\" is not valid in the [backup] section!");
-        }
-
         let snapshot_opts = &config.backup.snapshots;
 
-        // manually check for a "sources" field, check is not done by serde, see above.
-        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
-            bail!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
-        }
-
-        let repo = get_repository(&config.repository)?;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
             if config.global.dry_run {
@@ -173,9 +176,9 @@ impl BackupCmd {
                     repo.name
                 );
             }
-            init(repo, &self.key_opts, &self.config_opts)?
+            init(repo.0, &self.key_opts, &self.config_opts)?
         } else {
-            open_repository(&config.repository)?
+            repo.open()?
         }
         .to_indexed_ids()?;
 

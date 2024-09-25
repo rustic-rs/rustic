@@ -1,20 +1,18 @@
 //! `copy` subcommand
 
 use crate::{
-    commands::{get_repository, init::init_password, open_repository, open_repository_indexed},
-    config::{AllRepositoryOptions, Hooks},
+    commands::init::init_password,
     helpers::table_with_titles,
+    repository::{CliIndexedRepo, CliRepo},
     status_err, Application, RusticConfig, RUSTIC_APP,
 };
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use log::{error, info, log, Level};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 
-use rustic_core::{
-    repofile::SnapshotFile, CopySnapshot, Id, IndexedFull, KeyOptions, ProgressBars, Repository,
-};
+use rustic_core::{repofile::SnapshotFile, CopySnapshot, Id, KeyOptions};
 
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
@@ -58,7 +56,12 @@ impl Override<RusticConfig> for CopyCmd {
 
 impl Runnable for CopyCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        let config = RUSTIC_APP.config();
+        if config.copy.targets.is_empty() {
+            status_err!("No target given. Please specify at least 1 target either in the profile or using --target!");
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        }
+        if let Err(err) = config.repository.run_indexed(|repo| self.inner_run(repo)) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -66,14 +69,8 @@ impl Runnable for CopyCmd {
 }
 
 impl CopyCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        if config.copy.targets.is_empty() {
-            bail!("No target given. Please specify at least 1 target either in the profile or using --target!");
-        }
-
-        let repo = open_repository_indexed(&config.repository)?;
         let mut snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
         } else {
@@ -91,50 +88,40 @@ impl CopyCmd {
                 log!(level, "{}", merge_log);
             }
             let target_opt = &target_config.repository;
-            let hooks = target_config.global.hooks.with_context("target");
-            if let Err(err) = self.copy(&repo, target_opt, &snapshots, &hooks) {
+            if let Err(err) =
+                target_opt.run(|target_repo| self.copy(&repo, target_repo, &snapshots))
+            {
                 error!("error copying to target: {err}");
-                hooks.run_failed()?;
             }
-            hooks.run_finally()?;
         }
         Ok(())
     }
 
-    fn copy<P: ProgressBars>(
+    fn copy(
         &self,
-        repo: &Repository<P, impl IndexedFull>,
-        target_opt: &AllRepositoryOptions,
+        repo: &CliIndexedRepo,
+        target_repo: CliRepo,
         snapshots: &[SnapshotFile],
-        hooks: &Hooks,
     ) -> Result<()> {
-        hooks.run_before()?;
         let config = RUSTIC_APP.config();
-        let repo_dest = get_repository(target_opt)?;
 
-        info!("copying to target {}...", repo_dest.name);
-        let repo_dest = if self.init && repo_dest.config_id()?.is_none() {
-            if config.global.dry_run {
-                let error = anyhow!(
-                    "cannot initialize target {} in dry-run mode!",
-                    repo_dest.name
-                );
-                error!("{error}");
-                return Err(error);
-            }
+        info!("copying to target {}...", target_repo.name);
+        let target_repo = if self.init && target_repo.config_id()?.is_none() {
             let mut config_dest = repo.config().clone();
             config_dest.id = Id::random().into();
-            let pass = init_password(&repo_dest)?;
-            repo_dest.init_with_config(&pass, &self.key_opts, config_dest)?
+            let pass = init_password(&target_repo)?;
+            target_repo
+                .0
+                .init_with_config(&pass, &self.key_opts, config_dest)?
         } else {
-            open_repository(target_opt)?
+            target_repo.open()?
         };
 
-        if repo.config().poly()? != repo_dest.config().poly()? {
+        if repo.config().poly()? != target_repo.config().poly()? {
             bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
         }
 
-        let snaps = repo_dest.relevant_copy_snapshots(
+        let snaps = target_repo.relevant_copy_snapshots(
             |sn| !self.ids.is_empty() || config.snapshot_filter.matches(sn),
             snapshots,
         )?;
@@ -163,7 +150,7 @@ impl CopyCmd {
                 info!("would have copied {count} snapshots.");
             } else {
                 repo.copy(
-                    &repo_dest.to_indexed_ids()?,
+                    &target_repo.to_indexed_ids()?,
                     snaps
                         .iter()
                         .filter_map(|CopySnapshot { relevant, sn }| relevant.then_some(sn)),
@@ -172,7 +159,6 @@ impl CopyCmd {
         } else {
             info!("nothing to copy.");
         }
-        hooks.run_after()?;
         Ok(())
     }
 }

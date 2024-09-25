@@ -1,6 +1,6 @@
 //! `check` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -26,8 +26,8 @@ impl Runnable for CheckCmd {
 impl CheckCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
-        repo.check(self.opts)?;
-        Ok(())
+        config
+            .repository
+            .run_open(|repo| Ok(repo.check(self.opts)?))
     }
 }

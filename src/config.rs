@@ -9,20 +9,19 @@ pub(crate) mod progress_options;
 use std::fmt::Debug;
 use std::{collections::HashMap, path::PathBuf};
 
-use abscissa_core::config::Config;
-use abscissa_core::path::AbsPathBuf;
-use abscissa_core::FrameworkError;
+use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
+use anyhow::Result;
 use clap::{Parser, ValueHint};
 use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
 use merge::Merge;
-use rustic_backend::BackendOptions;
-use rustic_core::{CommandInput, RepositoryOptions, RusticResult};
+use rustic_core::{CommandInput, RusticResult};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
+use crate::repository::AllRepositoryOptions;
 use crate::{
     commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
     config::progress_options::ProgressOptions,
@@ -66,20 +65,6 @@ pub struct RusticConfig {
     /// webdav options
     #[clap(skip)]
     pub webdav: WebDavCmd,
-}
-
-#[derive(Clone, Default, Debug, Parser, Serialize, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct AllRepositoryOptions {
-    /// Backend options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    pub be: BackendOptions,
-
-    /// Repository options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    pub repo: RepositoryOptions,
 }
 
 impl RusticConfig {
@@ -295,7 +280,7 @@ impl Hooks {
         Self::run_all(&self.run_finally, &self.context, "run-finally")
     }
 
-    pub fn use_with<T>(&self, f: impl FnOnce() -> anyhow::Result<T>) -> anyhow::Result<T> {
+    pub fn use_with<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
         self.run_before()?;
         let result = match f() {
             Ok(result) => {

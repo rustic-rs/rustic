@@ -22,6 +22,12 @@ warm-up = false
 
 [repository.options-cold]
 
+[repository.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
 [snapshot-filter]
 filter-hosts = []
 filter-labels = []

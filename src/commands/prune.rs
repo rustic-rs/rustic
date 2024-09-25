@@ -1,7 +1,7 @@
 //! `prune` subcommand
 
 use crate::{
-    commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
+    helpers::bytes_size_to_string, repository::CliOpenRepo, status_err, Application, RUSTIC_APP,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
 use log::debug;
@@ -21,7 +21,11 @@ pub(crate) struct PruneCmd {
 
 impl Runnable for PruneCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -29,9 +33,8 @@ impl Runnable for PruneCmd {
 }
 
 impl PruneCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
 
         let pruner = repo.prune_plan(&self.opts)?;
 

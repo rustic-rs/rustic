@@ -1,8 +1,8 @@
 //! `smapshot` subcommand
 
 use crate::{
-    commands::open_repository,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
+    repository::CliOpenRepo,
     status_err, Application, RUSTIC_APP,
 };
 
@@ -56,7 +56,11 @@ pub(crate) struct SnapshotCmd {
 
 impl Runnable for SnapshotCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -64,14 +68,13 @@ impl Runnable for SnapshotCmd {
 }
 
 impl SnapshotCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         #[cfg(feature = "tui")]
         if self.interactive {
             return tui::run(self.group_by);
         }
 
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
 
         let groups = repo.get_snapshot_group(&self.ids, self.group_by, |sn| {
             config.snapshot_filter.matches(sn)

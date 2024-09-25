@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
+use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -60,7 +60,11 @@ pub(crate) struct FindCmd {
 
 impl Runnable for FindCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_indexed(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -68,9 +72,8 @@ impl Runnable for FindCmd {
 }
 
 impl FindCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository_indexed(&config.repository)?;
 
         let groups = repo.get_snapshot_group(&self.ids, self.group_by, |sn| {
             config.snapshot_filter.matches(sn)

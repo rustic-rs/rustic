@@ -69,12 +69,15 @@ If you want to contribute your own configuration, please
 
 These external commands are before and after each commands, respectively.
 
-| Attribute   | Description                                      | Default Value | Example Value                 | Environment Variable |
-| ----------- | ------------------------------------------------ | ------------- | ----------------------------- | -------------------- |
-| run-before  | Run the given command before execution           | not set       | "echo test", ["echo", "test"] |                      |
-| run-after   | Run the given command after successful execution | not set       | "echo test", ["echo", "test"] |                      |
-| run-failed  | Run the given command after failed execution     | not set       | "echo test", ["echo", "test"] |                      |
-| run-finally | Run the given command after every execution      | not set       | "echo test", ["echo", "test"] |                      |
+** Note **: There are also repository hooks, which should be used for commands
+needed to set up the repository (like mounting the repo dir), see below.
+
+| Attribute   | Description                                       | Default Value | Example Value | Environment Variable |
+| ----------- | ------------------------------------------------- | ------------- | ------------- | -------------------- |
+| run-before  | Run the given commands before execution           | not set       | ["echo test"] |                      |
+| run-after   | Run the given commands after successful execution | not set       | ["echo test"] |                      |
+| run-failed  | Run the given commands after failed execution     | not set       | ["echo test"] |                      |
+| run-finally | Run the given commands after every execution      | not set       | ["echo test"] |                      |
 
 ### Global Options - env variables `[global.env]`
 
@@ -126,6 +129,13 @@ can be only set in the config file or using env variables. For env variables use
 upper snake case and prefix with "RUSTIC_REPO_OPTHOT_".
 
 see Repository Options
+
+### Repository Hooks `[repository.hooks]`
+
+These external commands are before and after each repository-accessing commands,
+respectively.
+
+See Global Hooks.
 
 ### Snapshot-Filter Options `[snapshot-filter]`
 
@@ -179,23 +189,19 @@ can be overwritten in the source-specifc configuration, see below.
 
 ### Backup Hooks `[backup.hooks]`
 
-These external commands are before and after each backup, respectively. Note
-that global hooks are run additionaly.
+These external commands are before and after each backup, respectively.
 
-| Attribute   | Description                                      | Default Value | Example Value                 | Environment Variable |
-| ----------- | ------------------------------------------------ | ------------- | ----------------------------- | -------------------- |
-| run-before  | Run the given command before execution           | not set       | "echo test", ["echo", "test"] |                      |
-| run-after   | Run the given command after successful execution | not set       | "echo test", ["echo", "test"] |                      |
-| run-failed  | Run the given command after failed execution     | not set       | "echo test", ["echo", "test"] |                      |
-| run-finally | Run the given command after every execution      | not set       | "echo test", ["echo", "test"] |                      |
+** Note **: Global hooks and repository hooks are run additionaly.
+
+See Global Hooks.
 
 ### Backup Sources `[[backup.sources]]`
 
 **Note**: All of the backup options mentioned before can also be used as
 source-specific option and then only apply to this source.
 
-Source-specific hooks are called when backup up the defined source, additionally
-to global and backup hooks. only apply
+Source-specific hooks are called additionally to global, repository and backup
+hooks when backup up the defined source.
 
 | Attribute | Description                          | Default Value | Example Value               |
 | --------- | ------------------------------------ | ------------- | --------------------------- |

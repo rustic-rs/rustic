@@ -75,6 +75,13 @@ throttle = "10kB,10MB" # limit and burst per second; only opendal backends; Defa
 [repository.options-cold]
 # see [repository.options]
 
+# Repository hooks: The given commands are called for commands accessing the repository.
+[repository.hooks]
+run-before = ["echo before"] # Default: []
+run-after = ["echo after"] # Run after if successful, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
+
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
 filter-hosts = ["host2", "host2"] # Default: []

@@ -5,7 +5,7 @@ use std::{borrow::Cow, fmt::Write, time::Duration};
 use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
-use merge::Merge;
+use conflate::Merge;
 
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -19,7 +19,7 @@ use rustic_core::{Progress, ProgressBars};
 pub struct ProgressOptions {
     /// Don't show any progress bar
     #[clap(long, global = true, env = "RUSTIC_NO_PROGRESS")]
-    #[merge(strategy=merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub no_progress: bool,
 
     /// Interval to update progress bars
@@ -31,6 +31,7 @@ pub struct ProgressOptions {
         conflicts_with = "no_progress"
     )]
     #[serde_as(as = "Option<DisplayFromStr>")]
+    #[merge(strategy = conflate::option::overwrite_none)]
     pub progress_interval: Option<humantime::Duration>,
 }
 

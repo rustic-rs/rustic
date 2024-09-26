@@ -8,8 +8,8 @@ use std::{net::ToSocketAddrs, str::FromStr};
 use crate::{commands::open_repository_indexed, status_err, Application, RusticConfig, RUSTIC_APP};
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
 use anyhow::{anyhow, Result};
+use conflate::Merge;
 use dav_server::{warp::dav_handler, DavHandler};
-use merge::Merge;
 use serde::{Deserialize, Serialize};
 
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
@@ -19,27 +19,32 @@ use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 pub struct WebDavCmd {
     /// Address to bind the webdav server to. [default: "localhost:8000"]
     #[clap(long, value_name = "ADDRESS")]
+    #[merge(strategy = conflate::option::overwrite_none)]
     address: Option<String>,
 
     /// The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]
     #[clap(long)]
+    #[merge(strategy = conflate::option::overwrite_none)]
     path_template: Option<String>,
 
     /// The time template to use to display times in the path template. See https://docs.rs/chrono/latest/chrono/format/strftime/index.html for format options. [default: "%Y-%m-%d_%H-%M-%S"]
     #[clap(long)]
+    #[merge(strategy = conflate::option::overwrite_none)]
     time_template: Option<String>,
 
     /// Use symlinks. This may not be supported by all WebDAV clients
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy = conflate::bool::overwrite_false)]
     symlinks: bool,
 
     /// How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]
     #[clap(long)]
+    #[merge(strategy = conflate::option::overwrite_none)]
     file_access: Option<String>,
 
     /// Specify directly which snapshot/path to serve
     #[clap(value_name = "SNAPSHOT[:PATH]")]
+    #[merge(strategy = conflate::option::overwrite_none)]
     snapshot_path: Option<String>,
 }
 

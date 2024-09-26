@@ -801,6 +801,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "conflate"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06f57b4959992e02db0da86fcb4b0c80dc112d31b823de27f61576b1c809bc45"
+dependencies = [
+ "conflate_derive",
+ "num-traits",
+]
+
+[[package]]
+name = "conflate_derive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9395ace5316656ca6a778aa2c28ab0c4ea2c94a8f7dc942898c20be9b7a9a4b9"
+dependencies = [
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+]
+
+[[package]]
 name = "console"
 version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3154,6 +3176,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-error-attr2"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96de42df36bb9bba5542fe9f1a054b8cc87e172759a1868aa05c1f3acc89dfc5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
+name = "proc-macro-error2"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802"
+dependencies = [
+ "proc-macro-error-attr2",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3674,6 +3718,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "comfy-table",
+ "conflate",
  "convert_case",
  "crossterm 0.28.1",
  "dav-server",
@@ -3690,7 +3735,6 @@ dependencies = [
  "jemallocator-global",
  "libc",
  "log",
- "merge",
  "mimalloc",
  "once_cell",
  "predicates",

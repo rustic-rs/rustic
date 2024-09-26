@@ -277,6 +277,7 @@ impl BackupCmd {
 
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename)
+            .stdin_command(self.stdin_command)
             .as_path(self.as_path)
             .parent_opts(self.parent_opts)
             .ignore_save_opts(self.ignore_save_opts)

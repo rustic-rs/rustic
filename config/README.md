@@ -69,7 +69,7 @@ If you want to contribute your own configuration, please
 
 These external commands are before and after each commands, respectively.
 
-** Note **: There are also repository hooks, which should be used for commands
+**Note**: There are also repository hooks, which should be used for commands
 needed to set up the repository (like mounting the repo dir), see below.
 
 | Attribute   | Description                                       | Default Value | Example Value | Environment Variable |
@@ -191,7 +191,7 @@ can be overwritten in the source-specifc configuration, see below.
 
 These external commands are before and after each backup, respectively.
 
-** Note **: Global hooks and repository hooks are run additionaly.
+**Note**: Global hooks and repository hooks are run additionaly.
 
 See Global Hooks.
 
@@ -201,7 +201,7 @@ See Global Hooks.
 source-specific option and then only apply to this source.
 
 Source-specific hooks are called additionally to global, repository and backup
-hooks when backup up the defined source.
+hooks when backing up the defined source.
 
 | Attribute | Description                          | Default Value | Example Value               |
 | --------- | ------------------------------------ | ------------- | --------------------------- |

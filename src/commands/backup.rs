@@ -238,7 +238,7 @@ impl BackupCmd {
                 }
             }
             if is_err {
-                Err(anyhow!("Not all snapshots were successfully generated!"))
+                Err(anyhow!("Not all snapshots were generated successfully!"))
             } else {
                 Ok(())
             }
@@ -255,7 +255,7 @@ impl BackupCmd {
         if let Some(path) = &self.as_path {
             // as_path only works in combination with a single target
             if source.len() > 1 {
-                bail!("as-path only works with a single target!");
+                bail!("as-path only works with a single source!");
             }
             // merge Options from config file using as_path, if given
             if let Some(path) = path.as_os_str().to_str() {

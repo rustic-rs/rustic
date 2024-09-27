@@ -695,7 +695,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .zip(self.snaps_status.iter())
             .filter_map(|(snap, status)| status.to_forget.then_some(snap.id));
         let delete_ids: Vec<_> = old_snap_ids.chain(snap_ids_to_forget).collect();
-        self.repo.save_snapshots(save_snaps)?;
+        _ = self.repo.save_snapshots(save_snaps)?;
         self.repo.delete_snapshots(&delete_ids)?;
         // re-read snapshots
         self.reread()

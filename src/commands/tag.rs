@@ -104,7 +104,7 @@ impl TagCmd {
                 println!("would have modified the following snapshots:\n {old_snap_ids:?}");
             }
             (false, false) => {
-                repo.save_snapshots(snapshots)?;
+                _ = repo.save_snapshots(snapshots)?;
                 repo.delete_snapshots(&old_snap_ids)?;
             }
         }

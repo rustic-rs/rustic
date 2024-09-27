@@ -184,6 +184,10 @@ pub fn fill_table(snap: &SnapshotFile, mut add_entry: impl FnMut(&str, String)) 
         DeleteOption::NotSet => "not set".to_string(),
         DeleteOption::Never => "never".to_string(),
         DeleteOption::After(t) => format!("after {}", t.format("%Y-%m-%d %H:%M:%S")),
+        DeleteOption::LockedUntil(t) => {
+            format!("locked until {}", t.format("%Y-%m-%d %H:%M:%S"))
+        }
+        DeleteOption::LockedForever => "locked forever".to_string(),
     };
     add_entry("Delete", delete);
     add_entry("Paths", snap.paths.formatln());

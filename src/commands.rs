@@ -13,6 +13,7 @@ pub(crate) mod forget;
 pub(crate) mod init;
 pub(crate) mod key;
 pub(crate) mod list;
+pub(crate) mod lock;
 pub(crate) mod ls;
 pub(crate) mod merge;
 pub(crate) mod prune;
@@ -39,9 +40,10 @@ use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
-        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
-        repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        init::InitCmd, key::KeyCmd, list::ListCmd, lock::LockCmd, ls::LsCmd, merge::MergeCmd,
+        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
+        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
+        tag::TagCmd,
     },
     config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
@@ -112,6 +114,9 @@ enum RusticCmd {
 
     /// List repository files
     List(ListCmd),
+
+    /// Lock snapshots
+    Lock(LockCmd),
 
     /// List file contents of a snapshot
     Ls(LsCmd),

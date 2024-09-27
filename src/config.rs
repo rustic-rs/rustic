@@ -16,7 +16,7 @@ use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
 use merge::Merge;
-use rustic_core::{CommandInput, RusticResult};
+use rustic_core::CommandInput;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "webdav")]
@@ -260,39 +260,50 @@ impl Hooks {
         hooks.context = context.to_string();
         hooks
     }
-    fn run_all(cmds: &[CommandInput], context: &str, what: &str) -> RusticResult<()> {
+    fn run_all(cmds: &[CommandInput], context: &str, what: &str) -> Result<()> {
         for cmd in cmds {
             cmd.run(context, what)?;
         }
         Ok(())
     }
 
-    pub fn run_before(&self) -> RusticResult<()> {
+    pub fn run_before(&self) -> Result<()> {
         Self::run_all(&self.run_before, &self.context, "run-before")
     }
-    pub fn run_after(&self) -> RusticResult<()> {
+    pub fn run_after(&self) -> Result<()> {
         Self::run_all(&self.run_after, &self.context, "run-after")
     }
-    pub fn run_failed(&self) -> RusticResult<()> {
+    pub fn run_failed(&self) -> Result<()> {
         Self::run_all(&self.run_failed, &self.context, "run-failed")
     }
-    pub fn run_finally(&self) -> RusticResult<()> {
+    pub fn run_finally(&self) -> Result<()> {
         Self::run_all(&self.run_finally, &self.context, "run-finally")
     }
 
     pub fn use_with<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
-        self.run_before()?;
-        let result = match f() {
-            Ok(result) => {
-                self.run_after()?;
-                result
+        match self.run_before() {
+            Ok(_) => match f() {
+                Ok(result) => match self.run_after() {
+                    Ok(_) => {
+                        self.run_finally()?;
+                        Ok(result)
+                    }
+                    Err(err_after) => {
+                        _ = self.run_finally();
+                        Err(err_after)
+                    }
+                },
+                Err(err_f) => {
+                    _ = self.run_failed();
+                    _ = self.run_finally();
+                    Err(err_f)
+                }
+            },
+            Err(err_before) => {
+                _ = self.run_failed();
+                _ = self.run_finally();
+                Err(err_before)
             }
-            Err(err) => {
-                self.run_failed()?;
-                return Err(err);
-            }
-        };
-        self.run_finally()?;
-        Ok(result)
+        }
     }
 }

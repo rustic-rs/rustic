@@ -109,7 +109,7 @@ cargo install --git https://github.com/rustic-rs/rustic.git rustic-rs
 ### crates.io
 
 ```bash
-cargo install rustic-rs
+cargo install --locked rustic-rs
 ```
 
 ## Differences to `restic`?

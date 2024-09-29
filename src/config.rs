@@ -280,6 +280,11 @@ impl Hooks {
         Self::run_all(&self.run_finally, &self.context, "run-finally")
     }
 
+    /// Run the given closure using the specified hooks.
+    ///
+    /// Note: after a failure no error handling is done for the hooks run_failed
+    /// and run_finally which must run after. However, they already log a warning
+    /// or error depending on the `on_failure` setting.
     pub fn use_with<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
         match self.run_before() {
             Ok(_) => match f() {

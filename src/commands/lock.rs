@@ -43,8 +43,8 @@ enum LockSubCmd {
 #[derive(clap::Parser, Command, Debug, Clone)]
 pub(crate) struct RepoSubCmd {
     #[clap(long)]
-    /// Duration for how long to extend the locks (e.g. "10d"). "forever" is also allowed
-    duration: LockDuration,
+    /// Duration for how long to extend the locks (e.g. "10d").
+    duration: Option<LockDuration>,
 }
 
 impl Runnable for RepoSubCmd {
@@ -60,7 +60,7 @@ impl RepoSubCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config.repository)?;
-        repo.lock_repo(self.duration.0)?;
+        repo.lock_repo(self.duration.as_ref().map(|d| d.0))?;
         Ok(())
     }
 }
@@ -68,8 +68,8 @@ impl RepoSubCmd {
 #[derive(clap::Parser, Command, Debug, Clone)]
 pub(crate) struct KeysSubCmd {
     #[clap(long)]
-    /// Duration for how long to extend the locks (e.g. "10d"). "forever" is also allowed
-    duration: LockDuration,
+    /// Duration for how long to extend the locks (e.g. "10d").
+    duration: Option<LockDuration>,
 }
 
 impl Runnable for KeysSubCmd {
@@ -85,7 +85,7 @@ impl KeysSubCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = open_repository(&config.repository)?;
-        repo.lock_repo_files::<KeyId>(self.duration.0)?;
+        repo.lock_repo_files::<KeyId>(self.duration.as_ref().map(|d| d.0))?;
         Ok(())
     }
 }
@@ -97,8 +97,8 @@ pub(crate) struct SnapSubCmd {
     always_extend_lock: bool,
 
     #[clap(long)]
-    /// Duration for how long to extend the locks (e.g. "10d"). "forever" is also allowed
-    duration: LockDuration,
+    /// Duration for how long to extend the locks (e.g. "10d"). No duration means "forever"
+    duration: Option<LockDuration>,
 
     /// Snapshots to lock. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
@@ -106,19 +106,14 @@ pub(crate) struct SnapSubCmd {
 }
 
 #[derive(Debug, Clone)]
-struct LockDuration(Option<DateTime<Local>>);
+struct LockDuration(DateTime<Local>);
 
 impl FromStr for LockDuration {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "forever" => Ok(Self(None)),
-            d => {
-                let duration = humantime::Duration::from_str(d)?;
-                let duration = Duration::from_std(*duration)?;
-                Ok(Self(Some(Local::now() + duration)))
-            }
-        }
+        let duration = humantime::Duration::from_str(s)?;
+        let duration = Duration::from_std(*duration)?;
+        Ok(Self(Local::now() + duration))
     }
 }
 
@@ -144,7 +139,7 @@ impl SnapSubCmd {
 
         let lock_opts = LockOptions::default()
             .always_extend_lock(self.always_extend_lock)
-            .until(self.duration.0);
+            .until(self.duration.as_ref().map(|d| d.0));
 
         repo.lock_snaphots(&lock_opts, &snapshots)?;
 

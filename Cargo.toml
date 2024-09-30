@@ -148,7 +148,6 @@ lto = "fat"
 debug-assertions = false
 codegen-units = 1
 strip = true
-panic = "abort"
 
 [profile.test]
 opt-level = 1

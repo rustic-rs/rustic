@@ -2,7 +2,7 @@
 <img src="https://raw.githubusercontent.com/rustic-rs/assets/main/logos/readme_header_config.png" height="400" />
 </p>
 
-# Rustic Configuration Specification
+# rustic Configuration Specification
 
 `rustic` is a backup tool that allows users to define their backup options in
 profiles using TOML files. A configuration profile consists of various sections
@@ -55,15 +55,15 @@ If you want to contribute your own configuration, please
 
 ### Global Options `[global]`
 
-| Attribute         | Description                                                                       | Default Value | Example Value            | Environment Variable     |
-| ----------------- | --------------------------------------------------------------------------------- | ------------- | ------------------------ | ------------------------ |
-| check-index       | If true, check the index and read pack headers if index information is missing.   | false         |                          | RUSTIC_CHECK_INDEX       |
-| dry-run           | If true, performs a dry run without making any changes.                           | false         |                          | RUSTIC_DRY_RUN           |
-| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                          | RUSTIC_LOG_LEVEL         |
-| log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log"        | RUSTIC_LOG_FILE          |
-| no-progress       | If true, disables progress indicators.                                            | false         |                          | RUSTIC_NO_PROGRESS       |
-| progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"                     | RUSTIC_PROGRESS_INTERVAL |
-| use-profile       | Profile or array of profiles to use. Allows to recursely use other profiles.      | Empty array   | "other" , ["2nd", "3rd"] | RUSTIC_USE_PROFILE       |
+| Attribute         | Description                                                                       | Default Value | Example Value     | Environment Variable     |
+| ----------------- | --------------------------------------------------------------------------------- | ------------- | ----------------- | ------------------------ |
+| check-index       | If true, check the index and read pack headers if index information is missing.   | false         |                   | RUSTIC_CHECK_INDEX       |
+| dry-run           | If true, performs a dry run without making any changes.                           | false         |                   | RUSTIC_DRY_RUN           |
+| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                   | RUSTIC_LOG_LEVEL         |
+| log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log" | RUSTIC_LOG_FILE          |
+| no-progress       | If true, disables progress indicators.                                            | false         |                   | RUSTIC_NO_PROGRESS       |
+| progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL |
+| use-profiles      | Array of profiles to use. Allows to recursively use other profiles.               | Empty array   | ["2nd", "3rd"]    | RUSTIC_USE_PROFILE       |
 
 ### Global Options - env variables `[global.env]`
 
@@ -118,13 +118,13 @@ see Repository Options
 
 ### Snapshot-Filter Options `[snapshot-filter]`
 
-| Attribute    | Description                                    | Default Value | Example Value                |
-| ------------ | ---------------------------------------------- | ------------- | ---------------------------- |
-| filter-host  | Array or string of hosts to filter snapshots.  | Not set       | ["myhost", "host2"] / "host" |
-| filter-label | Array or string of labels to filter snapshots. | Not set       |                              |
-| filter-paths | Array or string of paths to filter snapshots.  | Not set       |                              |
-| filter-tags  | Array or string of tags to filter snapshots.   | Not set       |                              |
-| filter-fn    | Custom filter function for snapshots.          | Not set       |                              |
+| Attribute     | Description                                    | Default Value | Example Value       |
+| ------------- | ---------------------------------------------- | ------------- | ------------------- |
+| filter-hosts  | Array or string of hosts to filter snapshots.  | Not set       | ["myhost", "host2"] |
+| filter-labels | Array or string of labels to filter snapshots. | Not set       |                     |
+| filter-paths  | Array or string of paths to filter snapshots.  | Not set       |                     |
+| filter-tags   | Array or string of tags to filter snapshots.   | Not set       |                     |
+| filter-fn     | Custom filter function for snapshots.          | Not set       |                     |
 
 ### Backup Options `[backup]`
 
@@ -135,7 +135,7 @@ can be overwritten in the source-specifc configuration, see below.
 | --------------------- | --------------------------------------------------------------------------------------- | --------------------- | ------------- |
 | as-path               | Specifies the path for the backup when the source contains a single path.               | Not set               |               |
 | command               | Set the command saved in the snapshot.                                                  | The full command used |               |
-| custom-ignorefile     | Name of custom ignorefiles which will be used to exclude files.                         | Not set               |               |
+| custom-ignorefiles    | Name of custom ignorefiles which will be used to exclude files.                         | Not set               |               |
 | description           | Description for the snapshot.                                                           | Not set               |               |
 | description-from      | Path to a file containing the description for the snapshot.                             | Not set               |               |
 | delete-never          | If true, never delete the snapshot.                                                     | false                 |               |
@@ -143,12 +143,12 @@ can be overwritten in the source-specifc configuration, see below.
 | exclude-if-present    | Array of filenames to exclude from the backup if they are present.                      | Not set               |               |
 | force                 | If true, forces the backup even if no changes are detected.                             | false                 |               |
 | git-ignore            | If true, use .gitignore rules to exclude files from the backup in the source directory. | false                 |               |
-| glob                  | Array of globs specifying what to include/exclude in the backup.                        | Not set               |               |
-| glob-file             | Array or string of glob files specifying what to include/exclude in the backup.         | Not set               |               |
+| globs                 | Array of globs specifying what to include/exclude in the backup.                        | Not set               |               |
+| glob-files            | Array or string of glob files specifying what to include/exclude in the backup.         | Not set               |               |
 | group-by              | Grouping strategy to find parent snapshot.                                              | "host,label,paths"    |               |
 | host                  | Host name used in the snapshot.                                                         | Not set               |               |
-| iglob                 | Like glob, but apply case-insensitve                                                    | Not set               |               |
-| iglob-file            | Like glob-file, but apply case-insensitve                                               | Not set               |               |
+| iglobs                | Like glob, but apply case-insensitve                                                    | Not set               |               |
+| iglob-files           | Like glob-file, but apply case-insensitve                                               | Not set               |               |
 | ignore-devid          | If true, don't save device ID.                                                          | false                 |               |
 | ignore-ctime          | If true, ignore file change time (ctime).                                               | false                 |               |
 | ignore-inode          | If true, ignore file inode for the backup.                                              | false                 |               |
@@ -162,18 +162,18 @@ can be overwritten in the source-specifc configuration, see below.
 | quiet                 | Don't output backup summary.                                                            | false                 |               |
 | skip-identical-parent | Skip saving of the snapshot if it is identical to the parent.                           | false                 |               |
 | stdin-filename        | File name to be used when reading from stdin.                                           | Not set               |               |
-| tag                   | Array of tags for the backup.                                                           | Not set               |               |
+| tags                  | Array of tags for the backup.                                                           | Not set               |               |
 | time                  | Set the time saved in the snapshot.                                                     | Not set               |               |
 | with-atime            | If true, includes file access time (atime) in the backup.                               | false                 |               |
 
-### Backup Sources `[[backup.sources]]`
+### Backup Snapshots `[[backup.snapshots]]`
 
 **Note**: All of the backup options mentioned before can also be used as
 source-specific option and then only apply to this source.
 
-| Attribute | Description                          | Default Value | Example Value               |
-| --------- | ------------------------------------ | ------------- | --------------------------- |
-| source    | Source directory or file to back up. | Not set       | "/dir" , ["/dir1", "/dir2"] |
+| Attribute | Description                          | Default Value | Example Value      |
+| --------- | ------------------------------------ | ------------- | ------------------ |
+| source    | Source directory or file to back up. | Not set       | ["/dir1", "/dir2"] |
 
 ### Forget Options `[forget]`
 
@@ -198,7 +198,8 @@ source-specific option and then only apply to this source.
 | keep-within-quarter-yearly | The time duration within which quarter-yearly snapshots will be kept.   | Not set            |                        |
 | keep-within-half-yearly    | The time duration within which half-yearly snapshots will be kept.      | Not set            |                        |
 | keep-within-yearly         | The time duration within which yearly snapshots will be kept.           | Not set            |                        |
-| keep-tag                   | Keep snapshots containing one of these tags.                            | Not set            | ["keep", "important" ] |
+| keep-tags                  | Keep snapshots containing one of these tags.                            | Not set            | ["keep", "important" ] |
+| keep-ids                   | Keep snapshots containing one of these IDs.                             | Not set            | ["6e58f3d32" ]         |
 | keep-none                  | Allow to keep no snapshots.                                             | false              | true                   |
 | prune                      | If set to true, prune the repository after snapshots have been removed. | false              |                        |
 

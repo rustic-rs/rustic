@@ -171,9 +171,9 @@ can be overwritten in the source-specifc configuration, see below.
 **Note**: All of the backup options mentioned before can also be used as
 source-specific option and then only apply to this source.
 
-| Attribute | Description                          | Default Value | Example Value      |
-| --------- | ------------------------------------ | ------------- | ------------------ |
-| source    | Source directory or file to back up. | Not set       | ["/dir1", "/dir2"] |
+| Attribute | Description                                        | Default Value | Example Value      |
+| --------- | -------------------------------------------------- | ------------- | ------------------ |
+| sources   | Array of source directories or file(s) to back up. | Not set       | ["/dir1", "/dir2"] |
 
 ### Forget Options `[forget]`
 

@@ -94,8 +94,8 @@ could possibly shadow other values that you have already set.
 
 Additional repository options - depending on backend. These can be only set in
 the config file or using env variables. For env variables use upper snake case
-and prefix with "RUSTIC_REPO_OPT_", e.g. `use-passwort = "true"` becomes
-`RUSTIC_REPO_OPT_USE_PASSWORT=true`
+and prefix with "RUSTIC_REPO_OPT_", e.g. `use-password = "true"` becomes
+`RUSTIC_REPO_OPT_USE_PASSWORD=true`
 
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
@@ -129,7 +129,7 @@ see Repository Options
 ### Backup Options `[backup]`
 
 **Note**: If set here, the backup options apply for all sources, although they
-can be overwritten in the source-specifc configuration, see below.
+can be overwritten in the source-specific configuration, see below.
 
 | Attribute             | Description                                                                             | Default Value         | Example Value |
 | --------------------- | --------------------------------------------------------------------------------------- | --------------------- | ------------- |
@@ -147,8 +147,8 @@ can be overwritten in the source-specifc configuration, see below.
 | glob-files            | Array or string of glob files specifying what to include/exclude in the backup.         | Not set               |               |
 | group-by              | Grouping strategy to find parent snapshot.                                              | "host,label,paths"    |               |
 | host                  | Host name used in the snapshot.                                                         | Not set               |               |
-| iglobs                | Like glob, but apply case-insensitve                                                    | Not set               |               |
-| iglob-files           | Like glob-file, but apply case-insensitve                                               | Not set               |               |
+| iglobs                | Like glob, but apply case-insensitive                                                   | Not set               |               |
+| iglob-files           | Like glob-file, but apply case-insensitive                                              | Not set               |               |
 | ignore-devid          | If true, don't save device ID.                                                          | false                 |               |
 | ignore-ctime          | If true, ignore file change time (ctime).                                               | false                 |               |
 | ignore-inode          | If true, ignore file inode for the backup.                                              | false                 |               |
@@ -182,8 +182,8 @@ source-specific option and then only apply to this source.
 
 | Attribute                  | Description                                                             | Default Value      | Example Value          |
 | -------------------------- | ----------------------------------------------------------------------- | ------------------ | ---------------------- |
-| group-by                   | Group snapshots by given criteria before appling keep policies.         | "host,label,paths" |                        |
-| keep-last                  | Number of most rescent snapshots to keep.                               | Not set            | 15                     |
+| group-by                   | Group snapshots by given criteria before applying keep policies.        | "host,label,paths" |                        |
+| keep-last                  | Number of most recent snapshots to keep.                                | Not set            | 15                     |
 | keep-hourly                | Number of hourly snapshots to keep.                                     | Not set            |                        |
 | keep-daily                 | Number of daily snapshots to keep.                                      | Not set            | 8                      |
 | keep-weekly                | Number of weekly snapshots to keep.                                     | Not set            |                        |

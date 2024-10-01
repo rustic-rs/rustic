@@ -38,7 +38,6 @@ impl Runnable for DocsCmd {
 impl DocsCmd {
     fn inner_run(&self) -> Result<()> {
         let user_string = if self.dev && self.config {
-            // If both flags are set, open the development documentation
             open::that(RUSTIC_DEV_DOCS_URL)?;
             open::that(RUSTIC_CONFIG_DOCS_URL)?;
 

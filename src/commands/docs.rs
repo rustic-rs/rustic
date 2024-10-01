@@ -16,13 +16,18 @@ use crate::{
 /// If the `dev` flag is set, the development documentation will be opened.
 /// If the `config` flag is set, the configuration documentation will be opened.
 #[derive(Clone, Command, Default, Debug, clap::Parser)]
+#[clap(group = clap::ArgGroup::new("documentation").multiple(false))]
 pub struct DocsCmd {
+    /// Open the user documentation
+    #[clap(short, long, group = "documentation")]
+    user: bool,
+
     /// Open the development documentation
-    #[clap(long, short)]
+    #[clap(short, long, group = "documentation")]
     dev: bool,
 
     /// Open the config documentation
-    #[clap(long, short)]
+    #[clap(short, long, group = "documentation")]
     config: bool,
 }
 
@@ -37,28 +42,21 @@ impl Runnable for DocsCmd {
 
 impl DocsCmd {
     fn inner_run(&self) -> Result<()> {
-        let user_string = if self.dev && self.config {
-            open::that(RUSTIC_DEV_DOCS_URL)?;
-            open::that(RUSTIC_CONFIG_DOCS_URL)?;
-
-            format!(
-                "Opening the development documentation at {RUSTIC_DEV_DOCS_URL} and the configuration documentation at {RUSTIC_CONFIG_DOCS_URL}"
-            )
-        } else if self.config {
-            // Open the config documentation
-            open::that(RUSTIC_CONFIG_DOCS_URL)?;
-
-            format!("Opening the configuration documentation at {RUSTIC_CONFIG_DOCS_URL}")
-        } else if self.dev {
-            // Open the development documentation
-            open::that(RUSTIC_DEV_DOCS_URL)?;
-
-            format!("Opening the development documentation at {RUSTIC_DEV_DOCS_URL}")
-        } else {
-            // Open the user documentation
-            open::that(RUSTIC_DOCS_URL)?;
-
-            format!("Opening the user documentation at {RUSTIC_DOCS_URL}")
+        let user_string = match (self.user, self.dev, self.config) {
+            // Default: If no flag is set, open the user documentation
+            (true, false, false) | (false, false, false) => {
+                open::that(RUSTIC_DOCS_URL)?;
+                format!("Opening the user documentation at {RUSTIC_DOCS_URL}")
+            }
+            (false, true, false) => {
+                open::that(RUSTIC_DEV_DOCS_URL)?;
+                format!("Opening the development documentation at {RUSTIC_DEV_DOCS_URL}")
+            }
+            (false, false, true) => {
+                open::that(RUSTIC_CONFIG_DOCS_URL)?;
+                format!("Opening the configuration documentation at {RUSTIC_CONFIG_DOCS_URL}")
+            }
+            _ => unreachable!("this should not be possible"),
         };
 
         println!("{user_string}");

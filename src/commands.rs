@@ -76,7 +76,7 @@ enum RusticCmd {
     /// Backup to the repository
     Backup(BackupCmd),
 
-    /// Show raw data of repository files and blobs
+    /// Show raw data of files and blobs in a repository
     Cat(CatCmd),
 
     /// Change the repository configuration
@@ -88,29 +88,28 @@ enum RusticCmd {
     /// Check the repository
     Check(CheckCmd),
 
-    /// Copy snapshots to other repositories. Note: The target repositories must be given in the config file!
+    /// Copy snapshots to other repositories
     Copy(CopyCmd),
 
-    /// Compare two snapshots/paths
-    /// Note that the exclude options only apply for comparison with a local path
+    /// Compare two snapshots or paths
     Diff(DiffCmd),
 
-    /// dump the contents of a file in a snapshot to stdout
+    /// Dump the contents of a file within a snapshot to the terminal
     Dump(DumpCmd),
 
-    /// Find in given snapshots
+    /// Find patterns in given snapshots
     Find(FindCmd),
 
-    /// Remove snapshots from the repository
+    /// Mark snapshots to be removed from the repository
     Forget(ForgetCmd),
 
     /// Initialize a new repository
     Init(InitCmd),
 
-    /// Manage keys
+    /// Manage keys for a repository
     Key(KeyCmd),
 
-    /// List repository files
+    /// List repository files by file type
     List(ListCmd),
 
     /// List file contents of a snapshot
@@ -125,17 +124,17 @@ enum RusticCmd {
     /// Show the configuration which has been read from the config file(s)
     ShowConfig(ShowConfigCmd),
 
-    /// Update to the latest rustic release
+    /// Update to the latest stable rustic release
     #[cfg_attr(not(feature = "self-update"), clap(hide = true))]
     SelfUpdate(SelfUpdateCmd),
 
     /// Remove unused data or repack repository pack files
     Prune(PruneCmd),
 
-    /// Restore a snapshot/path
+    /// Restore a snapshot or path
     Restore(RestoreCmd),
 
-    /// Repair a snapshot/path
+    /// Repair a snapshot or the repository index
     Repair(RepairCmd),
 
     /// Show general information about the repository

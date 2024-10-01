@@ -182,14 +182,14 @@ source-specific option and then only apply to this source.
 | Attribute                  | Description                                                             | Default Value      | Example Value          | CLI Option                   |
 | -------------------------- | ----------------------------------------------------------------------- | ------------------ | ---------------------- | ---------------------------- |
 | group-by                   | Group snapshots by given criteria before applying keep policies.        | "host,label,paths" |                        | --group-by                   |
-| keep-last                  | Number of most recent snapshots to keep.                                | Not set            | 15                     | --keep-last                  |
-| keep-hourly                | Number of hourly snapshots to keep.                                     | Not set            |                        | --keep-hourly                |
-| keep-daily                 | Number of daily snapshots to keep.                                      | Not set            | 8                      | --keep-daily                 |
-| keep-weekly                | Number of weekly snapshots to keep.                                     | Not set            |                        | --keep-weekly                |
-| keep-monthly               | Number of monthly snapshots to keep.                                    | Not set            |                        | --keep-monthly               |
+| keep-last                  | Number of most recent snapshots to keep.                                | Not set            | 15                     | --keep-last, -l              |
+| keep-hourly, -H            | Number of hourly snapshots to keep.                                     | Not set            |                        | --keep-hourly                |
+| keep-daily, -d             | Number of daily snapshots to keep.                                      | Not set            | 8                      | --keep-daily                 |
+| keep-weekly, -w            | Number of weekly snapshots to keep.                                     | Not set            |                        | --keep-weekly                |
+| keep-monthly, -m           | Number of monthly snapshots to keep.                                    | Not set            |                        | --keep-monthly               |
 | keep-quarter-yearly        | Number of quarter-yearly snapshots to keep.                             | Not set            |                        | --keep-quarter-yearly        |
 | keep-half-yearly           | Number of half-yearly snapshots to keep.                                | Not set            |                        | --keep-half-yearly           |
-| keep-yearly                | Number of yearly snapshots to keep.                                     | Not set            |                        | --keep-yearly                |
+| keep-yearly, -y            | Number of yearly snapshots to keep.                                     | Not set            |                        | --keep-yearly                |
 | keep-within-hourly         | The time duration within which hourly snapshots will be kept.           | Not set            | "1 day"                | --keep-within-hourly         |
 | keep-within-daily          | The time duration within which daily snapshots will be kept.            | Not set            | "7 days"               | --keep-within-daily          |
 | keep-within-weekly         | The time duration within which weekly snapshots will be kept.           | Not set            |                        | --keep-within-weekly         |

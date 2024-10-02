@@ -94,13 +94,13 @@ enum RusticCmd {
     /// Compare two snapshots or paths
     Diff(DiffCmd),
 
-    /// Dump the contents of a file within a snapshot to the terminal on stdout
+    /// Dump the contents of a file within a snapshot to stdout
     Dump(DumpCmd),
 
     /// Find patterns in given snapshots
     Find(FindCmd),
 
-    /// Mark snapshots to be removed from the repository
+    /// Remove snapshots from the repository
     Forget(ForgetCmd),
 
     /// Initialize a new repository

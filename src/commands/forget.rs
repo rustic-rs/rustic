@@ -119,7 +119,13 @@ impl ForgetCmd {
                     .get_snapshots(&self.ids)?
                     .into_iter()
                     .map(|sn| {
-                        if sn.must_keep(now) {
+                        if sn.is_locked(now) {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: true,
+                                reasons: vec!["locked".to_string()],
+                            }
+                        } else if sn.must_keep(now) {
                             ForgetSnapshot {
                                 snapshot: sn,
                                 keep: true,

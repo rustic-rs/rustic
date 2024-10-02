@@ -3703,7 +3703,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.4.0 (git+https://github.com/rustic-rs/rustic_core.git?branch=lock)",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -3723,8 +3723,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28c795aff2332a69ba31fb6cc91237db3eb88d5d0d160177522ba49a21dd5911"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=lock#5a117257991f7634868431e7318f84382bf01fd4"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3743,7 +3742,7 @@ dependencies = [
  "rand",
  "rayon",
  "reqwest",
- "rustic_core",
+ "rustic_core 0.4.0 (git+https://github.com/rustic-rs/rustic_core.git?branch=lock)",
  "semver",
  "serde",
  "strum",
@@ -3759,6 +3758,59 @@ name = "rustic_core"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "666cbd4da5ab6060f77326e73c13fe2d5043c95161393e913b910aecbdc894d0"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "anyhow",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "chrono",
+ "crossbeam-channel",
+ "derivative",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "enum-map",
+ "enum-map-derive",
+ "enumset",
+ "filetime",
+ "gethostname",
+ "hex",
+ "humantime",
+ "ignore",
+ "integer-sqrt",
+ "itertools",
+ "log",
+ "nix",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand",
+ "rayon",
+ "runtime-format",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "shell-words",
+ "strum",
+ "thiserror",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
+name = "rustic_core"
+version = "0.4.0"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=lock#5a117257991f7634868431e7318f84382bf01fd4"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3823,7 +3875,7 @@ dependencies = [
  "bytes",
  "enum-map",
  "once_cell",
- "rustic_core",
+ "rustic_core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
 ]
 

@@ -170,12 +170,14 @@ impl SnapshotFilter {
             return false;
         }
 
-        // For the the `Vec`s we have two possililities:
-        // - There exists a suitable matches method on the snapshot item (this automatically handles emtpy filter correctly):
+        // For the the `Vec`s we have two possibilities:
+        // - There exists a suitable matches method on the snapshot item
+        //   (this automatically handles empty filter correctly):
         snapshot.paths.matches(&self.filter_paths)
             && snapshot.tags.matches(&self.filter_tags)
-        //  - manually check if the snapshot item is contained in the `Vec` - but only 
-        //    if the `Vec` is not empty. If it is empty, no condition is given.
+        //  - manually check if the snapshot item is contained in the `Vec`
+        //    but only if the `Vec` is not empty.
+        //    If it is empty, no condition is given.
             && (self.filter_paths_exact.is_empty()
                 || self.filter_paths_exact.contains(&snapshot.paths))
             && (self.filter_tags_exact.is_empty()

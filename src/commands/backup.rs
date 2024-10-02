@@ -12,8 +12,8 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Context, Result};
 use clap::ValueHint;
 use comfy_table::Cell;
+use conflate::Merge;
 use log::{debug, info, warn};
-use merge::Merge;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -47,10 +47,12 @@ pub struct BackupCmd {
 
     /// Start the given command and use its output as stdin
     #[clap(long, value_name = "COMMAND")]
+    #[merge(strategy=conflate::option::overwrite_none)]
     stdin_command: Option<CommandInput>,
 
     /// Manually set backup path in snapshot
     #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
     as_path: Option<PathBuf>,
 
     /// Ignore save options
@@ -60,27 +62,27 @@ pub struct BackupCmd {
 
     /// Don't scan the backup source for its size - this disables ETA estimation for backup.
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub no_scan: bool,
 
     /// Output generated snapshot in json format
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     json: bool,
 
     /// Show detailed information about generated snapshot
     #[clap(long, conflicts_with = "json")]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     long: bool,
 
     /// Don't show any output
     #[clap(long, conflicts_with_all = ["json", "long"])]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     quiet: bool,
 
     /// Initialize repository, if it doesn't exist yet
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     init: bool,
 
     /// Parent processing options

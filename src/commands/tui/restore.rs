@@ -53,11 +53,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
         }
         self.dest = dest;
         let dest = LocalDestination::new(&self.dest, true, !self.node.is_dir())?;
+
         // for restore, always recurse into tree
-        let ls_opts = LsOptions {
-            recursive: true,
-            ..Default::default()
-        };
+        let mut ls_opts = LsOptions::default();
+        ls_opts.recursive = true;
+
         let ls = self.repo.ls(&self.node, &ls_opts)?;
 
         let plan = self.repo.prepare_restore(&self.opts, ls, &dest, dry_run)?;
@@ -68,14 +68,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
     // restore using the plan
     //
     // Note: This currently runs `prepare_restore` again and doesn't use `plan`
-    // TODO: Fix when restore is changed such that `prepare_restore` is always dry_run and all modification is don in `restore`
+    // TODO: Fix when restore is changed such that `prepare_restore` is always dry_run and all modification is done in `restore`
     fn restore(&self, _plan: RestorePlan) -> Result<()> {
         let dest = LocalDestination::new(&self.dest, true, !self.node.is_dir())?;
+
         // for restore, always recurse into tree
-        let ls_opts = LsOptions {
-            recursive: true,
-            ..Default::default()
-        };
+        let mut ls_opts = LsOptions::default();
+        ls_opts.recursive = true;
+
         let ls = self.repo.ls(&self.node, &ls_opts)?;
         let plan = self
             .repo

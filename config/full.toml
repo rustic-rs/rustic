@@ -67,10 +67,16 @@ throttle = "10kB,10MB" # limit and burst per second; only opendal backends; Defa
 
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
-filter-hosts = ["host2", "host2"] # Default: []
+filter-hosts = ["host1", "host2"] # Default: []
 filter-labels = ["label1", "label2"] # Default: []
 filter-tags = ["tag1,tag2", "tag3"] # Default: []
+filter-tags-exact = ["tag1,tag2", "tag2"] # Default: []
 filter-paths = ["path1", "path2,path3"] # Default: []
+filter-paths-exact = ["path1", "path2,path3"] # Default: []
+filter-after = "2024-01-01" # Default: not set
+filter-before = "2024-02-05 12:15" # Default: not set
+filter-size = "200MiB" # Default: not set
+filter-size-added = "1 MB..10MB" # Default: not set
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 
 # Backup options: These options are used for all sources when calling the backup command.
@@ -126,10 +132,16 @@ sources = [
 prune = false
 group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
 # The following filter options can be also defined here and then overwrite the options for the forget command
-filter-hosts = ["host2", "host2"] # Default: []
+filter-hosts = ["host1", "host2"] # Default: []
 filter-labels = ["label1", "label2"] # Default: []
 filter-tags = ["tag1,tag2", "tag3"] # Default: []
+filter-tags-exact = ["tag1,tag2", "tag2"] # Default: []
 filter-paths = ["path1", "path2,path3"] # Default: []
+filter-paths-exact = ["path1", "path2,path3"] # Default: []
+filter-after = "2024-01-01" # Default: not set
+filter-before = "2024-02-05 12:15" # Default: not set
+filter-size = "200MiB" # Default: not set
+filter-size-added = "1 MB..10MB" # Default: not set
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 # The retention options follow. All of these are not set by default.
 keep-tags = ["tag1", "tag2,tag3"] # Default: not set

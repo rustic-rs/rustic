@@ -1,10 +1,17 @@
 use crate::error::RhaiErrorKinds;
 
+use bytesize::ByteSize;
+use derive_more::derive::Display;
 use log::warn;
 use rustic_core::{repofile::SnapshotFile, StringList};
-use std::{error::Error, str::FromStr};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use cached::proc_macro::cached;
+use chrono::{DateTime, Local, NaiveTime};
 use conflate::Merge;
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
@@ -75,11 +82,47 @@ pub struct SnapshotFilter {
     #[merge(strategy=conflate::vec::overwrite_empty)]
     filter_paths: Vec<StringList>,
 
+    /// Path list to filter exactly (no superset) as given (can be specified multiple times)
+    #[clap(long, global = true, value_name = "PATH[,PATH,..]")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[merge(strategy=conflate::vec::overwrite_empty)]
+    filter_paths_exact: Vec<StringList>,
+
     /// Tag list to filter (can be specified multiple times)
     #[clap(long, global = true, value_name = "TAG[,TAG,..]")]
     #[serde_as(as = "Vec<DisplayFromStr>")]
     #[merge(strategy=conflate::vec::overwrite_empty)]
     filter_tags: Vec<StringList>,
+
+    /// Tag list to filter exactly (no superset) as given (can be specified multiple times)
+    #[clap(long, global = true, value_name = "TAG[,TAG,..]")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    #[merge(strategy=conflate::vec::overwrite_empty)]
+    filter_tags_exact: Vec<StringList>,
+
+    /// Only use snapshots which are taken after the given given date/time
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, value_name = "DATE(TIME)")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_after: Option<AfterDate>,
+
+    /// Only use snapshots which are taken before the given given date/time
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, value_name = "DATE(TIME)")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_before: Option<BeforeDate>,
+
+    /// Only use snapshots with total size in given range
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, value_name = "SIZE")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_size: Option<SizeRange>,
+
+    /// Only use snapshots with size added to the repo in given range
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, value_name = "SIZE")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_size_added: Option<SizeRange>,
 
     /// Function to filter snapshots
     #[clap(long, global = true, value_name = "FUNC")]
@@ -118,9 +161,136 @@ impl SnapshotFilter {
             }
         }
 
+        // For the `Option`s we check if the option is set and the condition is not matched. In this case we can early return false.
+        if matches!(&self.filter_after, Some(after) if !after.matches(snapshot.time))
+            || matches!(&self.filter_before, Some(before) if !before.matches(snapshot.time))
+            || matches!((&self.filter_size,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.total_bytes_processed))
+            || matches!((&self.filter_size_added,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.data_added))
+        {
+            return false;
+        }
+
+        // For the the `Vec`s we have two possibilities:
+        // - There exists a suitable matches method on the snapshot item
+        //   (this automatically handles empty filter correctly):
         snapshot.paths.matches(&self.filter_paths)
             && snapshot.tags.matches(&self.filter_tags)
+        //  - manually check if the snapshot item is contained in the `Vec`
+        //    but only if the `Vec` is not empty.
+        //    If it is empty, no condition is given.
+            && (self.filter_paths_exact.is_empty()
+                || self.filter_paths_exact.contains(&snapshot.paths))
+            && (self.filter_tags_exact.is_empty()
+                || self.filter_tags_exact.contains(&snapshot.tags))
             && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
             && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
+    }
+}
+
+#[derive(Debug, Clone, Display)]
+struct AfterDate(DateTime<Local>);
+
+impl AfterDate {
+    fn matches(&self, datetime: DateTime<Local>) -> bool {
+        self.0 < datetime
+    }
+}
+
+impl FromStr for AfterDate {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let before_midnight = NaiveTime::from_hms_nano_opt(23, 59, 59, 999_999_999).unwrap();
+        let datetime = dateparser::parse_with(s, &Local, before_midnight)?;
+        Ok(Self(datetime.into()))
+    }
+}
+
+#[derive(Debug, Clone, Display)]
+struct BeforeDate(DateTime<Local>);
+
+impl BeforeDate {
+    fn matches(&self, datetime: DateTime<Local>) -> bool {
+        datetime < self.0
+    }
+}
+
+impl FromStr for BeforeDate {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let midnight = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+        let datetime = dateparser::parse_with(s, &Local, midnight)?;
+        Ok(Self(datetime.into()))
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SizeRange {
+    from: Option<ByteSize>,
+    to: Option<ByteSize>,
+}
+
+impl SizeRange {
+    fn matches(&self, size: u64) -> bool {
+        // The matches-expression is only true if the `Option` is `Some` and the size is smaller than from.
+        // Hence, !matches is true either if `self.from` is `None` or if the size >= the values
+        !matches!(self.from, Some(from) if size < from.0)
+        // same logic here, but smaller and greater swapped.
+            && !matches!(self.to, Some(to) if size > to.0)
+    }
+}
+
+fn parse_size(s: &str) -> Result<Option<ByteSize>, String> {
+    let s = s.trim();
+    if s.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(s.parse()?))
+}
+
+impl FromStr for SizeRange {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (from, to) = match s.split_once("..") {
+            Some((s1, s2)) => (parse_size(s1)?, parse_size(s2)?),
+            None => (parse_size(s)?, None),
+        };
+        Ok(Self { from, to })
+    }
+}
+
+impl Display for SizeRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(from) = self.from {
+            f.write_str(&from.to_string_as(true))?;
+        }
+        f.write_str("..")?;
+        if let Some(to) = self.to {
+            f.write_str(&to.to_string_as(true))?;
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("..", None, None)]
+    #[case("10", Some(10), None)]
+    #[case("..10k", None, Some(10_000))]
+    #[case("1MB..", Some(1_000_000), None)]
+    #[case("1 MB .. 1 GiB", Some(1_000_000), Some(1_073_741_824))]
+    #[case("10 .. 20 ", Some(10), Some(20))]
+    #[case(" 2G ", Some(2_000_000_000), None)]
+    fn size_range_from_str(
+        #[case] input: SizeRange,
+        #[case] from: Option<u64>,
+        #[case] to: Option<u64>,
+    ) {
+        assert_eq!(input.from.map(|v| v.0), from);
+        assert_eq!(input.to.map(|v| v.0), to);
     }
 }

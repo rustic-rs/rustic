@@ -94,7 +94,7 @@ enum RusticCmd {
     /// Compare two snapshots or paths
     Diff(DiffCmd),
 
-    /// Dump the contents of a file within a snapshot to the terminal
+    /// Dump the contents of a file within a snapshot to the terminal on stdout
     Dump(DumpCmd),
 
     /// Find patterns in given snapshots

@@ -1,11 +1,11 @@
 //! Rustic Abscissa Application
-use std::env;
+use std::{env, process};
 
 use abscissa_core::{
-    application::{self, AppCell},
+    application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
     terminal::component::Terminal,
-    Application, Component, FrameworkError, StandardPaths,
+    Application, Component, FrameworkError, Shutdown, StandardPaths,
 };
 
 use anyhow::Result;
@@ -15,6 +15,14 @@ use crate::{commands::EntryPoint, config::RusticConfig};
 
 /// Application state
 pub static RUSTIC_APP: AppCell<RusticApp> = AppCell::new();
+
+// Constants
+pub mod constants {
+    pub const RUSTIC_DOCS_URL: &str = "https://rustic.cli.rs/docs";
+    pub const RUSTIC_DEV_DOCS_URL: &str = "https://rustic.cli.rs/dev-docs";
+    pub const RUSTIC_CONFIG_DOCS_URL: &str =
+        "https://github.com/rustic-rs/rustic/blob/main/config/README.md";
+}
 
 /// Rustic Application
 #[derive(Debug)]
@@ -98,5 +106,26 @@ impl Application for RusticApp {
         self.config.set_once(config);
 
         Ok(())
+    }
+
+    /// Shut down this application gracefully
+    fn shutdown(&self, shutdown: Shutdown) -> ! {
+        let exit_code = match shutdown {
+            Shutdown::Crash => 1,
+            _ => 0,
+        };
+        self.shutdown_with_exitcode(shutdown, exit_code)
+    }
+}
+
+impl RusticApp {
+    /// Shut down this application gracefully, exiting with given exit code.
+    fn shutdown_with_exitcode(&self, shutdown: Shutdown, exit_code: i32) -> ! {
+        let result = self.state().components().shutdown(self, shutdown);
+        if let Err(e) = result {
+            fatal_error(self, &e)
+        }
+
+        process::exit(exit_code);
     }
 }

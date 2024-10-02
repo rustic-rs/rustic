@@ -7,7 +7,9 @@ pub(crate) mod completions;
 pub(crate) mod config;
 pub(crate) mod copy;
 pub(crate) mod diff;
+pub(crate) mod docs;
 pub(crate) mod dump;
+pub(crate) mod find;
 pub(crate) mod forget;
 pub(crate) mod init;
 pub(crate) mod key;
@@ -22,9 +24,12 @@ pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
+#[cfg(feature = "tui")]
+pub(crate) mod tui;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
 
+use std::fmt::Debug;
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -34,10 +39,11 @@ use crate::commands::webdav::WebDavCmd;
 use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
-        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
-        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
-        repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
+        forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
+        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
+        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
+        tag::TagCmd,
     },
     config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
@@ -52,10 +58,14 @@ use clap::builder::{
     styling::{AnsiColor, Effects},
     Styles,
 };
+use convert_case::{Case, Casing};
 use dialoguer::Password;
-use log::{log, Level};
-use rustic_core::{OpenStatus, Repository};
+use human_panic::setup_panic;
+use log::{log, warn, Level};
+use rustic_core::{IndexedFull, OpenStatus, ProgressBars, Repository};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+
+use self::find::FindCmd;
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
@@ -68,7 +78,7 @@ enum RusticCmd {
     /// Backup to the repository
     Backup(BackupCmd),
 
-    /// Show raw data of repository files and blobs
+    /// Show raw data of files and blobs in a repository
     Cat(CatCmd),
 
     /// Change the repository configuration
@@ -80,15 +90,20 @@ enum RusticCmd {
     /// Check the repository
     Check(CheckCmd),
 
-    /// Copy snapshots to other repositories. Note: The target repositories must be given in the config file!
+    /// Copy snapshots to other repositories
     Copy(CopyCmd),
 
-    /// Compare two snapshots/paths
-    /// Note that the exclude options only apply for comparison with a local path
+    /// Compare two snapshots or paths
     Diff(DiffCmd),
 
-    /// dump the contents of a file in a snapshot to stdout
+    /// Open the documentation
+    Docs(DocsCmd),
+
+    /// Dump the contents of a file within a snapshot to stdout
     Dump(DumpCmd),
+
+    /// Find patterns in given snapshots
+    Find(FindCmd),
 
     /// Remove snapshots from the repository
     Forget(ForgetCmd),
@@ -96,10 +111,10 @@ enum RusticCmd {
     /// Initialize a new repository
     Init(InitCmd),
 
-    /// Manage keys
+    /// Manage keys for a repository
     Key(KeyCmd),
 
-    /// List repository files
+    /// List repository files by file type
     List(ListCmd),
 
     /// List file contents of a snapshot
@@ -114,17 +129,17 @@ enum RusticCmd {
     /// Show the configuration which has been read from the config file(s)
     ShowConfig(ShowConfigCmd),
 
-    /// Update to the latest rustic release
+    /// Update to the latest stable rustic release
     #[cfg_attr(not(feature = "self-update"), clap(hide = true))]
     SelfUpdate(SelfUpdateCmd),
 
     /// Remove unused data or repack repository pack files
     Prune(PruneCmd),
 
-    /// Restore a snapshot/path
+    /// Restore (a path within) a snapshot
     Restore(RestoreCmd),
 
-    /// Repair a snapshot/path
+    /// Repair a snapshot or the repository index
     Repair(RepairCmd),
 
     /// Show general information about the repository
@@ -159,6 +174,9 @@ pub struct EntryPoint {
 
 impl Runnable for EntryPoint {
     fn run(&self) {
+        // Set up panic hook for better error messages and logs
+        setup_panic!();
+
         self.commands.run();
         RUSTIC_APP.shutdown(Shutdown::Graceful)
     }
@@ -181,14 +199,31 @@ impl Configurable<RusticConfig> for EntryPoint {
         // That's why it says `_config`, because it's not read at all and therefore not needed.
         let mut config = self.config.clone();
 
+        // collect "RUSTIC_REPO_OPT*" and "OPENDAL_*" env variables
+        for (var, value) in std::env::vars() {
+            if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPT_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
+                _ = config.repository.be.options.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("OPENDAL_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
+                _ = config.repository.be.options.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPTHOT_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
+                _ = config.repository.be.options_hot.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPTCOLD_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
+                _ = config.repository.be.options_cold.insert(var, value);
+            }
+        }
+
         // collect logs during merging as we start the logger *after* merging
         let mut merge_logs = Vec::new();
 
         // get global options from command line / env and config file
-        if config.global.use_profile.is_empty() {
+        if config.global.use_profiles.is_empty() {
             config.merge_profile("rustic", &mut merge_logs, Level::Info)?;
         } else {
-            for profile in &config.global.use_profile.clone() {
+            for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, &mut merge_logs, Level::Warn)?;
             }
         }
@@ -199,33 +234,44 @@ impl Configurable<RusticConfig> for EntryPoint {
                 .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
             None => LevelFilter::Info,
         };
+        let term_config = simplelog::ConfigBuilder::new()
+            .set_time_level(LevelFilter::Off)
+            .build();
         match &config.global.log_file {
             None => TermLogger::init(
                 level_filter,
-                simplelog::ConfigBuilder::new()
-                    .set_time_level(LevelFilter::Off)
-                    .build(),
+                term_config,
                 TerminalMode::Stderr,
                 ColorChoice::Auto,
             )
             .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
 
-            Some(file) => CombinedLogger::init(vec![
-                TermLogger::new(
+            Some(file) => {
+                let file_config = simplelog::ConfigBuilder::new()
+                    .set_time_format_rfc3339()
+                    .build();
+                let file = File::options()
+                    .create(true)
+                    .append(true)
+                    .open(file)
+                    .map_err(|e| {
+                        FrameworkErrorKind::PathError {
+                            name: Some(file.clone()),
+                        }
+                        .context(e)
+                    })?;
+                let term_logger = TermLogger::new(
                     level_filter.min(LevelFilter::Warn),
-                    simplelog::ConfigBuilder::new()
-                        .set_time_level(LevelFilter::Off)
-                        .build(),
+                    term_config,
                     TerminalMode::Stderr,
                     ColorChoice::Auto,
-                ),
-                WriteLogger::new(
-                    level_filter,
-                    simplelog::Config::default(),
-                    File::options().create(true).append(true).open(file)?,
-                ),
-            ])
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+                );
+                CombinedLogger::init(vec![
+                    term_logger,
+                    WriteLogger::new(level_filter, file_config, file),
+                ])
+                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
+            }
         }
 
         // display logs from merging
@@ -235,6 +281,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 
         match &self.commands {
             RusticCmd::Forget(cmd) => cmd.override_config(config),
+            RusticCmd::Copy(cmd) => cmd.override_config(config),
             #[cfg(feature = "webdav")]
             RusticCmd::Webdav(cmd) => cmd.override_config(config),
 
@@ -242,6 +289,20 @@ impl Configurable<RusticConfig> for EntryPoint {
             _ => Ok(config),
         }
     }
+}
+/// Get the repository with the given options
+///
+/// # Arguments
+///
+/// * `repo_opts` - The repository options
+///
+fn get_repository_with_progress<P>(
+    repo_opts: &AllRepositoryOptions,
+    po: P,
+) -> Result<Repository<P, ()>> {
+    let backends = repo_opts.be.to_backends()?;
+    let repo = Repository::new_with_progress(&repo_opts.repo, &backends, po)?;
+    Ok(repo)
 }
 
 /// Get the repository with the given options
@@ -252,9 +313,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 ///
 fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<ProgressOptions, ()>> {
     let po = RUSTIC_APP.config().global.progress_options;
-    let backends = repo_opts.be.to_backends()?;
-    let repo = Repository::new_with_progress(&repo_opts.repo, backends, po)?;
-    Ok(repo)
+    get_repository_with_progress(repo_opts, po)
 }
 
 /// Open the repository with the given options
@@ -267,19 +326,23 @@ fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<Progres
 ///
 /// * [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`] - If reading the password failed
 /// * [`RepositoryErrorKind::OpeningPasswordFileFailed`] - If opening the password file failed
-/// * [`RepositoryErrorKind::PasswordCommandParsingFailed`] - If parsing the password command failed
+/// * [`RepositoryErrorKind::PasswordCommandExecutionFailed`] - If executing the password command failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
 /// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
 ///
 /// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
 /// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: crate::error::RepositoryErrorKind::OpeningPasswordFileFailed
-/// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: crate::error::RepositoryErrorKind::PasswordCommandParsingFailed
+/// [`RepositoryErrorKind::PasswordCommandExecutionFailed`]: crate::error::RepositoryErrorKind::PasswordCommandExecutionFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 /// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
-fn open_repository(
+fn open_repository_with_progress<P: Clone>(
     repo_opts: &AllRepositoryOptions,
-) -> Result<Repository<ProgressOptions, OpenStatus>> {
-    let repo = get_repository(repo_opts)?;
+    po: P,
+) -> Result<Repository<P, OpenStatus>> {
+    if RUSTIC_APP.config().global.check_index {
+        warn!("Option check-index is not supported and will be ignored!");
+    }
+    let repo = get_repository_with_progress(repo_opts, po)?;
     match repo.password()? {
         // if password is given, directly return the result of find_key_in_backend and don't retry
         Some(pass) => {
@@ -300,6 +363,34 @@ fn open_repository(
         }
     }
     Err(anyhow!("incorrect password"))
+}
+
+fn open_repository(
+    repo_opts: &AllRepositoryOptions,
+) -> Result<Repository<ProgressOptions, OpenStatus>> {
+    let po = RUSTIC_APP.config().global.progress_options;
+    open_repository_with_progress(repo_opts, po)
+}
+/// helper function to get an opened and inedexed repo
+fn open_repository_indexed_with_progress<P: Clone + ProgressBars>(
+    repo_opts: &AllRepositoryOptions,
+    po: P,
+) -> Result<Repository<P, impl IndexedFull + Debug>> {
+    let open = open_repository_with_progress(repo_opts, po)?;
+    let check_index = RUSTIC_APP.config().global.check_index;
+    let repo = if check_index {
+        open.to_indexed_checked()
+    } else {
+        open.to_indexed()
+    }?;
+    Ok(repo)
+}
+
+fn open_repository_indexed(
+    repo_opts: &AllRepositoryOptions,
+) -> Result<Repository<ProgressOptions, impl IndexedFull + Debug>> {
+    let po = RUSTIC_APP.config().global.progress_options;
+    open_repository_indexed_with_progress(repo_opts, po)
 }
 
 #[cfg(test)]

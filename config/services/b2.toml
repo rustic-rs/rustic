@@ -1,14 +1,15 @@
-# rustic config file to use opendal storage - in this case b2
+# rustic config file to use B2 storage via Apache OpenDAL
 [repository]
 repository = "opendal:b2" # just specify the opendal service here
-password = "mypassword"
+password = "<rustic_passwd>"
+# or
+# password-file = "/home/<username>/etc/secure/rustic_passwd"
 
-# all other options are given here.
-# Please refer to https://opendal.apache.org/docs/rust/opendal/services/index.html for the options supported by each service
+# B2 specific options
 [repository.options]
 # Here, we give the required b2 options, see https://opendal.apache.org/docs/rust/opendal/services/struct.B2.html
-root = "repo-path" # Set the work directory for backend
-key_id = "my_id" # B2 application key keyID
-application_key = ".my_key" # B2 application key applicationKey
+application_key_id = "my_id" # B2 application key ID
+application_key = "my_key" # B2 application key secret. Can be also set using OPENDAL_APPLICATION_KEY
 bucket = "bucket_name" # B2 bucket name
-bucket_id = "bucket_id" # B2 bucket_id
+bucket_id = "bucket_id" # B2 bucket ID
+# root = "/" # Set a repository root directory if not using the root directory of the bucket

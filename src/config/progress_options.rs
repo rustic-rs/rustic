@@ -5,7 +5,7 @@ use std::{borrow::Cow, fmt::Write, time::Duration};
 use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
-use merge::Merge;
+use conflate::Merge;
 
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -19,7 +19,7 @@ use rustic_core::{Progress, ProgressBars};
 pub struct ProgressOptions {
     /// Don't show any progress bar
     #[clap(long, global = true, env = "RUSTIC_NO_PROGRESS")]
-    #[merge(strategy=merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub no_progress: bool,
 
     /// Interval to update progress bars
@@ -31,6 +31,7 @@ pub struct ProgressOptions {
         conflicts_with = "no_progress"
     )]
     #[serde_as(as = "Option<DisplayFromStr>")]
+    #[merge(strategy=conflate::option::overwrite_none)]
     pub progress_interval: Option<humantime::Duration>,
 }
 
@@ -131,11 +132,13 @@ impl Progress for RusticProgress {
             ProgressType::Bytes => {
                 self.0.set_style(
                     ProgressStyle::default_bar()
-                        .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| 
-                            match (s.pos(), s.len()){
-                                (pos,Some(len)) if pos != 0 => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
+                        .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| {
+                            let _ = match (s.pos(), s.len()){
+                                // Extra checks to prevent panics from dividing by zero or subtract overflow
+                                (pos,Some(len)) if pos != 0 && len > pos => write!(w,"{:#}", HumanDuration(Duration::from_secs(s.elapsed().as_secs() * (len-pos)/pos))),
                                 (_, _) => write!(w,"-"),
-                            }.unwrap())
+                            };
+                        })
                         .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
                         .unwrap()
                 );

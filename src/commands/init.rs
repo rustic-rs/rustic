@@ -66,7 +66,7 @@ impl InitCmd {
 ///  * [`RepositoryErrorKind::OpeningPasswordFileFailed`] - If opening the password file failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`] - If reading the password failed
 /// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
-/// * [`RepositoryErrorKind::PasswordCommandParsingFailed`] - If parsing the password command failed
+/// * [`RepositoryErrorKind::PasswordCommandExecutionFailed`] - If executing the password command failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
 ///
 /// # Returns
@@ -76,13 +76,18 @@ impl InitCmd {
 /// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: rustic_core::error::RepositoryErrorKind::OpeningPasswordFileFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
 /// [`RepositoryErrorKind::FromSplitError`]: rustic_core::error::RepositoryErrorKind::FromSplitError
-/// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: rustic_core::error::RepositoryErrorKind::PasswordCommandParsingFailed
+/// [`RepositoryErrorKind::PasswordCommandExecutionFailed`]: rustic_core::error::RepositoryErrorKind::PasswordCommandExecutionFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 pub(crate) fn init<P, S>(
     repo: Repository<P, S>,
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
 ) -> Result<Repository<P, OpenStatus>> {
+    let pass = init_password(&repo)?;
+    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+}
+
+pub(crate) fn init_password<P, S>(repo: &Repository<P, S>) -> Result<String> {
     let pass = repo.password()?.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
@@ -98,5 +103,5 @@ pub(crate) fn init<P, S>(
         }
     });
 
-    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+    Ok(pass)
 }

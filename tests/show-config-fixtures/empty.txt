@@ -1,0 +1,64 @@
+[global]
+use-profiles = []
+dry-run = false
+check-index = false
+no-progress = false
+
+[global.env]
+
+[repository]
+no-cache = false
+warm-up = false
+
+[repository.options]
+
+[repository.options-hot]
+
+[repository.options-cold]
+
+[snapshot-filter]
+filter-hosts = []
+filter-labels = []
+filter-paths = []
+filter-tags = []
+
+[backup]
+stdin-filename = ""
+with-atime = false
+ignore-devid = false
+no-scan = false
+json = false
+long = false
+quiet = false
+init = false
+skip-identical-parent = false
+force = false
+ignore-ctime = false
+ignore-inode = false
+globs = []
+iglobs = []
+glob-files = []
+iglob-files = []
+git-ignore = false
+no-require-git = false
+custom-ignorefiles = []
+exclude-if-present = []
+one-file-system = false
+tags = []
+delete-never = false
+snapshots = []
+sources = []
+
+[copy]
+targets = []
+
+[forget]
+prune = false
+filter-hosts = []
+filter-labels = []
+filter-paths = []
+filter-tags = []
+
+[webdav]
+symlinks = false
+

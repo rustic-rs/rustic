@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -36,12 +36,16 @@ pub(crate) struct LsCmd {
     snap: String,
 
     /// show summary
-    #[clap(long, short = 's')]
+    #[clap(long, short = 's', conflicts_with = "json")]
     summary: bool,
 
     /// show long listing
-    #[clap(long, short = 'l')]
+    #[clap(long, short = 'l', conflicts_with = "json")]
     long: bool,
+
+    /// show listing in json
+    #[clap(long, conflicts_with_all = ["summary", "long"])]
+    json: bool,
 
     /// show uid/gid instead of user/group
     #[clap(long, long("numeric-uid-gid"))]
@@ -65,10 +69,10 @@ impl Runnable for LsCmd {
 ///
 /// This struct is used to print a summary of the ls command.
 #[derive(Default)]
-struct Summary {
-    files: usize,
-    size: u64,
-    dirs: usize,
+pub struct Summary {
+    pub files: usize,
+    pub size: u64,
+    pub dirs: usize,
 }
 
 impl Summary {
@@ -77,7 +81,7 @@ impl Summary {
     /// # Arguments
     ///
     /// * `node` - the node to update the summary with
-    fn update(&mut self, node: &Node) {
+    pub fn update(&mut self, node: &Node) {
         if node.is_dir() {
             self.dirs += 1;
         }
@@ -88,10 +92,43 @@ impl Summary {
     }
 }
 
+pub trait NodeLs {
+    fn mode_str(&self) -> String;
+    fn link_str(&self) -> String;
+}
+
+impl NodeLs for Node {
+    fn mode_str(&self) -> String {
+        format!(
+            "{:>1}{:>9}",
+            match self.node_type {
+                NodeType::Dir => 'd',
+                NodeType::Symlink { .. } => 'l',
+                NodeType::Chardev { .. } => 'c',
+                NodeType::Dev { .. } => 'b',
+                NodeType::Fifo { .. } => 'p',
+                NodeType::Socket => 's',
+                _ => '-',
+            },
+            self.meta
+                .mode
+                .map(parse_permissions)
+                .unwrap_or_else(|| "?????????".to_string())
+        )
+    }
+    fn link_str(&self) -> String {
+        if let NodeType::Symlink { .. } = &self.node_type {
+            ["->", &self.node_type.to_link().to_string_lossy()].join(" ")
+        } else {
+            String::new()
+        }
+    }
+}
+
 impl LsCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?.to_indexed()?;
+        let repo = open_repository_indexed(&config.repository)?;
 
         let node =
             repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
@@ -102,14 +139,29 @@ impl LsCmd {
 
         let mut summary = Summary::default();
 
+        if self.json {
+            print!("[");
+        }
+
+        let mut first_item = true;
         for item in repo.ls(&node, &ls_opts)? {
             let (path, node) = item?;
             summary.update(&node);
-            if self.long {
+            if self.json {
+                if !first_item {
+                    print!(",");
+                }
+                print!("{}", serde_json::to_string(&path)?);
+            } else if self.long {
                 print_node(&node, &path, self.numeric_id);
             } else {
-                println!("{path:?} ");
+                println!("{}", path.display());
             }
+            first_item = false;
+        }
+
+        if self.json {
+            println!("]");
         }
 
         if self.summary {
@@ -129,22 +181,10 @@ impl LsCmd {
 ///
 /// * `node` - the node to print
 /// * `path` - the path of the node
-fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
+pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
     println!(
-        "{:>1}{:>9} {:>8} {:>8} {:>9} {:>12} {path:?} {}",
-        match node.node_type {
-            NodeType::Dir => 'd',
-            NodeType::Symlink { .. } => 'l',
-            NodeType::Chardev { .. } => 'c',
-            NodeType::Dev { .. } => 'b',
-            NodeType::Fifo { .. } => 'p',
-            NodeType::Socket => 's',
-            _ => '-',
-        },
-        node.meta
-            .mode
-            .map(parse_permissions)
-            .unwrap_or_else(|| "?????????".to_string()),
+        "{:>10} {:>8} {:>8} {:>9} {:>17} {path:?} {}",
+        node.mode_str(),
         if numeric_uid_gid {
             node.meta.uid.map(|uid| uid.to_string())
         } else {
@@ -160,13 +200,9 @@ fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
         node.meta.size,
         node.meta
             .mtime
-            .map(|t| t.format("%_d %b %H:%M").to_string())
+            .map(|t| t.format("%_d %b %Y %H:%M").to_string())
             .unwrap_or_else(|| "?".to_string()),
-        if let NodeType::Symlink { .. } = &node.node_type {
-            ["->", &node.node_type.to_link().to_string_lossy()].join(" ")
-        } else {
-            String::new()
-        }
+        node.link_str(),
     );
 }
 

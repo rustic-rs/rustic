@@ -1,7 +1,8 @@
 //! `restore` subcommand
 
 use crate::{
-    commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
+    commands::open_repository_indexed, helpers::bytes_size_to_string, status_err, Application,
+    RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -52,7 +53,7 @@ impl RestoreCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
         let dry_run = config.global.dry_run;
-        let repo = open_repository(&config.repository)?.to_indexed()?;
+        let repo = open_repository_indexed(&config.repository)?;
 
         let node =
             repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
@@ -64,7 +65,7 @@ impl RestoreCmd {
 
         let dest = LocalDestination::new(&self.dest, true, !node.is_dir())?;
 
-        let restore_infos = repo.prepare_restore(&self.opts, ls.clone(), &dest, dry_run)?;
+        let restore_infos = repo.prepare_restore(&self.opts, ls, &dest, dry_run)?;
 
         let fs = restore_infos.stats.files;
         println!(
@@ -94,6 +95,10 @@ impl RestoreCmd {
         if dry_run {
             repo.warm_up(restore_infos.to_packs().into_iter())?;
         } else {
+            // save some memory
+            let repo = repo.drop_data_from_index();
+
+            let ls = repo.ls(&node, &ls_opts)?;
             repo.restore(restore_infos, &self.opts, ls, &dest)?;
             println!("restore done.");
         }

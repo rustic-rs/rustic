@@ -3,24 +3,28 @@
 use std::path::PathBuf;
 
 use crate::{
-    commands::{get_repository, init::init},
-    helpers::bytes_size_to_string,
+    commands::{get_repository, init::init, open_repository, snapshots::fill_table},
+    helpers::{bold_cell, bytes_size_to_string, table},
     status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Context, Result};
+use clap::ValueHint;
+use comfy_table::Cell;
+use conflate::Merge;
 use log::{debug, info, warn};
-use merge::Merge;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
 use rustic_core::{
-    BackupOptions, ConfigOptions, KeyOptions, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    ParentOptions, PathList, SnapshotOptions,
+    BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, ParentOptions, PathList, SnapshotOptions,
 };
 
 /// `backup` subcommand
-#[derive(Clone, Command, Default, Debug, clap::Parser, Deserialize, Merge)]
+#[serde_as]
+#[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 // Note: using cli_sources, sources and source within this struct is a hack to support serde(deny_unknown_fields)
 // for deserializing the backup options from TOML
@@ -31,18 +35,24 @@ use rustic_core::{
 pub struct BackupCmd {
     /// Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all
     /// sources defined in the config file
-    #[clap(value_name = "SOURCE")]
+    #[clap(value_name = "SOURCE", value_hint = ValueHint::AnyPath)]
     #[merge(skip)]
     #[serde(skip)]
     cli_sources: Vec<String>,
 
     /// Set filename to be used when backing up from stdin
-    #[clap(long, value_name = "FILENAME", default_value = "stdin")]
+    #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
     #[merge(skip)]
     stdin_filename: String,
 
+    /// Start the given command and use its output as stdin
+    #[clap(long, value_name = "COMMAND")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    stdin_command: Option<CommandInput>,
+
     /// Manually set backup path in snapshot
-    #[clap(long, value_name = "PATH")]
+    #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
     as_path: Option<PathBuf>,
 
     /// Ignore save options
@@ -52,22 +62,27 @@ pub struct BackupCmd {
 
     /// Don't scan the backup source for its size - this disables ETA estimation for backup.
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub no_scan: bool,
 
     /// Output generated snapshot in json format
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     json: bool,
 
-    /// Don't show any output
+    /// Show detailed information about generated snapshot
     #[clap(long, conflicts_with = "json")]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    long: bool,
+
+    /// Don't show any output
+    #[clap(long, conflicts_with_all = ["json", "long"])]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     quiet: bool,
 
     /// Initialize repository, if it doesn't exist yet
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     init: bool,
 
     /// Parent processing options
@@ -97,15 +112,15 @@ pub struct BackupCmd {
     #[merge(skip)]
     config_opts: ConfigOptions,
 
-    /// Backup sources
+    /// Backup snapshots to generate
     #[clap(skip)]
     #[merge(strategy = merge_sources)]
-    sources: Vec<BackupCmd>,
+    snapshots: Vec<BackupCmd>,
 
     /// Backup source, used within config file
     #[clap(skip)]
     #[merge(skip)]
-    source: String,
+    sources: Vec<String>,
 }
 
 /// Merge backup sources
@@ -117,8 +132,8 @@ pub struct BackupCmd {
 /// * `left` - Vector of backup sources
 pub(crate) fn merge_sources(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCmd>) {
     left.append(&mut right);
-    left.sort_by(|opt1, opt2| opt1.source.cmp(&opt2.source));
-    left.dedup_by(|opt1, opt2| opt1.source == opt2.source);
+    left.sort_by(|opt1, opt2| opt1.sources.cmp(&opt2.sources));
+    left.dedup_by(|opt1, opt2| opt1.sources == opt2.sources);
 }
 
 impl Runnable for BackupCmd {
@@ -144,29 +159,32 @@ impl BackupCmd {
             }
             init(repo, &self.key_opts, &self.config_opts)?
         } else {
-            repo.open()?
+            open_repository(&config.repository)?
         }
         .to_indexed_ids()?;
 
         // manually check for a "source" field, check is not done by serde, see above.
-        if !config.backup.source.is_empty() {
+        if !config.backup.sources.is_empty() {
             bail!("key \"source\" is not valid in the [backup] section!");
         }
 
-        let config_opts = &config.backup.sources;
+        let snapshot_opts = &config.backup.snapshots;
 
         // manually check for a "sources" field, check is not done by serde, see above.
-        if config_opts.iter().any(|opt| !opt.sources.is_empty()) {
+        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
             bail!("key \"sources\" is not valid in a [[backup.sources]] section!");
         }
 
-        let config_sources: Vec<_> = config_opts
+        let config_snapshot_sources: Vec<_> = snapshot_opts
             .iter()
             .map(|opt| -> Result<_> {
-                Ok(PathList::from_string(&opt.source)?
+                Ok(PathList::from_iter(&opt.sources)
                     .sanitize()
                     .with_context(|| {
-                        format!("error sanitizing source=\"{}\" in config file", opt.source)
+                        format!(
+                            "error sanitizing source=\"{:?}\" in config file",
+                            opt.sources
+                        )
                     })?
                     .merge())
             })
@@ -179,38 +197,41 @@ impl BackupCmd {
             })
             .collect();
 
-        let sources = match (self.cli_sources.is_empty(), config_opts.is_empty()) {
+        let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
             (false, _) => {
-                let item = PathList::from_strings(&self.cli_sources).sanitize()?;
+                let item = PathList::from_iter(&self.cli_sources).sanitize()?;
                 vec![item]
             }
             (true, false) => {
                 info!("using all backup sources from config file.");
-                config_sources.clone()
+                config_snapshot_sources.clone()
             }
             (true, true) => {
                 bail!("no backup source given.");
             }
         };
 
-        for source in sources {
+        for sources in snapshot_sources {
             let mut opts = self.clone();
 
             // merge Options from config file, if given
-            if let Some(idx) = config_sources.iter().position(|s| s == &source) {
-                info!("merging source={source} section from config file");
-                opts.merge(config_opts[idx].clone());
+            if let Some(idx) = config_snapshot_sources.iter().position(|s| s == &sources) {
+                info!("merging source={sources} section from config file");
+                opts.merge(snapshot_opts[idx].clone());
             }
             if let Some(path) = &opts.as_path {
                 // as_path only works in combination with a single target
-                if source.len() > 1 {
+                if sources.len() > 1 {
                     bail!("as-path only works with a single target!");
                 }
                 // merge Options from config file using as_path, if given
                 if let Some(path) = path.as_os_str().to_str() {
-                    if let Some(idx) = config_opts.iter().position(|opt| opt.source == path) {
+                    if let Some(idx) = snapshot_opts
+                        .iter()
+                        .position(|opt| opt.sources == vec![path])
+                    {
                         info!("merging source=\"{path}\" section from config file");
-                        opts.merge(config_opts[idx].clone());
+                        opts.merge(snapshot_opts[idx].clone());
                     }
                 }
             }
@@ -220,17 +241,27 @@ impl BackupCmd {
 
             let backup_opts = BackupOptions::default()
                 .stdin_filename(opts.stdin_filename)
+                .stdin_command(opts.stdin_command)
                 .as_path(opts.as_path)
                 .parent_opts(opts.parent_opts)
                 .ignore_save_opts(opts.ignore_save_opts)
                 .ignore_filter_opts(opts.ignore_filter_opts)
                 .no_scan(opts.no_scan)
                 .dry_run(config.global.dry_run);
-            let snap = repo.backup(&backup_opts, &source, opts.snap_opts.to_snapshot()?)?;
+            let snap = repo.backup(&backup_opts, &sources, opts.snap_opts.to_snapshot()?)?;
 
             if opts.json {
                 let mut stdout = std::io::stdout();
                 serde_json::to_writer_pretty(&mut stdout, &snap)?;
+            } else if opts.long {
+                let mut table = table();
+
+                let add_entry = |title: &str, value: String| {
+                    _ = table.add_row([bold_cell(title), Cell::new(value)]);
+                };
+                fill_table(&snap, add_entry);
+
+                println!("{table}");
             } else if !opts.quiet {
                 let summary = snap.summary.unwrap();
                 println!(
@@ -257,7 +288,7 @@ impl BackupCmd {
                 println!("snapshot {} successfully saved.", snap.id);
             }
 
-            info!("backup of {source} done.");
+            info!("backup of {sources} done.");
         }
 
         Ok(())

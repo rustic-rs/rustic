@@ -66,7 +66,7 @@ If you want to contribute your own configuration, please
 
 ### Global Hooks `[global.hooks]`
 
-These external commands are before and after each commands, respectively.
+These external commands are run before and after each commands, respectively.
 
 **Note**: There are also repository hooks, which should be used for commands
 needed to set up the repository (like mounting the repo dir), see below.
@@ -131,8 +131,8 @@ see Repository Options
 
 ### Repository Hooks `[repository.hooks]`
 
-These external commands are before and after each repository-accessing commands,
-respectively.
+These external commands are run before and after each repository-accessing
+commands, respectively.
 
 See Global Hooks.
 
@@ -188,7 +188,7 @@ can be overwritten in the source-specific configuration, see below.
 
 ### Backup Hooks `[backup.hooks]`
 
-These external commands are before and after each backup, respectively.
+These external commands are run before and after each backup, respectively.
 
 **Note**: Global hooks and repository hooks are run additionaly.
 
@@ -197,14 +197,14 @@ See Global Hooks.
 ### Backup Snapshots `[[backup.snapshots]]`
 
 **Note**: All of the backup options mentioned before can also be used as
-source-specific option and then only apply to this source.
+snapshot-specific option and then only apply to this snapshot.
 
 | Attribute | Description                                        | Default Value | Example Value      |
 | --------- | -------------------------------------------------- | ------------- | ------------------ |
 | sources   | Array of source directories or file(s) to back up. | []            | ["/dir1", "/dir2"] |
 
 Source-specific hooks are called additionally to global, repository and backup
-hooks when backing up the defined source.
+hooks when backing up the defined sources into a snapshot.
 
 ### Forget Options `[forget]`
 

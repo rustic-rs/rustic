@@ -7,6 +7,7 @@ pub(crate) mod completions;
 pub(crate) mod config;
 pub(crate) mod copy;
 pub(crate) mod diff;
+pub(crate) mod docs;
 pub(crate) mod dump;
 pub(crate) mod find;
 pub(crate) mod forget;
@@ -38,10 +39,11 @@ use crate::commands::webdav::WebDavCmd;
 use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
-        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
-        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
-        repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
+        forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
+        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
+        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
+        tag::TagCmd,
     },
     config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
@@ -76,7 +78,7 @@ enum RusticCmd {
     /// Backup to the repository
     Backup(BackupCmd),
 
-    /// Show raw data of repository files and blobs
+    /// Show raw data of files and blobs in a repository
     Cat(CatCmd),
 
     /// Change the repository configuration
@@ -88,17 +90,19 @@ enum RusticCmd {
     /// Check the repository
     Check(CheckCmd),
 
-    /// Copy snapshots to other repositories. Note: The target repositories must be given in the config file!
+    /// Copy snapshots to other repositories
     Copy(CopyCmd),
 
-    /// Compare two snapshots/paths
-    /// Note that the exclude options only apply for comparison with a local path
+    /// Compare two snapshots or paths
     Diff(DiffCmd),
 
-    /// dump the contents of a file in a snapshot to stdout
+    /// Open the documentation
+    Docs(DocsCmd),
+
+    /// Dump the contents of a file within a snapshot to stdout
     Dump(DumpCmd),
 
-    /// Find in given snapshots
+    /// Find patterns in given snapshots
     Find(FindCmd),
 
     /// Remove snapshots from the repository
@@ -107,10 +111,10 @@ enum RusticCmd {
     /// Initialize a new repository
     Init(InitCmd),
 
-    /// Manage keys
+    /// Manage keys for a repository
     Key(KeyCmd),
 
-    /// List repository files
+    /// List repository files by file type
     List(ListCmd),
 
     /// List file contents of a snapshot
@@ -125,17 +129,17 @@ enum RusticCmd {
     /// Show the configuration which has been read from the config file(s)
     ShowConfig(ShowConfigCmd),
 
-    /// Update to the latest rustic release
+    /// Update to the latest stable rustic release
     #[cfg_attr(not(feature = "self-update"), clap(hide = true))]
     SelfUpdate(SelfUpdateCmd),
 
     /// Remove unused data or repack repository pack files
     Prune(PruneCmd),
 
-    /// Restore a snapshot/path
+    /// Restore (a path within) a snapshot
     Restore(RestoreCmd),
 
-    /// Repair a snapshot/path
+    /// Repair a snapshot or the repository index
     Repair(RepairCmd),
 
     /// Show general information about the repository
@@ -216,10 +220,10 @@ impl Configurable<RusticConfig> for EntryPoint {
         let mut merge_logs = Vec::new();
 
         // get global options from command line / env and config file
-        if config.global.use_profile.is_empty() {
+        if config.global.use_profiles.is_empty() {
             config.merge_profile("rustic", &mut merge_logs, Level::Info)?;
         } else {
-            for profile in &config.global.use_profile.clone() {
+            for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, &mut merge_logs, Level::Warn)?;
             }
         }
@@ -277,6 +281,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 
         match &self.commands {
             RusticCmd::Forget(cmd) => cmd.override_config(config),
+            RusticCmd::Copy(cmd) => cmd.override_config(config),
             #[cfg(feature = "webdav")]
             RusticCmd::Webdav(cmd) => cmd.override_config(config),
 
@@ -321,13 +326,13 @@ fn get_repository(repo_opts: &AllRepositoryOptions) -> Result<Repository<Progres
 ///
 /// * [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`] - If reading the password failed
 /// * [`RepositoryErrorKind::OpeningPasswordFileFailed`] - If opening the password file failed
-/// * [`RepositoryErrorKind::PasswordCommandParsingFailed`] - If parsing the password command failed
+/// * [`RepositoryErrorKind::PasswordCommandExecutionFailed`] - If executing the password command failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
 /// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
 ///
 /// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
 /// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: crate::error::RepositoryErrorKind::OpeningPasswordFileFailed
-/// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: crate::error::RepositoryErrorKind::PasswordCommandParsingFailed
+/// [`RepositoryErrorKind::PasswordCommandExecutionFailed`]: crate::error::RepositoryErrorKind::PasswordCommandExecutionFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: crate::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 /// [`RepositoryErrorKind::FromSplitError`]: crate::error::RepositoryErrorKind::FromSplitError
 fn open_repository_with_progress<P: Clone>(

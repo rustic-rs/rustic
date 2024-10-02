@@ -12,19 +12,18 @@ use abscissa_core::config::Config;
 use abscissa_core::path::AbsPathBuf;
 use abscissa_core::FrameworkError;
 use clap::{Parser, ValueHint};
+use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
-use merge::Merge;
 use rustic_backend::BackendOptions;
 use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, OneOrMany};
 
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
-    commands::{backup::BackupCmd, copy::Targets, forget::ForgetOptions},
+    commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
     config::progress_options::ProgressOptions,
     filtering::SnapshotFilter,
 };
@@ -56,7 +55,7 @@ pub struct RusticConfig {
 
     /// Copy options
     #[clap(skip)]
-    pub copy: Targets,
+    pub copy: CopyCmd,
 
     /// Forget options
     #[clap(skip)]
@@ -104,7 +103,7 @@ impl RusticConfig {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
             let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
-            for profile in &config.global.use_profile.clone() {
+            for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, merge_logs, Level::Warn)?;
             }
             self.merge(config);
@@ -125,7 +124,6 @@ impl RusticConfig {
 /// Global options
 ///
 /// These options are available for all commands.
-#[serde_as]
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
@@ -133,27 +131,27 @@ pub struct GlobalOptions {
     /// [default: "rustic"]
     #[clap(
         short = 'P',
-        long,
+        long = "use-profile",
         global = true,
         value_name = "PROFILE",
         env = "RUSTIC_USE_PROFILE"
     )]
-    #[merge(strategy = merge::vec::append)]
-    #[serde_as(as = "OneOrMany<_>")]
-    pub use_profile: Vec<String>,
+    #[merge(strategy=conflate::vec::append)]
+    pub use_profiles: Vec<String>,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
 
     /// Check if index matches pack files and read pack headers if neccessary
     #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub check_index: bool,
 
     /// Use this log level [default: info]
     #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
+    #[merge(strategy=conflate::option::overwrite_none)]
     pub log_level: Option<String>,
 
     /// Write log messages to the given file instead of printing them.
@@ -162,6 +160,7 @@ pub struct GlobalOptions {
     ///
     /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
     pub log_file: Option<PathBuf>,
 
     /// Settings to customize progress bars
@@ -171,14 +170,8 @@ pub struct GlobalOptions {
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
-    #[merge(strategy = extend)]
+    #[merge(strategy = conflate::hashmap::ignore)]
     pub env: HashMap<String, String>,
-}
-
-/// Extend the contents of a [`HashMap`] with the contents of another
-/// [`HashMap`] with the same key and value types.
-fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
-    left.extend(right);
 }
 
 /// Get the paths to the config file

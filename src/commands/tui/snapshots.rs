@@ -37,6 +37,7 @@ enum CurrentScreen<'a, P, S> {
     EnterAddTags(PopUpInput),
     EnterSetTags(PopUpInput),
     EnterRemoveTags(PopUpInput),
+    EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
     Dir(Snapshot<'a, P, S>),
@@ -71,13 +72,15 @@ enum SnapshotNode {
 }
 
 const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snaphots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
+    "(Esc) quit | (F5) reload snapshots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
 const HELP_TEXT: &str = r#"General Commands:
   q, Esc : exit
       F5 : re-read all snapshots from repository
    Enter : show snapshot contents
        v : toggle snapshot view [Filtered -> All -> Marked -> Modified]
+       V : modify filter to use     
+  Ctrl-v : reset filter
        i : show detailed snapshot information for selected snapshot
        w : write modified snapshots and delete snapshots to-forget
        ? : show this help page
@@ -552,6 +555,17 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.get_snap_entity(|snap| snap.description.clone().unwrap_or_default())
     }
 
+    pub fn get_filter(&self) -> Result<String> {
+        Ok(toml::to_string_pretty(&self.filter)?)
+    }
+
+    pub fn set_filter(&mut self, filter: String) {
+        if let Ok(filter) = toml::from_str::<SnapshotFilter>(&filter) {
+            self.filter = filter;
+            self.apply_view();
+        }
+    }
+
     pub fn set_label(&mut self, label: String) {
         self.process_marked_snaps(|snap| {
             if snap.label == label {
@@ -649,6 +663,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             CurrentScreen::EnterAddTags(_) => self.add_tags(input),
             CurrentScreen::EnterSetTags(_) => self.set_tags(input),
             CurrentScreen::EnterRemoveTags(_) => self.remove_tags(input),
+            CurrentScreen::EnterFilter(_) => self.set_filter(input),
             _ => {}
         }
     }
@@ -670,7 +685,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .snapshots
             .iter()
             .zip(self.snaps_status.iter())
-            .filter_map(|(snap, status)| status.modified.then_some(snap))
+            .filter_map(|(snap, status)| (status.modified && !status.to_forget).then_some(snap))
             .cloned()
             .collect();
         let old_snap_ids = save_snaps.iter().map(|sn| sn.id);
@@ -712,6 +727,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                 Char('d') => self.clear_description(),
                                 Char('t') => self.clear_tags(),
                                 Char('p') => self.clear_delete_protection(),
+                                Char('v') => self.reset_filter(),
                                 _ => {}
                             }
                         } else {
@@ -753,8 +769,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                     self.table.widget.next();
                                 }
                                 Char('X') => self.toggle_mark_all(),
-                                Char('F') => self.reset_filter(),
                                 Char('v') => self.toggle_view(),
+                                Char('V') => {
+                                    self.current_screen = CurrentScreen::EnterFilter(popup_input(
+                                        "set filter (Ctrl-s to confirm)",
+                                        "enter filter in TOML format",
+                                        &self.get_filter()?,
+                                        15,
+                                    ));
+                                }
                                 Char('i') => {
                                     self.current_screen =
                                         CurrentScreen::SnapshotDetails(self.snapshot_details());
@@ -832,7 +855,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             | CurrentScreen::EnterDescription(prompt)
             | CurrentScreen::EnterAddTags(prompt)
             | CurrentScreen::EnterSetTags(prompt)
-            | CurrentScreen::EnterRemoveTags(prompt) => match prompt.input(event) {
+            | CurrentScreen::EnterRemoveTags(prompt)
+            | CurrentScreen::EnterFilter(prompt) => match prompt.input(event) {
                 TextInputResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
                 TextInputResult::Input(input) => {
                     self.apply_input(input);
@@ -889,7 +913,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             | CurrentScreen::EnterDescription(popup)
             | CurrentScreen::EnterAddTags(popup)
             | CurrentScreen::EnterSetTags(popup)
-            | CurrentScreen::EnterRemoveTags(popup) => popup.draw(area, f),
+            | CurrentScreen::EnterRemoveTags(popup)
+            | CurrentScreen::EnterFilter(popup) => popup.draw(area, f),
             CurrentScreen::PromptWrite(popup) | CurrentScreen::PromptExit(popup) => {
                 popup.draw(area, f);
             }

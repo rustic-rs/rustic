@@ -20,14 +20,15 @@ _rustic() {
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -56,8 +57,8 @@ _rustic() {
         case $line[1] in
             (backup)
 _arguments "${_arguments_options[@]}" : \
-'--stdin-filename=[Set filename to be used when backing up from stdin]:FILENAME: ' \
-'--as-path=[Manually set backup path in snapshot]:PATH:_files' \
+'--stdin-filename=[Set filename to be used when backing up from stdin]:FILENAME:_files' \
+'--as-path=[Manually set backup path in snapshot]:PATH:_files -/' \
 '-g+[Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default\: host,label,paths)]:CRITERION: ' \
 '--group-by=[Group snapshots by any combination of host,label,paths,tags to find a suitable parent (default\: host,label,paths)]:CRITERION: ' \
 '(-f --force)--parent=[Snapshot to use as parent]:SNAPSHOT: ' \
@@ -95,14 +96,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -135,7 +137,7 @@ _arguments "${_arguments_options[@]}" : \
 '--warm-up[Warm up needed data pack files by only requesting them without processing]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'*::cli_sources -- Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all sources defined in the config file:' \
+'*::cli_sources -- Backup source (can be specified multiple times), use - for stdin. If no source is given, uses all sources defined in the config file:_files' \
 && ret=0
 ;;
 (cat)
@@ -145,14 +147,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -185,14 +188,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -218,14 +222,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -251,14 +256,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -283,14 +289,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -316,14 +323,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -349,14 +357,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -442,14 +451,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -474,14 +484,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -507,14 +518,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -543,14 +555,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -585,14 +598,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -615,7 +629,7 @@ _arguments "${_arguments_options[@]}" : \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':snap1 -- Reference snapshot/path:' \
-':snap2 -- New snapshot/path or local path \[default for PATH2\: PATH1\]:' \
+':snap2 -- New snapshot/path or local path \[default for PATH2\: PATH1\]:_files' \
 && ret=0
 ;;
 (dump)
@@ -625,14 +639,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -663,14 +678,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -735,14 +751,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '--json[Show infos in json format]' \
@@ -787,14 +804,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -820,14 +838,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -865,14 +884,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -926,14 +946,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -963,14 +984,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1010,14 +1032,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1048,14 +1071,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1086,14 +1110,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1118,14 +1143,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1156,14 +1182,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1203,14 +1230,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '--delete[Remove all files/dirs in destination which are not contained in snapshot]' \
@@ -1237,14 +1265,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1277,14 +1306,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1312,14 +1342,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1378,14 +1409,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1417,14 +1449,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \
@@ -1456,14 +1489,15 @@ _arguments "${_arguments_options[@]}" : \
 '--log-level=[Use this log level \[default\: info\]]:LOG_LEVEL: ' \
 '--log-file=[Write log messages to the given file instead of printing them]:LOGFILE:_files' \
 '(--no-progress)--progress-interval=[Interval to update progress bars]:DURATION: ' \
-'-r+[Repository to use]:REPOSITORY: ' \
-'--repository=[Repository to use]:REPOSITORY: ' \
+'-r+[Repository to use]:REPOSITORY:_files -/' \
+'--repository=[Repository to use]:REPOSITORY:_files -/' \
+'--repo=[Repository to use]:REPOSITORY:_files -/' \
 '--repo-hot=[Repository to use as hot storage]:REPO_HOT: ' \
 '--password=[Password of the repository]:PASSWORD: ' \
 '(--password)-p+[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password)--password-file=[File to read the password from]:PASSWORD_FILE:_files' \
 '(--password -p --password-file)--password-command=[Command to read the password from. Password is read from stdout]:PASSWORD_COMMAND: ' \
-'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files' \
+'(--no-cache)--cache-dir=[Use this dir as cache dir instead of the standard cache dir]:CACHE_DIR:_files -/' \
 '(--warm-up)--warm-up-command=[Warm up needed data pack files by running the command with %id replaced by pack id]:WARM_UP_COMMAND: ' \
 '--warm-up-wait=[Duration (e.g. 10m) to wait after warm up]:DURATION: ' \
 '*--filter-host=[Hostname to filter (can be specified multiple times)]:HOSTNAME: ' \

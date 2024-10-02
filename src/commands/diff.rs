@@ -4,6 +4,7 @@ use crate::{commands::open_repository_indexed, status_err, Application, RUSTIC_A
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
+use log::debug;
 
 use std::{
     fmt::Display,
@@ -13,7 +14,7 @@ use std::{
 use anyhow::{bail, Context, Result};
 
 use rustic_core::{
-    repofile::{BlobType, Node, NodeType},
+    repofile::{Node, NodeType},
     IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
     LsOptions, ReadSource, ReadSourceEntry, Repository, RusticResult,
 };
@@ -36,6 +37,10 @@ pub(crate) struct DiffCmd {
     /// don't check for different file contents
     #[clap(long)]
     no_content: bool,
+
+    /// only show differences for identical files, this can be used for a bitrot test on the local path
+    #[clap(long, conflicts_with = "no_content")]
+    only_identical: bool,
 
     /// Ignore options
     #[clap(flatten)]
@@ -108,13 +113,21 @@ impl DiffCmd {
                     Ok((path, node))
                 });
 
-                diff(
-                    repo.ls(&node1, &LsOptions::default())?,
-                    src,
-                    self.no_content,
-                    |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
-                    self.metadata,
-                )?;
+                if self.only_identical {
+                    diff_identical(
+                        repo.ls(&node1, &LsOptions::default())?,
+                        src,
+                        |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
+                    )?;
+                } else {
+                    diff(
+                        repo.ls(&node1, &LsOptions::default())?,
+                        src,
+                        self.no_content,
+                        |path, node1, _node2| identical_content_local(&local, &repo, path, node1),
+                        self.metadata,
+                    )?;
+                }
             }
             (None, _) => {
                 bail!("cannot use local path as first argument");
@@ -179,7 +192,7 @@ fn identical_content_local<P, S: IndexedFull>(
     };
 
     for id in node.content.iter().flatten() {
-        let ie = repo.get_index_entry(BlobType::Data, id)?;
+        let ie = repo.get_index_entry(id)?;
         let length = ie.data_length();
         if !id.blob_matches_reader(length as usize, &mut open_file) {
             return Ok(false);
@@ -370,5 +383,64 @@ fn diff(
         }
     }
     println!("{diff_statistics}");
+    Ok(())
+}
+
+fn diff_identical(
+    mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
+) -> Result<()> {
+    let mut item1 = tree_streamer1.next().transpose()?;
+    let mut item2 = tree_streamer2.next().transpose()?;
+
+    let mut checked: usize = 0;
+
+    loop {
+        match (&item1, &item2) {
+            (None, None) => break,
+            (Some(i1), None) => {
+                let path = &i1.0;
+                debug!("not checking {}: not present in target", path.display());
+                item1 = tree_streamer1.next().transpose()?;
+            }
+            (None, Some(i2)) => {
+                let path = &i2.0;
+                debug!("not checking {}: not present in source", path.display());
+                item2 = tree_streamer2.next().transpose()?;
+            }
+            (Some(i1), Some(i2)) if i1.0 < i2.0 => {
+                let path = &i1.0;
+                debug!("not checking {}: not present in target", path.display());
+                item1 = tree_streamer1.next().transpose()?;
+            }
+            (Some(i1), Some(i2)) if i1.0 > i2.0 => {
+                let path = &i2.0;
+                debug!("not checking {}: not present in source", path.display());
+                item2 = tree_streamer2.next().transpose()?;
+            }
+            (Some(i1), Some(i2)) => {
+                let path = &i1.0;
+                let node1 = &i1.1;
+                let node2 = &i2.1;
+
+                if matches!(&node1.node_type, NodeType::File)
+                    && matches!(&node2.node_type, NodeType::File)
+                    && node1.meta == node2.meta
+                {
+                    debug!("checking {}", path.display());
+                    checked += 1;
+                    if !file_identical(path, node1, node2)? {
+                        println!("M    {path:?}");
+                    }
+                } else {
+                    debug!("not checking {}: metadata changed", path.display());
+                }
+                item1 = tree_streamer1.next().transpose()?;
+                item2 = tree_streamer2.next().transpose()?;
+            }
+        }
+    }
+    println!("checked {checked} files.");
     Ok(())
 }

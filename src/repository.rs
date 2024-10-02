@@ -10,8 +10,8 @@ use std::ops::Deref;
 use abscissa_core::Application;
 use anyhow::{anyhow, bail, Result};
 use clap::Parser;
+use conflate::Merge;
 use dialoguer::Password;
-use merge::Merge;
 use rustic_backend::BackendOptions;
 use rustic_core::{
     FullIndex, IndexedStatus, OpenStatus, ProgressBars, Repository, RepositoryOptions,

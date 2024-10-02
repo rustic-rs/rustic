@@ -7,6 +7,7 @@ pub(crate) mod completions;
 pub(crate) mod config;
 pub(crate) mod copy;
 pub(crate) mod diff;
+pub(crate) mod docs;
 pub(crate) mod dump;
 pub(crate) mod find;
 pub(crate) mod forget;
@@ -38,10 +39,11 @@ use crate::commands::webdav::WebDavCmd;
 use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
-        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
-        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
-        repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
+        forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
+        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
+        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
+        tag::TagCmd,
     },
     config::RusticConfig,
     Application, RUSTIC_APP,
@@ -70,7 +72,7 @@ enum RusticCmd {
     /// Backup to the repository
     Backup(BackupCmd),
 
-    /// Show raw data of repository files and blobs
+    /// Show raw data of files and blobs in a repository
     Cat(CatCmd),
 
     /// Change the repository configuration
@@ -82,17 +84,19 @@ enum RusticCmd {
     /// Check the repository
     Check(CheckCmd),
 
-    /// Copy snapshots to other repositories. Note: The target repositories must be given in the config file!
+    /// Copy snapshots to other repositories
     Copy(CopyCmd),
 
-    /// Compare two snapshots/paths
-    /// Note that the exclude options only apply for comparison with a local path
+    /// Compare two snapshots or paths
     Diff(DiffCmd),
 
-    /// dump the contents of a file in a snapshot to stdout
+    /// Open the documentation
+    Docs(DocsCmd),
+
+    /// Dump the contents of a file within a snapshot to stdout
     Dump(DumpCmd),
 
-    /// Find in given snapshots
+    /// Find patterns in given snapshots
     Find(FindCmd),
 
     /// Remove snapshots from the repository
@@ -101,10 +105,10 @@ enum RusticCmd {
     /// Initialize a new repository
     Init(InitCmd),
 
-    /// Manage keys
+    /// Manage keys for a repository
     Key(KeyCmd),
 
-    /// List repository files
+    /// List repository files by file type
     List(ListCmd),
 
     /// List file contents of a snapshot
@@ -119,17 +123,17 @@ enum RusticCmd {
     /// Show the configuration which has been read from the config file(s)
     ShowConfig(ShowConfigCmd),
 
-    /// Update to the latest rustic release
+    /// Update to the latest stable rustic release
     #[cfg_attr(not(feature = "self-update"), clap(hide = true))]
     SelfUpdate(SelfUpdateCmd),
 
     /// Remove unused data or repack repository pack files
     Prune(PruneCmd),
 
-    /// Restore a snapshot/path
+    /// Restore (a path within) a snapshot
     Restore(RestoreCmd),
 
-    /// Repair a snapshot/path
+    /// Repair a snapshot or the repository index
     Repair(RepairCmd),
 
     /// Show general information about the repository

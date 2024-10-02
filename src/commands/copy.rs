@@ -8,8 +8,8 @@ use crate::{
 };
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
 use anyhow::{bail, Result};
+use conflate::Merge;
 use log::{error, info, log, Level};
-use merge::Merge;
 use serde::{Deserialize, Serialize};
 
 use rustic_core::{repofile::SnapshotFile, CopySnapshot, Id, KeyOptions};
@@ -31,7 +31,7 @@ pub struct CopyCmd {
 
     /// Target repository (can be specified multiple times)
     #[clap(long = "target", value_name = "TARGET")]
-    #[merge(strategy = merge::vec::overwrite_empty)]
+    #[merge(strategy=conflate::vec::overwrite_empty)]
     targets: Vec<String>,
 
     /// Key options (when using --init)

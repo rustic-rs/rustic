@@ -16,6 +16,14 @@ use crate::{commands::EntryPoint, config::RusticConfig};
 /// Application state
 pub static RUSTIC_APP: AppCell<RusticApp> = AppCell::new();
 
+// Constants
+pub mod constants {
+    pub const RUSTIC_DOCS_URL: &str = "https://rustic.cli.rs/docs";
+    pub const RUSTIC_DEV_DOCS_URL: &str = "https://rustic.cli.rs/dev-docs";
+    pub const RUSTIC_CONFIG_DOCS_URL: &str =
+        "https://github.com/rustic-rs/rustic/blob/main/config/README.md";
+}
+
 /// Rustic Application
 #[derive(Debug)]
 pub struct RusticApp {

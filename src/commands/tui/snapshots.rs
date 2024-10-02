@@ -1,4 +1,4 @@
-use std::{iter::once, str::FromStr};
+use std::{collections::BTreeSet, iter::once, mem, str::FromStr};
 
 use anyhow::Result;
 use chrono::Local;
@@ -697,13 +697,17 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         let delete_ids: Vec<_> = old_snap_ids.chain(snap_ids_to_forget).collect();
         self.repo.save_snapshots(save_snaps)?;
         self.repo.delete_snapshots(&delete_ids)?;
+        // remove snapshots-to-reread
+        let ids: BTreeSet<_> = delete_ids.into_iter().collect();
+        self.snapshots.retain(|snap| !ids.contains(&snap.id));
         // re-read snapshots
         self.reread()
     }
 
     // re-read all snapshots
     pub fn reread(&mut self) -> Result<()> {
-        self.snapshots = self.repo.get_all_snapshots()?;
+        let snapshots = mem::take(&mut self.snapshots);
+        self.snapshots = self.repo.update_all_snapshots(snapshots)?;
         self.snapshots
             .sort_unstable_by(|sn1, sn2| sn1.cmp_group(self.group_by, sn2).then(sn1.cmp(sn2)));
         self.snaps_status = vec![SnapStatus::default(); self.snapshots.len()];

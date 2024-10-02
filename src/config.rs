@@ -12,10 +12,10 @@ use std::{collections::HashMap, path::PathBuf};
 use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
 use anyhow::Result;
 use clap::{Parser, ValueHint};
+use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
-use merge::Merge;
 use rustic_core::CommandInput;
 use serde::{Deserialize, Serialize};
 
@@ -122,21 +122,22 @@ pub struct GlobalOptions {
         value_name = "PROFILE",
         env = "RUSTIC_USE_PROFILE"
     )]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy=conflate::vec::append)]
     pub use_profiles: Vec<String>,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
 
     /// Check if index matches pack files and read pack headers if neccessary
     #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     pub check_index: bool,
 
     /// Use this log level [default: info]
     #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
+    #[merge(strategy=conflate::option::overwrite_none)]
     pub log_level: Option<String>,
 
     /// Write log messages to the given file instead of printing them.
@@ -145,6 +146,7 @@ pub struct GlobalOptions {
     ///
     /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
     pub log_file: Option<PathBuf>,
 
     /// Settings to customize progress bars
@@ -158,14 +160,8 @@ pub struct GlobalOptions {
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
-    #[merge(strategy = extend)]
+    #[merge(strategy = conflate::hashmap::ignore)]
     pub env: HashMap<String, String>,
-}
-
-/// Extend the contents of a [`HashMap`] with the contents of another
-/// [`HashMap`] with the same key and value types.
-fn extend(left: &mut HashMap<String, String>, right: HashMap<String, String>) {
-    left.extend(right);
 }
 
 /// Get the paths to the config file
@@ -234,19 +230,19 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Hooks {
     /// Call this command before every rustic operation
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = conflate::vec::append)]
     pub run_before: Vec<CommandInput>,
 
     /// Call this command after every successful rustic operation
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = conflate::vec::append)]
     pub run_after: Vec<CommandInput>,
 
     /// Call this command after every failed rustic operation
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = conflate::vec::append)]
     pub run_failed: Vec<CommandInput>,
 
     /// Call this command after every rustic operation
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = conflate::vec::append)]
     pub run_finally: Vec<CommandInput>,
 
     #[serde(skip)]

@@ -66,12 +66,10 @@ impl Runnable for AddCmd {
 impl AddCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         // create new Repository options which just contain password information
-        let pass_opts = RepositoryOptions {
-            password: self.new_password.clone(),
-            password_file: self.new_password_file.clone(),
-            password_command: self.new_password_command.clone(),
-            ..Default::default()
-        };
+        let mut pass_opts = RepositoryOptions::default();
+        pass_opts.password = self.new_password.clone();
+        pass_opts.password_file = self.new_password_file.clone();
+        pass_opts.password_command = self.new_password_command.clone();
 
         let pass = pass_opts
             .evaluate_password()

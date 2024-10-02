@@ -260,6 +260,7 @@ mod tests {
     #[case("10", Some(10), None)]
     #[case("..10k", None, Some(10_000))]
     #[case("1MB..", Some(1_000_000), None)]
+    #[case("1 MB .. 1 GiB", Some(1_000_000), Some(1_073_741_824))]
     #[case("10 .. 20 ", Some(10), Some(20))]
     #[case(" 2G ", Some(2_000_000_000), None)]
     fn size_range_from_str(

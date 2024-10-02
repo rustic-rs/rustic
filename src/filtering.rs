@@ -161,18 +161,23 @@ impl SnapshotFilter {
             }
         }
 
-        if matches!(&self.filter_after, Some(after) if snapshot.time <= after.0)
-            || matches!(&self.filter_before, Some(before) if snapshot.time >= before.0)
+        // For the `Option`s we check if the option is set and the condition is not matched. In this case we can early return false.
+        if matches!(&self.filter_after, Some(after) if !after.matches(snapshot.time))
+            || matches!(&self.filter_before, Some(before) if !before.matches(snapshot.time))
             || matches!((&self.filter_size,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.total_bytes_processed))
             || matches!((&self.filter_size_added,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.data_added))
         {
             return false;
         }
 
+        // For the the `Vec`s we have two possililities:
+        // - There exists a suitable matches method on the snapshot item (this automatically handles emtpy filter correctly):
         snapshot.paths.matches(&self.filter_paths)
+            && snapshot.tags.matches(&self.filter_tags)
+        //  - manually check if the snapshot item is contained in the `Vec` - but only 
+        //    if the `Vec` is not empty. If it is empty, no condition is given.
             && (self.filter_paths_exact.is_empty()
                 || self.filter_paths_exact.contains(&snapshot.paths))
-            && snapshot.tags.matches(&self.filter_tags)
             && (self.filter_tags_exact.is_empty()
                 || self.filter_tags_exact.contains(&snapshot.tags))
             && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
@@ -182,6 +187,12 @@ impl SnapshotFilter {
 
 #[derive(Debug, Clone, Display)]
 struct AfterDate(DateTime<Local>);
+
+impl AfterDate {
+    fn matches(&self, datetime: DateTime<Local>) -> bool {
+        self.0 < datetime
+    }
+}
 
 impl FromStr for AfterDate {
     type Err = anyhow::Error;
@@ -194,6 +205,12 @@ impl FromStr for AfterDate {
 
 #[derive(Debug, Clone, Display)]
 struct BeforeDate(DateTime<Local>);
+
+impl BeforeDate {
+    fn matches(&self, datetime: DateTime<Local>) -> bool {
+        datetime < self.0
+    }
+}
 
 impl FromStr for BeforeDate {
     type Err = anyhow::Error;

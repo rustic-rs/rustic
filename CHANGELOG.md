@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1](https://github.com/rustic-rs/rustic/compare/v0.9.0...v0.9.1) - 2024-10-02
+
+### Added
+
+- *(commands)* add a `docs` command to easily access the user, dev and config documentation ([#1276](https://github.com/rustic-rs/rustic/pull/1276))
+
+### Fixed
+
+- *(deps)* update rustic_core and other dependencies and fix merge precedence ([#1282](https://github.com/rustic-rs/rustic/pull/1282))
+- *(docs)* update configuration documentation to align with recent changes ([#1280](https://github.com/rustic-rs/rustic/pull/1280))
+
 ## [0.9.0](https://github.com/rustic-rs/rustic/compare/v0.8.1...v0.9.0) - 2024-09-29
 
 ### Bug Fixes

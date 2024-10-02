@@ -65,12 +65,10 @@ impl AddCmd {
         let repo = open_repository(&config.repository)?;
 
         // create new Repository options which just contain password information
-        let pass_opts = RepositoryOptions {
-            password: self.new_password.clone(),
-            password_file: self.new_password_file.clone(),
-            password_command: self.new_password_command.clone(),
-            ..Default::default()
-        };
+        let mut pass_opts = RepositoryOptions::default();
+        pass_opts.password(self.new_password);
+        pass_opts.password_file(self.new_password_file);
+        pass_opts.password_command(self.new_password_command);
 
         let pass = pass_opts
             .evaluate_password()

@@ -131,7 +131,7 @@ enum RusticCmd {
     /// Remove unused data or repack repository pack files
     Prune(PruneCmd),
 
-    /// Restore a snapshot or path
+    /// Restore (a path within) a snapshot
     Restore(RestoreCmd),
 
     /// Repair a snapshot or the repository index

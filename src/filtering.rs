@@ -229,7 +229,10 @@ struct SizeRange {
 
 impl SizeRange {
     fn matches(&self, size: u64) -> bool {
+        // The matches-expression is only true if the `Option` is `Some` and the size is smaller than from.
+        // Hence, !matches is true either if `self.from` is `None` or if the size >= the values
         !matches!(self.from, Some(from) if size < from.0)
+        // same logic here, but smaller and greater swapped.
             && !matches!(self.to, Some(to) if size > to.0)
     }
 }

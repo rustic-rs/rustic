@@ -7,6 +7,7 @@ pub(crate) mod completions;
 pub(crate) mod config;
 pub(crate) mod copy;
 pub(crate) mod diff;
+pub(crate) mod docs;
 pub(crate) mod dump;
 pub(crate) mod find;
 pub(crate) mod forget;
@@ -38,10 +39,11 @@ use crate::commands::webdav::WebDavCmd;
 use crate::{
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
-        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, dump::DumpCmd, forget::ForgetCmd,
-        init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd, prune::PruneCmd,
-        repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd, self_update::SelfUpdateCmd,
-        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
+        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
+        forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
+        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
+        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
+        tag::TagCmd,
     },
     config::{progress_options::ProgressOptions, AllRepositoryOptions, RusticConfig},
     {Application, RUSTIC_APP},
@@ -94,6 +96,9 @@ enum RusticCmd {
     /// Compare two snapshots/paths
     /// Note that the exclude options only apply for comparison with a local path
     Diff(DiffCmd),
+
+    /// Open the documentation
+    Docs(DocsCmd),
 
     /// dump the contents of a file in a snapshot to stdout
     Dump(DumpCmd),

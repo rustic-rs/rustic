@@ -60,10 +60,10 @@ fn test_global_empty_hooks_passes() -> TestResult<()> {
     {
         rustic_runner(&temp_dir)?
             .args(["-P", hooks_config.to_str().unwrap()])
-            .args(["docs", "dev"])
+            .arg("repoinfo")
             .assert()
             .success()
-            .stdout(predicate::str::contains("Opening"));
+            .stdout(predicate::str::contains("Total Size"));
     }
 
     Ok(())
@@ -79,9 +79,10 @@ fn test_global_hooks_passes() -> TestResult<()> {
     {
         rustic_runner(&temp_dir)?
             .args(["-P", hooks_config.to_str().unwrap()])
-            .args(["docs", "dev"])
+            .arg("repoinfo")
             .assert()
             .success()
+            .stdout(predicate::str::contains("Total Size"))
             .stdout(predicate::str::contains("Running global hooks before"))
             .stdout(predicate::str::contains("Running global hooks after"))
             .stdout(predicate::str::contains("Running global hooks failed").not())

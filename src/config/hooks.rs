@@ -1,3 +1,17 @@
+//! rustic hooks configuration
+//!
+//! Hooks are commands that are executed before and after every rustic operation.
+//! They can be used to run custom scripts or commands before and after a backup,
+//! copy, forget, prune or other operation.
+//!
+//! Depending on the hook type, the command is being executed at a different point
+//! in the lifecycle of the program. The following hooks are available:
+//!
+//! - global hooks
+//! - repository hooks
+//! - backup hooks
+//! - specific source-related hooks
+
 use anyhow::Result;
 use conflate::Merge;
 use serde::{Deserialize, Serialize};

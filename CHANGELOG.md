@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1](https://github.com/rustic-rs/rustic/compare/v0.9.0...v0.9.1) - 2024-10-03
+
+### Added
+
+- *(config)* add more filters ([#1263](https://github.com/rustic-rs/rustic/pull/1263))
+- *(check)* Allow to only check trees+packs for given snapshots ([#1230](https://github.com/rustic-rs/rustic/pull/1230))
+- *(commands)* add a `docs` command to easily access the user, dev and config documentation ([#1276](https://github.com/rustic-rs/rustic/pull/1276))
+
+### Fixed
+
+- *(docs/cli)* improve the descriptions of the CLI commands ([#1277](https://github.com/rustic-rs/rustic/pull/1277))
+- *(deps)* update rustic_core and other dependencies and fix merge precedence ([#1282](https://github.com/rustic-rs/rustic/pull/1282))
+- *(docs)* update configuration documentation to align with recent changes ([#1280](https://github.com/rustic-rs/rustic/pull/1280))
+
+### Other
+
+- *(deps)* upgrade dependencies ([#1289](https://github.com/rustic-rs/rustic/pull/1289))
+- add triage label to new issues only if no label has been set when creating it ([#1287](https://github.com/rustic-rs/rustic/pull/1287))
+- *(interactive)* use update methods for refreshing snapshots ([#1285](https://github.com/rustic-rs/rustic/pull/1285))
+
 ## [0.9.0](https://github.com/rustic-rs/rustic/compare/v0.8.1...v0.9.0) - 2024-09-29
 
 ### Bug Fixes

@@ -72,7 +72,7 @@ fn test_global_empty_hooks_passes() -> TestResult<()> {
 #[test]
 fn test_global_hooks_passes() -> TestResult<()> {
     let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("global_hooks.toml");
+    let hooks_config = hook_dir.join("global_hooks");
 
     let temp_dir = setup()?;
 
@@ -95,7 +95,7 @@ fn test_global_hooks_passes() -> TestResult<()> {
 #[test]
 fn test_repository_hooks_passes() -> TestResult<()> {
     let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("repository_hooks.toml");
+    let hooks_config = hook_dir.join("repository_hooks");
 
     let temp_dir = setup()?;
 
@@ -117,7 +117,7 @@ fn test_repository_hooks_passes() -> TestResult<()> {
 #[test]
 fn test_backup_hooks_passes() -> TestResult<()> {
     let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("backup_hooks.toml");
+    let hooks_config = hook_dir.join("backup_hooks");
     let backup = "src/";
     let temp_dir = setup()?;
 

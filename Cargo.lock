@@ -85,9 +85,9 @@ dependencies = [
 
 [[package]]
 name = "aes256ctr_poly1305aes"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de2926121f4e92f1682d993563f9128b65978dab1fb3879f8f533e97c0697483"
+checksum = "c12ce6f8614befd457e18cc05cba86277779cd61a5f94a71368576cef2e6c3c4"
 dependencies = [
  "aead",
  "aes",
@@ -710,9 +710,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.29"
+version = "4.5.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8937760c3f4c60871870b8c3ee5f9b30771f792a7045c48bcbba999d7d6b3b8e"
+checksum = "74a01f4f9ee6c066d42a1c8dedf0dcddad16c72a8981a309d6398de3a75b0c39"
 dependencies = [
  "clap",
 ]
@@ -1112,6 +1112,18 @@ name = "data-encoding"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
+
+[[package]]
+name = "dateparser"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2ef451feee09ae5ecd8a02e738bd9adee9266b8fa9b44e22d3ce968d8694238"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "lazy_static",
+ "regex",
+]
 
 [[package]]
 name = "dav-server"
@@ -2206,9 +2218,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.10.0"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "187674a687eed5fe42285b40c6291f9a01517d415fad1c3cbc6a9f778af7fcd4"
+checksum = "ddc24109865250148c2e0f3d25d4f0f479571723792d3802153c60922a4fb708"
 
 [[package]]
 name = "is-docker"
@@ -3392,9 +3404,9 @@ dependencies = [
 
 [[package]]
 name = "raw-cpuid"
-version = "11.1.0"
+version = "11.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb9ee317cfe3fbd54b36a511efc1edd42e216903c9cd575e686dd68a2ba90d8d"
+checksum = "1ab240315c661615f2ee9f0f2cd32d5a7343a84d5ebcccb99d46e6637565e7b0"
 dependencies = [
  "bitflags",
 ]
@@ -3704,7 +3716,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "abscissa_core",
  "aho-corasick",
@@ -3719,7 +3731,9 @@ dependencies = [
  "conflate",
  "convert_case",
  "crossterm 0.28.1",
+ "dateparser",
  "dav-server",
+ "derive_more",
  "dialoguer",
  "dircmp",
  "directories",
@@ -3763,9 +3777,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_backend"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79360c30ad274ce29e0c298f845a0e3633bae546a5f93c594c8cb78ed81bfe28"
+checksum = "d7d5efc9f8d081134827cbe44b064eefad0864da4d33f37bd66147d80b57eb3e"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3797,9 +3811,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_core"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35ff53869f5837bda488b441c71461a15652169814cd682dca1a96de4e7e0364"
+checksum = "cf46b828febfd705eb2a4b24d5f09ed31aef9e8b5905a45b5e8e14446c735155"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -4939,9 +4953,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-bidi"
-version = "0.3.15"
+version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08f95100a766bf4f8f28f90d77e0a5461bbdb219042e7679bebe79004fed8d75"
+checksum = "5ab17db44d7388991a428b2ee655ce0c212e862eff1768a455c58f9aad6e7893"
 
 [[package]]
 name = "unicode-ident"

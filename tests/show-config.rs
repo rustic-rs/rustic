@@ -42,7 +42,7 @@ fn fixture() -> PathBuf {
 }
 
 #[test]
-fn show_config_passes() -> TestResult<()> {
+fn test_show_config_passes() -> TestResult<()> {
     let fixture_file = fixture();
     let mut file = get_temp_file()?;
 

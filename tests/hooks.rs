@@ -71,22 +71,21 @@ fn test_global_empty_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_global_hooks_passes() -> TestResult<()> {
-    let hooks_config = hook_fixture_dir().join("global_hooks");
+    let hooks_config = hook_fixture_dir().join("toml/global_hooks");
 
     let temp_dir = setup()?;
     let live_log = std::env::current_dir()?.join("global_hooks.log");
 
     {
         rustic_runner(&temp_dir)?
-            .args(["-P", hooks_config.to_str().unwrap()])
-            .arg("repoinfo")
+            .args(["-P", hooks_config.to_str().unwrap(), "repoinfo"])
             .assert()
             .success();
     }
 
     // compare the content of the global hook log with our fixture
     let global_log_fixture_content =
-        std::fs::read_to_string(hook_fixture_dir().join("global_hooks_success.log"))?;
+        std::fs::read_to_string(hook_fixture_dir().join("log/global_hooks_success.log"))?;
     let global_log_live = std::fs::read_to_string(&live_log)?;
     remove_file(live_log)?;
     assert_eq!(global_log_fixture_content, global_log_live);
@@ -96,7 +95,7 @@ fn test_global_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_repository_hooks_passes() -> TestResult<()> {
-    let hooks_config = hook_fixture_dir().join("repository_hooks");
+    let hooks_config = hook_fixture_dir().join("toml/repository_hooks");
 
     let temp_dir = setup()?;
     let live_log = std::env::current_dir()?.join("repository_hooks.log");
@@ -111,7 +110,7 @@ fn test_repository_hooks_passes() -> TestResult<()> {
 
     // compare the content of the repo hook log with our fixture
     let repo_log_fixture_content =
-        std::fs::read_to_string(hook_fixture_dir().join("repository_hooks_success.log"))?;
+        std::fs::read_to_string(hook_fixture_dir().join("log/repository_hooks_success.log"))?;
     let repo_log_live = std::fs::read_to_string(&live_log)?;
     remove_file(live_log)?;
     assert_eq!(repo_log_fixture_content, repo_log_live);
@@ -121,7 +120,7 @@ fn test_repository_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_backup_hooks_passes() -> TestResult<()> {
-    let hooks_config = hook_fixture_dir().join("backup_hooks");
+    let hooks_config = hook_fixture_dir().join("toml/backup_hooks");
     let backup = "src/";
     let temp_dir = setup()?;
     let live_log = std::env::current_dir()?.join("backup_hooks.log");
@@ -137,7 +136,7 @@ fn test_backup_hooks_passes() -> TestResult<()> {
 
     // compare the content of the backup hook log with our fixture
     let backup_log_fixture_content =
-        std::fs::read_to_string(hook_fixture_dir().join("backup_hooks_success.log"))?;
+        std::fs::read_to_string(hook_fixture_dir().join("log/backup_hooks_success.log"))?;
     let backup_log_live = std::fs::read_to_string(&live_log)?;
     remove_file(live_log)?;
     assert_eq!(backup_log_fixture_content, backup_log_live);

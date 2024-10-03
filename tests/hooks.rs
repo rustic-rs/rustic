@@ -85,7 +85,7 @@ fn test_global_hooks_passes() -> TestResult<()> {
             .success();
     }
 
-    // compare the content of the backup log with our fixture
+    // compare the content of the global hook log with our fixture
     let global_log_fixture_content =
         std::fs::read_to_string(hook_dir.join("global_hooks_success.log"))?;
     let global_log_live = std::fs::read_to_string("global_hooks.log")?;
@@ -110,7 +110,7 @@ fn test_repository_hooks_passes() -> TestResult<()> {
             .success();
     }
 
-    // compare the content of the backup log with our fixture
+    // compare the content of the repo hook log with our fixture
     let repo_log_fixture_content =
         std::fs::read_to_string(hook_dir.join("repository_hooks_success.log"))?;
     let repo_log_live = std::fs::read_to_string("repository_hooks.log")?;
@@ -136,7 +136,7 @@ fn test_backup_hooks_passes() -> TestResult<()> {
             .success();
     }
 
-    // compare the content of the backup log with our fixture
+    // compare the content of the backup hook log with our fixture
     let backup_log_fixture_content =
         std::fs::read_to_string(hook_dir.join("backup_hooks_success.log"))?;
     let backup_log_live = std::fs::read_to_string("backup_hooks.log")?;

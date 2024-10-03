@@ -53,8 +53,7 @@ fn setup() -> TestResult<TempDir> {
 
 #[test]
 fn test_global_empty_hooks_passes() -> TestResult<()> {
-    let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("empty_hooks.toml");
+    let hooks_config = hook_fixture_dir().join("empty_hooks.toml");
 
     let temp_dir = setup()?;
 
@@ -72,10 +71,10 @@ fn test_global_empty_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_global_hooks_passes() -> TestResult<()> {
-    let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("global_hooks");
+    let hooks_config = hook_fixture_dir().join("global_hooks");
 
     let temp_dir = setup()?;
+    let live_log = std::env::current_dir()?.join("global_hooks.log");
 
     {
         rustic_runner(&temp_dir)?
@@ -87,9 +86,9 @@ fn test_global_hooks_passes() -> TestResult<()> {
 
     // compare the content of the global hook log with our fixture
     let global_log_fixture_content =
-        std::fs::read_to_string(hook_dir.join("global_hooks_success.log"))?;
-    let global_log_live = std::fs::read_to_string("global_hooks.log")?;
-    remove_file("global_hooks.log")?;
+        std::fs::read_to_string(hook_fixture_dir().join("global_hooks_success.log"))?;
+    let global_log_live = std::fs::read_to_string(&live_log)?;
+    remove_file(live_log)?;
     assert_eq!(global_log_fixture_content, global_log_live);
 
     Ok(())
@@ -97,10 +96,10 @@ fn test_global_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_repository_hooks_passes() -> TestResult<()> {
-    let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("repository_hooks");
+    let hooks_config = hook_fixture_dir().join("repository_hooks");
 
     let temp_dir = setup()?;
+    let live_log = std::env::current_dir()?.join("repository_hooks.log");
 
     {
         rustic_runner(&temp_dir)?
@@ -112,9 +111,9 @@ fn test_repository_hooks_passes() -> TestResult<()> {
 
     // compare the content of the repo hook log with our fixture
     let repo_log_fixture_content =
-        std::fs::read_to_string(hook_dir.join("repository_hooks_success.log"))?;
-    let repo_log_live = std::fs::read_to_string("repository_hooks.log")?;
-    remove_file("repository_hooks.log")?;
+        std::fs::read_to_string(hook_fixture_dir().join("repository_hooks_success.log"))?;
+    let repo_log_live = std::fs::read_to_string(&live_log)?;
+    remove_file(live_log)?;
     assert_eq!(repo_log_fixture_content, repo_log_live);
 
     Ok(())
@@ -122,10 +121,10 @@ fn test_repository_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_backup_hooks_passes() -> TestResult<()> {
-    let hook_dir = hook_fixture_dir();
-    let hooks_config = hook_dir.join("backup_hooks");
+    let hooks_config = hook_fixture_dir().join("backup_hooks");
     let backup = "src/";
     let temp_dir = setup()?;
+    let live_log = std::env::current_dir()?.join("backup_hooks.log");
 
     {
         rustic_runner(&temp_dir)?
@@ -138,9 +137,9 @@ fn test_backup_hooks_passes() -> TestResult<()> {
 
     // compare the content of the backup hook log with our fixture
     let backup_log_fixture_content =
-        std::fs::read_to_string(hook_dir.join("backup_hooks_success.log"))?;
-    let backup_log_live = std::fs::read_to_string("backup_hooks.log")?;
-    remove_file("backup_hooks.log")?;
+        std::fs::read_to_string(hook_fixture_dir().join("backup_hooks_success.log"))?;
+    let backup_log_live = std::fs::read_to_string(&live_log)?;
+    remove_file(live_log)?;
     assert_eq!(backup_log_fixture_content, backup_log_live);
 
     Ok(())

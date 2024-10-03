@@ -1,13 +1,13 @@
 [repository.hooks]
 run-before = [
-  "echo 'Running repository hooks before' >> /tmp/repository_hooks.log",
+  "echo 'Running repository hooks before' >> repository_hooks.log",
 ]
 run-after = [
-  "echo 'Running repository hooks after' >> /tmp/repository_hooks.log",
+  "echo 'Running repository hooks after' >> repository_hooks.log",
 ]
 run-failed = [
-  "echo 'Running repository hooks failed' >> /tmp/repository_hooks.log",
+  "echo 'Running repository hooks failed' >> repository_hooks.log",
 ]
 run-finally = [
-  "echo 'Running repository hooks finally' >> /tmp/repository_hooks.log",
+  "echo 'Running repository hooks finally' >> repository_hooks.log",
 ]

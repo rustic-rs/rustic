@@ -12,6 +12,7 @@
 
 use std::path::PathBuf;
 
+use abscissa_core::fs::remove_file;
 use assert_cmd::Command;
 use predicates::prelude::predicate;
 use tempfile::{tempdir, TempDir};
@@ -85,8 +86,10 @@ fn test_global_hooks_passes() -> TestResult<()> {
     }
 
     // compare the content of the backup log with our fixture
-    let global_log_fixture_content = std::fs::read_to_string(hook_dir.join("global_hooks.log"))?;
-    let global_log_live = std::fs::read_to_string("/tmp/global_hooks.log")?;
+    let global_log_fixture_content =
+        std::fs::read_to_string(hook_dir.join("global_hooks_success.log"))?;
+    let global_log_live = std::fs::read_to_string("global_hooks.log")?;
+    remove_file("global_hooks.log")?;
     assert_eq!(global_log_fixture_content, global_log_live);
 
     Ok(())
@@ -108,8 +111,10 @@ fn test_repository_hooks_passes() -> TestResult<()> {
     }
 
     // compare the content of the backup log with our fixture
-    let repo_log_fixture_content = std::fs::read_to_string(hook_dir.join("repository_hooks.log"))?;
-    let repo_log_live = std::fs::read_to_string("/tmp/repository_hooks.log")?;
+    let repo_log_fixture_content =
+        std::fs::read_to_string(hook_dir.join("repository_hooks_success.log"))?;
+    let repo_log_live = std::fs::read_to_string("repository_hooks.log")?;
+    remove_file("repository_hooks.log")?;
     assert_eq!(repo_log_fixture_content, repo_log_live);
 
     Ok(())
@@ -132,8 +137,10 @@ fn test_backup_hooks_passes() -> TestResult<()> {
     }
 
     // compare the content of the backup log with our fixture
-    let backup_log_fixture_content = std::fs::read_to_string(hook_dir.join("backup_hooks.log"))?;
-    let backup_log_live = std::fs::read_to_string("/tmp/backup_hooks.log")?;
+    let backup_log_fixture_content =
+        std::fs::read_to_string(hook_dir.join("backup_hooks_success.log"))?;
+    let backup_log_live = std::fs::read_to_string("backup_hooks.log")?;
+    remove_file("backup_hooks.log")?;
     assert_eq!(backup_log_fixture_content, backup_log_live);
 
     Ok(())

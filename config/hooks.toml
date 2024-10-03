@@ -1,0 +1,17 @@
+[global.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
+[repository.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
+[backup.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []

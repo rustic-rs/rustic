@@ -1,0 +1,5 @@
+[backup.hooks]
+run-before = ["echo 'Running backup hooks before'"]
+run-after = ["echo 'Running backup hooks after'"]
+run-failed = ["echo 'Running backup hooks failed'"]
+run-finally = ["echo 'Running backup hooks finally'"]

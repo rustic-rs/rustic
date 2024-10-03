@@ -22,9 +22,9 @@ use abscissa_core::testing::prelude::*;
 use rustic_testing::{files_differ, get_temp_file, TestResult};
 
 // Storing this value as a [`Lazy`] static ensures that all instances of
-/// the runner acquire a mutex when executing commands and inspecting
-/// exit statuses, serializing what would otherwise be multithreaded
-/// invocations as `cargo test` executes tests in parallel by default.
+// the runner acquire a mutex when executing commands and inspecting
+// exit statuses, serializing what would otherwise be multithreaded
+// invocations as `cargo test` executes tests in parallel by default.
 pub static LAZY_RUNNER: Lazy<CmdRunner> = Lazy::new(|| {
     let mut runner = CmdRunner::new(env!("CARGO_BIN_EXE_rustic"));
     runner.exclusive().capture_stdout();

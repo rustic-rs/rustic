@@ -1,0 +1,5 @@
+[global.hooks]
+run-before = ["echo 'Running global hooks before'"]
+run-after = ["echo 'Running global hooks after'"]
+run-failed = ["echo 'Running global hooks failed'"]
+run-finally = ["echo 'Running global hooks finally'"]

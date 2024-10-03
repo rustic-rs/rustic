@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::{
     commands::{init::init, snapshots::fill_table},
-    config::Hooks,
+    config::hooks::Hooks,
     helpers::{bold_cell, bytes_size_to_string, table},
     repository::CliRepo,
     status_err, Application, RUSTIC_APP,

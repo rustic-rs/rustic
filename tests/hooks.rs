@@ -104,7 +104,7 @@ fn test_repository_hooks_passes() -> TestResult<()> {
     {
         rustic_runner(&temp_dir)?
             .args(["-P", hooks_config.to_str().unwrap()])
-            .arg("check")
+            .arg("docs")
             .assert()
             .success();
     }

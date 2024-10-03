@@ -103,10 +103,10 @@ impl Application for RusticApp {
             env::set_var(env, value);
         }
 
-        let hooks = config.global.hooks.clone();
+        let global_hooks = config.global.hooks.clone();
         self.config.set_once(config);
 
-        hooks.run_before().map_err(|err| -> FrameworkError {
+        global_hooks.run_before().map_err(|err| -> FrameworkError {
             FrameworkErrorKind::ProcessError.context(err).into()
         })?;
 

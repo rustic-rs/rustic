@@ -18,9 +18,10 @@ use rustic_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::config::progress_options::ProgressOptions;
-use crate::config::Hooks;
-use crate::RUSTIC_APP;
+use crate::{
+    config::{hooks::Hooks, progress_options::ProgressOptions},
+    RUSTIC_APP,
+};
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;

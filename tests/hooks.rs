@@ -295,10 +295,11 @@ generate_test_hook_function!(
 // #[case(vec!["diff"], "diff", BackupAction::WithBackup)]
 // TODO: Does it work? Also: Docs command requires a TTY
 // #[case(vec!["docs", "--help"], "docs", BackupAction::WithoutBackup)]
-// #[case(vec!["dump"], "dump", BackupAction::WithoutBackup)]
-// #[case(vec!["find"], "find", BackupAction::WithoutBackup)]
+#[case(vec!["dump", "latest:src/lib.rs"], "dump", BackupAction::WithBackup)]
+#[case(vec!["find"], "find", BackupAction::WithoutBackup)]
 #[case(vec!["forget"], "forget", BackupAction::WithoutBackup)]
-// #[case(vec!["init"], "init", BackupAction::WithoutBackup)]
+// TODO: Needs special handling
+// #[case(vec!["init", "--dry-run"], "init", BackupAction::WithoutBackup)]
 // TODO: Needs user input
 // #[case(vec!["key", "add"], "key", BackupAction::WithoutBackup)]
 #[case(vec!["list", "indexpacks"], "list", BackupAction::WithBackup)]
@@ -310,7 +311,7 @@ generate_test_hook_function!(
 #[case(vec!["prune"], "prune", BackupAction::WithBackup)]
 #[case(vec!["repoinfo"], "repoinfo", BackupAction::WithBackup)]
 #[case(vec!["repair", "index"], "repair", BackupAction::WithBackup)]
-#[case(vec!["restore", "latest", "tests/generated/test-restore"], "restore", BackupAction::WithBackup)]
+#[case(vec!["restore", "latest", "tests/generated/test-restore", "--dry-run"], "restore", BackupAction::WithBackup)]
 #[case(vec!["tag"], "tag", BackupAction::WithBackup)]
 // TODO: Requires user input
 // #[case(vec!["webdav"], "webdav", BackupAction::WithBackup)]

@@ -33,6 +33,7 @@ run-before = [
 run-after = [
   "sh -c 'echo Running backup hooks after >> tests/generated/full_hooks_after_backup_failure.log'",
   "false",
+  "sh -c 'echo MUST NOT SHOW UP >> tests/generated/full_hooks_after_backup_failure.log'",
 ]
 run-failed = [
   "sh -c 'echo Running backup hooks failed >> tests/generated/full_hooks_after_backup_failure.log'",

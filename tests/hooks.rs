@@ -221,206 +221,100 @@ fn test_empty_hooks_do_nothing_passes(toml_fixture_dir: PathBuf) -> TestResult<(
     Ok(())
 }
 
-// Case: Global hooks pass
-#[rstest]
-fn test_global_hooks_order_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
-    let args = &["repoinfo"];
+macro_rules! generate_test_hook_function {
+    ($name:ident, $fixture:expr, $args:expr, $status:expr) => {
+        #[rstest]
+        fn $name(
+            toml_fixture_dir: PathBuf,
+            generated_dir: PathBuf,
+            log_fixture_dir: PathBuf,
+        ) -> TestResult<()> {
+            let hooks_config_path = toml_fixture_dir.join($fixture);
+            let args = $args;
 
-    let file_name = "global_hooks_success.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
+            let file_name = format!("{}.log", $fixture);
+            let log_live_path = generated_dir.join(&file_name);
+            let log_fixture_path = log_fixture_dir.join(file_name);
 
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Success,
-    )?;
+            run_hook_comparison(
+                setup()?,
+                hooks_config_path,
+                args,
+                log_fixture_path,
+                log_live_path,
+                $status,
+            )?;
 
-    Ok(())
+            Ok(())
+        }
+    };
 }
 
-#[rstest]
-fn test_repository_hooks_order_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("repository_hooks_success");
-    let args = &["check"];
+// Scenario: Global hooks pass in order
+generate_test_hook_function!(
+    test_global_hooks_order_passes,
+    "global_hooks_success",
+    &["repoinfo"],
+    RunnerStatus::Success
+);
 
-    let file_name = "repository_hooks_success.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
+// Scenario: Repository hooks pass in order
+generate_test_hook_function!(
+    test_repository_hooks_order_passes,
+    "repository_hooks_success",
+    &["check"],
+    RunnerStatus::Success
+);
 
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Success,
-    )?;
+// Scenario: Backup hooks pass in order
+generate_test_hook_function!(
+    test_backup_hooks_order_passes,
+    "backup_hooks_success",
+    &["backup", "src/"],
+    RunnerStatus::Success
+);
 
-    Ok(())
-}
+// Scenario: Full hooks pass in order
+generate_test_hook_function!(
+    test_full_hooks_order_passes,
+    "full_hooks_success",
+    &["backup", "src/"],
+    RunnerStatus::Success
+);
 
-#[rstest]
-fn test_backup_hooks_order_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("backup_hooks_success");
-    let args = &["backup", "src/"];
+// Scenario: Check do not run backup hooks
+generate_test_hook_function!(
+    test_check_do_not_run_backup_hooks_passes,
+    "check_not_backup_hooks_success",
+    &["check"],
+    RunnerStatus::Success
+);
 
-    let file_name = "backup_hooks_success.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
+// Scenario: Failure in before backup hook does not run backup
+generate_test_hook_function!(
+    test_backup_hooks_with_failure_passes,
+    "backup_hooks_failure",
+    &["backup", "src/"],
+    RunnerStatus::Failure
+);
 
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Success,
-    )?;
+// Scenario: Failure in after backup hook does run repo and global
+// hooks failed and finally
+generate_test_hook_function!(
+    test_full_hooks_with_failure_after_backup_passes,
+    "full_hooks_after_backup_failure",
+    &["backup", "src/"],
+    RunnerStatus::Failure
+);
 
-    Ok(())
-}
-
-#[rstest]
-fn test_full_hooks_order_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("full_hooks_success");
-    let args = &["backup", "src/"];
-
-    let file_name = "full_hooks_success.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
-
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Success,
-    )?;
-
-    Ok(())
-}
-
-#[rstest]
-fn test_check_do_not_run_backup_hooks_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("check_not_backup_hooks_success");
-    let args = &["check"];
-
-    let file_name = "check_not_backup_hooks_success.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
-
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Success,
-    )?;
-
-    Ok(())
-}
-
-#[rstest]
-fn test_backup_hooks_with_failure_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("backup_hooks_failure");
-    let args = &["backup", "src/"];
-
-    let file_name = "backup_hooks_failure.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
-
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Failure,
-    )?;
-
-    Ok(())
-}
-
-#[rstest]
-fn test_full_hooks_with_failure_after_backup_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("full_hooks_after_backup_failure");
-    let args = &["backup", "src/"];
-
-    let file_name = "full_hooks_after_backup_failure.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
-
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Failure,
-    )?;
-
-    Ok(())
-}
-
-#[rstest]
-fn test_full_hooks_with_failure_before_repo_passes(
-    toml_fixture_dir: PathBuf,
-    generated_dir: PathBuf,
-    log_fixture_dir: PathBuf,
-) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("full_hooks_before_repo_failure");
-    let args = &["backup", "src/"];
-
-    let file_name = "full_hooks_before_repo_failure.log";
-    let log_live_path = generated_dir.join(file_name);
-    let log_fixture_path = log_fixture_dir.join(file_name);
-
-    run_hook_comparison(
-        setup()?,
-        hooks_config_path,
-        args,
-        log_fixture_path,
-        log_live_path,
-        RunnerStatus::Failure,
-    )?;
-
-    Ok(())
-}
+// Scenario: Failure in before repo hook does run repo and global
+// hooks failed and finally
+generate_test_hook_function!(
+    test_full_hooks_with_failure_before_repo_passes,
+    "full_hooks_before_repo_failure",
+    &["backup", "src/"],
+    RunnerStatus::Failure
+);
 
 // #[rstest]
 // fn test_global_hooks_for_all_commands_passes(

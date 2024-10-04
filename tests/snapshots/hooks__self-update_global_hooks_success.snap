@@ -1,0 +1,5 @@
+---
+source: tests/hooks.rs
+expression: log_live
+---
+"Running global hooks before\nRunning global hooks after\nRunning global hooks finally\n"

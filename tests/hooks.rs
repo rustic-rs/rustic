@@ -299,9 +299,10 @@ generate_test_hook_function!(
 // #[case(vec!["find"], "find", BackupAction::WithoutBackup)]
 #[case(vec!["forget"], "forget", BackupAction::WithoutBackup)]
 // #[case(vec!["init"], "init", BackupAction::WithoutBackup)]
-#[case(vec!["key"], "key", BackupAction::WithoutBackup)]
-#[case(vec!["list"], "list", BackupAction::WithBackup)]
-#[case(vec!["ls"], "ls", BackupAction::WithBackup)]
+// TODO: Needs user input
+// #[case(vec!["key", "add"], "key", BackupAction::WithoutBackup)]
+#[case(vec!["list", "indexpacks"], "list", BackupAction::WithBackup)]
+#[case(vec!["ls", "latest"], "ls", BackupAction::WithBackup)]
 #[case(vec!["merge"], "merge", BackupAction::WithoutBackup)]
 #[case(vec!["snapshots"], "snapshots", BackupAction::WithBackup)]
 #[case(vec!["show-config"], "show-config", BackupAction::WithoutBackup)]

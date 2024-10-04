@@ -9,3 +9,4 @@ coverage/*lcov
 # Ignore generated test files
 /tests/generated/*.toml
 /tests/generated/*.log
+/tests/generated/test-restore

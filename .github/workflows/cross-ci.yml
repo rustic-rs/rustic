@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable]
-        feature: [default, self-update]
+        feature: [default]
         job:
           - os: windows-latest
             os-name: windows
@@ -93,6 +93,7 @@ jobs:
           use-cross: ${{ matrix.job.use-cross }}
           all-features: "false"
           feature: ${{ matrix.feature }}
+          extra-cargo-build-args: --features self-update
 
   result:
     name: Result (Cross-CI)

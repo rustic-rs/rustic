@@ -151,6 +151,21 @@ enum BackupAction {
     WithoutBackup,
 }
 
+// Load a template from a file and replace a placeholder with a value
+// and write the result to a new file
+fn load_template_replace_and_write(
+    template_path: &PathBuf,
+    placeholder: &str,
+    value: &str,
+    output_path: &PathBuf,
+) -> TestResult<()> {
+    let template = std::fs::read_to_string(template_path)?;
+    let replaced = template.replace(placeholder, value);
+    std::fs::write(output_path, replaced)?;
+
+    Ok(())
+}
+
 fn setup(with_backup: BackupAction) -> TestResult<TempDir> {
     let temp_dir = tempdir()?;
     rustic_runner(&temp_dir)?
@@ -318,36 +333,47 @@ generate_test_hook_function!(
     RunnerStatus::Failure
 );
 
-// TODO: Fix command invocation for testing
-// #[rstest]
-// #[case(vec!["backup", "src/"], "global_hooks_success", BackupAction::WithoutBackup)]
-// #[case(vec!["cat", "tree", "latest"], "global_hooks_success", BackupAction::WithBackup)]
-// #[case(vec!["config"], "global_hooks_success", BackupAction::WithoutBackup)]
-// #[case(vec!["completions", "bash"], "global_hooks_success", BackupAction::WithoutBackup)]
-// #[case(vec!["check"], "global_hooks_success", BackupAction::WithBackup)]
-// fn test_global_hooks_for_all_commands_passes(
-//     #[case] command_args: Vec<&str>,
-//     #[case] fixture_name: &str,
-//     #[case] backup_action: BackupAction,
-//     toml_fixture_dir: PathBuf,
-//     generated_dir: PathBuf,
-//     log_fixture_dir: PathBuf,
-// ) -> TestResult<()> {
-//     let hooks_config_path = toml_fixture_dir.join(fixture_name);
-//     let file_name = format!("{}.log", fixture_name);
-//     let log_live_path = generated_dir.join(&file_name);
-//     let log_fixture_path = log_fixture_dir.join(file_name);
+#[rstest]
+#[case(vec!["backup", "src/"], "backup", BackupAction::WithoutBackup)]
+#[case(vec!["cat", "tree", "latest"], "cat", BackupAction::WithBackup)]
+#[case(vec!["config"], "config", BackupAction::WithoutBackup)]
+#[case(vec!["completions", "bash"], "completions", BackupAction::WithoutBackup)]
+#[case(vec!["check"], "check", BackupAction::WithBackup)]
+fn test_global_hooks_for_all_commands_passes(
+    #[case] command_args: Vec<&str>,
+    #[case] command_name: &str,
+    #[case] backup_action: BackupAction,
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+) -> TestResult<()> {
+    let file_name = format!("{command_name}_global_hooks_success");
+    let mut output_config_file_name = file_name.clone();
+    output_config_file_name.push_str(".toml");
 
-//     let setup = setup(backup_action)?;
+    let hooks_config_path = generated_dir.join(&file_name);
+    let output_config_path = generated_dir.join(output_config_file_name);
 
-//     run_hook_comparison(
-//         setup,
-//         hooks_config_path.clone(),
-//         command_args.as_slice(),
-//         fixture_name,
-//         log_live_path.clone(),
-//         RunnerStatus::Success,
-//     )?;
+    load_template_replace_and_write(
+        &toml_fixture_dir.join("commands_global_hooks_success.tpl"),
+        "${{filename}}",
+        &file_name,
+        &output_config_path,
+    )?;
 
-//     Ok(())
-// }
+    let log_live_path = generated_dir.join(format!("{file_name}.log"));
+
+    let setup = setup(backup_action)?;
+
+    run_hook_comparison(
+        setup,
+        hooks_config_path.clone(),
+        command_args.as_slice(),
+        &file_name,
+        log_live_path.clone(),
+        RunnerStatus::Success,
+    )?;
+
+    remove_file(output_config_path)?;
+
+    Ok(())
+}

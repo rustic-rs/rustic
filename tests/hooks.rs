@@ -72,8 +72,28 @@ fn compare_logs(log_fixture_path: PathBuf, log_live_path: PathBuf) -> TestResult
     Ok(())
 }
 
+fn run_hook_comparison(
+    temp_dir: TempDir,
+    hooks_config: PathBuf,
+    args: &[&str],
+    log_fixture_path: PathBuf,
+    log_live_path: PathBuf,
+) -> TestResult<()> {
+    {
+        rustic_runner(&temp_dir)?
+            .args(["-P", hooks_config.to_str().unwrap()])
+            .args(args)
+            .assert()
+            .success();
+    }
+
+    compare_logs(log_fixture_path, log_live_path)?;
+
+    Ok(())
+}
+
 #[test]
-fn test_global_empty_hooks_passes() -> TestResult<()> {
+fn test_empty_hooks_passes() -> TestResult<()> {
     let hooks_config = toml_fixture_dir().join("empty_hooks_success");
 
     let temp_dir = setup()?;
@@ -92,91 +112,89 @@ fn test_global_empty_hooks_passes() -> TestResult<()> {
 
 #[test]
 fn test_global_hooks_passes() -> TestResult<()> {
-    let hooks_config = toml_fixture_dir().join("global_hooks_success");
+    let hooks_config_path = toml_fixture_dir().join("global_hooks_success");
 
     let temp_dir = setup()?;
+
+    let args = &["repoinfo"];
+
     let file_name = "global_hooks_success.log";
     let log_live_path = generated_dir().join(file_name);
     let log_fixture_path = log_fixture_dir().join(file_name);
 
-    {
-        rustic_runner(&temp_dir)?
-            .args(["-P", hooks_config.to_str().unwrap(), "repoinfo"])
-            .assert()
-            .success();
-    }
-
-    compare_logs(log_fixture_path, log_live_path)?;
+    run_hook_comparison(
+        temp_dir,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+    )?;
 
     Ok(())
 }
 
 #[test]
 fn test_repository_hooks_passes() -> TestResult<()> {
-    let hooks_config = toml_fixture_dir().join("repository_hooks_success");
+    let hooks_config_path = toml_fixture_dir().join("repository_hooks_success");
 
     let temp_dir = setup()?;
+
+    let args = &["check"];
+
     let file_name = "repository_hooks_success.log";
     let log_live_path = generated_dir().join(file_name);
     let log_fixture_path = log_fixture_dir().join(file_name);
 
-    {
-        rustic_runner(&temp_dir)?
-            .args(["-P", hooks_config.to_str().unwrap()])
-            .arg("check")
-            .assert()
-            .success();
-    }
-
-    compare_logs(log_fixture_path, log_live_path)?;
+    run_hook_comparison(
+        temp_dir,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+    )?;
 
     Ok(())
 }
 
 #[test]
 fn test_backup_hooks_passes() -> TestResult<()> {
-    let hooks_config = toml_fixture_dir().join("backup_hooks_success");
-    let backup = "src/";
+    let hooks_config_path = toml_fixture_dir().join("backup_hooks_success");
+
     let temp_dir = setup()?;
+    let args = &["backup", "src/"];
 
     let file_name = "backup_hooks_success.log";
     let log_live_path = generated_dir().join(file_name);
     let log_fixture_path = log_fixture_dir().join(file_name);
 
-    {
-        rustic_runner(&temp_dir)?
-            .args(["-P", hooks_config.to_str().unwrap()])
-            .arg("backup")
-            .arg(backup)
-            .assert()
-            .success();
-    }
-
-    compare_logs(log_fixture_path, log_live_path)?;
+    run_hook_comparison(
+        temp_dir,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+    )?;
 
     Ok(())
 }
 
 #[test]
-fn test_all_hooks_passes() -> TestResult<()> {
-    let hooks_config = toml_fixture_dir().join("all_hooks_success");
-    let backup = "src/";
+fn test_full_hooks_passes() -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir().join("full_hooks_success");
     let temp_dir = setup()?;
+    let args = &["backup", "src/"];
 
-    let file_name = "all_hooks_success.log";
+    let file_name = "full_hooks_success.log";
     let log_live_path = generated_dir().join(file_name);
     let log_fixture_path = log_fixture_dir().join(file_name);
 
-    {
-        rustic_runner(&temp_dir)?
-            .args(["-P", hooks_config.to_str().unwrap()])
-            .arg("backup")
-            .arg(backup)
-            .assert()
-            .success();
-    }
-
-    compare_logs(log_fixture_path, log_live_path)?;
+    run_hook_comparison(
+        temp_dir,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+    )?;
 
     Ok(())
 }

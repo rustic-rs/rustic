@@ -10,29 +10,123 @@
 //     unused_qualifications
 // )]
 
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 use abscissa_core::fs::remove_file;
 use assert_cmd::Command;
 use predicates::prelude::predicate;
+use rstest::{fixture, rstest};
 use tempfile::{tempdir, TempDir};
 
 use rustic_testing::TestResult;
-
+#[fixture]
 fn hook_fixture_dir() -> PathBuf {
     ["tests", "hooks-fixtures"].iter().collect()
 }
 
+#[fixture]
 fn generated_dir() -> PathBuf {
     ["tests", "generated"].iter().collect()
 }
 
+#[fixture]
 fn toml_fixture_dir() -> PathBuf {
     hook_fixture_dir().join("toml")
 }
 
+#[fixture]
 fn log_fixture_dir() -> PathBuf {
     hook_fixture_dir().join("log")
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+enum HookType {
+    Global,
+    Repository,
+    Backup,
+}
+
+#[fixture]
+fn commands_fixture() -> BTreeMap<HookType, Vec<Vec<String>>> {
+    let mut commands = BTreeMap::new();
+
+    commands.insert(
+        HookType::Global,
+        vec![
+            // vec!["backup".to_string(), "src/".to_string()],
+            // vec!["cat".to_string(), "tree".to_string(), "latest".to_string()],
+            // vec!["config".to_string()],
+            // vec!["completions".to_string(), "bash".to_string()],
+            // vec!["check".to_string()],
+            vec!["backup".to_string()],
+            vec!["cat".to_string()],
+            vec!["config".to_string()],
+            vec!["completions".to_string()],
+            vec!["check".to_string()],
+            // TODO: Fix command invocation for testing
+            vec!["copy".to_string()],
+            // TODO: Fix command invocation for testing
+            vec!["diff".to_string()],
+            // Can't test docs command as it requires a TTY
+            vec!["docs".to_string()],
+            // TODO: Fix command invocation for testing
+            vec!["dump".to_string()],
+            // TODO: Fix command invocation for testing
+            vec!["find".to_string()],
+            vec!["forget".to_string()],
+            // TODO: Fix command invocation for testing
+            vec!["init".to_string()],
+            vec!["key".to_string()],
+            vec!["list".to_string()],
+            vec!["ls".to_string()],
+            vec!["merge".to_string()],
+            vec!["snapshots".to_string()],
+            vec!["show-config".to_string()],
+            vec!["self-update".to_string()],
+            vec!["prune".to_string()],
+            vec!["restore".to_string()],
+            vec!["repair".to_string()],
+            vec!["repoinfo".to_string()],
+            vec!["tag".to_string()],
+            vec!["webdav".to_string()],
+            vec!["help".to_string()],
+        ],
+    );
+
+    commands.insert(
+        HookType::Repository,
+        vec![
+            vec!["backup".to_string(), "src/".to_string()],
+            vec!["cat".to_string(), "tree".to_string(), "latest".to_string()],
+            vec!["config".to_string()],
+            vec!["check".to_string()],
+            vec!["copy".to_string()],
+            vec!["diff".to_string()],
+            vec!["dump".to_string()],
+            vec!["find".to_string()],
+            vec!["forget".to_string()],
+            vec!["init".to_string()],
+            vec!["key".to_string()],
+            vec!["list".to_string()],
+            vec!["ls".to_string()],
+            vec!["merge".to_string()],
+            vec!["snapshots".to_string()],
+            vec!["show-config".to_string()],
+            vec!["prune".to_string()],
+            vec!["restore".to_string()],
+            vec!["repair".to_string()],
+            vec!["repoinfo".to_string()],
+            vec!["tag".to_string()],
+            vec!["webdav".to_string()],
+        ],
+    );
+
+    commands.insert(
+        HookType::Backup,
+        vec![vec!["backup".to_string(), "src/".to_string()]],
+    );
+
+    commands
 }
 
 pub fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
@@ -109,9 +203,9 @@ fn run_hook_comparison(
     Ok(())
 }
 
-#[test]
-fn test_empty_hooks_passes() -> TestResult<()> {
-    let hooks_config = toml_fixture_dir().join("empty_hooks_success");
+#[rstest]
+fn test_empty_hooks_passes(toml_fixture_dir: PathBuf) -> TestResult<()> {
+    let hooks_config = toml_fixture_dir.join("empty_hooks_success");
 
     let temp_dir = setup()?;
 
@@ -127,17 +221,22 @@ fn test_empty_hooks_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_global_hooks_passes() -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir().join("global_hooks_success");
+// Case: Global hooks pass
+#[rstest]
+fn test_global_hooks_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
 
     let temp_dir = setup()?;
 
     let args = &["repoinfo"];
 
     let file_name = "global_hooks_success.log";
-    let log_live_path = generated_dir().join(file_name);
-    let log_fixture_path = log_fixture_dir().join(file_name);
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
         temp_dir,
@@ -151,17 +250,21 @@ fn test_global_hooks_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_repository_hooks_passes() -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir().join("repository_hooks_success");
+#[rstest]
+fn test_repository_hooks_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("repository_hooks_success");
 
     let temp_dir = setup()?;
 
     let args = &["check"];
 
     let file_name = "repository_hooks_success.log";
-    let log_live_path = generated_dir().join(file_name);
-    let log_fixture_path = log_fixture_dir().join(file_name);
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
         temp_dir,
@@ -175,16 +278,20 @@ fn test_repository_hooks_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_backup_hooks_passes() -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir().join("backup_hooks_success");
+#[rstest]
+fn test_backup_hooks_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("backup_hooks_success");
 
     let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "backup_hooks_success.log";
-    let log_live_path = generated_dir().join(file_name);
-    let log_fixture_path = log_fixture_dir().join(file_name);
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
         temp_dir,
@@ -198,15 +305,19 @@ fn test_backup_hooks_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_full_hooks_passes() -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir().join("full_hooks_success");
+#[rstest]
+fn test_full_hooks_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("full_hooks_success");
     let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "full_hooks_success.log";
-    let log_live_path = generated_dir().join(file_name);
-    let log_fixture_path = log_fixture_dir().join(file_name);
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
         temp_dir,
@@ -220,15 +331,19 @@ fn test_full_hooks_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_backup_hooks_with_failure_passes() -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir().join("backup_hooks_failure");
+#[rstest]
+fn test_backup_hooks_with_failure_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("backup_hooks_failure");
     let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "backup_hooks_failure.log";
-    let log_live_path = generated_dir().join(file_name);
-    let log_fixture_path = log_fixture_dir().join(file_name);
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
         temp_dir,
@@ -242,15 +357,19 @@ fn test_backup_hooks_with_failure_passes() -> TestResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_full_hooks_with_failure_after_backup_passes() -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir().join("full_hooks_after_backup_failure");
+#[rstest]
+fn test_full_hooks_with_failure_after_backup_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("full_hooks_after_backup_failure");
     let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "full_hooks_after_backup_failure.log";
-    let log_live_path = generated_dir().join(file_name);
-    let log_fixture_path = log_fixture_dir().join(file_name);
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
         temp_dir,
@@ -260,6 +379,39 @@ fn test_full_hooks_with_failure_after_backup_passes() -> TestResult<()> {
         log_live_path,
         RunnerStatus::Failure,
     )?;
+
+    Ok(())
+}
+
+#[rstest]
+fn test_global_hooks_for_all_commands_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+    commands_fixture: BTreeMap<HookType, Vec<Vec<String>>>,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
+    let file_name = "global_hooks_success.log";
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
+
+    if let Some((_, commands)) = commands_fixture.get_key_value(&HookType::Global) {
+        for command in commands.iter() {
+            let mut args = command.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
+
+            // We use the help command of each command to test the global hooks
+            args.push("help");
+
+            run_hook_comparison(
+                setup()?,
+                hooks_config_path.clone(),
+                args.as_slice(),
+                log_fixture_path.clone(),
+                log_live_path.clone(),
+                RunnerStatus::Success,
+            )?;
+        }
+    }
 
     Ok(())
 }

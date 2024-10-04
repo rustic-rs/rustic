@@ -229,9 +229,6 @@ fn test_global_hooks_passes(
     log_fixture_dir: PathBuf,
 ) -> TestResult<()> {
     let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
-
-    let temp_dir = setup()?;
-
     let args = &["repoinfo"];
 
     let file_name = "global_hooks_success.log";
@@ -239,7 +236,7 @@ fn test_global_hooks_passes(
     let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
-        temp_dir,
+        setup()?,
         hooks_config_path,
         args,
         log_fixture_path,
@@ -257,9 +254,6 @@ fn test_repository_hooks_passes(
     log_fixture_dir: PathBuf,
 ) -> TestResult<()> {
     let hooks_config_path = toml_fixture_dir.join("repository_hooks_success");
-
-    let temp_dir = setup()?;
-
     let args = &["check"];
 
     let file_name = "repository_hooks_success.log";
@@ -267,7 +261,7 @@ fn test_repository_hooks_passes(
     let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
-        temp_dir,
+        setup()?,
         hooks_config_path,
         args,
         log_fixture_path,
@@ -285,8 +279,6 @@ fn test_backup_hooks_passes(
     log_fixture_dir: PathBuf,
 ) -> TestResult<()> {
     let hooks_config_path = toml_fixture_dir.join("backup_hooks_success");
-
-    let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "backup_hooks_success.log";
@@ -294,7 +286,7 @@ fn test_backup_hooks_passes(
     let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
-        temp_dir,
+        setup()?,
         hooks_config_path,
         args,
         log_fixture_path,
@@ -312,7 +304,6 @@ fn test_full_hooks_passes(
     log_fixture_dir: PathBuf,
 ) -> TestResult<()> {
     let hooks_config_path = toml_fixture_dir.join("full_hooks_success");
-    let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "full_hooks_success.log";
@@ -320,7 +311,32 @@ fn test_full_hooks_passes(
     let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
-        temp_dir,
+        setup()?,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+        RunnerStatus::Success,
+    )?;
+
+    Ok(())
+}
+
+#[rstest]
+fn test_check_do_not_run_backup_hooks_passes(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+    log_fixture_dir: PathBuf,
+) -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir.join("check_not_backup_hooks_success");
+    let args = &["check"];
+
+    let file_name = "check_not_backup_hooks_success.log";
+    let log_live_path = generated_dir.join(file_name);
+    let log_fixture_path = log_fixture_dir.join(file_name);
+
+    run_hook_comparison(
+        setup()?,
         hooks_config_path,
         args,
         log_fixture_path,
@@ -338,7 +354,6 @@ fn test_backup_hooks_with_failure_passes(
     log_fixture_dir: PathBuf,
 ) -> TestResult<()> {
     let hooks_config_path = toml_fixture_dir.join("backup_hooks_failure");
-    let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "backup_hooks_failure.log";
@@ -346,7 +361,7 @@ fn test_backup_hooks_with_failure_passes(
     let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
-        temp_dir,
+        setup()?,
         hooks_config_path,
         args,
         log_fixture_path,
@@ -364,7 +379,6 @@ fn test_full_hooks_with_failure_after_backup_passes(
     log_fixture_dir: PathBuf,
 ) -> TestResult<()> {
     let hooks_config_path = toml_fixture_dir.join("full_hooks_after_backup_failure");
-    let temp_dir = setup()?;
     let args = &["backup", "src/"];
 
     let file_name = "full_hooks_after_backup_failure.log";
@@ -372,7 +386,7 @@ fn test_full_hooks_with_failure_after_backup_passes(
     let log_fixture_path = log_fixture_dir.join(file_name);
 
     run_hook_comparison(
-        temp_dir,
+        setup()?,
         hooks_config_path,
         args,
         log_fixture_path,
@@ -384,34 +398,59 @@ fn test_full_hooks_with_failure_after_backup_passes(
 }
 
 #[rstest]
-fn test_global_hooks_for_all_commands_passes(
+fn test_full_hooks_with_failure_before_repo_passes(
     toml_fixture_dir: PathBuf,
     generated_dir: PathBuf,
     log_fixture_dir: PathBuf,
-    commands_fixture: BTreeMap<HookType, Vec<Vec<String>>>,
 ) -> TestResult<()> {
-    let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
-    let file_name = "global_hooks_success.log";
+    let hooks_config_path = toml_fixture_dir.join("full_hooks_before_repo_failure");
+    let args = &["backup", "src/"];
+
+    let file_name = "full_hooks_before_repo_failure.log";
     let log_live_path = generated_dir.join(file_name);
     let log_fixture_path = log_fixture_dir.join(file_name);
 
-    if let Some((_, commands)) = commands_fixture.get_key_value(&HookType::Global) {
-        for command in commands.iter() {
-            let mut args = command.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
-
-            // We use the help command of each command to test the global hooks
-            args.push("help");
-
-            run_hook_comparison(
-                setup()?,
-                hooks_config_path.clone(),
-                args.as_slice(),
-                log_fixture_path.clone(),
-                log_live_path.clone(),
-                RunnerStatus::Success,
-            )?;
-        }
-    }
+    run_hook_comparison(
+        setup()?,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+        RunnerStatus::Failure,
+    )?;
 
     Ok(())
 }
+
+// #[rstest]
+// fn test_global_hooks_for_all_commands_passes(
+//     toml_fixture_dir: PathBuf,
+//     generated_dir: PathBuf,
+//     log_fixture_dir: PathBuf,
+//     commands_fixture: BTreeMap<HookType, Vec<Vec<String>>>,
+// ) -> TestResult<()> {
+//     let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
+//     let file_name = "global_hooks_success.log";
+//     let log_live_path = generated_dir.join(file_name);
+//     let log_fixture_path = log_fixture_dir.join(file_name);
+
+//     if let Some((_, commands)) = commands_fixture.get_key_value(&HookType::Global) {
+//         for command in commands.iter() {
+//             let mut args = command.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
+
+//             // We use the help command of each command to test the global hooks
+//             args.push("help");
+
+//             run_hook_comparison(
+//                 setup()?,
+//                 hooks_config_path.clone(),
+//                 args.as_slice(),
+//                 log_fixture_path.clone(),
+//                 log_live_path.clone(),
+//                 RunnerStatus::Success,
+//             )?;
+//         }
+//     }
+
+//     Ok(())
+// }

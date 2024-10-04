@@ -1,6 +1,6 @@
 [repository.hooks]
 run-before = [
-  "sh -c 'echo Running repository hooks before >> tests/generated/repository_hooks_success.log'",
+  "sh -c 'echo Running repository hooks before > tests/generated/repository_hooks_success.log'",
 ]
 run-after = [
   "sh -c 'echo Running repository hooks after >> tests/generated/repository_hooks_success.log'",

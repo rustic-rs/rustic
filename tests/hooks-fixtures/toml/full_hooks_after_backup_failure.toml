@@ -1,6 +1,6 @@
 [global.hooks]
 run-before = [
-  "sh -c 'echo Running global hooks before >> tests/generated/full_hooks_after_backup_failure.log'",
+  "sh -c 'echo Running global hooks before > tests/generated/full_hooks_after_backup_failure.log'",
 ]
 run-after = [
   "sh -c 'echo Running global hooks after >> tests/generated/full_hooks_after_backup_failure.log'",

@@ -1,0 +1,6 @@
+Running global hooks before
+Running repository hooks before
+Running repository hooks failed
+Running repository hooks finally
+Running global hooks failed
+Running global hooks finally

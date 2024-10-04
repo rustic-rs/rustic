@@ -204,7 +204,7 @@ fn run_hook_comparison(
 }
 
 #[rstest]
-fn test_empty_hooks_passes(toml_fixture_dir: PathBuf) -> TestResult<()> {
+fn test_empty_hooks_do_nothing_passes(toml_fixture_dir: PathBuf) -> TestResult<()> {
     let hooks_config = toml_fixture_dir.join("empty_hooks_success");
 
     let temp_dir = setup()?;
@@ -223,7 +223,7 @@ fn test_empty_hooks_passes(toml_fixture_dir: PathBuf) -> TestResult<()> {
 
 // Case: Global hooks pass
 #[rstest]
-fn test_global_hooks_passes(
+fn test_global_hooks_order_passes(
     toml_fixture_dir: PathBuf,
     generated_dir: PathBuf,
     log_fixture_dir: PathBuf,
@@ -248,7 +248,7 @@ fn test_global_hooks_passes(
 }
 
 #[rstest]
-fn test_repository_hooks_passes(
+fn test_repository_hooks_order_passes(
     toml_fixture_dir: PathBuf,
     generated_dir: PathBuf,
     log_fixture_dir: PathBuf,
@@ -273,7 +273,7 @@ fn test_repository_hooks_passes(
 }
 
 #[rstest]
-fn test_backup_hooks_passes(
+fn test_backup_hooks_order_passes(
     toml_fixture_dir: PathBuf,
     generated_dir: PathBuf,
     log_fixture_dir: PathBuf,
@@ -298,7 +298,7 @@ fn test_backup_hooks_passes(
 }
 
 #[rstest]
-fn test_full_hooks_passes(
+fn test_full_hooks_order_passes(
     toml_fixture_dir: PathBuf,
     generated_dir: PathBuf,
     log_fixture_dir: PathBuf,

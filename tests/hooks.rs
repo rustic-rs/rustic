@@ -235,3 +235,25 @@ fn test_backup_hooks_with_failure_passes() -> TestResult<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_full_hooks_with_failure_after_backup_passes() -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir().join("full_hooks_after_backup_failure");
+    let temp_dir = setup()?;
+    let args = &["backup", "src/"];
+
+    let file_name = "full_hooks_after_backup_failure.log";
+    let log_live_path = generated_dir().join(file_name);
+    let log_fixture_path = log_fixture_dir().join(file_name);
+
+    run_hook_comparison(
+        temp_dir,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+        RunnerStatus::Failure,
+    )?;
+
+    Ok(())
+}

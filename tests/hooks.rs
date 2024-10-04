@@ -145,7 +145,12 @@ pub fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     Ok(runner)
 }
 
-fn setup() -> TestResult<TempDir> {
+enum BackupAction {
+    WithBackup,
+    WithoutBackup,
+}
+
+fn setup(with_backup: BackupAction) -> TestResult<TempDir> {
     let temp_dir = tempdir()?;
     rustic_runner(&temp_dir)?
         .args(["init"])
@@ -153,6 +158,18 @@ fn setup() -> TestResult<TempDir> {
         .success()
         .stderr(predicate::str::contains("successfully created."))
         .stderr(predicate::str::contains("successfully added."));
+
+    match with_backup {
+        BackupAction::WithBackup => {
+            rustic_runner(&temp_dir)?
+                // We need this so output on stderr is not being taken as an error
+                .arg("--log-level=error")
+                .args(["backup", "src/"])
+                .assert()
+                .success();
+        }
+        BackupAction::WithoutBackup => {}
+    }
 
     Ok(temp_dir)
 }
@@ -188,6 +205,8 @@ fn run_hook_comparison(
 ) -> TestResult<()> {
     {
         let runner = rustic_runner(&temp_dir)?
+            // We need this so output on stderr is not being taken as an error
+            .arg("--log-level=error")
             .args(["-P", hooks_config.to_str().unwrap()])
             .args(args)
             .assert();
@@ -207,7 +226,7 @@ fn run_hook_comparison(
 fn test_empty_hooks_do_nothing_passes(toml_fixture_dir: PathBuf) -> TestResult<()> {
     let hooks_config = toml_fixture_dir.join("empty_hooks_success");
 
-    let temp_dir = setup()?;
+    let temp_dir = setup(BackupAction::WithoutBackup)?;
 
     {
         rustic_runner(&temp_dir)?
@@ -237,7 +256,7 @@ macro_rules! generate_test_hook_function {
             let log_fixture_path = log_fixture_dir.join(file_name);
 
             run_hook_comparison(
-                setup()?,
+                setup(BackupAction::WithoutBackup)?,
                 hooks_config_path,
                 args,
                 log_fixture_path,
@@ -316,35 +335,36 @@ generate_test_hook_function!(
     RunnerStatus::Failure
 );
 
+// TODO: Fix command invocation for testing
 // #[rstest]
+// #[case(vec!["backup", "src/"], "global_hooks_success", BackupAction::WithoutBackup)]
+// #[case(vec!["cat", "tree", "latest"], "global_hooks_success", BackupAction::WithBackup)]
+// #[case(vec!["config"], "global_hooks_success", BackupAction::WithoutBackup)]
+// #[case(vec!["completions", "bash"], "global_hooks_success", BackupAction::WithoutBackup)]
+// #[case(vec!["check"], "global_hooks_success", BackupAction::WithBackup)]
 // fn test_global_hooks_for_all_commands_passes(
+//     #[case] command_args: Vec<&str>,
+//     #[case] fixture_name: &str,
+//     #[case] backup_action: BackupAction,
 //     toml_fixture_dir: PathBuf,
 //     generated_dir: PathBuf,
 //     log_fixture_dir: PathBuf,
-//     commands_fixture: BTreeMap<HookType, Vec<Vec<String>>>,
 // ) -> TestResult<()> {
-//     let hooks_config_path = toml_fixture_dir.join("global_hooks_success");
-//     let file_name = "global_hooks_success.log";
-//     let log_live_path = generated_dir.join(file_name);
+//     let hooks_config_path = toml_fixture_dir.join(fixture_name);
+//     let file_name = format!("{}.log", fixture_name);
+//     let log_live_path = generated_dir.join(&file_name);
 //     let log_fixture_path = log_fixture_dir.join(file_name);
 
-//     if let Some((_, commands)) = commands_fixture.get_key_value(&HookType::Global) {
-//         for command in commands.iter() {
-//             let mut args = command.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
+//     let setup = setup(backup_action)?;
 
-//             // We use the help command of each command to test the global hooks
-//             args.push("help");
-
-//             run_hook_comparison(
-//                 setup()?,
-//                 hooks_config_path.clone(),
-//                 args.as_slice(),
-//                 log_fixture_path.clone(),
-//                 log_live_path.clone(),
-//                 RunnerStatus::Success,
-//             )?;
-//         }
-//     }
+//     run_hook_comparison(
+//         setup,
+//         hooks_config_path.clone(),
+//         command_args.as_slice(),
+//         log_fixture_path.clone(),
+//         log_live_path.clone(),
+//         RunnerStatus::Success,
+//     )?;
 
 //     Ok(())
 // }

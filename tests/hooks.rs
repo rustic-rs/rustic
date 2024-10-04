@@ -66,7 +66,13 @@ fn setup() -> TestResult<TempDir> {
 /// Compare the content of the repo hook log with our fixture
 fn compare_logs(log_fixture_path: PathBuf, log_live_path: PathBuf) -> TestResult<()> {
     let log_fixture_content = std::fs::read_to_string(log_fixture_path)?;
+
+    // Remove carriage returns from the fixture content on Windows
+    #[cfg(windows)]
+    let log_fixture_content = log_fixture_content.replace('\r', "");
+
     let log_live = std::fs::read_to_string(&log_live_path)?;
+
     remove_file(log_live_path)?;
     assert_eq!(log_fixture_content, log_live);
     Ok(())

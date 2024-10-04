@@ -48,7 +48,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
       - name: Run clippy
-        run: cargo clippy --locked --all-targets --features ${{ matrix.feature }} -- -D warnings
+        run: cargo clippy --locked --all-targets --features ${{ matrix.feature }} --features self-update -- -D warnings
 
   test:
     name: Test
@@ -79,7 +79,7 @@ jobs:
           toolchain: stable
       - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
       - name: Run Cargo Test
-        run: cargo test -r --all-targets --features ${{ matrix.feature }} --workspace
+        run: cargo test -r --all-targets --features ${{ matrix.feature }} --features self-update --workspace
 
   docs:
     name: Build docs

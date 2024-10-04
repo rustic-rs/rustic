@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable]
-        feature: [default]
+        feature: [default, self-update]
         job:
           - os: windows-latest
             os-name: windows

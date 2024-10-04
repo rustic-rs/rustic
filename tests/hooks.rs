@@ -31,7 +31,7 @@ fn generated_dir() -> PathBuf {
 
 #[fixture]
 fn toml_fixture_dir() -> PathBuf {
-    hook_fixture_dir().join("toml")
+    hook_fixture_dir()
 }
 
 #[fixture]
@@ -174,21 +174,6 @@ fn setup(with_backup: BackupAction) -> TestResult<TempDir> {
     Ok(temp_dir)
 }
 
-/// Compare the content of the repo hook log with our fixture
-fn compare_logs(log_fixture_path: PathBuf, log_live_path: PathBuf) -> TestResult<()> {
-    let log_fixture_content = std::fs::read_to_string(log_fixture_path)?;
-
-    // Remove carriage returns from the fixture content on Windows
-    #[cfg(windows)]
-    let log_fixture_content = log_fixture_content.replace('\r', "");
-
-    let log_live = std::fs::read_to_string(&log_live_path)?;
-
-    remove_file(log_live_path)?;
-    assert_eq!(log_fixture_content, log_live);
-    Ok(())
-}
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum RunnerStatus {
     Success,
@@ -199,7 +184,7 @@ fn run_hook_comparison(
     temp_dir: TempDir,
     hooks_config: PathBuf,
     args: &[&str],
-    log_fixture_path: PathBuf,
+    snapshot_name: &str,
     log_live_path: PathBuf,
     status: RunnerStatus,
 ) -> TestResult<()> {
@@ -217,7 +202,9 @@ fn run_hook_comparison(
         };
     }
 
-    compare_logs(log_fixture_path, log_live_path)?;
+    let log_live = std::fs::read_to_string(&log_live_path)?;
+    remove_file(log_live_path)?;
+    insta::assert_ron_snapshot!(snapshot_name, log_live);
 
     Ok(())
 }
@@ -243,23 +230,18 @@ fn test_empty_hooks_do_nothing_passes(toml_fixture_dir: PathBuf) -> TestResult<(
 macro_rules! generate_test_hook_function {
     ($name:ident, $fixture:expr, $args:expr, $status:expr) => {
         #[rstest]
-        fn $name(
-            toml_fixture_dir: PathBuf,
-            generated_dir: PathBuf,
-            log_fixture_dir: PathBuf,
-        ) -> TestResult<()> {
+        fn $name(toml_fixture_dir: PathBuf, generated_dir: PathBuf) -> TestResult<()> {
             let hooks_config_path = toml_fixture_dir.join($fixture);
             let args = $args;
 
             let file_name = format!("{}.log", $fixture);
             let log_live_path = generated_dir.join(&file_name);
-            let log_fixture_path = log_fixture_dir.join(file_name);
 
             run_hook_comparison(
                 setup(BackupAction::WithoutBackup)?,
                 hooks_config_path,
                 args,
-                log_fixture_path,
+                $fixture,
                 log_live_path,
                 $status,
             )?;
@@ -361,7 +343,7 @@ generate_test_hook_function!(
 //         setup,
 //         hooks_config_path.clone(),
 //         command_args.as_slice(),
-//         log_fixture_path.clone(),
+//         fixture_name,
 //         log_live_path.clone(),
 //         RunnerStatus::Success,
 //     )?;

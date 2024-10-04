@@ -1,0 +1,5 @@
+---
+source: tests/hooks.rs
+expression: log_live
+---
+"Running backup hooks before\nRunning backup hooks failed\nRunning backup hooks finally\n"

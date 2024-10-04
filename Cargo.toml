@@ -106,6 +106,7 @@ toml = "0.8"
 abscissa_core = { version = "0.7.0", default-features = false, features = ["testing"] }
 assert_cmd = "2.0.16"
 dircmp = "0.2"
+insta = { version = "1.40.0", features = ["ron"] }
 predicates = "3.1.2"
 pretty_assertions = "1.4"
 quickcheck = "1"

@@ -72,19 +72,30 @@ fn compare_logs(log_fixture_path: PathBuf, log_live_path: PathBuf) -> TestResult
     Ok(())
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum RunnerStatus {
+    Success,
+    Failure,
+}
+
 fn run_hook_comparison(
     temp_dir: TempDir,
     hooks_config: PathBuf,
     args: &[&str],
     log_fixture_path: PathBuf,
     log_live_path: PathBuf,
+    status: RunnerStatus,
 ) -> TestResult<()> {
     {
-        rustic_runner(&temp_dir)?
+        let runner = rustic_runner(&temp_dir)?
             .args(["-P", hooks_config.to_str().unwrap()])
             .args(args)
-            .assert()
-            .success();
+            .assert();
+
+        match status {
+            RunnerStatus::Success => runner.success(),
+            RunnerStatus::Failure => runner.failure(),
+        };
     }
 
     compare_logs(log_fixture_path, log_live_path)?;
@@ -128,6 +139,7 @@ fn test_global_hooks_passes() -> TestResult<()> {
         args,
         log_fixture_path,
         log_live_path,
+        RunnerStatus::Success,
     )?;
 
     Ok(())
@@ -151,6 +163,7 @@ fn test_repository_hooks_passes() -> TestResult<()> {
         args,
         log_fixture_path,
         log_live_path,
+        RunnerStatus::Success,
     )?;
 
     Ok(())
@@ -173,6 +186,7 @@ fn test_backup_hooks_passes() -> TestResult<()> {
         args,
         log_fixture_path,
         log_live_path,
+        RunnerStatus::Success,
     )?;
 
     Ok(())
@@ -194,6 +208,29 @@ fn test_full_hooks_passes() -> TestResult<()> {
         args,
         log_fixture_path,
         log_live_path,
+        RunnerStatus::Success,
+    )?;
+
+    Ok(())
+}
+
+#[test]
+fn test_backup_hooks_with_failure_passes() -> TestResult<()> {
+    let hooks_config_path = toml_fixture_dir().join("backup_hooks_failure");
+    let temp_dir = setup()?;
+    let args = &["backup", "src/"];
+
+    let file_name = "backup_hooks_failure.log";
+    let log_live_path = generated_dir().join(file_name);
+    let log_fixture_path = log_fixture_dir().join(file_name);
+
+    run_hook_comparison(
+        temp_dir,
+        hooks_config_path,
+        args,
+        log_fixture_path,
+        log_live_path,
+        RunnerStatus::Failure,
     )?;
 
     Ok(())

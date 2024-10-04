@@ -145,6 +145,7 @@ pub fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     Ok(runner)
 }
 
+#[allow(dead_code)]
 enum BackupAction {
     WithBackup,
     WithoutBackup,

@@ -20,5 +20,5 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         push: true
-        tags: ghcr.io/mueckinger/rustic:latest,ghcr.io/mueckinger/rustic:${{ github.ref_name }}
+        tags: ghcr.io/rustic-rs/rustic:latest,ghcr.io/rustic-rs/rustic:${{ github.ref_name }}
         build-args: RUSTIC_VERSION=${{ github.ref_name }}

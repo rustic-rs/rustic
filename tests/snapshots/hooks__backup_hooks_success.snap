@@ -1,5 +1,0 @@
----
-source: tests/hooks.rs
-expression: log_live
----
-"Running backup hooks before\nRunning backup hooks after\nRunning backup hooks finally\n"

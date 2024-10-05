@@ -1,5 +1,0 @@
----
-source: tests/hooks.rs
-expression: log_live
----
-"Running repository hooks before\nRunning repository hooks after\nRunning repository hooks finally\n"

@@ -1,5 +1,0 @@
----
-source: tests/hooks.rs
-expression: log_live
----
-"Running global hooks before\nRunning repository hooks before\nRunning repository hooks failed\nRunning repository hooks finally\nRunning global hooks failed\nRunning global hooks finally\n"

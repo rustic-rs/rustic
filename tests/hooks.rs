@@ -315,14 +315,14 @@ generate_test_hook_function!(
 #[case(vec!["tag"], "tag", BackupAction::WithBackup)]
 // TODO: Requires user input
 // #[case(vec!["webdav"], "webdav", BackupAction::WithBackup)]
-fn test_global_hooks_for_all_commands_passes(
+fn test_hooks_access_for_all_commands_passes(
     #[case] command_args: Vec<&str>,
     #[case] command_name: &str,
     #[case] backup_action: BackupAction,
     toml_fixture_dir: PathBuf,
     generated_dir: PathBuf,
 ) -> TestResult<()> {
-    let file_name = format!("{command_name}_global_hooks_success");
+    let file_name = format!("{command_name}_hooks_access_success");
     let mut output_config_file_name = file_name.clone();
     output_config_file_name.push_str(".toml");
 
@@ -330,7 +330,7 @@ fn test_global_hooks_for_all_commands_passes(
     let output_config_path = generated_dir.join(output_config_file_name);
 
     load_template_replace_and_write(
-        &toml_fixture_dir.join("commands_global_hooks_success.tpl"),
+        &toml_fixture_dir.join("commands_hooks_access_success.tpl"),
         "${{filename}}",
         &file_name,
         &output_config_path,

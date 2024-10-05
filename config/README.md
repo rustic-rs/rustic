@@ -155,7 +155,7 @@ see Repository Options
 These external commands are run before and after each repository-accessing
 commands, respectively.
 
-See Global Hooks.
+See [Global Hooks](#global-hooks-globalhooks).
 
 ### Snapshot-Filter Options `[snapshot-filter]`
 
@@ -221,7 +221,7 @@ These external commands are run before and after each backup, respectively.
 
 **Note**: Global hooks and repository hooks are run additionaly.
 
-See Global Hooks.
+See [Global Hooks](#global-hooks-globalhooks).
 
 ### Backup Snapshots `[[backup.snapshots]]`
 

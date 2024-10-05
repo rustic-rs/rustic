@@ -228,8 +228,8 @@ generate_test_hook_function!(
 // Scenario: Failure in after backup hook does run repo and global
 // hooks failed and finally
 generate_test_hook_function!(
-    test_full_hooks_with_failure_after_backup_passes,
-    "full_hooks_after_backup_failure",
+    test_full_hooks_with_failure_before_backup_passes,
+    "full_hooks_before_backup_failure",
     &["backup", "src/"],
     RunnerStatus::Failure
 );

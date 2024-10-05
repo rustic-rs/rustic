@@ -1,3 +1,17 @@
+# Hooks configuration
+#
+# Hooks are commands that are run during certain events in the application lifecycle.
+# They can be used to run custom scripts or commands before or after certain actions.
+# The hooks are run in the order they are defined in the configuration file.
+# The hooks are divided into 4 categories: global, repository, backup,
+# and specific backup sources.
+#
+# You can also read a more detailed explanation of the hooks in the documentation:
+# https://rustic.cli.rs/docs/commands/misc/hooks.html
+#
+# Please make sure to check the in-repository documentation for the config files
+# available at: https://github.com/rustic-rs/rustic/blob/main/config/README.md
+#
 [global.hooks]
 run-before = []
 run-after = []
@@ -15,3 +29,7 @@ run-before = []
 run-after = []
 run-failed = []
 run-finally = []
+
+[[backup.snapshots]]
+sources = []
+hooks = { run-before = [], run-after = [], run-failed = [], run-finally = [] }

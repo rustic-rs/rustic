@@ -243,48 +243,6 @@ generate_test_hook_function!(
     RunnerStatus::Failure
 );
 
-// commands.insert(
-//     HookType::Global,
-//     vec![
-//         vec!["tag".to_string()],
-//         vec!["webdav".to_string()],
-//         vec!["help".to_string()],
-//     ],
-// );
-
-// commands.insert(
-//     HookType::Repository,
-//     vec![
-//         vec!["backup".to_string(), "src/".to_string()],
-//         vec!["cat".to_string(), "tree".to_string(), "latest".to_string()],
-//         vec!["config".to_string()],
-//         vec!["check".to_string()],
-//         vec!["copy".to_string()],
-//         vec!["diff".to_string()],
-//         vec!["dump".to_string()],
-//         vec!["find".to_string()],
-//         vec!["forget".to_string()],
-//         vec!["init".to_string()],
-//         vec!["key".to_string()],
-//         vec!["list".to_string()],
-//         vec!["ls".to_string()],
-//         vec!["merge".to_string()],
-//         vec!["snapshots".to_string()],
-//         vec!["show-config".to_string()],
-//         vec!["prune".to_string()],
-//         vec!["restore".to_string()],
-//         vec!["repair".to_string()],
-//         vec!["repoinfo".to_string()],
-//         vec!["tag".to_string()],
-//         vec!["webdav".to_string()],
-//     ],
-// );
-
-// commands.insert(
-//     HookType::Backup,
-//     vec![vec!["backup".to_string(), "src/".to_string()]],
-// );
-
 #[rstest]
 #[case(vec!["backup", "src/"], "backup", BackupAction::WithoutBackup)]
 #[case(vec!["cat", "tree", "latest"], "cat", BackupAction::WithBackup)]
@@ -307,7 +265,8 @@ generate_test_hook_function!(
 #[case(vec!["merge"], "merge", BackupAction::WithoutBackup)]
 #[case(vec!["snapshots"], "snapshots", BackupAction::WithBackup)]
 #[case(vec!["show-config"], "show-config", BackupAction::WithoutBackup)]
-#[case(vec!["self-update"], "self-update", BackupAction::WithoutBackup)]
+// TODO: Github API errors with `NetworkError: api request failed with status: 403`
+// #[case(vec!["self-update"], "self-update", BackupAction::WithoutBackup)]
 #[case(vec!["prune"], "prune", BackupAction::WithBackup)]
 #[case(vec!["repoinfo"], "repoinfo", BackupAction::WithBackup)]
 #[case(vec!["repair", "index"], "repair", BackupAction::WithBackup)]

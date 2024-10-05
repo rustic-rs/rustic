@@ -97,6 +97,12 @@ Or you can check out the
 Nightly binaries are available
 [here](https://rustic.cli.rs/docs/nightly_builds.html).
 
+### Docker
+
+```bash
+docker pull ghcr.io/rustic-rs/rustic
+```
+
 ### From source
 
 **Beware**: This installs the latest development version, which might be

@@ -14,6 +14,27 @@ This specification covers all the available sections and attributes in the
 variable names. Users can customize their backup behavior by modifying these
 attributes according to their needs.
 
+## Table of Contents
+
+- [Merge Precedence](#merge-precedence)
+- [Profiles](#profiles)
+- [Sections and Attributes](#sections-and-attributes)
+  - [Global Options `[global]`](#global-options-global)
+  - [Global Hooks `[global.hooks]`](#global-hooks-globalhooks)
+  - [Global Options - env variables `[global.env]`](#global-options---env-variables-globalenv)
+  - [Repository Options `[repository]`](#repository-options-repository)
+  - [Repository Options (Additional) `[repository.options]`](#repository-options-additional-repositoryoptions)
+  - [Repository Options for cold repo (Additional) `[repository.options-cold]`](#repository-options-for-cold-repo-additional-repositoryoptions-cold)
+  - [Repository Options for hot repo (Additional) `[repository.options-hot]`](#repository-options-for-hot-repo-additional-repositoryoptions-hot)
+  - [Repository Hooks `[repository.hooks]`](#repository-hooks-repositoryhooks)
+  - [Snapshot-Filter Options `[snapshot-filter]`](#snapshot-filter-options-snapshot-filter)
+  - [Backup Options `[backup]`](#backup-options-backup)
+  - [Backup Hooks `[backup.hooks]`](#backup-hooks-backuphooks)
+  - [Backup Snapshots `[[backup.snapshots]]`](#backup-snapshots-backupsnapshots)
+  - [Forget Options `[forget]`](#forget-options-forget)
+  - [Copy Targets `[copy]`](#copy-targets-copy)
+  - [WebDAV Options `[webdav]`](#webdav-options-webdav)
+
 ## Merge Precedence
 
 The merge precedence for values is:

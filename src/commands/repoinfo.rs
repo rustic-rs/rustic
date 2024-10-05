@@ -1,8 +1,8 @@
 //! `repoinfo` subcommand
 
 use crate::{
-    commands::{get_repository, open_repository},
     helpers::{bytes_size_to_string, table_right_from},
+    repository::CliRepo,
     status_err, Application, RUSTIC_APP,
 };
 
@@ -30,7 +30,11 @@ pub(crate) struct RepoInfoCmd {
 
 impl Runnable for RepoInfoCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -48,21 +52,13 @@ struct Infos {
 }
 
 impl RepoInfoCmd {
-    fn inner_run(&self) -> Result<()> {
-        let config = RUSTIC_APP.config();
-
+    fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let infos = Infos {
             files: (!self.only_index)
-                .then(|| -> Result<_> {
-                    let repo = get_repository(&config.repository)?;
-                    Ok(repo.infos_files()?)
-                })
+                .then(|| -> Result<_> { Ok(repo.infos_files()?) })
                 .transpose()?,
             index: (!self.only_files)
-                .then(|| -> Result<_> {
-                    let repo = open_repository(&config.repository)?;
-                    Ok(repo.infos_index()?)
-                })
+                .then(|| -> Result<_> { Ok(repo.open()?.infos_index()?) })
                 .transpose()?,
         };
 

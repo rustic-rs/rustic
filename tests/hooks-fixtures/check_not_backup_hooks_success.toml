@@ -1,0 +1,41 @@
+[global.hooks]
+run-before = [
+  "sh -c 'echo Running global hooks before > tests/generated/check_not_backup_hooks_success.log'",
+]
+run-after = [
+  "sh -c 'echo Running global hooks after >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-failed = [
+  "sh -c 'echo Running global hooks failed >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-finally = [
+  "sh -c 'echo Running global hooks finally >> tests/generated/check_not_backup_hooks_success.log'",
+]
+
+[repository.hooks]
+run-before = [
+  "sh -c 'echo Running repository hooks before >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-after = [
+  "sh -c 'echo Running repository hooks after >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-failed = [
+  "sh -c 'echo Running repository hooks failed >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-finally = [
+  "sh -c 'echo Running repository hooks finally >> tests/generated/check_not_backup_hooks_success.log'",
+]
+
+[backup.hooks]
+run-before = [
+  "sh -c 'echo MUST NOT SHOW UP >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-after = [
+  "sh -c 'echo MUST NOT SHOW UP >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-failed = [
+  "sh -c 'echo MUST NOT SHOW UP >> tests/generated/check_not_backup_hooks_success.log'",
+]
+run-finally = [
+  "sh -c 'echo MUST NOT SHOW UP >> tests/generated/check_not_backup_hooks_success.log'",
+]

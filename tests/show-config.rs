@@ -22,9 +22,9 @@ use abscissa_core::testing::prelude::*;
 use rustic_testing::{files_differ, get_temp_file, TestResult};
 
 // Storing this value as a [`Lazy`] static ensures that all instances of
-/// the runner acquire a mutex when executing commands and inspecting
-/// exit statuses, serializing what would otherwise be multithreaded
-/// invocations as `cargo test` executes tests in parallel by default.
+// the runner acquire a mutex when executing commands and inspecting
+// exit statuses, serializing what would otherwise be multithreaded
+// invocations as `cargo test` executes tests in parallel by default.
 pub static LAZY_RUNNER: Lazy<CmdRunner> = Lazy::new(|| {
     let mut runner = CmdRunner::new(env!("CARGO_BIN_EXE_rustic"));
     runner.exclusive().capture_stdout();
@@ -35,13 +35,15 @@ fn cmd_runner() -> CmdRunner {
     LAZY_RUNNER.clone()
 }
 
-fn fixtures_dir() -> PathBuf {
-    ["tests", "show-config-fixtures"].iter().collect()
+fn fixture() -> PathBuf {
+    ["tests", "show-config-fixtures", "empty.txt"]
+        .iter()
+        .collect()
 }
 
 #[test]
-fn show_config_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("empty.txt");
+fn test_show_config_passes() -> TestResult<()> {
+    let fixture_file = fixture();
     let mut file = get_temp_file()?;
 
     {
@@ -56,8 +58,8 @@ fn show_config_passes() -> TestResult<()> {
         cmd.wait()?.expect_success();
     }
 
-    if files_differ(fixture_path, file.path())? {
-        panic!("generated completions for bash shell differ, breaking change!");
+    if files_differ(fixture_file, file.path())? {
+        panic!("generated empty.txt differs, breaking change!");
     }
 
     Ok(())

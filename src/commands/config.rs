@@ -1,6 +1,6 @@
 //! `config` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
@@ -28,9 +28,10 @@ impl Runnable for ConfigCmd {
 impl ConfigCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
 
-        let changed = repo.apply_config(&self.config_opts)?;
+        let changed = config
+            .repository
+            .run_open(|repo| Ok(repo.apply_config(&self.config_opts)?))?;
 
         if changed {
             println!("saved new config");

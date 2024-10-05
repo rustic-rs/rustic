@@ -5,7 +5,7 @@ use abscissa_core::{
     application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
     terminal::component::Terminal,
-    Application, Component, FrameworkError, Shutdown, StandardPaths,
+    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
 };
 
 use anyhow::Result;
@@ -103,7 +103,12 @@ impl Application for RusticApp {
             env::set_var(env, value);
         }
 
+        let global_hooks = config.global.hooks.clone();
         self.config.set_once(config);
+
+        global_hooks.run_before().map_err(|err| -> FrameworkError {
+            FrameworkErrorKind::ProcessError.context(err).into()
+        })?;
 
         Ok(())
     }
@@ -121,6 +126,12 @@ impl Application for RusticApp {
 impl RusticApp {
     /// Shut down this application gracefully, exiting with given exit code.
     fn shutdown_with_exitcode(&self, shutdown: Shutdown, exit_code: i32) -> ! {
+        let hooks = &RUSTIC_APP.config().global.hooks;
+        match shutdown {
+            Shutdown::Crash => _ = hooks.run_failed(),
+            _ => _ = hooks.run_after(),
+        };
+        _ = hooks.run_finally();
         let result = self.state().components().shutdown(self, shutdown);
         if let Err(e) = result {
             fatal_error(self, &e)

@@ -14,7 +14,6 @@ use snapshots::Snapshots;
 use std::io;
 use std::sync::{Arc, RwLock};
 
-use crate::commands::open_repository_indexed_with_progress;
 use crate::{Application, RUSTIC_APP};
 
 use anyhow::Result;
@@ -45,13 +44,16 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
     let progress = TuiProgressBars {
         terminal: terminal.clone(),
     };
-    let p = progress.progress_spinner("starting rustic in interactive mode...");
-    let repo = open_repository_indexed_with_progress(&config.repository, progress)?;
-    p.finish();
-    // create app and run it
-    let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
-    let app = App { snapshots };
-    let res = run_app(terminal, app);
+    let res = config
+        .repository
+        .run_indexed_with_progress(progress.clone(), |repo| {
+            let p = progress.progress_spinner("starting rustic in interactive mode...");
+            p.finish();
+            // create app and run it
+            let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
+            let app = App { snapshots };
+            run_app(terminal, app)
+        });
 
     if let Err(err) = res {
         println!("{err:?}");

@@ -4,7 +4,7 @@ use abscissa_core::{status_err, Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
 use dialoguer::Password;
 
-use crate::{commands::get_repository, Application, RUSTIC_APP};
+use crate::{repository::CliRepo, Application, RUSTIC_APP};
 
 use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 
@@ -22,7 +22,11 @@ pub(crate) struct InitCmd {
 
 impl Runnable for InitCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -30,9 +34,8 @@ impl Runnable for InitCmd {
 }
 
 impl InitCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = get_repository(&config.repository)?;
 
         // Note: This is again checked in repo.init_with_password(), however we want to inform
         // users before they are prompted to enter a password
@@ -48,7 +51,7 @@ impl InitCmd {
             );
         }
 
-        let _ = init(repo, &self.key_opts, &self.config_opts)?;
+        let _ = init(repo.0, &self.key_opts, &self.config_opts)?;
         Ok(())
     }
 }

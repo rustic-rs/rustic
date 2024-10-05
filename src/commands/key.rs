@@ -1,6 +1,6 @@
 //! `key` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
 
 use std::path::PathBuf;
 
@@ -52,7 +52,11 @@ impl Runnable for KeyCmd {
 
 impl Runnable for AddCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -60,10 +64,7 @@ impl Runnable for AddCmd {
 }
 
 impl AddCmd {
-    fn inner_run(&self) -> Result<()> {
-        let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
-
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         // create new Repository options which just contain password information
         let mut pass_opts = RepositoryOptions::default();
         pass_opts.password = self.new_password.clone();

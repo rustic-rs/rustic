@@ -93,6 +93,7 @@ jobs:
           use-cross: ${{ matrix.job.use-cross }}
           all-features: "false"
           feature: ${{ matrix.feature }}
+          extra-cargo-build-args: --features self-update
 
   result:
     name: Result (Cross-CI)

@@ -85,7 +85,7 @@ bytesize = "1"
 cached = "0.53.1"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
-conflate = "0.2"
+conflate = "0.3"
 convert_case = "0.6.0"
 dateparser = "0.2.1"
 derive_more = { version = "1.0.0", features = ["debug"] }

@@ -64,8 +64,8 @@ fn src_snapshot() -> Result<TestSource> {
     Ok(TestSource::new(dir))
 }
 
-pub fn rustic_runner(temp_dir: &TempDir, password: &'static str) -> TestResult<Command> {
-    let repo_dir = temp_dir.path().join("repo");
+pub fn rustic_runner(temp_dir: &Path, password: &'static str) -> TestResult<Command> {
+    let repo_dir = temp_dir.join("repo");
     let mut runner = Command::new(env!("CARGO_BIN_EXE_rustic"));
 
     runner
@@ -83,14 +83,15 @@ fn test_rustic_repo_passes(rustic_repo: Result<TestSource>) -> TestResult<()> {
     let rustic_repo = rustic_repo?;
     let repo_password = "rustic";
     let rustic_repo_path = rustic_repo.into_path();
+    let rustic_repo_path = rustic_repo_path.path();
 
     {
-        let mut runner = rustic_runner(&rustic_repo_path, repo_password)?;
+        let mut runner = rustic_runner(rustic_repo_path, repo_password)?;
         runner.args(["check", "--read-data"]).assert().success();
     }
 
     {
-        let mut runner = rustic_runner(&rustic_repo_path, repo_password)?;
+        let mut runner = rustic_runner(rustic_repo_path, repo_password)?;
         runner
             .arg("snapshots")
             .assert()
@@ -99,7 +100,7 @@ fn test_rustic_repo_passes(rustic_repo: Result<TestSource>) -> TestResult<()> {
     }
 
     {
-        let mut runner = rustic_runner(&rustic_repo_path, repo_password)?;
+        let mut runner = rustic_runner(rustic_repo_path, repo_password)?;
         runner
             .arg("diff")
             .arg("31d477a2")
@@ -117,14 +118,15 @@ fn test_restic_repo_with_rustic_passes(restic_repo: Result<TestSource>) -> TestR
     let restic_repo = restic_repo?;
     let repo_password = "restic";
     let restic_repo_path = restic_repo.into_path();
+    let restic_repo_path = restic_repo_path.path();
 
     {
-        let mut runner = rustic_runner(&restic_repo_path, repo_password)?;
+        let mut runner = rustic_runner(restic_repo_path, repo_password)?;
         runner.args(["check", "--read-data"]).assert().success();
     }
 
     {
-        let mut runner = rustic_runner(&restic_repo_path, repo_password)?;
+        let mut runner = rustic_runner(restic_repo_path, repo_password)?;
         runner
             .arg("snapshots")
             .assert()
@@ -133,7 +135,7 @@ fn test_restic_repo_with_rustic_passes(restic_repo: Result<TestSource>) -> TestR
     }
 
     {
-        let mut runner = rustic_runner(&restic_repo_path, repo_password)?;
+        let mut runner = rustic_runner(restic_repo_path, repo_password)?;
         runner
             .arg("diff")
             .arg("9305509c")
@@ -141,6 +143,31 @@ fn test_restic_repo_with_rustic_passes(restic_repo: Result<TestSource>) -> TestR
             .assert()
             .success()
             .stdout(predicates::str::contains("1 removed"));
+    }
+
+    Ok(())
+}
+
+#[rstest]
+#[ignore = "requires live fixture, run manually in CI"]
+fn test_restic_latest_repo_with_rustic_passes() -> TestResult<()> {
+    let path = "tests/repository-fixtures/";
+    let repo_password = "restic";
+    let restic_repo_path = Path::new(path).canonicalize()?;
+    let restic_repo_path = restic_repo_path.as_path();
+
+    {
+        let mut runner = rustic_runner(restic_repo_path, repo_password)?;
+        runner.args(["check", "--read-data"]).assert().success();
+    }
+
+    {
+        let mut runner = rustic_runner(restic_repo_path, repo_password)?;
+        runner
+            .arg("snapshots")
+            .assert()
+            .success()
+            .stdout(predicates::str::contains("2 snapshot(s)"));
     }
 
     Ok(())

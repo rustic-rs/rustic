@@ -1,0 +1,80 @@
+name: Compatibility
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+  push:
+    branches:
+      - main
+      - "renovate/**"
+    paths-ignore:
+      - "**/*.md"
+  schedule:
+    - cron: "0 0 * * 0"
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        rust: [stable]
+        feature: [default]
+        job:
+          - os: macos-latest
+          - os: ubuntu-latest
+          - os: windows-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        if: github.event_name != 'pull_request'
+        with:
+          fetch-depth: 0
+
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Restic
+        uses: AnimMouse/setup-restic@v1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
+
+      - name: Create fixtures
+        run: | 
+          restic init
+          restic backup src
+          rm -rf src/lib.rs
+          restic backup src
+        env:
+          RESTIC_REPOSITORY: tests\repository-fixtures\repo
+          RESTIC_PASSWORD: restic
+
+      - name: Run Cargo Test
+        run: cargo test -r --package rustic-rs --test repositories --features ${{ matrix.feature }} --features self-update -- test_restic_latest_repo_with_rustic_passes --exact --show-output --ignored
+
+  result:
+    name: Result (Compat)
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    steps:
+      - name: Mark the job as successful
+        run: exit 0
+        if: success()
+      - name: Mark the job as unsuccessful
+        run: exit 1
+        if: "!success()"

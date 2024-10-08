@@ -20,42 +20,39 @@ impl TestSource {
     }
 }
 
-#[fixture]
-fn rustic_repo() -> Result<TestSource> {
-    let dir = tempdir()?;
-    let path = Path::new("tests/repository-fixtures/rustic-repo.tar.gz").canonicalize()?;
+fn open_and_unpack(open_path: &'static str, unpack_dir: &TempDir) -> Result<()> {
+    let path = Path::new(open_path).canonicalize()?;
     let tar_gz = File::open(path)?;
     let tar = GzDecoder::new(tar_gz);
     let mut archive = Archive::new(tar);
     archive.set_preserve_permissions(true);
     archive.set_preserve_mtime(true);
-    archive.unpack(&dir)?;
+    archive.unpack(unpack_dir)?;
+    Ok(())
+}
+
+#[fixture]
+fn rustic_repo() -> Result<TestSource> {
+    let dir = tempdir()?;
+    let path = "tests/repository-fixtures/rustic-repo.tar.gz";
+    open_and_unpack(path, &dir)?;
     Ok(TestSource::new(dir))
 }
 
 #[fixture]
 fn restic_repo() -> Result<TestSource> {
     let dir = tempdir()?;
-    let path = Path::new("tests/repository-fixtures/restic-repo.tar.gz").canonicalize()?;
-    let tar_gz = File::open(path)?;
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.set_preserve_permissions(true);
-    archive.set_preserve_mtime(true);
-    archive.unpack(&dir)?;
+    let path = "tests/repository-fixtures/restic-repo.tar.gz";
+    open_and_unpack(path, &dir)?;
     Ok(TestSource::new(dir))
 }
 
 #[fixture]
 fn rustic_copy_repo() -> Result<TestSource> {
     let dir = tempdir()?;
-    let path = Path::new("tests/repository-fixtures/rustic-copy-repo.tar.gz").canonicalize()?;
-    let tar_gz = File::open(path)?;
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.set_preserve_permissions(true);
-    archive.set_preserve_mtime(true);
-    archive.unpack(&dir)?;
+    let path = "tests/repository-fixtures/rustic-copy-repo.tar.gz";
+    open_and_unpack(path, &dir)?;
+
     Ok(TestSource::new(dir))
 }
 

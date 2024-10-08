@@ -59,13 +59,8 @@ fn rustic_copy_repo() -> Result<TestSource> {
 #[fixture]
 fn src_snapshot() -> Result<TestSource> {
     let dir = tempdir()?;
-    let path = Path::new("tests/repository-fixtures/src-snapshot.tar.gz").canonicalize()?;
-    let tar_gz = File::open(path)?;
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.set_preserve_permissions(true);
-    archive.set_preserve_mtime(true);
-    archive.unpack(&dir)?;
+    let path = "tests/repository-fixtures/src-snapshot.tar.gz";
+    open_and_unpack(path, &dir)?;
     Ok(TestSource::new(dir))
 }
 

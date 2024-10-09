@@ -44,7 +44,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Restic
-        uses: AnimMouse/setup-restic@v1.2.0 # We need to use a specific version, due to the cache being broken on last version
+        uses: rustic-rs/setup-restic@main
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1

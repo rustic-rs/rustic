@@ -823,6 +823,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "conflate"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13bdff17de7eedc79f443ed16c10b7f86765802d94be78146a4ab9e52e1e94e2"
+dependencies = [
+ "conflate_derive",
+ "num-traits",
+]
+
+[[package]]
 name = "conflate_derive"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3779,7 +3789,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "comfy-table",
- "conflate",
+ "conflate 0.3.0",
  "convert_case",
  "crossterm 0.28.1",
  "dateparser",
@@ -3839,7 +3849,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "clap",
- "conflate",
+ "conflate 0.2.0",
  "derive_setters",
  "displaydoc",
  "hex",
@@ -3876,7 +3886,7 @@ dependencies = [
  "cachedir",
  "chrono",
  "clap",
- "conflate",
+ "conflate 0.2.0",
  "crossbeam-channel",
  "dav-server",
  "derivative",

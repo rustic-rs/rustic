@@ -5,7 +5,7 @@ repositories.
 
 The `rustic` repository is a simple repository that is used to test the `rustic`
 library. The `restic` repository is a repository created by the `restic` backup
-tool. It is used to test `rustic` against a repository created with restic.
+tool.
 The latter is used to ensure that `rustic` can read and write to a repository
 created by `restic`.
 

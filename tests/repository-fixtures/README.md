@@ -9,10 +9,6 @@ tool. It is used to test `rustic` against a repository created with restic.
 The latter is used to ensure that `rustic` can read and write to a repository
 created by `restic`.
 
-TODO: We should create a `restic` repository live during our tests. This way we
-can ensure that the repository is always compatible with the latest version of
-`restic`.
-
 ## Accessing the Repositories
 
 The `rustic` repository is located at `./rustic-repo`. The `restic` repository

@@ -51,17 +51,18 @@ jobs:
         with:
           toolchain: stable
 
-      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
-
       - name: Create fixtures
         run: | 
           restic init
           restic backup src
-          rm -rf src/lib.rs
+          mv src/lib.rs lib.rs
           restic backup src
+          mv lib.rs src/lib.rs
         env:
           RESTIC_REPOSITORY: tests\repository-fixtures\repo
           RESTIC_PASSWORD: restic
+            
+      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
 
       - name: Run Cargo Test
         run: cargo test -r --test repositories --features ${{ matrix.feature }} --features self-update -- test_restic_latest_repo_with_rustic_passes --exact --show-output --ignored

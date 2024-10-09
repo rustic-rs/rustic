@@ -9,6 +9,7 @@
 <a href="https://raw.githubusercontent.com/rustic-rs/rustic/main/"><img src="https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg" /></a>
 <a href="https://crates.io/crates/rustic-rs"><img src="https://img.shields.io/crates/d/rustic-rs.svg" /></a>
 <a href="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml/badge.svg" /></a>
+<a href="https://github.com/rustic-rs/rustic/actions/workflows/release-image.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/release-image.yml/badge.svg" /></a>
 <p>
 
 ## About

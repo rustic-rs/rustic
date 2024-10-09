@@ -43,13 +43,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      # We need to create a temp directory to store the Restic binary (setup-restic action seems to require it)
-      - name: Create temp directory
-        run: mkdir -p ${{ runner.temp }}/Restic
-        shell: bash
-
       - name: Setup Restic
-        uses: AnimMouse/setup-restic@v1
+        uses: AnimMouse/setup-restic@v1.2.0 # We need to use a specific version, due to the cache being broken on last version
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1

@@ -36,14 +36,14 @@ impl PruneCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let pruner = repo.prune_plan(&self.opts)?;
+        let prune_plan = repo.prune_plan(&self.opts)?;
 
-        print_stats(&pruner.stats);
+        print_stats(&prune_plan.stats);
 
         if config.global.dry_run {
-            repo.warm_up(pruner.repack_packs().into_iter())?;
+            repo.warm_up(prune_plan.repack_packs().into_iter())?;
         } else {
-            pruner.do_prune(&repo, &self.opts)?;
+            repo.prune(&self.opts, prune_plan)?;
         }
 
         Ok(())

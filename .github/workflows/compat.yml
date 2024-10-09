@@ -52,6 +52,7 @@ jobs:
           toolchain: stable
 
       - name: Create fixtures
+        shell: bash
         run: | 
           restic init
           restic backup src
@@ -59,7 +60,7 @@ jobs:
           restic backup src
           mv lib.rs src/lib.rs
         env:
-          RESTIC_REPOSITORY: tests\repository-fixtures\repo
+          RESTIC_REPOSITORY: ./tests/repository-fixtures/repo
           RESTIC_PASSWORD: restic
             
       - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2

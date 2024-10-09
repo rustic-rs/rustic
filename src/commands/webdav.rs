@@ -5,7 +5,7 @@
 
 use std::{net::ToSocketAddrs, str::FromStr};
 
-use crate::{commands::open_repository_indexed, status_err, Application, RusticConfig, RUSTIC_APP};
+use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
 use anyhow::{anyhow, Result};
 use conflate::Merge;
@@ -63,7 +63,11 @@ impl Override<RusticConfig> for WebDavCmd {
 
 impl Runnable for WebDavCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_indexed(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -74,9 +78,8 @@ impl WebDavCmd {
     /// be careful about self VS RUSTIC_APP.config() usage
     /// only the RUSTIC_APP.config() involves the TOML and ENV merged configurations
     /// see https://github.com/rustic-rs/rustic/issues/1242
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository_indexed(&config.repository)?;
 
         let path_template = config
             .webdav

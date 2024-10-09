@@ -1,9 +1,10 @@
 //! `tag` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
+use anyhow::Result;
 use chrono::{Duration, Local};
 
 use rustic_core::{repofile::DeleteOption, StringList};
@@ -61,7 +62,11 @@ pub(crate) struct TagCmd {
 
 impl Runnable for TagCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -69,9 +74,8 @@ impl Runnable for TagCmd {
 }
 
 impl TagCmd {
-    fn inner_run(&self) -> anyhow::Result<()> {
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
 
         let snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?

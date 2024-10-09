@@ -4,28 +4,29 @@
 //! application's configuration file and/or command-line options
 //! for specifying it.
 
+pub(crate) mod hooks;
 pub(crate) mod progress_options;
 
+use std::fmt::Debug;
 use std::{collections::HashMap, path::PathBuf};
 
-use abscissa_core::config::Config;
-use abscissa_core::path::AbsPathBuf;
-use abscissa_core::FrameworkError;
+use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
+use anyhow::Result;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
-use rustic_backend::BackendOptions;
-use rustic_core::RepositoryOptions;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
+
 use crate::{
     commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
-    config::progress_options::ProgressOptions,
+    config::{hooks::Hooks, progress_options::ProgressOptions},
     filtering::SnapshotFilter,
+    repository::AllRepositoryOptions,
 };
 
 /// Rustic Configuration
@@ -65,20 +66,6 @@ pub struct RusticConfig {
     /// webdav options
     #[clap(skip)]
     pub webdav: WebDavCmd,
-}
-
-#[derive(Clone, Default, Debug, Parser, Serialize, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
-pub struct AllRepositoryOptions {
-    /// Backend options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    pub be: BackendOptions,
-
-    /// Repository options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    pub repo: RepositoryOptions,
 }
 
 impl RusticConfig {
@@ -167,6 +154,10 @@ pub struct GlobalOptions {
     #[clap(flatten)]
     #[serde(flatten)]
     pub progress_options: ProgressOptions,
+
+    /// Hooks
+    #[clap(skip)]
+    pub hooks: Hooks,
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]

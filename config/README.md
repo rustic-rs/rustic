@@ -14,6 +14,27 @@ This specification covers all the available sections and attributes in the
 variable names. Users can customize their backup behavior by modifying these
 attributes according to their needs.
 
+## Table of Contents
+
+- [Merge Precedence](#merge-precedence)
+- [Profiles](#profiles)
+- [Sections and Attributes](#sections-and-attributes)
+  - [Global Options `[global]`](#global-options-global)
+  - [Global Hooks `[global.hooks]`](#global-hooks-globalhooks)
+  - [Global Options - env variables `[global.env]`](#global-options---env-variables-globalenv)
+  - [Repository Options `[repository]`](#repository-options-repository)
+  - [Repository Options (Additional) `[repository.options]`](#repository-options-additional-repositoryoptions)
+  - [Repository Options for cold repo (Additional) `[repository.options-cold]`](#repository-options-for-cold-repo-additional-repositoryoptions-cold)
+  - [Repository Options for hot repo (Additional) `[repository.options-hot]`](#repository-options-for-hot-repo-additional-repositoryoptions-hot)
+  - [Repository Hooks `[repository.hooks]`](#repository-hooks-repositoryhooks)
+  - [Snapshot-Filter Options `[snapshot-filter]`](#snapshot-filter-options-snapshot-filter)
+  - [Backup Options `[backup]`](#backup-options-backup)
+  - [Backup Hooks `[backup.hooks]`](#backup-hooks-backuphooks)
+  - [Backup Snapshots `[[backup.snapshots]]`](#backup-snapshots-backupsnapshots)
+  - [Forget Options `[forget]`](#forget-options-forget)
+  - [Copy Targets `[copy]`](#copy-targets-copy)
+  - [WebDAV Options `[webdav]`](#webdav-options-webdav)
+
 ## Merge Precedence
 
 The merge precedence for values is:
@@ -93,6 +114,20 @@ If you want to contribute your own configuration, please
 | progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"              | RUSTIC_PROGRESS_INTERVAL | --progress-interval |
 | use-profiles      | Array of profiles to use. Allows to recursively use other profiles.               | Empty array   | ["2nd", "3rd"]    | RUSTIC_USE_PROFILE       | --use-profile, -P   |
 
+### Global Hooks `[global.hooks]`
+
+These external commands are run before and after each commands, respectively.
+
+**Note**: There are also repository hooks, which should be used for commands
+needed to set up the repository (like mounting the repo dir), see below.
+
+| Attribute   | Description                                       | Default Value | Example Value | Environment Variable |
+| ----------- | ------------------------------------------------- | ------------- | ------------- | -------------------- |
+| run-before  | Run the given commands before execution           | not set       | ["echo test"] |                      |
+| run-after   | Run the given commands after successful execution | not set       | ["echo test"] |                      |
+| run-failed  | Run the given commands after failed execution     | not set       | ["echo test"] |                      |
+| run-finally | Run the given commands after every execution      | not set       | ["echo test"] |                      |
+
 ### Global Options - env variables `[global.env]`
 
 All given environment variables are set before processing. This is handy to
@@ -144,15 +179,30 @@ upper snake case and prefix with "RUSTIC_REPO_OPTHOT_".
 
 see Repository Options
 
+### Repository Hooks `[repository.hooks]`
+
+These external commands are run before and after each repository-accessing
+commands, respectively.
+
+See [Global Hooks](#global-hooks-globalhooks).
+
 ### Snapshot-Filter Options `[snapshot-filter]`
 
-| Attribute     | Description                             | Default Value | Example Value       | CLI Option     |
-| ------------- | --------------------------------------- | ------------- | ------------------- | -------------- |
-| filter-hosts  | Array of hosts to filter snapshots.     | Not set       | ["myhost", "host2"] | --filter-host  |
-| filter-labels | Array of labels to filter snapshots.    | Not set       | ["mylabal"]         | --filter-label |
-| filter-paths  | Array of pathlists to filter snapshots. | Not set       | ["/home,/root"]     | --filter-paths |
-| filter-tags   | Array of taglists to filter snapshots.  | Not set       | ["tag1,tag2"]       | --filter-tags  |
-| filter-fn     | Custom filter function for snapshots.   | Not set       |                     | --filter-fn    |
+| Attribute          | Description                                                            | Default Value | Example Value            | CLI Option           |
+| ------------------ | ---------------------------------------------------------------------- | ------------- | ------------------------ | -------------------- |
+| filter-hosts       | Array of hosts to filter snapshots.                                    | Not set       | ["myhost", "host2"]      | --filter-host        |
+| filter-labels      | Array of labels to filter snapshots.                                   | Not set       | ["mylabal"]              | --filter-label       |
+| filter-paths       | Array of pathlists to filter snapshots.                                | Not set       | ["/home,/root"]          | --filter-paths       |
+| filter-paths-exact | Array or string of paths to filter snapshots. Exact match.             | Not set       | ["path1,path2", "path3"] | --filter-paths-exact |
+| filter-tags        | Array of taglists to filter snapshots.                                 | Not set       | ["tag1,tag2"]            | --filter-tags        |
+| filter-tags-exact  | Array or string of tags to filter snapshots. Exact match.              | Not set       | ["tag1,tag2", "tag3"]    | --filter-tags-exact  |
+| filter-before      | Filter snapshots before the given date/time                            | Not set       | "2024-01-01"             | --filter-before      |
+| filter-after       | Filter snapshots after the given date/time                             | Not set       | "2023-01-01 11:15:23"    | --filter-after       |
+| filter-size        | Filter snapshots for a total size in the size range.                   | Not set       | "1MB..1GB"               | --filter-size        |
+|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                  |                      |
+| filter-size-added  | Filter snapshots for a size added to the repository in the size range. | Not set       | "1MB..1GB"               | --filter-size-added  |
+|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                  |                      |
+| filter-fn          | Custom filter function for snapshots.                                  | Not set       |                          | --filter-fn          |
 
 ### Backup Options `[backup]`
 
@@ -194,14 +244,26 @@ can be overwritten in the source-specific configuration, see below.
 | time                  | Set the time saved in the snapshot.                                                     | current time          |               | --time                  |
 | with-atime            | If true, includes file access time (atime) in the backup.                               | false                 |               | --with-atime            |
 
+### Backup Hooks `[backup.hooks]`
+
+These external commands are run before and after each backup, respectively.
+
+**Note**: Global hooks and repository hooks are run additionaly.
+
+See [Global Hooks](#global-hooks-globalhooks).
+
 ### Backup Snapshots `[[backup.snapshots]]`
 
 **Note**: All of the backup options mentioned before can also be used as
-source-specific option and then only apply to this source.
+snapshot-specific option and then only apply to this snapshot.
 
-| Attribute | Description                                        | Default Value | Example Value      |
-| --------- | -------------------------------------------------- | ------------- | ------------------ |
-| sources   | Array of source directories or file(s) to back up. | []            | ["/dir1", "/dir2"] |
+| Attribute | Description                                                   | Default Value | Example Value                                                          |
+| --------- | ------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
+| sources   | Array of source directories or file(s) to back up.            | []            | ["/dir1", "/dir2"]                                                     |
+| hooks     | Hooks to run before and after backing up the defined sources. | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
+
+Source-specific hooks are called additionally to global, repository and backup
+hooks when backing up the defined sources into a snapshot.
 
 ### Forget Options `[forget]`
 
@@ -230,6 +292,9 @@ source-specific option and then only apply to this source.
 | keep-ids                   | Keep snapshots containing one of these IDs.                             | []                 | ["6e58f3d32" ]         | --keep-id                    |
 | keep-none                  | Allow to keep no snapshots.                                             | false              | true                   | --keep-none                  |
 | prune                      | If set to true, prune the repository after snapshots have been removed. | false              |                        | --prune                      |
+
+Additionally extra snapshot filter options can be given for the `forget` command
+here, see Snapshot-Filter options.
 
 ### Copy Targets `[copy]`
 

@@ -16,6 +16,16 @@ progress-interval = "100ms"
 dry-run = false
 check-index = false
 
+# Global hooks: The given commands are called for every command
+[global.hooks]
+run-before = [
+  # long form giving command and args explicitely and allow to specify failure behavior
+  { command = "echo", args = ["before"], on-failure = "warn" }, # allowed values for on-failure: "error" (default), "warn", "ignore"
+] # Default: []
+run-after = ["echo after"] # Run after if successful, short version, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
+
 # Global env variables: These are set by rustic before calling a subcommand, e.g. rclone or commands
 # defined in the repository options.
 [global.env]
@@ -65,12 +75,25 @@ throttle = "10kB,10MB" # limit and burst per second; only opendal backends; Defa
 [repository.options-cold]
 # see [repository.options]
 
+# Repository hooks: The given commands are called for commands accessing the repository.
+[repository.hooks]
+run-before = ["echo before"] # Default: []
+run-after = ["echo after"] # Run after if successful, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
+
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
-filter-hosts = ["host2", "host2"] # Default: []
+filter-hosts = ["host1", "host2"] # Default: []
 filter-labels = ["label1", "label2"] # Default: []
 filter-tags = ["tag1,tag2", "tag3"] # Default: []
+filter-tags-exact = ["tag1,tag2", "tag2"] # Default: []
 filter-paths = ["path1", "path2,path3"] # Default: []
+filter-paths-exact = ["path1", "path2,path3"] # Default: []
+filter-after = "2024-01-01" # Default: not set
+filter-before = "2024-02-05 12:15" # Default: not set
+filter-size = "200MiB" # Default: not set
+filter-size-added = "1 MB..10MB" # Default: not set
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 
 # Backup options: These options are used for all sources when calling the backup command.
@@ -108,11 +131,25 @@ no-scan = false
 quiet = false
 skip-identical-parent = false
 
+# Backup hooks: The given commands are called for the `backup` command
+[backup.hooks]
+run-before = ["echo before"] # Default: []
+run-after = ["echo after"] # Run after if successful, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
+
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.snapshots]]
 sources = ["/path/to/source1"]
 label = "label" # Default: not set
 # .. and so on. see [backup]
+
+# Source-specific hooks: The given commands when backing up the defined source
+[backup.snapshots.hooks]
+run-before = ["echo before"] # Default: []
+run-after = ["echo after"] # Run after if successful, default: []
+run-failed = ["echo failed"] # Default: []
+run-finally = ["echo finally"] # Always run after, default: []
 
 [[backup.snapshots]]
 sources = [
@@ -126,10 +163,16 @@ sources = [
 prune = false
 group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
 # The following filter options can be also defined here and then overwrite the options for the forget command
-filter-hosts = ["host2", "host2"] # Default: []
+filter-hosts = ["host1", "host2"] # Default: []
 filter-labels = ["label1", "label2"] # Default: []
 filter-tags = ["tag1,tag2", "tag3"] # Default: []
+filter-tags-exact = ["tag1,tag2", "tag2"] # Default: []
 filter-paths = ["path1", "path2,path3"] # Default: []
+filter-paths-exact = ["path1", "path2,path3"] # Default: []
+filter-after = "2024-01-01" # Default: not set
+filter-before = "2024-02-05 12:15" # Default: not set
+filter-size = "200MiB" # Default: not set
+filter-size-added = "1 MB..10MB" # Default: not set
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
 # The retention options follow. All of these are not set by default.
 keep-tags = ["tag1", "tag2,tag3"] # Default: not set

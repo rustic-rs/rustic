@@ -1,0 +1,12 @@
+[backup.hooks]
+run-before = [
+  "sh -c 'echo Running backup hooks before > tests/generated/backup_hooks_failure.log'",
+  "false",
+  "sh -c 'echo MUST NOT SHOW UP >> tests/generated/backup_hooks_failure.log'",
+]
+run-failed = [
+  "sh -c 'echo Running backup hooks failed >> tests/generated/backup_hooks_failure.log'",
+]
+run-finally = [
+  "sh -c 'echo Running backup hooks finally >> tests/generated/backup_hooks_failure.log'",
+]

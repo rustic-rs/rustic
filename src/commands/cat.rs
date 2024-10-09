@@ -1,9 +1,6 @@
 //! `cat` subcommand
 
-use crate::{
-    commands::{open_repository, open_repository_indexed},
-    status_err, Application, RUSTIC_APP,
-};
+use crate::{status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
@@ -62,24 +59,26 @@ impl Runnable for CatCmd {
 impl CatCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let data =
-            match &self.cmd {
-                CatSubCmd::Config => {
-                    open_repository(&config.repository)?.cat_file(FileType::Config, "")?
-                }
-                CatSubCmd::Index(opt) => {
-                    open_repository(&config.repository)?.cat_file(FileType::Index, &opt.id)?
-                }
-                CatSubCmd::Snapshot(opt) => {
-                    open_repository(&config.repository)?.cat_file(FileType::Snapshot, &opt.id)?
-                }
-                CatSubCmd::TreeBlob(opt) => open_repository_indexed(&config.repository)?
-                    .cat_blob(BlobType::Tree, &opt.id)?,
-                CatSubCmd::DataBlob(opt) => open_repository_indexed(&config.repository)?
-                    .cat_blob(BlobType::Data, &opt.id)?,
-                CatSubCmd::Tree(opt) => open_repository_indexed(&config.repository)?
-                    .cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?,
-            };
+        let data = match &self.cmd {
+            CatSubCmd::Config => config
+                .repository
+                .run_open(|repo| Ok(repo.cat_file(FileType::Config, "")?))?,
+            CatSubCmd::Index(opt) => config
+                .repository
+                .run_open(|repo| Ok(repo.cat_file(FileType::Index, &opt.id)?))?,
+            CatSubCmd::Snapshot(opt) => config
+                .repository
+                .run_open(|repo| Ok(repo.cat_file(FileType::Snapshot, &opt.id)?))?,
+            CatSubCmd::TreeBlob(opt) => config
+                .repository
+                .run_indexed(|repo| Ok(repo.cat_blob(BlobType::Tree, &opt.id)?))?,
+            CatSubCmd::DataBlob(opt) => config
+                .repository
+                .run_indexed(|repo| Ok(repo.cat_blob(BlobType::Data, &opt.id)?))?,
+            CatSubCmd::Tree(opt) => config.repository.run_indexed(|repo| {
+                Ok(repo.cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?)
+            })?,
+        };
         println!("{}", String::from_utf8(data.to_vec())?);
 
         Ok(())

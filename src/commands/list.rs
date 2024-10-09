@@ -2,7 +2,7 @@
 
 use std::num::NonZero;
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
@@ -19,7 +19,11 @@ pub(crate) struct ListCmd {
 
 impl Runnable for ListCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -27,10 +31,7 @@ impl Runnable for ListCmd {
 }
 
 impl ListCmd {
-    fn inner_run(&self) -> Result<()> {
-        let config = RUSTIC_APP.config();
-        let repo = open_repository(&config.repository)?;
-
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         match self.tpe.as_str() {
             // special treatment for listing blobs: read the index and display it
             "blobs" | "indexpacks" | "indexcontent" => {

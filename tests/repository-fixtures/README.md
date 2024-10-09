@@ -3,8 +3,8 @@
 This directory contains fixtures for testing the `rustic` and `restic`
 repositories.
 
-The `rustic` repository is a simple repository that is used to test the `rustic`
-library. The `restic` repository is a repository created by the `restic` backup
+The `rustic` repository is a repository that is used to test the `rustic`
+binary. The `restic` repository is a repository created by the `restic` backup
 tool.
 The latter is used to ensure that `rustic` can read and write to a repository
 created by `restic`.

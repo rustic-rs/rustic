@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        feature: [default]
+        feature: [release]
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Install Rust toolchain
@@ -48,7 +48,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
       - name: Run clippy
-        run: cargo clippy --locked --all-targets --features ${{ matrix.feature }} --features self-update -- -D warnings
+        run: cargo clippy --locked --all-targets --features ${{ matrix.feature }} -- -D warnings
 
   test:
     name: Test
@@ -56,7 +56,7 @@ jobs:
     strategy:
       matrix:
         rust: [stable]
-        feature: [default]
+        feature: [release]
         job:
           - os: macos-latest
           - os: ubuntu-latest
@@ -79,7 +79,7 @@ jobs:
           toolchain: stable
       - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
       - name: Run Cargo Test
-        run: cargo test -r --all-targets --features ${{ matrix.feature }} --features self-update --workspace
+        run: cargo test -r --all-targets --features ${{ matrix.feature }} --workspace
 
   docs:
     name: Build docs

@@ -112,7 +112,7 @@ jobs:
           sign-release: true
           hash-release: true
           use-project-version: true
-          extra-cargo-build-args: --features self-update
+          extra-cargo-build-args: --features release
 
   publish-nightly:
     if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/heads/main' }}

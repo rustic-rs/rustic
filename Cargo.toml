@@ -19,8 +19,13 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 
 [features]
 default = ["tui", "webdav"]
+release = ["default", "self-update"]
+
+# Allocators
 mimalloc = ["dep:mimalloc"]
 jemallocator = ["dep:jemallocator-global"]
+
+# Commands
 self-update = ["dep:self_update", "dep:semver"]
 tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = ["dep:dav-server", "dep:warp", "dep:tokio", "rustic_core/webdav"]

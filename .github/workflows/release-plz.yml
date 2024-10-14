@@ -22,7 +22,7 @@ jobs:
           app-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
           private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
           fetch-depth: 0
           token: ${{ steps.generate-token.outputs.token }}
@@ -30,7 +30,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
   
       - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@693f6d4e6b31911b9a153800b47ed9368bbf1bd6 # v0.5
+        uses: MarcoIeni/release-plz-action@ede2f28fa44b20604b878348dda4a27f21a434da # v0.5
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

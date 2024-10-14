@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         rust: [stable]
-        feature: [default]
+        feature: [release]
         job:
           - os: macos-latest
           - os: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
       - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
 
       - name: Run Cargo Test
-        run: cargo test -r --test repositories --features ${{ matrix.feature }} --features self-update -- test_restic_latest_repo_with_rustic_passes --exact --show-output --ignored
+        run: cargo test -r --test repositories --features ${{ matrix.feature }} -- test_restic_latest_repo_with_rustic_passes --exact --show-output --ignored
 
   result:
     name: Result (Compat)

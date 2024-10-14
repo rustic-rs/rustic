@@ -1,6 +1,6 @@
 [package]
 name = "rustic-rs"
-version = "0.9.1"
+version = "0.9.3"
 authors = ["the rustic-rs team"]
 categories = ["command-line-utilities"]
 documentation = "https://docs.rs/rustic-rs"
@@ -19,8 +19,13 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 
 [features]
 default = ["tui", "webdav"]
+release = ["default", "self-update"]
+
+# Allocators
 mimalloc = ["dep:mimalloc"]
 jemallocator = ["dep:jemallocator-global"]
+
+# Commands
 self-update = ["dep:self_update", "dep:semver"]
 tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = ["dep:dav-server", "dep:warp", "dep:tokio", "rustic_core/webdav"]
@@ -42,7 +47,7 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 [dependencies]
 abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
 rustic_backend = { version = "0.4.1", features = ["cli"] }
-rustic_core = { version = "0.5.1", features = ["cli"] }
+rustic_core = { version = "0.5.3", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }

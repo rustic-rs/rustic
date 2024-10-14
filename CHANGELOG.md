@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.3](https://github.com/rustic-rs/rustic/compare/v0.9.2...v0.9.3) - 2024-10-10
+
+### Fixed
+
+- *(deps)* update rustic_core to version 0.5.3 ([#1314](https://github.com/rustic-rs/rustic/pull/1314))
+
+### Other
+
+- add status badge for docker image build and shorten workflow name ([#1311](https://github.com/rustic-rs/rustic/pull/1311))
+
+## [0.9.2](https://github.com/rustic-rs/rustic/compare/v0.9.1...v0.9.2) - 2024-10-09
+
+### Added
+
+- *(config)* Add hooks ([#1218](https://github.com/rustic-rs/rustic/pull/1218))
+
+### Other
+
+- *(deps)* update rustic_core ([#1309](https://github.com/rustic-rs/rustic/pull/1309))
+- build and publish docker image on release ([#1297](https://github.com/rustic-rs/rustic/pull/1297))
+
 ## [0.9.1](https://github.com/rustic-rs/rustic/compare/v0.9.0...v0.9.1) - 2024-10-03
 
 ### Added

@@ -286,6 +286,8 @@ impl Configurable<RusticConfig> for EntryPoint {
             RusticCmd::Copy(cmd) => cmd.override_config(config),
             #[cfg(feature = "webdav")]
             RusticCmd::Webdav(cmd) => cmd.override_config(config),
+            #[cfg(feature = "mount")]
+            RusticCmd::Mount(cmd) => cmd.override_config(config),
 
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),

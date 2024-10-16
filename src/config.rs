@@ -19,6 +19,8 @@ use itertools::Itertools;
 use log::Level;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "mount")]
+use crate::commands::mount::MountCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 
@@ -61,6 +63,11 @@ pub struct RusticConfig {
     /// Forget options
     #[clap(skip)]
     pub forget: ForgetOptions,
+
+    #[cfg(feature = "mount")]
+    /// mount options
+    #[clap(skip)]
+    pub mount: MountCmd,
 
     #[cfg(feature = "webdav")]
     /// webdav options

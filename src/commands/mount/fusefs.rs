@@ -1,5 +1,3 @@
-use super::Vfs;
-
 #[cfg(not(windows))]
 use std::os::unix::prelude::OsStrExt;
 use std::{
@@ -12,7 +10,7 @@ use std::{
 
 use rustic_core::{
     repofile::{Node, NodeType},
-    vfs::OpenFile,
+    vfs::{OpenFile, Vfs},
     IndexedFull, Repository,
 };
 

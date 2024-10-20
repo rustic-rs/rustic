@@ -10,7 +10,7 @@ use std::{
 
 use rustic_core::{
     repofile::{Node, NodeType},
-    vfs::{OpenFile, Vfs},
+    vfs::{FilePolicy, OpenFile, Vfs},
     IndexedFull, Repository,
 };
 
@@ -25,10 +25,11 @@ pub struct FuseFS<P, S> {
     vfs: Vfs,
     open_files: RwLock<BTreeMap<u64, OpenFile>>,
     now: SystemTime,
+    file_policy: FilePolicy,
 }
 
 impl<P, S: IndexedFull> FuseFS<P, S> {
-    pub(crate) fn new(repo: Repository<P, S>, vfs: Vfs) -> Self {
+    pub(crate) fn new(repo: Repository<P, S>, vfs: Vfs, file_policy: FilePolicy) -> Self {
         let open_files = RwLock::new(BTreeMap::new());
 
         Self {
@@ -36,6 +37,7 @@ impl<P, S: IndexedFull> FuseFS<P, S> {
             vfs,
             open_files,
             now: SystemTime::now(),
+            file_policy,
         }
     }
 
@@ -128,6 +130,9 @@ impl<P, S: IndexedFull> FilesystemMT for FuseFS<P, S> {
     }
 
     fn open(&self, _req: RequestInfo, path: &Path, _flags: u32) -> ResultOpen {
+        if matches!(self.file_policy, FilePolicy::Forbidden) {
+            return Err(libc::ENOTSUP);
+        }
         let node = self.node_from_path(path)?;
         let open = self.repo.open_file(&node).map_err(|_| libc::ENOSYS)?;
         let fh = {

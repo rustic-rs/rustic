@@ -3,7 +3,7 @@
 // ignore markdown clippy lints as we use doc-comments to generate clap help texts
 #![allow(clippy::doc_markdown)]
 
-use std::{net::ToSocketAddrs, str::FromStr};
+use std::net::ToSocketAddrs;
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
@@ -124,7 +124,7 @@ impl WebDavCmd {
                     Ok(FilePolicy::Read)
                 }
             },
-            |s| FilePolicy::from_str(s),
+            |s| s.parse(),
         )?;
 
         let dav_server = DavHandler::builder()

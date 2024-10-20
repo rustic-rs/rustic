@@ -1,4 +1,8 @@
 //! `mount` subcommand
+
+// ignore markdown clippy lints as we use doc-comments to generate clap help texts
+#![allow(clippy::doc_markdown)]
+
 mod fusefs;
 use fusefs::FuseFS;
 
@@ -10,7 +14,7 @@ use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdow
 use anyhow::{anyhow, Result};
 use conflate::Merge;
 use fuse_mt::{mount, FuseMT};
-use rustic_core::vfs::{IdenticalSnapshot, Latest, Vfs};
+use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
@@ -30,6 +34,11 @@ pub struct MountCmd {
     #[clap(long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
     no_allow_other: bool,
+
+    /// How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]
+    #[clap(long)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    file_access: Option<String>,
 
     /// The mount point to use
     #[clap(value_name = "PATH")]
@@ -120,7 +129,18 @@ impl MountCmd {
             ]);
         }
 
-        let fs = FuseMT::new(FuseFS::new(repo, vfs), 1);
+        let file_access = config.mount.file_access.as_ref().map_or_else(
+            || {
+                if repo.config().is_hot == Some(true) {
+                    Ok(FilePolicy::Forbidden)
+                } else {
+                    Ok(FilePolicy::Read)
+                }
+            },
+            |s| s.parse(),
+        )?;
+
+        let fs = FuseMT::new(FuseFS::new(repo, vfs, file_access), 1);
         mount(fs, mountpoint, &options)?;
 
         Ok(())

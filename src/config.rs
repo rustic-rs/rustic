@@ -18,6 +18,8 @@ use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
 use serde::{Deserialize, Serialize};
+#[cfg(not(all(feature = "mount", feature = "webdav")))]
+use toml::Value;
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
@@ -64,15 +66,21 @@ pub struct RusticConfig {
     #[clap(skip)]
     pub forget: ForgetOptions,
 
-    #[cfg(feature = "mount")]
     /// mount options
     #[clap(skip)]
+    #[cfg(feature = "mount")]
     pub mount: MountCmd,
+    #[cfg(not(feature = "mount"))]
+    #[merge(skip)]
+    pub mount: Option<Value>,
 
-    #[cfg(feature = "webdav")]
     /// webdav options
     #[clap(skip)]
+    #[cfg(feature = "webdav")]
     pub webdav: WebDavCmd,
+    #[cfg(not(feature = "webdav"))]
+    #[merge(skip)]
+    pub webdav: Option<Value>,
 }
 
 impl RusticConfig {

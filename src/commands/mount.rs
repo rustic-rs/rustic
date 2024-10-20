@@ -36,10 +36,10 @@ pub struct MountCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     mountpoint: Option<PathBuf>,
 
-    /// Specify directly which path to mount
+    /// Specify directly which snapshot/path to mount
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     #[merge(strategy=conflate::option::overwrite_none)]
-    snapshot: Option<String>,
+    snapshot_path: Option<String>,
 }
 
 impl Override<RusticConfig> for MountCmd {
@@ -89,8 +89,8 @@ impl MountCmd {
             .unwrap_or_else(|| "%Y-%m-%d_%H-%M-%S".to_string());
 
         let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
-        let vfs = if let Some(snap) = &config.mount.snapshot {
-            let node = repo.node_from_snapshot_path(snap, sn_filter)?;
+        let vfs = if let Some(snap_path) = &config.mount.snapshot_path {
+            let node = repo.node_from_snapshot_path(snap_path, sn_filter)?;
             Vfs::from_dir_node(&node)
         } else {
             let snapshots = repo.get_matching_snapshots(sn_filter)?;

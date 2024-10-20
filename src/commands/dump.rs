@@ -6,6 +6,7 @@ use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use log::warn;
 use rustic_core::{
     repofile::{Node, NodeType},
     vfs::OpenFile,
@@ -63,7 +64,7 @@ fn dump_tar(
     ls_opts: &LsOptions,
 ) -> Result<()> {
     let mut ar = Builder::new(w);
-    for item in repo.ls(&node, ls_opts)? {
+    for item in repo.ls(node, ls_opts)? {
         let (path, node) = item?;
         let mut header = Header::new_gnu();
 
@@ -74,7 +75,13 @@ fn dump_tar(
             NodeType::Dev { .. } => EntryType::Block,
             NodeType::Chardev { .. } => EntryType::Char,
             NodeType::Fifo => EntryType::Fifo,
-            NodeType::Socket => EntryType::Block,
+            NodeType::Socket => {
+                warn!(
+                    "socket is not supported. Adding {} as empty file",
+                    path.display()
+                );
+                EntryType::Regular
+            }
         };
         header.set_entry_type(entry_type);
         header.set_size(node.meta.size);
@@ -113,7 +120,7 @@ fn dump_tar(
         if node.is_file() {
             // write file content if this is a regular file
             let open_file = OpenFileReader {
-                repo: &repo,
+                repo,
                 open_file: repo.open_file(&node)?,
                 offset: 0,
             };

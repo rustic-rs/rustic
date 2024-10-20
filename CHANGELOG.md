@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.4](https://github.com/rustic-rs/rustic/compare/v0.9.3...v0.9.4) - 2024-10-20
+
+### Fixed
+
+- clippy lints for new Rust version ([#1329](https://github.com/rustic-rs/rustic/pull/1329))
+- *(deps)* downgrade self-update to fix problems finding right target ([#1323](https://github.com/rustic-rs/rustic/pull/1323))
+
+### Other
+
+- introduce a new feature 'release' that includes the 'self-update' feature ([#1307](https://github.com/rustic-rs/rustic/pull/1307))
+
 ## [0.9.3](https://github.com/rustic-rs/rustic/compare/v0.9.2...v0.9.3) - 2024-10-10
 
 ### Fixed

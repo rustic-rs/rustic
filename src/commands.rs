@@ -117,7 +117,7 @@ enum RusticCmd {
 
     #[cfg(feature = "mount")]
     /// Mount repository
-    Mount(MountCmd),
+    Mount(Box<MountCmd>),
 
     /// List file contents of a snapshot
     Ls(Box<LsCmd>),

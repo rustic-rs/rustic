@@ -57,7 +57,7 @@ impl Override<RusticConfig> for MountCmd {
     // arguments.
     fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
         let mut self_config = self.clone();
-        // merge "webdav" section from config file, if given
+        // merge "mount" section from config file, if given
         self_config.merge(config.mount);
         config.mount = self_config;
         Ok(config)

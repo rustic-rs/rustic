@@ -45,7 +45,7 @@ all-features = true
 rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
-abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
+abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
 rustic_backend = { version = "0.4.1", features = ["cli"] }
 rustic_core = { version = "0.5.3", features = ["cli"] }
 
@@ -108,7 +108,7 @@ self_update = { version = "0.39.0", default-features = false, optional = true, f
 toml = "0.8"
 
 [dev-dependencies]
-abscissa_core = { version = "0.7.0", default-features = false, features = ["testing"] }
+abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }
 assert_cmd = "2.0.16"
 dircmp = "0.2"
 insta = { version = "1.40.0", features = ["ron"] }

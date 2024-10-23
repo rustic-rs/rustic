@@ -117,6 +117,7 @@ self_update = { version = "=0.39.0", default-features = false, optional = true, 
 tar = "0.4.43"
 toml = "0.8"
 flate2 = "1.0.34"
+zip = { version = "2.2.0", default-features = false, features = ["deflate", "chrono"] }
 
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }

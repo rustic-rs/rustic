@@ -6,6 +6,7 @@ use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use flate2::{write::GzEncoder, Compression};
 use log::warn;
 use rustic_core::{
     repofile::{Node, NodeType},
@@ -21,9 +22,25 @@ pub(crate) struct DumpCmd {
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 
-    /// Listing options
-    #[clap(flatten)]
-    ls_opts: LsOptions,
+    /// set archive format to use.
+    #[clap(long, value_name = "FORMAT", value_parser=["auto", "content", "tar", "tar.gz"], default_value = "auto")]
+    archive: String,
+
+    /// Glob pattern to exclude/include (can be specified multiple times)
+    #[clap(long, help_heading = "Exclude options")]
+    glob: Vec<String>,
+
+    /// Same as --glob pattern but ignores the casing of filenames
+    #[clap(long, value_name = "GLOB", help_heading = "Exclude options")]
+    iglob: Vec<String>,
+
+    /// Read glob patterns to exclude/include from this file (can be specified multiple times)
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
+    glob_file: Vec<String>,
+
+    /// Same as --glob-file ignores the casing of filenames in patterns
+    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
+    iglob_file: Vec<String>,
 }
 
 impl Runnable for DumpCmd {
@@ -46,15 +63,49 @@ impl DumpCmd {
         let node =
             repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
 
-        let mut stdout = std::io::stdout();
-        if node.is_file() {
-            repo.dump(&node, &mut stdout)?;
-        } else {
-            dump_tar(&repo, &node, &mut stdout, &self.ls_opts)?;
-        }
+        let stdout = std::io::stdout();
+
+        let ls_opts = LsOptions::default()
+            .glob(self.glob.clone())
+            .glob_file(self.glob_file.clone())
+            .iglob(self.iglob.clone())
+            .iglob_file(self.iglob_file.clone())
+            .recursive(true);
+
+        let mut w: Box<dyn Write> = Box::new(stdout);
+
+        match (self.archive.as_str(), node.is_file()) {
+            ("auto", true) | ("content", _) => dump_content(&repo, &node, &mut w, &ls_opts)?,
+            ("auto", false) | ("tar", _) => dump_tar(&repo, &node, &mut w, &ls_opts)?,
+            ("tar.gz", _) => dump_tar_gz(&repo, &node, &mut w, &ls_opts)?,
+            _ => {}
+        };
 
         Ok(())
     }
+}
+
+fn dump_content(
+    repo: &CliIndexedRepo,
+    node: &Node,
+    w: &mut impl Write,
+    ls_opts: &LsOptions,
+) -> Result<()> {
+    for item in repo.ls(node, ls_opts)? {
+        let (_, node) = item?;
+        repo.dump(&node, w)?;
+    }
+    Ok(())
+}
+
+fn dump_tar_gz(
+    repo: &CliIndexedRepo,
+    node: &Node,
+    w: &mut impl Write,
+    ls_opts: &LsOptions,
+) -> Result<()> {
+    let mut w = GzEncoder::new(w, Compression::default());
+    dump_tar(repo, node, &mut w, ls_opts)
 }
 
 fn dump_tar(

@@ -104,6 +104,7 @@ indicatif = "0.17"
 itertools = "0.13"
 open = "5.3.0"
 self_update = { version = "0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
+tar = "0.4.42"
 toml = "0.8"
 
 [dev-dependencies]

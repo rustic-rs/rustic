@@ -7,13 +7,15 @@
 //! You can run them with 'nextest':
 //! `cargo nextest run -E 'test(backup)'`.
 
+use std::path::PathBuf;
+
 use dircmp::Comparison;
 use tempfile::{tempdir, TempDir};
 
 use assert_cmd::Command;
 use predicates::prelude::{predicate, PredicateBooleanExt};
 
-use rustic_testing::TestResult;
+use rustic_testing::{files_differ, TestResult};
 
 pub fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     let password = "test";
@@ -100,6 +102,10 @@ fn test_backup_and_check_passes() -> TestResult<()> {
     Ok(())
 }
 
+fn fixture_test_tar() -> PathBuf {
+    ["tests", "dump-fixtures", "test.tar"].iter().collect()
+}
+
 #[test]
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;
@@ -135,6 +141,18 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
 
     // no differences
     assert!(compare_result.is_empty());
+
+    let dump_tar_file = restore_dir.join("test.tar");
+    {
+        // Run `dump`
+        rustic_runner(&temp_dir)?
+            .arg("dump")
+            .arg("latest")
+            .arg(&dump_tar_file)
+            .assert()
+            .success();
+    }
+    assert!(!files_differ(fixture_test_tar(), dump_tar_file)?);
 
     Ok(())
 }

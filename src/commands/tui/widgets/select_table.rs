@@ -87,7 +87,7 @@ impl SelectTable {
 
         self.table = Table::default()
             .header(Row::new(self.header.clone()).style(header_style))
-            .highlight_style(selected_style)
+            .row_highlight_style(selected_style)
             .bg(colors.buffer_bg)
             .widths(widths.iter().map(|w| {
                 (*w).try_into()

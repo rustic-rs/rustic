@@ -101,6 +101,7 @@ allow = [
   "Apache-2.0 WITH LLVM-exception",
   "ISC",
   "Unicode-DFS-2016",
+  "BSD-2-Clause",
   "BSD-3-Clause",
   "MPL-2.0",
   "OpenSSL",

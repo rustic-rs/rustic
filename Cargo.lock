@@ -3861,7 +3861,6 @@ dependencies = [
  "libc",
  "log",
  "mimalloc",
- "once_cell",
  "open",
  "predicates",
  "pretty_assertions",

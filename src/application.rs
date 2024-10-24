@@ -121,9 +121,7 @@ impl Application for RusticApp {
         };
         self.shutdown_with_exitcode(shutdown, exit_code)
     }
-}
 
-impl RusticApp {
     /// Shut down this application gracefully, exiting with given exit code.
     fn shutdown_with_exitcode(&self, shutdown: Shutdown, exit_code: i32) -> ! {
         let hooks = &RUSTIC_APP.config().global.hooks;

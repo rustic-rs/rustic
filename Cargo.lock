@@ -3884,9 +3884,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_backend"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7d5efc9f8d081134827cbe44b064eefad0864da4d33f37bd66147d80b57eb3e"
+checksum = "505fe0c120bb2ad90aa24192790c97a0a1fbed82b8d7c873e4fde589f5758478"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3912,15 +3912,16 @@ dependencies = [
  "strum_macros",
  "thiserror",
  "tokio",
+ "typed-path",
  "url",
  "walkdir",
 ]
 
 [[package]]
 name = "rustic_core"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11529c7b9a74297cb6c36f89d3746eb6a1112b8d309d5b25b338a9fedef0ff02"
+checksum = "3007c09f6c92835aaf7b0fbd97228d2042448974e1d7554b1a62019989a81073"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -5065,6 +5066,12 @@ dependencies = [
  "url",
  "utf-8",
 ]
+
+[[package]]
+name = "typed-path"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82205ffd44a9697e34fc145491aa47310f9871540bb7909eaa9365e0a9a46607"
 
 [[package]]
 name = "typenum"

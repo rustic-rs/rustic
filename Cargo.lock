@@ -3925,9 +3925,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_core"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3007c09f6c92835aaf7b0fbd97228d2042448974e1d7554b1a62019989a81073"
+checksum = "dbc1d8eff26bc13c3b0adffc0506b087771fcb54af25ace3ac6d5914aca84d5d"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -3983,15 +3983,14 @@ dependencies = [
 
 [[package]]
 name = "rustic_testing"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3362016d877cd9a671933b346c3b2c714115d723c0460ded7babaae483e91596"
+checksum = "a5e117dc6316011e224f871f4d3a1ee4915e4be17a63b74dde0da3249531e2dd"
 dependencies = [
  "aho-corasick",
  "anyhow",
  "bytes",
  "enum-map",
- "once_cell",
  "rustic_core",
  "tempfile",
 ]

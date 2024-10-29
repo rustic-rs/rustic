@@ -37,8 +37,8 @@ fn setup() -> TestResult<TempDir> {
         .args(["init"])
         .assert()
         .success()
-        .stderr(predicate::str::contains("successfully created."))
-        .stderr(predicate::str::contains("successfully added."));
+        .stdout(predicate::str::contains("successfully created."))
+        .stdout(predicate::str::contains("successfully added."));
 
     Ok(temp_dir)
 }
@@ -93,8 +93,8 @@ fn test_backup_and_check_passes() -> TestResult<()> {
             .args(["check", "--read-data"])
             .assert()
             .success()
-            .stderr(predicate::str::contains("WARN").not())
-            .stderr(predicate::str::contains("ERROR").not());
+            .stdout(predicate::str::contains("WARN").not())
+            .stdout(predicate::str::contains("ERROR").not());
     }
 
     Ok(())

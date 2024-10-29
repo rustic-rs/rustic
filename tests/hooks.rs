@@ -82,8 +82,8 @@ fn setup(with_backup: BackupAction) -> TestResult<TempDir> {
         .args(["init"])
         .assert()
         .success()
-        .stderr(predicate::str::contains("successfully created."))
-        .stderr(predicate::str::contains("successfully added."));
+        .stdout(predicate::str::contains("successfully created."))
+        .stdout(predicate::str::contains("successfully added."));
 
     match with_backup {
         BackupAction::WithBackup => {

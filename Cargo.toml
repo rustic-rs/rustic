@@ -46,8 +46,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.4.2", features = ["cli"] }
-rustic_core = { version = "0.5.5", features = ["cli"] }
+rustic_backend = { git = "https://github.com/rustic-rs/rustic_core", package = "rustic_backend", branch = "feat/tracing-logging", version = "0.4.2", features = ["cli"] }
+rustic_core = { git = "https://github.com/rustic-rs/rustic_core", package = "rustic_core", branch = "feat/tracing-logging", version = "0.5.5", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -62,9 +62,6 @@ warp = { version = "0.3.7", optional = true }
 crossterm = { version = "0.28", optional = true }
 ratatui = { version = "0.29.0", optional = true }
 tui-textarea = { version = "0.7.0", optional = true }
-
-# logging
-log = "0.4"
 
 # errors
 anyhow = "1"
@@ -83,7 +80,6 @@ comfy-table = "7"
 rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 scopeguard = "1"
 semver = { version = "1", optional = true }
-simplelog = "0.12"
 
 # commands
 bytesize = "1"
@@ -106,6 +102,7 @@ open = "5.3.0"
 self_update = { version = "0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.42"
 toml = "0.8"
+canonical-path = "2.0.2"
 
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }

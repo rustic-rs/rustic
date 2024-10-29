@@ -2,9 +2,8 @@
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{tracing::debug, Command, Runnable, Shutdown};
 use clap::ValueHint;
-use log::debug;
 
 use std::{
     fmt::Display,

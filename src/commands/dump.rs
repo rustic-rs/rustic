@@ -4,9 +4,8 @@ use std::io::{Read, Write};
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{tracing::warn, Command, Runnable, Shutdown};
 use anyhow::Result;
-use log::warn;
 use rustic_core::{
     repofile::{Node, NodeType},
     vfs::OpenFile,

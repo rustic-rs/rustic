@@ -4,11 +4,12 @@ use std::{env, process};
 use abscissa_core::{
     application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
-    terminal::component::Terminal,
-    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
+    path::{AbsPath, AbsPathBuf, ExePath, RootPath, SecretsPath},
+    trace::{self},
+    Application, FrameworkError, FrameworkErrorKind, Shutdown,
 };
-
 use anyhow::Result;
+use directories::ProjectDirs;
 
 // use crate::helpers::*;
 use crate::{commands::EntryPoint, config::RusticConfig};
@@ -22,8 +23,10 @@ pub mod constants {
     pub const RUSTIC_DEV_DOCS_URL: &str = "https://rustic.cli.rs/dev-docs";
     pub const RUSTIC_CONFIG_DOCS_URL: &str =
         "https://github.com/rustic-rs/rustic/blob/main/config/README.md";
+    /// Name of the application's secrets directory
+    pub(crate) const SECRETS_DIR: &str = "secrets";
+    pub(crate) const LOGS_DIR: &str = "logs";
 }
-
 /// Rustic Application
 #[derive(Debug)]
 pub struct RusticApp {
@@ -32,6 +35,78 @@ pub struct RusticApp {
 
     /// Application state.
     state: application::State<Self>,
+}
+
+#[derive(Clone, Debug)]
+pub struct RusticPaths {
+    /// Path to the application's executable.
+    exe: AbsPathBuf,
+
+    /// Path to the application's root directory
+    root: AbsPathBuf,
+
+    /// Path to the application's secrets
+    secrets: AbsPathBuf,
+
+    /// Path to the application's cache directory
+    cache: AbsPathBuf,
+
+    /// Path to the application's log directory
+    logs: AbsPathBuf,
+
+    /// Path to the application's configuration directory
+    config: AbsPathBuf,
+}
+
+impl ExePath for RusticPaths {
+    fn exe(&self) -> &AbsPath {
+        self.exe.as_ref()
+    }
+}
+
+impl RootPath for RusticPaths {
+    fn root(&self) -> &AbsPath {
+        self.root.as_ref()
+    }
+}
+
+impl SecretsPath for RusticPaths {
+    fn secrets(&self) -> &AbsPath {
+        self.secrets.as_ref()
+    }
+}
+
+impl RusticPaths {
+    fn from_project_dirs() -> Result<Self, FrameworkError> {
+        let project_dirs = ProjectDirs::from("", "", "rustic").ok_or_else(|| {
+            FrameworkErrorKind::PathError {
+                name: Some("project_dirs".into()),
+            }
+            .context("failed to determine project directories")
+        })?;
+
+        let exe = canonical_path::current_exe()?;
+        let root = canonical_path::CanonicalPathBuf::new(project_dirs.data_dir())?;
+        let secrets = root.join(constants::SECRETS_DIR)?;
+        let logs = root.join(constants::LOGS_DIR)?;
+        let config = canonical_path::CanonicalPathBuf::new(project_dirs.config_dir())?;
+        let cache = canonical_path::CanonicalPathBuf::new(project_dirs.cache_dir())?;
+
+        Ok(Self {
+            exe,
+            root,
+            secrets,
+            logs,
+            cache,
+            config,
+        })
+    }
+}
+
+impl Default for RusticPaths {
+    fn default() -> Self {
+        Self::from_project_dirs().expect("failed to determine project directories")
+    }
 }
 
 /// Initialize a new application instance.
@@ -55,7 +130,7 @@ impl Application for RusticApp {
     type Cfg = RusticConfig;
 
     /// Paths to resources within the application.
-    type Paths = StandardPaths;
+    type Paths = RusticPaths;
 
     /// Accessor for application configuration.
     fn config(&self) -> config::Reader<RusticConfig> {
@@ -65,17 +140,6 @@ impl Application for RusticApp {
     /// Borrow the application state immutably.
     fn state(&self) -> &application::State<Self> {
         &self.state
-    }
-
-    /// Returns the framework components used by this application.
-    fn framework_components(
-        &mut self,
-        command: &Self::Cmd,
-    ) -> Result<Vec<Box<dyn Component<Self>>>, FrameworkError> {
-        // we only ue the terminal component
-        let terminal = Terminal::new(self.term_colors(command));
-
-        Ok(vec![Box::new(terminal)])
     }
 
     /// Register all components used by this application.
@@ -136,5 +200,21 @@ impl Application for RusticApp {
         }
 
         process::exit(exit_code);
+    }
+
+    /// Get tracing configuration from command-line options
+    fn tracing_config(&self, command: &EntryPoint) -> trace::Config {
+        if command.verbose {
+            trace::Config::verbose()
+        } else {
+            command
+                .config
+                .global
+                .log_level
+                .as_ref()
+                .map_or_else(trace::Config::default, |level| {
+                    trace::Config::from(level.to_owned())
+                })
+        }
     }
 }

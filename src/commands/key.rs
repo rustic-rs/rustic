@@ -4,10 +4,9 @@ use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
 
 use std::path::PathBuf;
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{tracing::info, Command, Runnable, Shutdown};
 use anyhow::Result;
 use dialoguer::Password;
-use log::info;
 
 use rustic_core::{CommandInput, KeyOptions, RepositoryOptions};
 

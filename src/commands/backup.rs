@@ -10,12 +10,14 @@ use crate::{
     status_err, Application, RUSTIC_APP,
 };
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{
+    tracing::{debug, error, info, warn},
+    Command, Runnable, Shutdown,
+};
 use anyhow::{anyhow, bail, Context, Result};
 use clap::ValueHint;
 use comfy_table::Cell;
 use conflate::Merge;
-use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 

@@ -4,9 +4,8 @@ use crate::{
     helpers::bytes_size_to_string, repository::CliIndexedRepo, status_err, Application, RUSTIC_APP,
 };
 
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{tracing::info, Command, Runnable, Shutdown};
 use anyhow::Result;
-use log::info;
 
 use rustic_core::{LocalDestination, LsOptions, RestoreOptions};
 

@@ -2745,15 +2745,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num_threads"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "number_prefix"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3836,6 +3827,7 @@ dependencies = [
  "assert_cmd",
  "bytesize",
  "cached",
+ "canonical-path",
  "chrono",
  "clap",
  "clap_complete",
@@ -3859,7 +3851,6 @@ dependencies = [
  "itertools",
  "jemallocator-global",
  "libc",
- "log",
  "mimalloc",
  "open",
  "predicates",
@@ -3870,7 +3861,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.5.5 (git+https://github.com/rustic-rs/rustic_core?branch=feat/tracing-logging)",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -3878,7 +3869,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "simplelog",
  "tar",
  "tempfile",
  "thiserror",
@@ -3891,8 +3881,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "505fe0c120bb2ad90aa24192790c97a0a1fbed82b8d7c873e4fde589f5758478"
+source = "git+https://github.com/rustic-rs/rustic_core?branch=feat/tracing-logging#350eed0a572f039d1715cc59c957e12b3196fe67"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3906,18 +3895,18 @@ dependencies = [
  "hex",
  "humantime",
  "itertools",
- "log",
  "opendal",
  "rand",
  "rayon",
  "reqwest 0.12.8",
- "rustic_core",
+ "rustic_core 0.5.5 (git+https://github.com/rustic-rs/rustic_core?branch=feat/tracing-logging)",
  "semver",
  "serde",
  "strum",
  "strum_macros",
  "thiserror",
  "tokio",
+ "tracing",
  "typed-path",
  "url",
  "walkdir",
@@ -3937,10 +3926,7 @@ dependencies = [
  "cached",
  "cachedir",
  "chrono",
- "clap",
- "conflate",
  "crossbeam-channel",
- "dav-server",
  "derivative",
  "derive_more",
  "derive_setters",
@@ -3951,7 +3937,6 @@ dependencies = [
  "enum-map-derive",
  "enumset",
  "filetime",
- "futures",
  "gethostname",
  "hex",
  "humantime",
@@ -3982,6 +3967,63 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustic_core"
+version = "0.5.5"
+source = "git+https://github.com/rustic-rs/rustic_core?branch=feat/tracing-logging#350eed0a572f039d1715cc59c957e12b3196fe67"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "anyhow",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "chrono",
+ "clap",
+ "conflate",
+ "crossbeam-channel",
+ "dav-server",
+ "derivative",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "enum-map",
+ "enum-map-derive",
+ "enumset",
+ "filetime",
+ "futures",
+ "gethostname",
+ "hex",
+ "humantime",
+ "ignore",
+ "integer-sqrt",
+ "itertools",
+ "nix",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand",
+ "rayon",
+ "runtime-format",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "shell-words",
+ "strum",
+ "thiserror",
+ "tracing",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
 name = "rustic_testing"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3991,7 +4033,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "enum-map",
- "rustic_core",
+ "rustic_core 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
 ]
 
@@ -4452,17 +4494,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simplelog"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16257adbfaef1ee58b1363bdc0664c9b8e1e30aed86049635fb5f147d065a9c0"
-dependencies = [
- "log",
- "termcolor",
- "time",
-]
-
-[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4783,9 +4814,7 @@ checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",
- "libc",
  "num-conv",
- "num_threads",
  "powerfmt",
  "serde",
  "time-core",

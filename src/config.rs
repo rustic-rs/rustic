@@ -10,13 +10,12 @@ pub(crate) mod progress_options;
 use std::fmt::Debug;
 use std::{collections::HashMap, path::PathBuf};
 
-use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
+use abscissa_core::{config::Config, path::AbsPathBuf, tracing::log::Level, FrameworkError};
 use anyhow::Result;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
-use log::Level;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "webdav")]
@@ -174,7 +173,7 @@ pub struct GlobalOptions {
 /// # Returns
 ///
 /// A vector of [`PathBuf`]s to the config files
-fn get_config_paths(filename: &str) -> Vec<PathBuf> {
+pub(crate) fn get_config_paths(filename: &str) -> Vec<PathBuf> {
     [
         ProjectDirs::from("", "", "rustic")
             .map(|project_dirs| project_dirs.config_dir().to_path_buf()),

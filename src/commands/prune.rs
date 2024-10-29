@@ -3,8 +3,7 @@
 use crate::{
     helpers::bytes_size_to_string, repository::CliOpenRepo, status_err, Application, RUSTIC_APP,
 };
-use abscissa_core::{Command, Runnable, Shutdown};
-use log::debug;
+use abscissa_core::{tracing::debug, Command, Runnable, Shutdown};
 
 use anyhow::Result;
 

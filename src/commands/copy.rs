@@ -6,10 +6,16 @@ use crate::{
     repository::{CliIndexedRepo, CliRepo},
     status_err, Application, RusticConfig, RUSTIC_APP,
 };
-use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
+use abscissa_core::{
+    config::Override,
+    tracing::{
+        error, info,
+        log::{log, Level},
+    },
+    Command, FrameworkError, Runnable, Shutdown,
+};
 use anyhow::{bail, Result};
 use conflate::Merge;
-use log::{error, info, log, Level};
 use serde::{Deserialize, Serialize};
 
 use rustic_core::{repofile::SnapshotFile, CopySnapshot, Id, KeyOptions};

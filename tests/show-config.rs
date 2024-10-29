@@ -10,15 +10,11 @@
 //     unused_qualifications
 // )]
 
-use std::{
-    io::{Read, Write},
-    path::PathBuf,
-    sync::LazyLock,
-};
+use std::{io::Read, sync::LazyLock};
 
 use abscissa_core::testing::prelude::*;
 
-use rustic_testing::{files_differ, get_temp_file, TestResult};
+use rustic_testing::TestResult;
 
 // Storing this value as a [`Lazy`] static ensures that all instances of
 // the runner acquire a mutex when executing commands and inspecting
@@ -34,32 +30,19 @@ fn cmd_runner() -> CmdRunner {
     LAZY_RUNNER.clone()
 }
 
-fn fixture() -> PathBuf {
-    ["tests", "show-config-fixtures", "empty.txt"]
-        .iter()
-        .collect()
-}
-
 #[test]
 fn test_show_config_passes() -> TestResult<()> {
-    let fixture_file = fixture();
-    let mut file = get_temp_file()?;
+    let mut output = String::new();
 
     {
-        let file = file.as_file_mut();
-        let mut runner = cmd_runner();
-        let mut cmd = runner.args(["show-config"]).run();
-
-        let mut output = String::new();
-        cmd.stdout().read_to_string(&mut output)?;
-        file.write_all(output.as_bytes())?;
-        file.sync_all()?;
-        cmd.wait()?.expect_success();
+        _ = cmd_runner()
+            .args(["show-config"])
+            .run()
+            .stdout()
+            .read_to_string(&mut output)?;
     }
 
-    if files_differ(fixture_file, file.path())? {
-        panic!("generated empty.txt differs, breaking change!");
-    }
+    insta::assert_snapshot!(output);
 
     Ok(())
 }

@@ -5,8 +5,9 @@ use abscissa_core::{
     application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
     path::{AbsPath, AbsPathBuf, ExePath, RootPath, SecretsPath},
-    trace::{self},
-    Application, FrameworkError, FrameworkErrorKind, Shutdown,
+    terminal::component::Terminal,
+    trace::{self, Tracing},
+    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown,
 };
 use anyhow::Result;
 use directories::ProjectDirs;
@@ -140,6 +141,19 @@ impl Application for RusticApp {
     /// Borrow the application state immutably.
     fn state(&self) -> &application::State<Self> {
         &self.state
+    }
+
+    /// Initialize the framework's default set of components, potentially
+    /// sourcing terminal and tracing options from command line arguments.
+    fn framework_components(
+        &mut self,
+        command: &Self::Cmd,
+    ) -> Result<Vec<Box<dyn Component<Self>>>, FrameworkError> {
+        let terminal = Terminal::new(self.term_colors(command));
+        let tracing = Tracing::new(self.tracing_config(command), self.term_colors(command))
+            .expect("tracing subsystem failed to initialize");
+
+        Ok(vec![Box::new(terminal), Box::new(tracing)])
     }
 
     /// Register all components used by this application.

@@ -10,10 +10,9 @@ pub(crate) mod progress_options;
 use std::fmt::Debug;
 use std::{collections::HashMap, path::PathBuf};
 
-use abscissa_core::{
-    config::Config, path::AbsPathBuf, tracing::log::Level, Application, FrameworkError,
-};
+use abscissa_core::{config::Config, path::AbsPathBuf, tracing::log::Level, FrameworkError};
 use anyhow::Result;
+use canonical_path::CanonicalPathBuf;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use itertools::Itertools;
@@ -27,7 +26,6 @@ use crate::{
     config::{hooks::Hooks, progress_options::ProgressOptions},
     filtering::SnapshotFilter,
     repository::AllRepositoryOptions,
-    RUSTIC_APP,
 };
 
 /// Rustic Configuration
@@ -83,20 +81,31 @@ impl RusticConfig {
         profile: &str,
         merge_logs: &mut Vec<(Level, String)>,
         level_missing: Level,
+        paths: &[CanonicalPathBuf],
     ) -> Result<(), FrameworkError> {
-        let profile_filename = profile.to_string() + ".toml";
-        let paths = get_config_paths(&profile_filename);
+        let paths_with_filenames: Vec<PathBuf> = paths
+            .iter()
+            .map(|path| {
+                let mut path = (*path).clone().into_path_buf();
+                path.push(profile.to_string() + ".toml");
+                path
+            })
+            .collect();
 
-        if let Some(path) = paths.iter().find(|path| path.exists()) {
+        if let Some(path) = paths_with_filenames.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
+
             let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profiles.clone() {
-                config.merge_profile(profile, merge_logs, Level::Warn)?;
+                config.merge_profile(profile, merge_logs, Level::Warn, paths)?;
             }
             self.merge(config);
         } else {
-            let paths_string = paths.iter().map(|path| path.display()).join(", ");
+            let paths_string = paths_with_filenames
+                .iter()
+                .map(|path| path.display())
+                .join(", ");
             merge_logs.push((
                 level_missing,
                 format!(
@@ -164,29 +173,6 @@ pub struct GlobalOptions {
     #[clap(skip)]
     #[merge(strategy = conflate::hashmap::ignore)]
     pub env: HashMap<String, String>,
-}
-
-/// Get the paths to the config file
-///
-/// # Arguments
-///
-/// * `filename` - name of the config file
-///
-/// # Returns
-///
-/// A vector of [`PathBuf`]s to the config files
-pub(crate) fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    RUSTIC_APP
-        .state()
-        .paths()
-        .configs()
-        .iter()
-        .map(|path| {
-            let mut path = path.clone().into_path_buf();
-            path.push(filename);
-            path
-        })
-        .collect()
 }
 
 /// Get the path to the global config directory on Windows.

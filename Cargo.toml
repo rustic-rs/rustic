@@ -90,6 +90,7 @@ clap_complete = "4"
 conflate = "0.2"
 convert_case = "0.6.0"
 dateparser = "0.2.1"
+derive-getters = { version = "0.5.0", features = ["auto_copy_getters"] }
 derive_more = { version = "1", features = ["debug"] }
 dialoguer = "0.11.0"
 directories = "5"
@@ -103,7 +104,6 @@ open = "5.3.0"
 self_update = { version = "0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.42"
 toml = "0.8"
-derive-getters = { version = "0.5.0", features = ["auto_copy_getters"] }
 
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }

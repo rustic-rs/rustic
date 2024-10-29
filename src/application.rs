@@ -204,8 +204,8 @@ impl Application for RusticApp {
         // application configuration is processed
         self.register_components(command)?;
 
-        // Load default configuration
-        let config = RusticConfig::default();
+        // Load configuration
+        let config = command.config.clone();
 
         // Fire callback regardless of whether any config was loaded to
         // in order to signal state in the application lifecycle

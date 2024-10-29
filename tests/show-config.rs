@@ -42,6 +42,9 @@ fn test_show_config_passes() -> TestResult<()> {
             .read_to_string(&mut output)?;
     }
 
+    // remove the first three lines of the output
+    output = output.lines().skip(3).collect::<Vec<&str>>().join("\n");
+
     insta::assert_snapshot!(output);
 
     Ok(())

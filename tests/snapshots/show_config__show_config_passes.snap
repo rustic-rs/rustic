@@ -2,9 +2,6 @@
 source: tests/show-config.rs
 expression: output
 ---
-[2m2024-10-29T23:35:19.893418Z[0m [34mDEBUG[0m [2mabscissa_core::component::registry[0m[2m:[0m registered component: abscissa_core::terminal::component::Terminal (v0.8.1)
-[2m2024-10-29T23:35:19.893460Z[0m [34mDEBUG[0m [2mabscissa_core::component::registry[0m[2m:[0m registered component: abscissa_core::trace::component::Tracing (v0.8.1)
-[2m2024-10-29T23:35:19.893687Z[0m [32m INFO[0m [2mrustic_rs::commands[0m[2m:[0m using no config file, none of these exist: \\?\C:\Users\dailyuse\AppData\Roaming\rustic\config\rustic.toml, \\?\C:\ProgramData\rustic\config\rustic.toml, \\?\P:\PARA\Personal\2 Areas\Bildung_und_Entwicklung\Hobbys_und_Interessen\Developer\Maintenance\rustic\rustic\rustic.toml    
 [global]
 use-profiles = []
 dry-run = false

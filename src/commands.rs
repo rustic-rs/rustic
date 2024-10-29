@@ -34,6 +34,7 @@ use std::fmt::Debug;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
+    application::RusticPaths,
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
@@ -161,6 +162,10 @@ pub struct EntryPoint {
     /// Enable verbose logging
     #[arg(short, long)]
     pub verbose: bool,
+
+    /// Paths used by the application
+    #[clap(skip)]
+    pub paths: RusticPaths,
 }
 
 impl Runnable for EntryPoint {

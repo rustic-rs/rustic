@@ -10,11 +10,12 @@ pub(crate) mod progress_options;
 use std::fmt::Debug;
 use std::{collections::HashMap, path::PathBuf};
 
-use abscissa_core::{config::Config, path::AbsPathBuf, tracing::log::Level, FrameworkError};
+use abscissa_core::{
+    config::Config, path::AbsPathBuf, tracing::log::Level, Application, FrameworkError,
+};
 use anyhow::Result;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
-use directories::ProjectDirs;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +27,7 @@ use crate::{
     config::{hooks::Hooks, progress_options::ProgressOptions},
     filtering::SnapshotFilter,
     repository::AllRepositoryOptions,
+    RUSTIC_APP,
 };
 
 /// Rustic Configuration
@@ -174,20 +176,17 @@ pub struct GlobalOptions {
 ///
 /// A vector of [`PathBuf`]s to the config files
 pub(crate) fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    [
-        ProjectDirs::from("", "", "rustic")
-            .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
-        get_global_config_path(),
-        Some(PathBuf::from(".")),
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        path.map(|mut p| {
-            p.push(filename);
-            p
+    RUSTIC_APP
+        .state()
+        .paths()
+        .configs()
+        .iter()
+        .map(|path| {
+            let mut path = path.clone().into_path_buf();
+            path.push(filename);
+            path
         })
-    })
-    .collect()
+        .collect()
 }
 
 /// Get the path to the global config directory on Windows.
@@ -197,7 +196,7 @@ pub(crate) fn get_config_paths(filename: &str) -> Vec<PathBuf> {
 /// The path to the global config directory on Windows.
 /// If the environment variable `PROGRAMDATA` is not set, `None` is returned.
 #[cfg(target_os = "windows")]
-fn get_global_config_path() -> Option<PathBuf> {
+pub(crate) fn get_global_config_path() -> Option<PathBuf> {
     std::env::var_os("PROGRAMDATA").map(|program_data| {
         let mut path = PathBuf::from(program_data);
         path.push(r"rustic\config");
@@ -211,7 +210,7 @@ fn get_global_config_path() -> Option<PathBuf> {
 ///
 /// `None` is returned.
 #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
-fn get_global_config_path() -> Option<PathBuf> {
+pub(crate) fn get_global_config_path() -> Option<PathBuf> {
     None
 }
 
@@ -222,6 +221,6 @@ fn get_global_config_path() -> Option<PathBuf> {
 ///
 /// "/etc/rustic" is returned.
 #[cfg(not(any(target_os = "windows", target_os = "ios", target_arch = "wasm32")))]
-fn get_global_config_path() -> Option<PathBuf> {
+pub(crate) fn get_global_config_path() -> Option<PathBuf> {
     Some(PathBuf::from("/etc/rustic"))
 }

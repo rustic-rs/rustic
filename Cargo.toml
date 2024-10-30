@@ -1,6 +1,6 @@
 [package]
 name = "rustic-rs"
-version = "0.9.3"
+version = "0.9.4"
 authors = ["the rustic-rs team"]
 categories = ["command-line-utilities"]
 documentation = "https://docs.rs/rustic-rs"
@@ -12,7 +12,7 @@ license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/rustic-rs/rustic"
 resolver = "2"
-rust-version = "1.76.0"
+rust-version = "1.80.0"
 description = """
 rustic - fast, encrypted, deduplicated backups powered by Rust
 """
@@ -46,9 +46,9 @@ all-features = true
 rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
-abscissa_core = { version = "0.7.0", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.4.1", features = ["cli"] }
-rustic_core = { version = "0.5.3", features = ["cli"] }
+abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
+rustic_backend = { version = "0.4.2", features = ["cli"] }
+rustic_core = { version = "0.5.5", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -61,8 +61,8 @@ warp = { version = "0.3.7", optional = true }
 
 # tui
 crossterm = { version = "0.28", optional = true }
-ratatui = { version = "0.28.1", optional = true }
-tui-textarea = { version = "0.6.1", optional = true }
+ratatui = { version = "0.29.0", optional = true }
+tui-textarea = { version = "0.7.0", optional = true }
 
 # logging
 log = "0.4"
@@ -75,14 +75,14 @@ thiserror = "1"
 # serialization
 serde = { version = "1", features = ["serde_derive"] }
 serde_json = "1"
-serde_with = { version = "3.10", features = ["base64"] }
+serde_with = { version = "3", features = ["base64"] }
 
 # other dependencies
-aho-corasick = "1.1.3"
+aho-corasick = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
-comfy-table = "7.1.1"
-rhai = { version = "1.19", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
-scopeguard = "1.2"
+comfy-table = "7"
+rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
+scopeguard = "1"
 semver = { version = "1", optional = true }
 simplelog = "0.12"
 
@@ -94,23 +94,23 @@ clap_complete = "4"
 conflate = "0.2"
 convert_case = "0.6.0"
 dateparser = "0.2.1"
-derive_more = { version = "1.0.0", features = ["debug"] }
+derive_more = { version = "1", features = ["debug"] }
 dialoguer = "0.11.0"
 directories = "5"
 fuse_mt = { version = "0.6", optional = true }
 gethostname = "0.5"
 globset = "0.4.15"
-human-panic = "2.0.1"
+human-panic = "2"
 humantime = "2"
 indicatif = "0.17"
 itertools = "0.13"
-once_cell = "1.20"
 open = "5.3.0"
 self_update = { version = "0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
+tar = "0.4.42"
 toml = "0.8"
 
 [dev-dependencies]
-abscissa_core = { version = "0.7.0", default-features = false, features = ["testing"] }
+abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }
 assert_cmd = "2.0.16"
 dircmp = "0.2"
 insta = { version = "1.40.0", features = ["ron"] }
@@ -119,7 +119,7 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.23"
-rustic_testing = "0.2.2"
+rustic_testing = "0.2.3"
 tempfile = "3.13"
 toml = "0.8"
 

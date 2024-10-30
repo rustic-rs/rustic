@@ -4,9 +4,9 @@ version = 3
 
 [[package]]
 name = "abscissa_core"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8346a52bf3fb445d5949d144c37360ad2f1d7950cfcc6d4e9e4999b1cd1bd42a"
+checksum = "de5df09bc18cb069dec8524aff811cbe9d7bf5f4b78ef739ef125a37b9d3f044"
 dependencies = [
  "abscissa_derive",
  "arc-swap",
@@ -21,18 +21,18 @@ dependencies = [
  "semver",
  "serde",
  "termcolor",
- "toml 0.5.11",
+ "toml",
  "tracing",
- "tracing-log 0.1.4",
+ "tracing-log",
  "tracing-subscriber",
  "wait-timeout",
 ]
 
 [[package]]
 name = "abscissa_derive"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55bfb86e57d13c06e482c570826ddcddcc8f07fab916760e8911141d4fda8b62"
+checksum = "e04c7df69b2c6b9b6dba8422d1295e58ac4bcfc7c9e7e7d4c55a38aaff2ad92a"
 dependencies = [
  "ident_case",
  "proc-macro2",
@@ -775,7 +775,7 @@ dependencies = [
  "crossterm 0.27.0",
  "strum",
  "strum_macros",
- "unicode-width",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -843,7 +843,7 @@ dependencies = [
  "encode_unicode",
  "lazy_static",
  "libc",
- "unicode-width",
+ "unicode-width 0.1.14",
  "windows-sys 0.52.0",
 ]
 
@@ -2041,7 +2041,7 @@ dependencies = [
  "os_info",
  "serde",
  "serde_derive",
- "toml 0.8.19",
+ "toml",
  "uuid",
 ]
 
@@ -2239,8 +2239,14 @@ dependencies = [
  "instant",
  "number_prefix",
  "portable-atomic",
- "unicode-width",
+ "unicode-width 0.1.14",
 ]
+
+[[package]]
+name = "indoc"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
 
 [[package]]
 name = "inout"
@@ -3474,23 +3480,23 @@ dependencies = [
 
 [[package]]
 name = "ratatui"
-version = "0.28.1"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdef7f9be5c0122f890d58bdf4d964349ba6a6161f705907526d891efabba57d"
+checksum = "eabd94c2f37801c20583fc49dd5cd6b0ba68c716787c2dd6ed18571e1e63117b"
 dependencies = [
  "bitflags 2.6.0",
  "cassowary",
  "compact_str",
  "crossterm 0.28.1",
+ "indoc",
  "instability",
  "itertools",
  "lru",
  "paste",
  "strum",
- "strum_macros",
  "unicode-segmentation",
  "unicode-truncate",
- "unicode-width",
+ "unicode-width 0.2.0",
 ]
 
 [[package]]
@@ -3859,7 +3865,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.9.3"
+version = "0.9.4"
 dependencies = [
  "abscissa_core",
  "aho-corasick",
@@ -3893,7 +3899,6 @@ dependencies = [
  "libc",
  "log",
  "mimalloc",
- "once_cell",
  "open",
  "predicates",
  "pretty_assertions",
@@ -3912,19 +3917,20 @@ dependencies = [
  "serde_json",
  "serde_with",
  "simplelog",
+ "tar",
  "tempfile",
  "thiserror",
  "tokio",
- "toml 0.8.19",
+ "toml",
  "tui-textarea",
  "warp",
 ]
 
 [[package]]
 name = "rustic_backend"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7d5efc9f8d081134827cbe44b064eefad0864da4d33f37bd66147d80b57eb3e"
+checksum = "505fe0c120bb2ad90aa24192790c97a0a1fbed82b8d7c873e4fde589f5758478"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3950,15 +3956,16 @@ dependencies = [
  "strum_macros",
  "thiserror",
  "tokio",
+ "typed-path",
  "url",
  "walkdir",
 ]
 
 [[package]]
 name = "rustic_core"
-version = "0.5.3"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11529c7b9a74297cb6c36f89d3746eb6a1112b8d309d5b25b338a9fedef0ff02"
+checksum = "dbc1d8eff26bc13c3b0adffc0506b087771fcb54af25ace3ac6d5914aca84d5d"
 dependencies = [
  "aes256ctr_poly1305aes",
  "anyhow",
@@ -4014,15 +4021,14 @@ dependencies = [
 
 [[package]]
 name = "rustic_testing"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3362016d877cd9a671933b346c3b2c714115d723c0460ded7babaae483e91596"
+checksum = "a5e117dc6316011e224f871f4d3a1ee4915e4be17a63b74dde0da3249531e2dd"
 dependencies = [
  "aho-corasick",
  "anyhow",
  "bytes",
  "enum-map",
- "once_cell",
  "rustic_core",
  "tempfile",
 ]
@@ -4198,9 +4204,9 @@ dependencies = [
 
 [[package]]
 name = "secrecy"
-version = "0.8.0"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
+checksum = "e891af845473308773346dc847b2c23ee78fe442e0472ac50e22a18a93d3ae5a"
 dependencies = [
  "serde",
  "zeroize",
@@ -4960,15 +4966,6 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "toml"
 version = "0.8.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1ed1f98e3fdc28d6d910e6737ae6ab1a93bf1985935a1193e68f93eeb68d24e"
@@ -5042,17 +5039,6 @@ dependencies = [
 
 [[package]]
 name = "tracing-log"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f751112709b4e791d8ce53e32c4ed2d353565a795ce84da2285393f41557bdf2"
-dependencies = [
- "log",
- "once_cell",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-log"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
@@ -5077,7 +5063,7 @@ dependencies = [
  "thread_local",
  "tracing",
  "tracing-core",
- "tracing-log 0.2.0",
+ "tracing-log",
 ]
 
 [[package]]
@@ -5105,13 +5091,13 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tui-textarea"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29c07084342a575cea919eea996b9658a358c800b03d435df581c1d7c60e065a"
+checksum = "0a5318dd619ed73c52a9417ad19046724effc1287fb75cdcc4eca1d6ac1acbae"
 dependencies = [
  "crossterm 0.28.1",
  "ratatui",
- "unicode-width",
+ "unicode-width 0.2.0",
 ]
 
 [[package]]
@@ -5132,6 +5118,12 @@ dependencies = [
  "url",
  "utf-8",
 ]
+
+[[package]]
+name = "typed-path"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82205ffd44a9697e34fc145491aa47310f9871540bb7909eaa9365e0a9a46607"
 
 [[package]]
 name = "typenum"
@@ -5183,7 +5175,7 @@ checksum = "b3644627a5af5fa321c95b9b235a72fd24cd29c648c2c379431e6628655627bf"
 dependencies = [
  "itertools",
  "unicode-segmentation",
- "unicode-width",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -5191,6 +5183,12 @@ name = "unicode-width"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
+
+[[package]]
+name = "unicode-width"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 
 [[package]]
 name = "unicode-xid"

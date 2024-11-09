@@ -1,0 +1,29 @@
+# Documentation: https://github.com/cross-rs/cross/blob/4090beca3cfffa44371a5bba524de3a578aa46c3/docs/config_file.md
+
+# [build]
+# NOTE: $CROSS_DEB_ARCH is automatically provided by cross
+# pre-build = [                                  # additional commands to run prior to building the package
+#     "dpkg --add-architecture $CROSS_DEB_ARCH",
+#     "apt-get update && apt-get --assume-yes install libssl-dev:$CROSS_DEB_ARCH"
+# ]
+
+[target.x86_64-pc-windows-gnu]
+image = "rustembedded/cross:x86_64-pc-windows-gnu"
+# additional commands to run prior to building the target package, can also be a list of commands, see above
+# scripts will be invoked with RUN `./pre-build-script $CROSS_TARGET`
+# pre-build = "./scripts/my-script.sh"
+
+[target.i686-pc-windows-gnu]
+image = "rustembedded/cross:i686-pc-windows-gnu"
+
+[target.x86_64-apple-darwin]
+image = "ghcr.io/cross-rs/x86_64-apple-darwin:main"
+
+[target.aarch64-apple-darwin]
+image = "ghcr.io/cross-rs/aarch64-apple-darwin:main"
+
+[target.x86_64-unknown-linux-gnu]
+image = "rustembedded/cross:x86_64-unknown-linux-gnu"
+
+[target.i686-unknown-linux-gnu]
+image = "rustembedded/cross:i686-unknown-linux-gnu"

@@ -42,7 +42,7 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: macos-latest
+          - os: macos-latest-large
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64

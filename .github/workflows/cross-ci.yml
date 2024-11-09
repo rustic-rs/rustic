@@ -49,7 +49,7 @@ jobs:
             os-name: macos
             target: aarch64-apple-darwin
             architecture: arm64
-            use-cross: true
+            use-cross: false
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-gnu

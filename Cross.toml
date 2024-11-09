@@ -19,8 +19,8 @@ image = "rustembedded/cross:i686-pc-windows-gnu"
 [target.x86_64-apple-darwin]
 image = "ghcr.io/cross-rs/x86_64-apple-darwin:main"
 
-[target.aarch64-apple-darwin]
-image = "ghcr.io/cross-rs/aarch64-apple-darwin-cross:main"
+# [target.aarch64-apple-darwin]
+# image = "ghcr.io/cross-rs/aarch64-apple-darwin:main"
 
 [target.i686-unknown-linux-gnu]
 image = "rustembedded/cross:i686-unknown-linux-gnu"

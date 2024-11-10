@@ -36,48 +36,56 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
+            extra-features: false
           - os: windows-latest
             os-name: windows
             target: x86_64-pc-windows-gnu
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: macos-latest
+            extra-features: false
+          - os: macos-13
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
             binary-postfix: ""
             use-cross: false
+            extra-features: false
           - os: macos-latest
             os-name: macos
             target: aarch64-apple-darwin
             architecture: arm64
             binary-postfix: ""
             use-cross: true
+            extra-features: false
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-gnu
             architecture: x86_64
             binary-postfix: ""
             use-cross: false
+            extra-features: mount
           - os: ubuntu-latest
             os-name: linux
             target: x86_64-unknown-linux-musl
             architecture: x86_64
             binary-postfix: ""
             use-cross: false
+            extra-features: mount
           - os: ubuntu-latest
             os-name: linux
             target: aarch64-unknown-linux-gnu
             architecture: arm64
             binary-postfix: ""
             use-cross: true
+            extra-features: mount
           - os: ubuntu-latest
             os-name: linux
             target: i686-unknown-linux-gnu
             architecture: i686
             binary-postfix: ""
             use-cross: true
+            extra-features: mount
           # TODO!: This needs a fix, linking `execinfo` fails
           # - os: ubuntu-latest
           #   os-name: netbsd
@@ -85,13 +93,14 @@ jobs:
           #   architecture: x86_64
           #   binary-postfix: ""
           #   use-cross: true
+          #   extra-features: false
           - os: ubuntu-latest
             os-name: linux
             target: armv7-unknown-linux-gnueabihf
             architecture: armv7
             binary-postfix: ""
             use-cross: true
-
+            extra-features: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -118,6 +127,7 @@ jobs:
           use-project-version: true
           use-tag-version: true # IMPORTANT: this is being used to make sure the tag that is built is in the archive filename, so automation can download the correct version
           extra-cargo-build-args: --features release
+          extra-features: ${{ matrix.job.extra-features }}
 
   create-release:
     name: Creating release with artifacts

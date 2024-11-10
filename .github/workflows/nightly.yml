@@ -66,6 +66,7 @@ jobs:
             architecture: x86_64
             binary-postfix: ""
             use-cross: false
+            # FIXME: `mount` pobably doesn't work with musl
             extra-features: false
           - os: ubuntu-latest
             os-name: linux
@@ -73,6 +74,7 @@ jobs:
             architecture: arm64
             binary-postfix: ""
             use-cross: true
+            # FIXME: We need to install the dependencies in Cross.toml
             extra-features: false
           - os: ubuntu-latest
             os-name: linux
@@ -80,6 +82,7 @@ jobs:
             architecture: i686
             binary-postfix: ""
             use-cross: true
+            # FIXME: We need to install the dependencies in Cross.toml
             extra-features: false
           # TODO!: This needs a fix, linking `execinfo` fails
           # - os: ubuntu-latest

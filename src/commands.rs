@@ -16,6 +16,8 @@ pub(crate) mod key;
 pub(crate) mod list;
 pub(crate) mod ls;
 pub(crate) mod merge;
+#[cfg(feature = "mount")]
+pub(crate) mod mount;
 pub(crate) mod prune;
 pub(crate) mod repair;
 pub(crate) mod repoinfo;
@@ -31,6 +33,8 @@ pub(crate) mod webdav;
 
 use std::fmt::Debug;
 
+#[cfg(feature = "mount")]
+use crate::commands::mount::MountCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
@@ -104,6 +108,10 @@ enum RusticCmd {
 
     /// List repository files by file type
     List(Box<ListCmd>),
+
+    #[cfg(feature = "mount")]
+    /// Mount a repository as read-only filesystem
+    Mount(Box<MountCmd>),
 
     /// List file contents of a snapshot
     Ls(Box<LsCmd>),
@@ -220,6 +228,8 @@ impl Override<RusticConfig> for EntryPoint {
             RusticCmd::Copy(cmd) => cmd.override_config(config),
             #[cfg(feature = "webdav")]
             RusticCmd::Webdav(cmd) => cmd.override_config(config),
+            #[cfg(feature = "mount")]
+            RusticCmd::Mount(cmd) => cmd.override_config(config),
 
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),

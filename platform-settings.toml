@@ -1,0 +1,10 @@
+[platforms.defaults]
+release-features = [
+  "release",
+]
+
+# Check if 'build-dependencies.just' needs to be updated
+[platforms.x86_64-unknown-linux-gnu]
+additional-features = [
+  "mount",
+]

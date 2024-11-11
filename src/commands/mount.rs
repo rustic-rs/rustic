@@ -1,27 +1,25 @@
-//! `webdav` subcommand
+//! `mount` subcommand
 
 // ignore markdown clippy lints as we use doc-comments to generate clap help texts
 #![allow(clippy::doc_markdown)]
 
-use std::net::ToSocketAddrs;
+mod fusefs;
+use fusefs::FuseFS;
+
+use std::{ffi::OsStr, path::PathBuf};
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
+
 use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
 use anyhow::{anyhow, Result};
 use conflate::Merge;
-use dav_server::{warp::dav_handler, DavHandler};
-use serde::{Deserialize, Serialize};
-
+use fuse_mt::{mount, FuseMT};
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
-pub struct WebDavCmd {
-    /// Address to bind the webdav server to. [default: "localhost:8000"]
-    #[clap(long, value_name = "ADDRESS")]
-    #[merge(strategy=conflate::option::overwrite_none)]
-    address: Option<String>,
-
+pub struct MountCmd {
     /// The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]
     #[clap(long)]
     #[merge(strategy=conflate::option::overwrite_none)]
@@ -32,36 +30,41 @@ pub struct WebDavCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     time_template: Option<String>,
 
-    /// Use symlinks. This may not be supported by all WebDAV clients
+    /// Don't allow other users to access the mount point
     #[clap(long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
-    symlinks: bool,
+    no_allow_other: bool,
 
     /// How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]
     #[clap(long)]
     #[merge(strategy=conflate::option::overwrite_none)]
     file_access: Option<String>,
 
-    /// Specify directly which snapshot/path to serve
+    /// The mount point to use
+    #[clap(value_name = "PATH")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    mountpoint: Option<PathBuf>,
+
+    /// Specify directly which snapshot/path to mount
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     #[merge(strategy=conflate::option::overwrite_none)]
     snapshot_path: Option<String>,
 }
 
-impl Override<RusticConfig> for WebDavCmd {
+impl Override<RusticConfig> for MountCmd {
     // Process the given command line options, overriding settings from
     // a configuration file using explicit flags taken from command-line
     // arguments.
     fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
         let mut self_config = self.clone();
-        // merge "webdav" section from config file, if given
-        self_config.merge(config.webdav);
-        config.webdav = self_config;
+        // merge "mount" section from config file, if given
+        self_config.merge(config.mount);
+        config.mount = self_config;
         Ok(config)
     }
 }
 
-impl Runnable for WebDavCmd {
+impl Runnable for MountCmd {
     fn run(&self) {
         if let Err(err) = RUSTIC_APP
             .config()
@@ -74,49 +77,59 @@ impl Runnable for WebDavCmd {
     }
 }
 
-impl WebDavCmd {
-    /// be careful about self VS RUSTIC_APP.config() usage
-    /// only the RUSTIC_APP.config() involves the TOML and ENV merged configurations
-    /// see https://github.com/rustic-rs/rustic/issues/1242
+impl MountCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
+        let mountpoint = config
+            .mount
+            .mountpoint
+            .as_ref()
+            .ok_or_else(|| anyhow!("please specify a mountpoint"))?;
 
         let path_template = config
-            .webdav
+            .mount
             .path_template
             .clone()
             .unwrap_or_else(|| "[{hostname}]/[{label}]/{time}".to_string());
         let time_template = config
-            .webdav
+            .mount
             .time_template
             .clone()
             .unwrap_or_else(|| "%Y-%m-%d_%H-%M-%S".to_string());
 
         let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
-
-        let vfs = if let Some(snap) = &config.webdav.snapshot_path {
-            let node = repo.node_from_snapshot_path(snap, sn_filter)?;
+        let vfs = if let Some(snap_path) = &config.mount.snapshot_path {
+            let node = repo.node_from_snapshot_path(snap_path, sn_filter)?;
             Vfs::from_dir_node(&node)
         } else {
             let snapshots = repo.get_matching_snapshots(sn_filter)?;
-            let (latest, identical) = if config.webdav.symlinks {
-                (Latest::AsLink, IdenticalSnapshot::AsLink)
-            } else {
-                (Latest::AsDir, IdenticalSnapshot::AsDir)
-            };
-            Vfs::from_snapshots(snapshots, &path_template, &time_template, latest, identical)?
+            Vfs::from_snapshots(
+                snapshots,
+                &path_template,
+                &time_template,
+                Latest::AsLink,
+                IdenticalSnapshot::AsLink,
+            )?
         };
 
-        let addr = config
-            .webdav
-            .address
-            .clone()
-            .unwrap_or_else(|| "localhost:8000".to_string())
-            .to_socket_addrs()?
-            .next()
-            .ok_or_else(|| anyhow!("no address given"))?;
+        let name_opt = format!("fsname=rusticfs:{}", repo.config().id);
+        let mut options = vec![
+            OsStr::new("-o"),
+            OsStr::new(&name_opt),
+            OsStr::new("-o"),
+            OsStr::new("kernel_cache"),
+        ];
 
-        let file_access = config.webdav.file_access.as_ref().map_or_else(
+        if !config.mount.no_allow_other {
+            options.extend_from_slice(&[
+                OsStr::new("-o"),
+                OsStr::new("allow_other"),
+                OsStr::new("-o"),
+                OsStr::new("default_permissions"),
+            ]);
+        }
+
+        let file_access = config.mount.file_access.as_ref().map_or_else(
             || {
                 if repo.config().is_hot == Some(true) {
                     Ok(FilePolicy::Forbidden)
@@ -127,16 +140,8 @@ impl WebDavCmd {
             |s| s.parse(),
         )?;
 
-        let dav_server = DavHandler::builder()
-            .filesystem(vfs.into_webdav_fs(repo, file_access))
-            .build_handler();
-
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()?
-            .block_on(async {
-                warp::serve(dav_handler(dav_server)).run(addr).await;
-            });
+        let fs = FuseMT::new(FuseFS::new(repo, vfs, file_access), 1);
+        mount(fs, mountpoint, &options)?;
 
         Ok(())
     }

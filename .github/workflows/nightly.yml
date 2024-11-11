@@ -37,7 +37,7 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: macos-latest
+          - os: macos-13
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
@@ -112,7 +112,6 @@ jobs:
           sign-release: true
           hash-release: true
           use-project-version: true
-          extra-cargo-build-args: --features release
 
   publish-nightly:
     if: ${{ github.repository_owner == 'rustic-rs' && github.ref == 'refs/heads/main' }}

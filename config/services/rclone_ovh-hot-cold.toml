@@ -1,9 +1,9 @@
 # rustic config file to backup /home, /etc and /root to a hot/cold repository hosted by OVH
 # using OVH cloud archive and OVH object storage
 #
-# backup usage: "rustic -P ovh-hot-cold backup
-# cleanup:      "rustic -P ovh-hot-cold forget --prune
-#
+# backup usage: "rustic --use-profile ovh-hot-cold backup
+# cleanup:      "rustic --use-profile ovh-hot-cold forget --prune
+
 [repository]
 repository = "rclone:ovh:backup-home"
 repo-hot = "rclone:ovh:backup-home-hot"

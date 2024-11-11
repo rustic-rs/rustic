@@ -91,7 +91,6 @@ jobs:
             architecture: armv7
             binary-postfix: ""
             use-cross: true
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -117,7 +116,6 @@ jobs:
           hash-release: true
           use-project-version: true
           use-tag-version: true # IMPORTANT: this is being used to make sure the tag that is built is in the archive filename, so automation can download the correct version
-          extra-cargo-build-args: --features release
 
   create-release:
     name: Creating release with artifacts

@@ -29,6 +29,7 @@ jemallocator = ["dep:jemallocator-global"]
 self-update = ["dep:self_update", "dep:semver"]
 tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = ["dep:dav-server", "dep:warp", "dep:tokio", "rustic_core/webdav"]
+mount = ["dep:fuse_mt"]
 
 [[bin]]
 name = "rustic"
@@ -96,6 +97,7 @@ dateparser = "0.2.1"
 derive_more = { version = "1", features = ["debug"] }
 dialoguer = "0.11.0"
 directories = "5"
+fuse_mt = { version = "0.6", optional = true }
 gethostname = "0.5"
 globset = "0.4.15"
 human-panic = "2"
@@ -123,6 +125,7 @@ toml = "0.8"
 
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2.159"
+
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md
 [package.metadata.binstall]

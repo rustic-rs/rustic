@@ -93,7 +93,6 @@ jobs:
           use-cross: ${{ matrix.job.use-cross }}
           all-features: "false"
           feature: ${{ matrix.feature }}
-          extra-features: ${{ matrix.job.extra-features }}
 
   result:
     name: Result (Cross-CI)

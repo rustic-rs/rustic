@@ -42,7 +42,7 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: macos-latest
+          - os: macos-13
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
@@ -91,10 +91,9 @@ jobs:
             architecture: armv7
             binary-postfix: ""
             use-cross: true
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0 # fetch all history so that git describe works
       - name: Create binary artifact
@@ -117,7 +116,6 @@ jobs:
           hash-release: true
           use-project-version: true
           use-tag-version: true # IMPORTANT: this is being used to make sure the tag that is built is in the archive filename, so automation can download the correct version
-          extra-cargo-build-args: --features release
 
   create-release:
     name: Creating release with artifacts
@@ -126,7 +124,7 @@ jobs:
     steps:
       # Need to clone the repo again for the CHANGELOG.md
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0 # fetch all history so that git describe works
 

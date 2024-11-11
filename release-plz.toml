@@ -3,7 +3,7 @@
 [workspace]
 git_release_enable = false # we currently use our own release process
 pr_draft = true
-dependencies_update = true
+# dependencies_update = true # We don't want to update dependencies automatically, as currently our dependencies tree is broken somewhere
 # changelog_config = "cliff.toml" # Don't use this for now, as it will override the default changelog config
 
 [changelog]

@@ -16,6 +16,8 @@ pub(crate) mod key;
 pub(crate) mod list;
 pub(crate) mod ls;
 pub(crate) mod merge;
+#[cfg(feature = "mount")]
+pub(crate) mod mount;
 pub(crate) mod prune;
 pub(crate) mod repair;
 pub(crate) mod repoinfo;
@@ -34,6 +36,8 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+#[cfg(feature = "mount")]
+use crate::commands::mount::MountCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
@@ -70,81 +74,85 @@ use self::find::FindCmd;
 #[derive(clap::Parser, Command, Debug, Runnable)]
 enum RusticCmd {
     /// Backup to the repository
-    Backup(BackupCmd),
+    Backup(Box<BackupCmd>),
 
     /// Show raw data of files and blobs in a repository
-    Cat(CatCmd),
+    Cat(Box<CatCmd>),
 
     /// Change the repository configuration
-    Config(ConfigCmd),
+    Config(Box<ConfigCmd>),
 
     /// Generate shell completions
-    Completions(CompletionsCmd),
+    Completions(Box<CompletionsCmd>),
 
     /// Check the repository
-    Check(CheckCmd),
+    Check(Box<CheckCmd>),
 
     /// Copy snapshots to other repositories
-    Copy(CopyCmd),
+    Copy(Box<CopyCmd>),
 
     /// Compare two snapshots or paths
-    Diff(DiffCmd),
+    Diff(Box<DiffCmd>),
 
     /// Open the documentation
-    Docs(DocsCmd),
+    Docs(Box<DocsCmd>),
 
     /// Dump the contents of a file within a snapshot to stdout
-    Dump(DumpCmd),
+    Dump(Box<DumpCmd>),
 
     /// Find patterns in given snapshots
-    Find(FindCmd),
+    Find(Box<FindCmd>),
 
     /// Remove snapshots from the repository
-    Forget(ForgetCmd),
+    Forget(Box<ForgetCmd>),
 
     /// Initialize a new repository
-    Init(InitCmd),
+    Init(Box<InitCmd>),
 
     /// Manage keys for a repository
-    Key(KeyCmd),
+    Key(Box<KeyCmd>),
 
     /// List repository files by file type
-    List(ListCmd),
+    List(Box<ListCmd>),
+
+    #[cfg(feature = "mount")]
+    /// Mount a repository as read-only filesystem
+    Mount(Box<MountCmd>),
 
     /// List file contents of a snapshot
-    Ls(LsCmd),
+    Ls(Box<LsCmd>),
 
     /// Merge snapshots
-    Merge(MergeCmd),
+    Merge(Box<MergeCmd>),
 
     /// Show a detailed overview of the snapshots within the repository
-    Snapshots(SnapshotCmd),
+    Snapshots(Box<SnapshotCmd>),
 
     /// Show the configuration which has been read from the config file(s)
-    ShowConfig(ShowConfigCmd),
+    ShowConfig(Box<ShowConfigCmd>),
 
     /// Update to the latest stable rustic release
     #[cfg_attr(not(feature = "self-update"), clap(hide = true))]
-    SelfUpdate(SelfUpdateCmd),
+    SelfUpdate(Box<SelfUpdateCmd>),
 
     /// Remove unused data or repack repository pack files
-    Prune(PruneCmd),
+    Prune(Box<PruneCmd>),
 
     /// Restore (a path within) a snapshot
-    Restore(RestoreCmd),
+    Restore(Box<RestoreCmd>),
 
     /// Repair a snapshot or the repository index
-    Repair(RepairCmd),
+    Repair(Box<RepairCmd>),
 
     /// Show general information about the repository
-    Repoinfo(RepoInfoCmd),
+    Repoinfo(Box<RepoInfoCmd>),
 
     /// Change tags of snapshots
-    Tag(TagCmd),
+    Tag(Box<TagCmd>),
 
     /// Start a webdav server which allows to access the repository
     #[cfg(feature = "webdav")]
-    Webdav(WebDavCmd),
+    Webdav(Box<WebDavCmd>),
 }
 
 fn styles() -> Styles {
@@ -278,6 +286,8 @@ impl Configurable<RusticConfig> for EntryPoint {
             RusticCmd::Copy(cmd) => cmd.override_config(config),
             #[cfg(feature = "webdav")]
             RusticCmd::Webdav(cmd) => cmd.override_config(config),
+            #[cfg(feature = "mount")]
+            RusticCmd::Mount(cmd) => cmd.override_config(config),
 
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),

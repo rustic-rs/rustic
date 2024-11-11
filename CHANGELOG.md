@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.4](https://github.com/rustic-rs/rustic/compare/v0.9.3...v0.9.4) - 2024-10-24
+
+### Added
+
+- *(commands)* Add tar output to dump command ([#1328](https://github.com/rustic-rs/rustic/pull/1328))
+
+### Fixed
+
+- clippy lints for new Rust version ([#1329](https://github.com/rustic-rs/rustic/pull/1329))
+- *(deps)* downgrade self-update to fix problems finding right target ([#1323](https://github.com/rustic-rs/rustic/pull/1323))
+
+### Other
+
+- *(deps)* remove once_cell and replace with std::sync::LazyLock, increase MSRV to 1.80.0 ([#1337](https://github.com/rustic-rs/rustic/pull/1337))
+- *(deps)* update tokio, ratatui, and tui-textarea ([#1336](https://github.com/rustic-rs/rustic/pull/1336))
+- *(deps)* update rustic_core and rustic_backend ([#1334](https://github.com/rustic-rs/rustic/pull/1334))
+- *(deps)* update abscissa framework ([#1330](https://github.com/rustic-rs/rustic/pull/1330))
+- introduce a new feature 'release' that includes the 'self-update' feature ([#1307](https://github.com/rustic-rs/rustic/pull/1307))
+
 ## [0.9.3](https://github.com/rustic-rs/rustic/compare/v0.9.2...v0.9.3) - 2024-10-10
 
 ### Fixed

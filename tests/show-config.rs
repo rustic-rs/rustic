@@ -13,9 +13,8 @@
 use std::{
     io::{Read, Write},
     path::PathBuf,
+    sync::LazyLock,
 };
-
-use once_cell::sync::Lazy;
 
 use abscissa_core::testing::prelude::*;
 
@@ -25,7 +24,7 @@ use rustic_testing::{files_differ, get_temp_file, TestResult};
 // the runner acquire a mutex when executing commands and inspecting
 // exit statuses, serializing what would otherwise be multithreaded
 // invocations as `cargo test` executes tests in parallel by default.
-pub static LAZY_RUNNER: Lazy<CmdRunner> = Lazy::new(|| {
+pub static LAZY_RUNNER: LazyLock<CmdRunner> = LazyLock::new(|| {
     let mut runner = CmdRunner::new(env!("CARGO_BIN_EXE_rustic"));
     runner.exclusive().capture_stdout();
     runner

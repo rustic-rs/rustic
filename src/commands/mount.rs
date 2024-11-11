@@ -33,7 +33,7 @@ pub struct MountCmd {
     /// Don't allow other users to access the mount point
     #[clap(long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
-    no_allow_other: bool,
+    exclusive: bool,
 
     /// How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]
     #[clap(long)]
@@ -43,7 +43,7 @@ pub struct MountCmd {
     /// The mount point to use
     #[clap(value_name = "PATH")]
     #[merge(strategy=conflate::option::overwrite_none)]
-    mountpoint: Option<PathBuf>,
+    mount_point: Option<PathBuf>,
 
     /// Specify directly which snapshot/path to mount
     #[clap(value_name = "SNAPSHOT[:PATH]")]
@@ -80,9 +80,9 @@ impl Runnable for MountCmd {
 impl MountCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let mountpoint = config
+        let mount_point = config
             .mount
-            .mountpoint
+            .mount_point
             .as_ref()
             .ok_or_else(|| anyhow!("please specify a mountpoint"))?;
 
@@ -120,7 +120,7 @@ impl MountCmd {
             OsStr::new("kernel_cache"),
         ];
 
-        if !config.mount.no_allow_other {
+        if !config.mount.exclusive {
             options.extend_from_slice(&[
                 OsStr::new("-o"),
                 OsStr::new("allow_other"),
@@ -141,7 +141,7 @@ impl MountCmd {
         )?;
 
         let fs = FuseMT::new(FuseFS::new(repo, vfs, file_access), 1);
-        mount(fs, mountpoint, &options)?;
+        mount(fs, mount_point, &options)?;
 
         Ok(())
     }

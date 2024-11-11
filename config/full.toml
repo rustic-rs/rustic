@@ -209,7 +209,7 @@ snapshot-path = "latest:/dir" # Default: not set - if not set, generate a virtua
 [mount]
 path-template = "[{hostname}]/[{label}]/{time}" # The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]. Only relevant if no snapshot-path is given.
 time-template = "%Y-%m-%d_%H-%M-%S" # only relevant if no snapshot-path is given
-no-allow-other = true
+exclusive = true # don't allow other users to access the mount point
 file-access = "read" # Default: "forbidden" for hot/cold repos, else "read"
-mountpoint = "~/mnt"
+mount-point = "~/mnt"
 snapshot-path = "latest:/dir" # Default: not set - if not set, generate a virtual tree with all snapshots using path-template

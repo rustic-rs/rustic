@@ -49,6 +49,19 @@ pub struct MountCmd {
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     #[merge(strategy=conflate::option::overwrite_none)]
     snapshot_path: Option<String>,
+
+    /// Other options to use for mount
+    #[clap(skip)]
+    options: MountOpts,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Merge)]
+pub(crate) struct MountOpts(#[merge(strategy = conflate::vec::ignore)] pub(crate) Vec<String>);
+
+impl Default for MountOpts {
+    fn default() -> Self {
+        Self(vec![String::from("kernel_cache")])
+    }
 }
 
 impl Override<RusticConfig> for MountCmd {
@@ -91,6 +104,7 @@ impl MountCmd {
             .path_template
             .clone()
             .unwrap_or_else(|| "[{hostname}]/[{label}]/{time}".to_string());
+
         let time_template = config
             .mount
             .time_template
@@ -112,21 +126,13 @@ impl MountCmd {
             )?
         };
 
-        let name_opt = format!("fsname=rusticfs:{}", repo.config().id);
-        let mut options = vec![
-            OsStr::new("-o"),
-            OsStr::new(&name_opt),
-            OsStr::new("-o"),
-            OsStr::new("kernel_cache"),
-        ];
+        let mut options = self.options.0;
+
+        options.extend_from_slice(&[format!("fsname=rusticfs:{}", repo.config().id)]);
 
         if !config.mount.exclusive {
-            options.extend_from_slice(&[
-                OsStr::new("-o"),
-                OsStr::new("allow_other"),
-                OsStr::new("-o"),
-                OsStr::new("default_permissions"),
-            ]);
+            options
+                .extend_from_slice(&["allow_other".to_string(), "default_permissions".to_string()]);
         }
 
         let file_access = config.mount.file_access.as_ref().map_or_else(
@@ -141,7 +147,17 @@ impl MountCmd {
         )?;
 
         let fs = FuseMT::new(FuseFS::new(repo, vfs, file_access), 1);
-        mount(fs, mount_point, &options)?;
+
+        // Sort and deduplicate options
+        options.sort_unstable();
+        options.dedup();
+
+        // join options into a single comma-delimited string and prepent "-o "
+        // this should be parsed just fine by fuser, here
+        // https://github.com/cberner/fuser/blob/9f6ced73a36f1d99846e28be9c5e4903939ee9d5/src/mnt/mount_options.rs#L157
+        let options = OsStr::new(&format!("-o {}", options.join(",")));
+
+        mount(fs, mount_point, &[options.as_ref()])?;
 
         Ok(())
     }

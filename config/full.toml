@@ -213,3 +213,6 @@ exclusive = true # don't allow other users to access the mount point
 file-access = "read" # Default: "forbidden" for hot/cold repos, else "read"
 mount-point = "~/mnt"
 snapshot-path = "latest:/dir" # Default: not set - if not set, generate a virtual tree with all snapshots using path-template
+options = [
+  "kernel_cache", # Default: ["kernel_cache]
+]

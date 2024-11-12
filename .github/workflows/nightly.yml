@@ -69,6 +69,12 @@ jobs:
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
+            target: aarch64-unknown-linux-musl
+            architecture: arm64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
             target: i686-unknown-linux-gnu
             architecture: i686
             binary-postfix: ""

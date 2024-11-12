@@ -1,6 +1,6 @@
 //! `cat` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{status_err, Application, RUSTIC_APP};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
@@ -59,19 +59,25 @@ impl Runnable for CatCmd {
 impl CatCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
-
         let data = match &self.cmd {
-            CatSubCmd::Config => repo.cat_file(FileType::Config, "")?,
-            CatSubCmd::Index(opt) => repo.cat_file(FileType::Index, &opt.id)?,
-            CatSubCmd::Snapshot(opt) => repo.cat_file(FileType::Snapshot, &opt.id)?,
-            // special treatment for 'cat'ing blobs: read the index and use it to locate the blob
-            CatSubCmd::TreeBlob(opt) => repo.to_indexed()?.cat_blob(BlobType::Tree, &opt.id)?,
-            CatSubCmd::DataBlob(opt) => repo.to_indexed()?.cat_blob(BlobType::Data, &opt.id)?,
-            // special treatment for 'cat'ing a tree within a snapshot
-            CatSubCmd::Tree(opt) => repo
-                .to_indexed()?
-                .cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?,
+            CatSubCmd::Config => config
+                .repository
+                .run_open(|repo| Ok(repo.cat_file(FileType::Config, "")?))?,
+            CatSubCmd::Index(opt) => config
+                .repository
+                .run_open(|repo| Ok(repo.cat_file(FileType::Index, &opt.id)?))?,
+            CatSubCmd::Snapshot(opt) => config
+                .repository
+                .run_open(|repo| Ok(repo.cat_file(FileType::Snapshot, &opt.id)?))?,
+            CatSubCmd::TreeBlob(opt) => config
+                .repository
+                .run_indexed(|repo| Ok(repo.cat_blob(BlobType::Tree, &opt.id)?))?,
+            CatSubCmd::DataBlob(opt) => config
+                .repository
+                .run_indexed(|repo| Ok(repo.cat_blob(BlobType::Data, &opt.id)?))?,
+            CatSubCmd::Tree(opt) => config.repository.run_indexed(|repo| {
+                Ok(repo.cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?)
+            })?,
         };
         println!("{}", String::from_utf8(data.to_vec())?);
 

@@ -36,6 +36,9 @@ _rustic() {
             rustic,dump)
                 cmd="rustic__dump"
                 ;;
+            rustic,find)
+                cmd="rustic__find"
+                ;;
             rustic,forget)
                 cmd="rustic__forget"
                 ;;
@@ -80,6 +83,9 @@ _rustic() {
                 ;;
             rustic,tag)
                 cmd="rustic__tag"
+                ;;
+            rustic,webdav)
+                cmd="rustic__webdav"
                 ;;
             rustic__cat,config)
                 cmd="rustic__cat__config"
@@ -147,6 +153,9 @@ _rustic() {
             rustic__help,dump)
                 cmd="rustic__help__dump"
                 ;;
+            rustic__help,find)
+                cmd="rustic__help__find"
+                ;;
             rustic__help,forget)
                 cmd="rustic__help__forget"
                 ;;
@@ -191,6 +200,9 @@ _rustic() {
                 ;;
             rustic__help,tag)
                 cmd="rustic__help__tag"
+                ;;
+            rustic__help,webdav)
+                cmd="rustic__help__webdav"
                 ;;
             rustic__help__cat,config)
                 cmd="rustic__help__cat__config"
@@ -256,7 +268,7 @@ _rustic() {
 
     case "${cmd}" in
         rustic)
-            opts="-P -n -r -p -h -V --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help --version backup cat config completions check copy diff dump forget init key list ls merge snapshots show-config self-update prune restore repair repoinfo tag help"
+            opts="-P -n -r -p -h -V --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help --version backup cat config completions check copy diff dump find forget init key list ls merge snapshots show-config self-update prune restore repair repoinfo tag webdav help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -275,7 +287,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -283,11 +306,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -299,11 +335,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -311,7 +369,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -350,18 +411,32 @@ _rustic() {
             return 0
             ;;
         rustic__backup)
-            opts="-g -f -x -P -n -r -p -h --stdin-filename --as-path --with-atime --ignore-devid --json --init --group-by --parent --force --ignore-ctime --ignore-inode --glob --iglob --glob-file --iglob-file --git-ignore --no-require-git --exclude-if-present --one-file-system --exclude-larger-than --label --tag --description --description-from --time --delete-never --delete-after --host --command --hostname --username --with-created --set-compression --set-version --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [SOURCE]..."
+            opts="-g -f -x -P -n -r -p -h --stdin-filename --as-path --with-atime --ignore-devid --no-scan --json --quiet --init --group-by --parent --skip-identical-parent --force --ignore-ctime --ignore-inode --glob --iglob --glob-file --iglob-file --git-ignore --no-require-git --custom-ignorefile --exclude-if-present --one-file-system --exclude-larger-than --label --tag --description --description-from --time --delete-never --delete-after --host --command --hostname --username --with-created --set-compression --set-version --set-append-only --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --set-extra-verify --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [SOURCE]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
                 --stdin-filename)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --as-path)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --group-by)
@@ -392,6 +467,10 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --custom-ignorefile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --exclude-if-present)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -413,7 +492,18 @@ _rustic() {
                     return 0
                     ;;
                 --description-from)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --time)
@@ -448,6 +538,10 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --set-append-only)
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
+                    return 0
+                    ;;
                 --set-treepack-size)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -480,6 +574,10 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --set-extra-verify)
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
+                    return 0
+                    ;;
                 --use-profile)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -493,7 +591,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -501,11 +610,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -517,11 +639,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -529,7 +673,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -568,7 +715,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help tree-blob data-blob config index snapshot tree help"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help tree-blob data-blob config index snapshot tree help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -587,7 +734,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -595,11 +753,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -611,11 +782,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -623,7 +816,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -662,7 +858,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat__config)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -681,7 +877,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -689,11 +896,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -705,11 +925,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -717,7 +959,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -756,7 +1001,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat__data__blob)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -775,7 +1020,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -783,11 +1039,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -799,11 +1068,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -811,7 +1102,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -962,7 +1256,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat__index)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -981,7 +1275,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -989,11 +1294,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1005,11 +1323,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1017,7 +1357,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1056,7 +1399,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat__snapshot)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1075,7 +1418,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1083,11 +1437,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1099,11 +1466,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1111,7 +1500,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1150,7 +1542,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat__tree)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1169,7 +1561,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1177,11 +1580,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1193,11 +1609,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1205,7 +1643,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1244,7 +1685,7 @@ _rustic() {
             return 0
             ;;
         rustic__cat__tree__blob)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <ID>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1263,7 +1704,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1271,11 +1723,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1287,11 +1752,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1299,7 +1786,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1338,7 +1828,7 @@ _rustic() {
             return 0
             ;;
         rustic__check)
-            opts="-P -n -r -p -h --trust-cache --read-data --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --trust-cache --read-data --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1357,7 +1847,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1365,11 +1866,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1381,11 +1895,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1393,7 +1929,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1432,7 +1971,7 @@ _rustic() {
             return 0
             ;;
         rustic__completions)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help bash fish zsh powershell"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help bash fish zsh powershell"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1451,7 +1990,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1459,11 +2009,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1475,11 +2038,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1487,7 +2072,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1526,7 +2114,7 @@ _rustic() {
             return 0
             ;;
         rustic__config)
-            opts="-P -n -r -p -h --set-compression --set-version --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --set-compression --set-version --set-append-only --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --set-extra-verify --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1538,6 +2126,10 @@ _rustic() {
                     ;;
                 --set-version)
                     COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-append-only)
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
                     return 0
                     ;;
                 --set-treepack-size)
@@ -1572,6 +2164,10 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --set-extra-verify)
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
+                    return 0
+                    ;;
                 --use-profile)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -1585,7 +2181,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1593,11 +2200,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1609,11 +2229,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1621,7 +2263,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1660,7 +2305,7 @@ _rustic() {
             return 0
             ;;
         rustic__copy)
-            opts="-P -n -r -p -h --init --hostname --username --with-created --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-P -n -r -p -h --init --hostname --username --with-created --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1687,7 +2332,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1695,11 +2351,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1711,11 +2380,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1723,7 +2414,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1762,7 +2456,7 @@ _rustic() {
             return 0
             ;;
         rustic__diff)
-            opts="-x -P -n -r -p -h --metadata --no-content --glob --iglob --glob-file --iglob-file --git-ignore --no-require-git --exclude-if-present --one-file-system --exclude-larger-than --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT1[:PATH1]> <SNAPSHOT2[:PATH2]|PATH2>"
+            opts="-x -P -n -r -p -h --metadata --no-content --glob --iglob --glob-file --iglob-file --git-ignore --no-require-git --custom-ignorefile --exclude-if-present --one-file-system --exclude-larger-than --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT1[:PATH1]> <SNAPSHOT2[:PATH2]|PATH2>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1781,6 +2475,10 @@ _rustic() {
                     return 0
                     ;;
                 --iglob-file)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --custom-ignorefile)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -1805,7 +2503,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1813,11 +2522,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1829,11 +2551,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1841,7 +2585,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1880,7 +2627,7 @@ _rustic() {
             return 0
             ;;
         rustic__dump)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1899,7 +2646,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -1907,11 +2665,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -1923,11 +2694,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -1935,7 +2728,173 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --warm-up-command)
                     COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --warm-up-wait)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-host)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-label)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-paths)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-tags)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-fn)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        rustic__find)
+            opts="-g -P -n -r -p -h --glob --iglob --path --group-by --all --show-misses --numeric-uid-gid --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --glob)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --iglob)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --path)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --group-by)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -g)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --use-profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -P)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --log-level)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
+                    return 0
+                    ;;
+                --progress-interval)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --repository)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                -r)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo-hot)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --password)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
+                    return 0
+                    ;;
+                -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
+                    return 0
+                    ;;
+                --password-command)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --cache-dir)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -1974,7 +2933,7 @@ _rustic() {
             return 0
             ;;
         rustic__forget)
-            opts="-g -l -H -d -w -m -y -P -n -r -p -h --json --group-by --prune --filter-host --filter-label --filter-paths --filter-tags --filter-fn --keep-tags --keep-id --keep-last --keep-hourly --keep-daily --keep-weekly --keep-monthly --keep-quarter-yearly --keep-half-yearly --keep-yearly --keep-within --keep-within-hourly --keep-within-daily --keep-within-weekly --keep-within-monthly --keep-within-quarter-yearly --keep-within-half-yearly --keep-within-yearly --max-repack --max-unused --keep-pack --keep-delete --instant-delete --fast-repack --repack-uncompressed --repack-all --repack-cacheable-only --no-resize --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help [ID]..."
+            opts="-g -l -H -d -w -m -y -P -n -r -p -h --json --quiet --group-by --prune --filter-host --filter-label --filter-paths --filter-tags --filter-fn --keep-tags --keep-id --keep-last --keep-hourly --keep-daily --keep-weekly --keep-monthly --keep-quarter-yearly --keep-half-yearly --keep-yearly --keep-within --keep-within-hourly --keep-within-daily --keep-within-weekly --keep-within-monthly --keep-within-quarter-yearly --keep-within-half-yearly --keep-within-yearly --keep-none --max-repack --max-unused --keep-pack --keep-delete --instant-delete --early-delete-index --fast-repack --repack-uncompressed --repack-all --repack-cacheable-only --no-resize --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2137,7 +3096,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -2145,11 +3115,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -2161,11 +3144,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -2173,7 +3178,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -2192,7 +3200,7 @@ _rustic() {
             return 0
             ;;
         rustic__help)
-            opts="backup cat config completions check copy diff dump forget init key list ls merge snapshots show-config self-update prune restore repair repoinfo tag help"
+            opts="backup cat config completions check copy diff dump find forget init key list ls merge snapshots show-config self-update prune restore repair repoinfo tag webdav help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2388,6 +3396,20 @@ _rustic() {
             return 0
             ;;
         rustic__help__dump)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        rustic__help__find)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -2653,8 +3675,22 @@ _rustic() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        rustic__help__webdav)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         rustic__init)
-            opts="-P -n -r -p -h --hostname --username --with-created --set-compression --set-version --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --hostname --username --with-created --set-compression --set-version --set-append-only --set-treepack-size --set-treepack-size-limit --set-treepack-growfactor --set-datapack-size --set-datapack-growfactor --set-datapack-size-limit --set-min-packsize-tolerate-percent --set-max-packsize-tolerate-percent --set-extra-verify --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2674,6 +3710,10 @@ _rustic() {
                     ;;
                 --set-version)
                     COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --set-append-only)
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
                     return 0
                     ;;
                 --set-treepack-size)
@@ -2708,6 +3748,10 @@ _rustic() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --set-extra-verify)
+                    COMPREPLY=($(compgen -W "true false" -- "${cur}"))
+                    return 0
+                    ;;
                 --use-profile)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -2721,7 +3765,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -2729,11 +3784,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -2745,11 +3813,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -2757,7 +3847,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -2796,7 +3889,7 @@ _rustic() {
             return 0
             ;;
         rustic__key)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help add help"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help add help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2815,7 +3908,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -2823,11 +3927,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -2839,11 +3956,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -2851,7 +3990,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -2890,13 +4032,21 @@ _rustic() {
             return 0
             ;;
         rustic__key__add)
-            opts="-P -n -r -p -h --new-password-file --hostname --username --with-created --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --new-password --new-password-file --new-password-command --hostname --username --with-created --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --new-password)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --new-password-file)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --new-password-command)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2921,7 +4071,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -2929,11 +4090,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -2945,11 +4119,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -2957,7 +4153,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3038,7 +4237,7 @@ _rustic() {
             return 0
             ;;
         rustic__list)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help blobs index packs snapshots keys"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help blobs index packs snapshots keys"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3057,7 +4256,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3065,11 +4275,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3081,11 +4304,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3093,7 +4338,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3132,7 +4380,7 @@ _rustic() {
             return 0
             ;;
         rustic__ls)
-            opts="-s -l -P -n -r -p -h --summary --long --glob --iglob --glob-file --iglob-file --recursive --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
+            opts="-s -l -P -n -r -p -h --summary --long --numeric-uid-gid --glob --iglob --glob-file --iglob-file --recursive --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help <SNAPSHOT[:PATH]>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3167,7 +4415,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3175,11 +4434,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3191,11 +4463,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3203,7 +4497,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3242,7 +4539,7 @@ _rustic() {
             return 0
             ;;
         rustic__merge)
-            opts="-P -n -r -p -h --json --delete --label --tag --description --description-from --time --delete-never --delete-after --host --command --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-P -n -r -p -h --json --delete --label --tag --description --description-from --time --delete-never --delete-after --host --command --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3261,7 +4558,18 @@ _rustic() {
                     return 0
                     ;;
                 --description-from)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --time)
@@ -3293,7 +4601,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3301,11 +4620,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3317,11 +4649,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3329,7 +4683,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3368,7 +4725,7 @@ _rustic() {
             return 0
             ;;
         rustic__prune)
-            opts="-P -n -r -p -h --max-repack --max-unused --keep-pack --keep-delete --instant-delete --fast-repack --repack-uncompressed --repack-all --repack-cacheable-only --no-resize --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --max-repack --max-unused --keep-pack --keep-delete --instant-delete --early-delete-index --fast-repack --repack-uncompressed --repack-all --repack-cacheable-only --no-resize --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3407,7 +4764,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3415,11 +4783,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3431,11 +4812,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3443,7 +4846,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3482,7 +4888,7 @@ _rustic() {
             return 0
             ;;
         rustic__repair)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help index snapshots help"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help index snapshots help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3501,7 +4907,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3509,11 +4926,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3525,11 +4955,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3537,7 +4989,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3632,7 +5087,7 @@ _rustic() {
             return 0
             ;;
         rustic__repair__index)
-            opts="-P -n -r -p -h --read-all --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --read-all --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3651,7 +5106,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3659,11 +5125,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3675,11 +5154,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3687,7 +5188,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3726,7 +5230,7 @@ _rustic() {
             return 0
             ;;
         rustic__repair__snapshots)
-            opts="-P -n -r -p -h --delete --suffix --tag --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-P -n -r -p -h --delete --suffix --tag --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3753,7 +5257,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3761,11 +5276,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3777,11 +5305,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3789,7 +5339,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3828,7 +5381,7 @@ _rustic() {
             return 0
             ;;
         rustic__repoinfo)
-            opts="-P -n -r -p -h --only-files --only-index --json --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --only-files --only-index --json --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3847,7 +5400,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3855,11 +5419,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -3871,11 +5448,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -3883,7 +5482,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -3922,7 +5524,7 @@ _rustic() {
             return 0
             ;;
         rustic__restore)
-            opts="-P -n -r -p -h --delete --numeric-id --no-ownership --verify-existing --glob --iglob --glob-file --iglob-file --recursive --filter-host --filter-label --filter-paths --filter-tags --filter-fn --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help <SNAPSHOT[:PATH]> <DESTINATION>"
+            opts="-P -n -r -p -h --delete --numeric-id --no-ownership --verify-existing --glob --iglob --glob-file --iglob-file --recursive --filter-host --filter-label --filter-paths --filter-tags --filter-fn --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --help <SNAPSHOT[:PATH]> <DESTINATION>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3977,7 +5579,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -3985,11 +5598,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -4001,11 +5627,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -4013,7 +5661,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -4032,7 +5683,7 @@ _rustic() {
             return 0
             ;;
         rustic__self__update)
-            opts="-P -n -r -p -h --force --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --force --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4051,7 +5702,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -4059,11 +5721,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -4075,11 +5750,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -4087,7 +5784,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -4126,7 +5826,7 @@ _rustic() {
             return 0
             ;;
         rustic__show__config)
-            opts="-P -n -r -p -h --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
+            opts="-P -n -r -p -h --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4145,7 +5845,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -4153,11 +5864,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -4169,11 +5893,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -4181,7 +5927,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -4220,7 +5969,7 @@ _rustic() {
             return 0
             ;;
         rustic__snapshots)
-            opts="-g -P -n -r -p -h --group-by --long --json --all --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-g -i -P -n -r -p -h --group-by --long --json --all --interactive --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4247,7 +5996,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -4255,11 +6015,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -4271,11 +6044,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -4283,7 +6078,10 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -4322,7 +6120,7 @@ _rustic() {
             return 0
             ;;
         rustic__tag)
-            opts="-P -n -r -p -h --add --remove --set --remove-delete --set-delete-never --set-delete-after --use-profile --dry-run --log-level --log-file --no-progress --progress-interval --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
+            opts="-P -n -r -p -h --add --remove --set --remove-delete --set-delete-never --set-delete-after --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [ID]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4357,7 +6155,18 @@ _rustic() {
                     return 0
                     ;;
                 --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --progress-interval)
@@ -4365,11 +6174,24 @@ _rustic() {
                     return 0
                     ;;
                 --repository)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 -r)
-                    COMPREPLY=($(compgen -f "${cur}"))
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --repo-hot)
@@ -4381,11 +6203,33 @@ _rustic() {
                     return 0
                     ;;
                 --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
                     COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
                     return 0
                     ;;
                 --password-command)
@@ -4393,7 +6237,169 @@ _rustic() {
                     return 0
                     ;;
                 --cache-dir)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --warm-up-command)
                     COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --warm-up-wait)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-host)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-label)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-paths)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-tags)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --filter-fn)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        rustic__webdav)
+            opts="-P -n -r -p -h --address --path-template --time-template --symlinks --file-access --use-profile --dry-run --check-index --log-level --log-file --no-progress --progress-interval --repo --repository --repo-hot --password --password-file --password-command --no-cache --cache-dir --warm-up --warm-up-command --warm-up-wait --filter-host --filter-label --filter-paths --filter-tags --filter-fn --help [SNAPSHOT[:PATH]]"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --address)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --path-template)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --time-template)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --file-access)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --use-profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -P)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --log-level)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --log-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
+                    return 0
+                    ;;
+                --progress-interval)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --repository)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                -r)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
+                    return 0
+                    ;;
+                --repo-hot)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --password)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --password-file)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
+                    return 0
+                    ;;
+                -p)
+                    local oldifs
+                    if [ -n "${IFS+x}" ]; then
+                        oldifs="$IFS"
+                    fi
+                    IFS=$'\n'
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    if [ -n "${oldifs+x}" ]; then
+                        IFS="$oldifs"
+                    fi
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o filenames
+                    fi
+                    return 0
+                    ;;
+                --password-command)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --cache-dir)
+                    COMPREPLY=()
+                    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+                        compopt -o plusdirs
+                    fi
                     return 0
                     ;;
                 --warm-up-command)
@@ -4434,4 +6440,8 @@ _rustic() {
     esac
 }
 
-complete -F _rustic -o nosort -o bashdefault -o default rustic
+if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 || "${BASH_VERSINFO[0]}" -gt 4 ]]; then
+    complete -F _rustic -o nosort -o bashdefault -o default rustic
+else
+    complete -F _rustic -o bashdefault -o default rustic
+fi

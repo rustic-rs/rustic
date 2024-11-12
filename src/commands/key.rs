@@ -1,6 +1,6 @@
 //! `key` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
 
 use std::path::PathBuf;
 
@@ -9,7 +9,7 @@ use anyhow::Result;
 use dialoguer::Password;
 use log::info;
 
-use rustic_core::{KeyOptions, Repository, RepositoryOptions};
+use rustic_core::{CommandInput, KeyOptions, RepositoryOptions};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -27,9 +27,17 @@ enum KeySubCmd {
 
 #[derive(clap::Parser, Debug)]
 pub(crate) struct AddCmd {
+    /// New password
+    #[clap(long)]
+    pub(crate) new_password: Option<String>,
+
     /// File from which to read the new password
     #[clap(long)]
     pub(crate) new_password_file: Option<PathBuf>,
+
+    /// Command to get the new password from
+    #[clap(long)]
+    pub(crate) new_password_command: Option<CommandInput>,
 
     /// Key options
     #[clap(flatten)]
@@ -44,7 +52,11 @@ impl Runnable for KeyCmd {
 
 impl Runnable for AddCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -52,21 +64,15 @@ impl Runnable for AddCmd {
 }
 
 impl AddCmd {
-    fn inner_run(&self) -> Result<()> {
-        let config = RUSTIC_APP.config();
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+        // create new Repository options which just contain password information
+        let mut pass_opts = RepositoryOptions::default();
+        pass_opts.password = self.new_password.clone();
+        pass_opts.password_file = self.new_password_file.clone();
+        pass_opts.password_command = self.new_password_command.clone();
 
-        let repo = open_repository(&config)?;
-
-        // create new "artificial" repo using the given password options
-        let repo_opts = RepositoryOptions {
-            password_file: self.new_password_file.clone(),
-            repository: Some(String::new()), // fake repository to make Repository::new() not bail
-            ..Default::default()
-        };
-        let repo_newpass = Repository::new(&repo_opts)?;
-
-        let pass = repo_newpass
-            .password()
+        let pass = pass_opts
+            .evaluate_password()
             .map_err(|err| err.into())
             .transpose()
             .unwrap_or_else(|| -> Result<_> {

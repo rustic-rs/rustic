@@ -2,6 +2,382 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.4](https://github.com/rustic-rs/rustic/compare/v0.9.3...v0.9.4) - 2024-10-24
+
+### Added
+
+- *(commands)* Add tar output to dump command ([#1328](https://github.com/rustic-rs/rustic/pull/1328))
+
+### Fixed
+
+- clippy lints for new Rust version ([#1329](https://github.com/rustic-rs/rustic/pull/1329))
+- *(deps)* downgrade self-update to fix problems finding right target ([#1323](https://github.com/rustic-rs/rustic/pull/1323))
+
+### Other
+
+- *(deps)* remove once_cell and replace with std::sync::LazyLock, increase MSRV to 1.80.0 ([#1337](https://github.com/rustic-rs/rustic/pull/1337))
+- *(deps)* update tokio, ratatui, and tui-textarea ([#1336](https://github.com/rustic-rs/rustic/pull/1336))
+- *(deps)* update rustic_core and rustic_backend ([#1334](https://github.com/rustic-rs/rustic/pull/1334))
+- *(deps)* update abscissa framework ([#1330](https://github.com/rustic-rs/rustic/pull/1330))
+- introduce a new feature 'release' that includes the 'self-update' feature ([#1307](https://github.com/rustic-rs/rustic/pull/1307))
+
+## [0.9.3](https://github.com/rustic-rs/rustic/compare/v0.9.2...v0.9.3) - 2024-10-10
+
+### Fixed
+
+- *(deps)* update rustic_core to version 0.5.3 ([#1314](https://github.com/rustic-rs/rustic/pull/1314))
+
+### Other
+
+- add status badge for docker image build and shorten workflow name ([#1311](https://github.com/rustic-rs/rustic/pull/1311))
+
+## [0.9.2](https://github.com/rustic-rs/rustic/compare/v0.9.1...v0.9.2) - 2024-10-09
+
+### Added
+
+- *(config)* Add hooks ([#1218](https://github.com/rustic-rs/rustic/pull/1218))
+
+### Other
+
+- *(deps)* update rustic_core ([#1309](https://github.com/rustic-rs/rustic/pull/1309))
+- build and publish docker image on release ([#1297](https://github.com/rustic-rs/rustic/pull/1297))
+
+## [0.9.1](https://github.com/rustic-rs/rustic/compare/v0.9.0...v0.9.1) - 2024-10-03
+
+### Added
+
+- *(config)* add more filters ([#1263](https://github.com/rustic-rs/rustic/pull/1263))
+- *(check)* Allow to only check trees+packs for given snapshots ([#1230](https://github.com/rustic-rs/rustic/pull/1230))
+- *(commands)* add a `docs` command to easily access the user, dev and config documentation ([#1276](https://github.com/rustic-rs/rustic/pull/1276))
+
+### Fixed
+
+- *(docs/cli)* improve the descriptions of the CLI commands ([#1277](https://github.com/rustic-rs/rustic/pull/1277))
+- *(deps)* update rustic_core and other dependencies and fix merge precedence ([#1282](https://github.com/rustic-rs/rustic/pull/1282))
+- *(docs)* update configuration documentation to align with recent changes ([#1280](https://github.com/rustic-rs/rustic/pull/1280))
+
+### Other
+
+- *(deps)* upgrade dependencies ([#1289](https://github.com/rustic-rs/rustic/pull/1289))
+- add triage label to new issues only if no label has been set when creating it ([#1287](https://github.com/rustic-rs/rustic/pull/1287))
+- *(interactive)* use update methods for refreshing snapshots ([#1285](https://github.com/rustic-rs/rustic/pull/1285))
+
+## [0.9.0](https://github.com/rustic-rs/rustic/compare/v0.8.1...v0.9.0) - 2024-09-29
+
+### Bug Fixes
+
+- [**breaking**] use multiple options only as array in config profile
+  ([#1240](https://github.com/rustic-rs/rustic/pull/1240))
+- Allow snapshots to be modified and marked to forget
+  ([#1253](https://github.com/rustic-rs/rustic/pull/1253))
+- make ls and find show the year of mtime date
+  ([#1249](https://github.com/rustic-rs/rustic/pull/1249))
+- ls: Remove printing trailing space
+  ([#1247](https://github.com/rustic-rs/rustic/pull/1247))
+- webdav/forget: correctly use application config
+  ([#1241](https://github.com/rustic-rs/rustic/pull/1241))
+
+### Features
+
+- [**breaking**] copy: Use config profile as target
+  ([#1131](https://github.com/rustic-rs/rustic/pull/1131))
+- backup: Add option `stdin-command` 
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- Add list indexpacks and list indexcontent commands
+  ([#1254](https://github.com/rustic-rs/rustic/pull/1254))
+- Add option `--only-identical` for `diff` to allow for bitrot check
+  ([#1250](https://github.com/rustic-rs/rustic/pull/1250))
+- ls: Add option --json ([#1251](https://github.com/rustic-rs/rustic/pull/1251))
+- backup: Add option `--long`
+  ([#1159](https://github.com/rustic-rs/rustic/pull/1159))
+
+### Documentation
+
+- update installation instructions in readme to use `--locked` flag for install
+  from crates.io
+- update RepositoryErrorKind rustdoc following rustic_core change
+  ([#1237](https://github.com/rustic-rs/rustic/pull/1237))
+
+### Other
+
+- Remove self-update from default crate features
+  ([#1139](https://github.com/rustic-rs/rustic/pull/1139))
+- Reduce memory usage of restore
+  ([#1069](https://github.com/rustic-rs/rustic/pull/1069))
+- *(deps)* update rust crate libc to v0.2.159
+  ([#1257](https://github.com/rustic-rs/rustic/pull/1257))
+- *(deps)* lock file maintenance
+  ([#1269](https://github.com/rustic-rs/rustic/pull/1269))
+- *(deps)* update rust crate rstest to 0.23
+  ([#1267](https://github.com/rustic-rs/rustic/pull/1267))
+- *(deps)* update rust crate tempfile to v3.13.0
+  ([#1266](https://github.com/rustic-rs/rustic/pull/1266))
+- *(deps)* update marcoieni/release-plz-action digest to 8b0f89a
+  ([#1265](https://github.com/rustic-rs/rustic/pull/1265))
+- *(deps)* update embarkstudios/cargo-deny-action action to v2
+  ([#1259](https://github.com/rustic-rs/rustic/pull/1259))
+- *(deps)* update rustsec/audit-check action to v2
+  ([#1260](https://github.com/rustic-rs/rustic/pull/1260))
+- *(deps)* update softprops/action-gh-release action to v2
+  ([#1258](https://github.com/rustic-rs/rustic/pull/1258))
+- *(deps)* update embarkstudios/cargo-deny-action digest to 3f4a782
+  ([#1228](https://github.com/rustic-rs/rustic/pull/1228))
+
+## [0.8.1] - 2024-09-08
+
+### Bug Fixes
+
+- Allow to compile without tui feature
+  ([#1208](https://github.com/rustic-rs/rustic/issues/1208))
+- Use cargo --locked in CI pipeline
+  ([#1207](https://github.com/rustic-rs/rustic/issues/1207))
+- Return exitcode ([#1220](https://github.com/rustic-rs/rustic/issues/1220))
+- "Incorrect Password" error is now only shown if password is really incorrect.
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+- Group by now works as expected
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+- A bug in `keep-tags` and `filter-tags` has been fixed.
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+- Building OpenBSD platform target is now possible again
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.1))
+
+### Documentation
+
+- Update config profile readme
+  ([#1221](https://github.com/rustic-rs/rustic/issues/1221))
+
+### Features
+
+- Add autocompletion hints
+  ([#1225](https://github.com/rustic-rs/rustic/issues/1225))
+- Allow to modify filters
+  ([#1210](https://github.com/rustic-rs/rustic/issues/1210))
+- Allow to view text files
+  ([#1216](https://github.com/rustic-rs/rustic/issues/1216))
+
+### Generated
+
+- Updated Completions fixtures
+
+### Miscellaneous Tasks
+
+- Bump quinn-proto from 0.11.6 to 0.11.8
+  ([#1223](https://github.com/rustic-rs/rustic/issues/1223))
+- Dependency updates ([#1227](https://github.com/rustic-rs/rustic/issues/1227))
+
+## [0.8.0] - 2024-08-21
+
+### Bug Fixes
+
+- Add comments for owncloud and nextcloud dependent settings
+- Rename service examples
+- Ask for password in backup and copy command if it is missing
+  ([#1061](https://github.com/rustic-rs/rustic/issues/1061))
+- Ask for missing password in copy when initializing
+  ([#1063](https://github.com/rustic-rs/rustic/issues/1063))
+- Fix possible overflow in progress bar ETA
+  ([#1079](https://github.com/rustic-rs/rustic/issues/1079))
+- Correct b2.toml ([#1072](https://github.com/rustic-rs/rustic/issues/1072))
+- Show log filename if open/creation failed
+  ([#1111](https://github.com/rustic-rs/rustic/issues/1111))
+- [**breaking**] Multiple paths in config profile as array
+  ([#1124](https://github.com/rustic-rs/rustic/issues/1124))
+- Respect delete-protection when running forget with ids
+  ([#1149](https://github.com/rustic-rs/rustic/issues/1149))
+- Reset terminal no matter what
+  ([#1175](https://github.com/rustic-rs/rustic/issues/1175))
+- Allow missing fields in snapshot summary (to support restic 0.17.0)
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- Allow non-value/null xattr fields
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- Backup file if listing xattrs fails
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- limit memory usage for restore when having large pack files
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- prune: correct number of packs to repack
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+
+### Features
+
+- [**breaking**] Show-config now outputs toml
+  ([#1095](https://github.com/rustic-rs/rustic/issues/1095))
+- [**breaking**] Allow specifying many options in config profile without array
+  ([#1130](https://github.com/rustic-rs/rustic/issues/1130))
+- Add interactive snapshots mode
+  ([#1114](https://github.com/rustic-rs/rustic/issues/1114))
+- The find command has been added
+  ([#1136](https://github.com/rustic-rs/rustic/issues/1136))
+- Allow setting extra repository options via env variables
+  ([#1081](https://github.com/rustic-rs/rustic/issues/1081))
+- Add --check-index option
+  ([#1078](https://github.com/rustic-rs/rustic/issues/1078))
+- Add extra check before writing data and add --set-extra-check config option
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- Add append-only repository mode
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- forget: Enforce to have a --keep-* option and add --keep-none.
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
+- Add s3_idrive config and move configs to a services subdirectory
+  ([#1048](https://github.com/rustic-rs/rustic/issues/1048))
+- Add example config for owncloud and nextcloud
+  ([#1052](https://github.com/rustic-rs/rustic/issues/1052))
+- Use human-panic to print better error messages in case rustic panics
+  ([#1065](https://github.com/rustic-rs/rustic/issues/1065))
+- Prune: Add more debug output
+  ([#1064](https://github.com/rustic-rs/rustic/issues/1064))
+- Add interactive ls mode
+  ([#1117](https://github.com/rustic-rs/rustic/issues/1117))
+- Add interactive restore
+  ([#1123](https://github.com/rustic-rs/rustic/issues/1123))
+- Interactive Ls: remember parent position
+  ([#1126](https://github.com/rustic-rs/rustic/issues/1126))
+- Use RFC3339 time format in logfile
+  ([#1133](https://github.com/rustic-rs/rustic/issues/1133))
+- Add possibility to change snapshot description
+  ([#1137](https://github.com/rustic-rs/rustic/issues/1137))
+- Interactive: Allow to delete snapshots
+  ([#1143](https://github.com/rustic-rs/rustic/issues/1143))
+- Interactive: Prompt before exiting
+  ([#1146](https://github.com/rustic-rs/rustic/issues/1146))
+- Document opendal options connections and throttle
+- Add better progress bars
+  ([#1152](https://github.com/rustic-rs/rustic/issues/1152))
+- Show diff statistics
+  ([#1178](https://github.com/rustic-rs/rustic/issues/1178))
+
+### Documentaton
+
+- Update configuration README
+  ([#1088](https://github.com/rustic-rs/rustic/issues/1088))
+- Fix typo in find.rs ([#1187](https://github.com/rustic-rs/rustic/issues/1187))
+
+### Miscellaneous Tasks
+
+- Fix cargo-binstall metadata
+- Move rustic_testing into rustic_core
+- Break old ci jobs when new commits are pushed so we don't fill up the queue
+- Bump mio from 0.8.10 to 0.8.11
+  ([#1089](https://github.com/rustic-rs/rustic/issues/1089))
+- Update deps and adapt to rustic_core changes
+- Bump h2 from 0.3.25 to 0.3.26
+  ([#1113](https://github.com/rustic-rs/rustic/issues/1113))
+- Bump rustls from 0.21.10 to 0.21.11
+  ([#1127](https://github.com/rustic-rs/rustic/issues/1127))
+- Update rustic_core and rustic_backend
+  ([#1201](https://github.com/rustic-rs/rustic/issues/1201))
+
+### Testing
+
+- Replace missing crates folder with src
+- Refactor integration tests to assert_cmd and predicates, test all configs in
+  config subdirectory ([#1060](https://github.com/rustic-rs/rustic/issues/1060))
+
+## [0.7.0] - 2024-02-03
+
+### Packaging
+
+- Enable RPM file build target
+  ([#951](https://github.com/rustic-rs/rustic/issues/951))
+
+### Bug Fixes
+
+- Remove unmaintained `actions-rs` ci actions
+- Remove unmaintained `actions-rs/cargo` ci action with cross.
+- Remove unmaintained `actions-rs/toolchain` ci action
+- Log config file logs after reading config files
+  ([#961](https://github.com/rustic-rs/rustic/issues/961))
+- Fix progress for copy command
+  ([#965](https://github.com/rustic-rs/rustic/issues/965))
+- Enable abscissa_core testing feature only for dev
+  ([#976](https://github.com/rustic-rs/rustic/issues/976))
+- Update github action to download artifacts, as upload/download actions from
+  nightly workflow were incompatible with each other
+- Update rust crate duct to 0.13.7
+  ([#991](https://github.com/rustic-rs/rustic/issues/991))
+- Update rust crate libc to 0.2.151
+  ([#992](https://github.com/rustic-rs/rustic/issues/992))
+- Diff: Add local: to path syntax
+  ([#1000](https://github.com/rustic-rs/rustic/issues/1000))
+- Update rust crate libc to 0.2.152
+  ([#1016](https://github.com/rustic-rs/rustic/issues/1016))
+- Error handling when entering passwords
+  ([#963](https://github.com/rustic-rs/rustic/issues/963))
+- Use hyphen in cli api for numeric-uid-gid
+
+### Documentation
+
+- Update changelog
+- Fix new lines in changelog
+- Update changelog
+
+### Features
+
+- Add --quiet option to backup and forget
+  ([#964](https://github.com/rustic-rs/rustic/issues/964))
+- Allow building without self-update feature
+  ([#975](https://github.com/rustic-rs/rustic/issues/975))
+- Add option --numeric-uid-gid to ls
+  ([#1019](https://github.com/rustic-rs/rustic/issues/1019))
+- Add colors to help texts
+  ([#1007](https://github.com/rustic-rs/rustic/issues/1007))
+- Add webdav command ([#1024](https://github.com/rustic-rs/rustic/issues/1024))
+
+### Generated
+
+- Updated Completions fixtures
+
+### Miscellaneous Tasks
+
+- Run actions that need secrets.GITHUB_TOKEN only on rustic-rs org
+- Update dtolnay/rust-toolchain
+- Update taiki-e/install-action
+- Update rustsec/audit-check
+- Netbsd nightly builds fail due to missing execinfo, so we don't build on it
+  for now
+- Upgrade dprint config
+- Activate automerge for github action digest update
+- Activate automerge for github action digest update
+- Automerge lockfile maintenance
+- Try to fix nightly build
+- Display structure of downloaded artifact files
+- Display structure of downloaded artifact files II
+- Release
+- Do not run twice on release branches
+- Remove release workflow and fix release continuous deployment
+- Run on tag push
+- Add release candidates to CD
+- Remove conditional for checking tags
+- Fix path for release files for CD
+- Fix path for release files for CD, second approach with full file name
+- Fix binstall pkg-url
+- Use tag version in directory names for automation to download new versions
+- Set `max-parallel` to 1 for build matrix
+- Replace max-parallel with an own job
+
+### Refactor
+
+- Adjust to changes in rustic_core for added rustic_backend
+  ([#966](https://github.com/rustic-rs/rustic/issues/966))
+
+### Testing
+
+- Add missing powershell profile to completions test
+
+### Build
+
+- Bump zerocopy from 0.7.25 to 0.7.31
+  ([#967](https://github.com/rustic-rs/rustic/issues/967))
+- Bump h2 from 0.3.22 to 0.3.24
+  ([#1009](https://github.com/rustic-rs/rustic/issues/1009))
+
+### Diff
+
+- Improve code (better lifetime handling)
+
+### Ls
+
+- Add alternative option name --numeric-id
+
 ## [0.6.0] - 2023-10-23
 
 ### Breaking Changes

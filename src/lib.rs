@@ -34,10 +34,8 @@ Application based on the [Abscissa] framework.
     patterns_in_fns_without_body,
     trivial_numeric_casts,
     unused_results,
-    trivial_casts,
     unused_extern_crates,
     unused_import_braces,
-    unused_qualifications,
     unconditional_recursion,
     unused,
     unused_allocation,
@@ -64,6 +62,7 @@ pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod filtering;
 pub(crate) mod helpers;
+pub(crate) mod repository;
 
 // rustic_cli Public API
 

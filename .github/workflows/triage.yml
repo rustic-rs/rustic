@@ -13,4 +13,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
         run: |
-          gh issue edit $ISSUE_URL --add-label "S-triage"
+          # check if issue doesn't have any labels
+          if [[ $(gh issue view $ISSUE_URL --json labels -q '.labels | length') -eq 0 ]]; then
+            # add S-triage label
+            gh issue edit $ISSUE_URL --add-label "S-triage"
+          fi

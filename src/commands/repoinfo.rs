@@ -1,15 +1,16 @@
 //! `repoinfo` subcommand
 
 use crate::{
-    commands::open_repository, helpers::bytes_size_to_string, status_err, Application, RUSTIC_APP,
+    helpers::{bytes_size_to_string, table_right_from},
+    repository::CliRepo,
+    status_err, Application, RUSTIC_APP,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use serde::Serialize;
 
-use crate::helpers::table_right_from;
 use anyhow::Result;
-use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos, Repository};
+use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos};
 
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -29,7 +30,11 @@ pub(crate) struct RepoInfoCmd {
 
 impl Runnable for RepoInfoCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -47,22 +52,13 @@ struct Infos {
 }
 
 impl RepoInfoCmd {
-    fn inner_run(&self) -> Result<()> {
-        let config = RUSTIC_APP.config();
-
+    fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let infos = Infos {
             files: (!self.only_index)
-                .then(|| {
-                    let po = config.global.progress_options;
-                    let repo = Repository::new_with_progress(&config.repository, po)?;
-                    repo.infos_files()
-                })
+                .then(|| -> Result<_> { Ok(repo.infos_files()?) })
                 .transpose()?,
             index: (!self.only_files)
-                .then(|| -> Result<_> {
-                    let repo = open_repository(&config)?;
-                    Ok(repo.infos_index()?)
-                })
+                .then(|| -> Result<_> { Ok(repo.open()?.infos_index()?) })
                 .transpose()?,
         };
 

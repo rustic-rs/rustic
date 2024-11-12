@@ -1,0 +1,11 @@
+[repository]
+repository = "opendal:webdav"
+password = "my-backup-password"
+
+[repository.options]
+endpoint = "https://my-owncloud-or-nextcloud-server.com"
+# root = "remote.php/webdav/my-folder"         # for owncloud
+# root = "remote.php/dav/files/<username>"     # for nextcloud
+username = "user"
+# In `Settings -> Security -> App passwords / tokens` you should create a token to be used here.
+password = "token"

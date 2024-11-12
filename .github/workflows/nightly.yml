@@ -37,7 +37,7 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: macos-latest
+          - os: macos-13
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
@@ -69,6 +69,12 @@ jobs:
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
+            target: aarch64-unknown-linux-musl
+            architecture: arm64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
             target: i686-unknown-linux-gnu
             architecture: i686
             binary-postfix: ""
@@ -89,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0 # fetch all history so that git describe works
       - name: Create binary artifact
@@ -120,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
       - name: Releasing nightly builds
         shell: bash
         run: |
@@ -148,7 +154,7 @@ jobs:
           mkdir -p $WORKING_DIR/$DEST_DIR
 
           # do the copy
-          for i in binary-*; do cp -a $i/* $WORKING_DIR/$DEST_DIR; done
+          for artifact_dir in binary-*; do cp -a $artifact_dir/* $WORKING_DIR/$DEST_DIR; done
 
           # create the commit
           cd $WORKING_DIR

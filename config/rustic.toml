@@ -17,7 +17,7 @@ password = "mySecretPassword"
 
 # snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
-filter-host = ["myhost"]
+filter-hosts = ["myhost"]
 
 # backup options: These options are used for all sources when calling the backup command.
 # They can be overwritten by source-specific options (see below) or command line options.
@@ -29,16 +29,16 @@ git-ignore = true
 #
 # Note that if you call "rustic backup" without any source, all sources from this config
 # file will be processed.
-[[backup.sources]]
-source = "/data/dir"
+[[backup.snapshots]]
+sources = ["/data/dir"]
 
-[[backup.sources]]
-source = "/home"
-glob = ["!/home/*/Downloads/*"]
+[[backup.snapshots]]
+sources = ["/home"]
+globs = ["!/home/*/Downloads/*"]
 
 # forget options
 [forget]
-filter-host = [
+filter-hosts = [
   "forgethost",
 ] # <- this overwrites the snapshot-filter option defined above
 keep-tags = ["mytag"]

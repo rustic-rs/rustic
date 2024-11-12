@@ -1,11 +1,11 @@
 //! Rustic Abscissa Application
-use std::env;
+use std::{env, process};
 
 use abscissa_core::{
-    application::{self, AppCell},
+    application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
     terminal::component::Terminal,
-    Application, Component, FrameworkError, StandardPaths,
+    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
 };
 
 use anyhow::Result;
@@ -15,6 +15,14 @@ use crate::{commands::EntryPoint, config::RusticConfig};
 
 /// Application state
 pub static RUSTIC_APP: AppCell<RusticApp> = AppCell::new();
+
+// Constants
+pub mod constants {
+    pub const RUSTIC_DOCS_URL: &str = "https://rustic.cli.rs/docs";
+    pub const RUSTIC_DEV_DOCS_URL: &str = "https://rustic.cli.rs/dev-docs";
+    pub const RUSTIC_CONFIG_DOCS_URL: &str =
+        "https://github.com/rustic-rs/rustic/blob/main/config/README.md";
+}
 
 /// Rustic Application
 #[derive(Debug)]
@@ -95,8 +103,38 @@ impl Application for RusticApp {
             env::set_var(env, value);
         }
 
+        let global_hooks = config.global.hooks.clone();
         self.config.set_once(config);
 
+        global_hooks.run_before().map_err(|err| -> FrameworkError {
+            FrameworkErrorKind::ProcessError.context(err).into()
+        })?;
+
         Ok(())
+    }
+
+    /// Shut down this application gracefully
+    fn shutdown(&self, shutdown: Shutdown) -> ! {
+        let exit_code = match shutdown {
+            Shutdown::Crash => 1,
+            _ => 0,
+        };
+        self.shutdown_with_exitcode(shutdown, exit_code)
+    }
+
+    /// Shut down this application gracefully, exiting with given exit code.
+    fn shutdown_with_exitcode(&self, shutdown: Shutdown, exit_code: i32) -> ! {
+        let hooks = &RUSTIC_APP.config().global.hooks;
+        match shutdown {
+            Shutdown::Crash => _ = hooks.run_failed(),
+            _ => _ = hooks.run_after(),
+        };
+        _ = hooks.run_finally();
+        let result = self.state().components().shutdown(self, shutdown);
+        if let Err(e) = result {
+            fatal_error(self, &e)
+        }
+
+        process::exit(exit_code);
     }
 }

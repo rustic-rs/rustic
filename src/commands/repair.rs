@@ -1,6 +1,9 @@
 //! `repair` subcommand
 
-use crate::{commands::open_repository, status_err, Application, RUSTIC_APP};
+use crate::{
+    repository::{CliIndexedRepo, CliOpenRepo},
+    status_err, Application, RUSTIC_APP,
+};
 use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::Result;
@@ -50,7 +53,8 @@ impl Runnable for RepairCmd {
 
 impl Runnable for IndexSubCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        let config = RUSTIC_APP.config();
+        if let Err(err) = config.repository.run_open(|repo| self.inner_run(repo)) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -58,9 +62,8 @@ impl Runnable for IndexSubCmd {
 }
 
 impl IndexSubCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
         repo.repair_index(&self.opts, config.global.dry_run)?;
         Ok(())
     }
@@ -68,7 +71,8 @@ impl IndexSubCmd {
 
 impl Runnable for SnapSubCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        let config = RUSTIC_APP.config();
+        if let Err(err) = config.repository.run_indexed(|repo| self.inner_run(repo)) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -76,9 +80,8 @@ impl Runnable for SnapSubCmd {
 }
 
 impl SnapSubCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?.to_indexed()?;
         let snaps = if self.ids.is_empty() {
             repo.get_all_snapshots()?
         } else {

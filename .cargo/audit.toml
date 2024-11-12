@@ -1,0 +1,10 @@
+[advisories]
+ignore = [
+  # FIXME!: See https://github.com/RustCrypto/RSA/issues/19#issuecomment-1822995643.
+  # There is no workaround available yet.
+  "RUSTSEC-2023-0071",
+  # FIXME!: proc-macro-error's maintainer seems to be unreachable, we use `merge` which is using this.
+  # `merge` is self-hosted on another platform, we should check if and how to replace it/open upstream
+  # issue for updating the dependency.
+  "RUSTSEC-2024-0370",
+]

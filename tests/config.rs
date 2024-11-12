@@ -1,31 +1,17 @@
 //! Configuration file tests
 
-use log::LevelFilter;
+use anyhow::Result;
+use rstest::*;
 use rustic_rs::RusticConfig;
-use std::{error::Error, fs, path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf};
 
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
-
-fn get_config_file_path() -> PathBuf {
-    ["config", "full.toml"].iter().collect()
-}
-/// Ensure `full.toml` parses as a valid config file
-#[test]
-fn parse_full_toml_example() -> Result<()> {
-    let output = std::process::Command::new("cargo")
-        .args(["locate-project", "--workspace", "--message-format", "plain"])
-        .output()?;
-    let root = PathBuf::from_str(String::from_utf8(output.stdout)?.as_str())?;
-    let root_dir = root.parent().unwrap();
-    let config_path = root_dir.join(get_config_file_path());
+/// Ensure all `configs` parse as a valid config files
+#[rstest]
+fn test_parse_rustic_configs_is_ok(
+    #[files("config/**/*.toml")] config_path: PathBuf,
+) -> Result<()> {
     let toml_string = fs::read_to_string(config_path)?;
-    let config: RusticConfig = toml::from_str(&toml_string)?;
-
-    assert_eq!(
-        LevelFilter::from_str(config.global.log_level.unwrap().as_str())?,
-        LevelFilter::Info
-    );
-    assert!(!config.global.dry_run);
+    let _ = toml::from_str::<RusticConfig>(&toml_string)?;
 
     Ok(())
 }

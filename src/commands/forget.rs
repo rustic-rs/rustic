@@ -1,16 +1,15 @@
 //! `forget` subcommand
 
-use crate::{
-    commands::open_repository, helpers::table_with_titles, status_err, Application, RusticConfig,
-    RUSTIC_APP,
-};
+use crate::repository::CliOpenRepo;
+use crate::{helpers::table_with_titles, status_err, Application, RusticConfig, RUSTIC_APP};
 
 use abscissa_core::{config::Override, Shutdown};
 use abscissa_core::{Command, FrameworkError, Runnable};
 use anyhow::Result;
 
-use merge::Merge;
-use serde::Deserialize;
+use chrono::Local;
+use conflate::Merge;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
@@ -63,17 +62,18 @@ impl Override<RusticConfig> for ForgetCmd {
 
 /// Forget options
 #[serde_as]
-#[derive(Clone, Default, Debug, clap::Parser, Deserialize, Merge)]
+#[derive(Clone, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ForgetOptions {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]
     #[serde_as(as = "Option<DisplayFromStr>")]
+    #[merge(strategy=conflate::option::overwrite_none)]
     group_by: Option<SnapshotGroupCriterion>,
 
     /// Also prune the repository
     #[clap(long)]
-    #[merge(strategy = merge::bool::overwrite_false)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
     prune: bool,
 
     /// Snapshot filter options
@@ -89,7 +89,11 @@ pub struct ForgetOptions {
 
 impl Runnable for ForgetCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run_open(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -97,9 +101,11 @@ impl Runnable for ForgetCmd {
 }
 
 impl ForgetCmd {
-    fn inner_run(&self) -> Result<()> {
+    /// be careful about self vs `RUSTIC_APP.config()` usage
+    /// only the `RUSTIC_APP.config()` involves the TOML and ENV merged configurations
+    /// see <https://github.com/rustic-rs/rustic/issues/1242>
+    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let repo = open_repository(&config)?;
 
         let group_by = config.forget.group_by.unwrap_or_default();
 
@@ -108,15 +114,26 @@ impl ForgetCmd {
                 config.forget.filter.matches(sn)
             })?
         } else {
+            let now = Local::now();
             let item = ForgetGroup {
                 group: SnapshotGroup::default(),
                 snapshots: repo
                     .get_snapshots(&self.ids)?
                     .into_iter()
-                    .map(|sn| ForgetSnapshot {
-                        snapshot: sn,
-                        keep: false,
-                        reasons: vec!["id argument".to_string()],
+                    .map(|sn| {
+                        if sn.must_keep(now) {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: true,
+                                reasons: vec!["snapshot".to_string()],
+                            }
+                        } else {
+                            ForgetSnapshot {
+                                snapshot: sn,
+                                keep: false,
+                                reasons: vec!["id argument".to_string()],
+                            }
+                        }
                     })
                     .collect(),
             };
@@ -143,7 +160,7 @@ impl ForgetCmd {
             (_, _, true) => {}
         }
 
-        if self.config.prune {
+        if config.forget.prune {
             let mut prune_opts = self.prune_opts.clone();
             prune_opts.opts.ignore_snaps = forget_snaps;
             prune_opts.run();

@@ -9,6 +9,7 @@
 <a href="https://raw.githubusercontent.com/rustic-rs/rustic/main/"><img src="https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg" /></a>
 <a href="https://crates.io/crates/rustic-rs"><img src="https://img.shields.io/crates/d/rustic-rs.svg" /></a>
 <a href="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/nightly.yml/badge.svg" /></a>
+<a href="https://github.com/rustic-rs/rustic/actions/workflows/release-image.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/release-image.yml/badge.svg" /></a>
 <p>
 
 ## About
@@ -35,8 +36,8 @@ The `rustic` project is split into multiple crates:
 
 - [rustic](https://crates.io/crates/rustic-rs) - the main binary
 - [rustic-core](https://crates.io/crates/rustic_core) - the core library
-
-<!-- - [rustic-testing](https://crates.io/crates/rustic_testing) - testing utilities -->
+- [rustic-backend](https://crates.io/crates/rustic_backend) - the library for
+  supporting various backends
 
 ## Features
 
@@ -97,6 +98,12 @@ Or you can check out the
 Nightly binaries are available
 [here](https://rustic.cli.rs/docs/nightly_builds.html).
 
+### Docker
+
+```bash
+docker pull ghcr.io/rustic-rs/rustic
+```
+
 ### From source
 
 **Beware**: This installs the latest development version, which might be
@@ -109,7 +116,7 @@ cargo install --git https://github.com/rustic-rs/rustic.git rustic-rs
 ### crates.io
 
 ```bash
-cargo install rustic-rs
+cargo install --locked rustic-rs
 ```
 
 ## Differences to `restic`?
@@ -136,7 +143,7 @@ Please make sure, that you read the
 
 ## Minimum Rust version policy
 
-This crate's minimum supported `rustc` version is `1.70.0`.
+This crate's minimum supported `rustc` version is `1.80.0`.
 
 The current policy is that the minimum Rust version required to use this crate
 can be increased in minor version updates. For example, if `crate 1.0` requires

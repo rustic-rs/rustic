@@ -2,10 +2,9 @@
 
 use abscissa_core::{status_err, Command, Runnable, Shutdown};
 use anyhow::{bail, Result};
-
-use crate::{Application, RUSTIC_APP};
-
 use dialoguer::Password;
+
+use crate::{repository::CliRepo, Application, RUSTIC_APP};
 
 use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 
@@ -23,7 +22,11 @@ pub(crate) struct InitCmd {
 
 impl Runnable for InitCmd {
     fn run(&self) {
-        if let Err(err) = self.inner_run() {
+        if let Err(err) = RUSTIC_APP
+            .config()
+            .repository
+            .run(|repo| self.inner_run(repo))
+        {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -31,11 +34,8 @@ impl Runnable for InitCmd {
 }
 
 impl InitCmd {
-    fn inner_run(&self) -> Result<()> {
+    fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let po = config.global.progress_options;
-        let repo = Repository::new_with_progress(&config.repository, po)?;
 
         // Note: This is again checked in repo.init_with_password(), however we want to inform
         // users before they are prompted to enter a password
@@ -51,7 +51,7 @@ impl InitCmd {
             );
         }
 
-        let _ = init(repo, &self.key_opts, &self.config_opts)?;
+        let _ = init(repo.0, &self.key_opts, &self.config_opts)?;
         Ok(())
     }
 }
@@ -69,7 +69,7 @@ impl InitCmd {
 ///  * [`RepositoryErrorKind::OpeningPasswordFileFailed`] - If opening the password file failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`] - If reading the password failed
 /// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
-/// * [`RepositoryErrorKind::PasswordCommandParsingFailed`] - If parsing the password command failed
+/// * [`RepositoryErrorKind::PasswordCommandExecutionFailed`] - If executing the password command failed
 /// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
 ///
 /// # Returns
@@ -79,13 +79,18 @@ impl InitCmd {
 /// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: rustic_core::error::RepositoryErrorKind::OpeningPasswordFileFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
 /// [`RepositoryErrorKind::FromSplitError`]: rustic_core::error::RepositoryErrorKind::FromSplitError
-/// [`RepositoryErrorKind::PasswordCommandParsingFailed`]: rustic_core::error::RepositoryErrorKind::PasswordCommandParsingFailed
+/// [`RepositoryErrorKind::PasswordCommandExecutionFailed`]: rustic_core::error::RepositoryErrorKind::PasswordCommandExecutionFailed
 /// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 pub(crate) fn init<P, S>(
     repo: Repository<P, S>,
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
 ) -> Result<Repository<P, OpenStatus>> {
+    let pass = init_password(&repo)?;
+    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+}
+
+pub(crate) fn init_password<P, S>(repo: &Repository<P, S>) -> Result<String> {
     let pass = repo.password()?.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
@@ -101,5 +106,5 @@ pub(crate) fn init<P, S>(
         }
     });
 
-    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+    Ok(pass)
 }

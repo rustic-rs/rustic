@@ -56,7 +56,7 @@ pub struct MountCmd {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Merge)]
-pub(crate) struct MountOpts(#[merge(strategy = conflate::vec::ignore)] pub(crate) Vec<String>);
+pub(crate) struct MountOpts(#[merge(strategy = conflate::vec::append)] pub(crate) Vec<String>);
 
 impl Default for MountOpts {
     fn default() -> Self {
@@ -126,7 +126,7 @@ impl MountCmd {
             )?
         };
 
-        let mut options = self.options.0;
+        let mut options = self.options.0.clone();
 
         options.extend_from_slice(&[format!("fsname=rusticfs:{}", repo.config().id)]);
 
@@ -155,9 +155,10 @@ impl MountCmd {
         // join options into a single comma-delimited string and prepent "-o "
         // this should be parsed just fine by fuser, here
         // https://github.com/cberner/fuser/blob/9f6ced73a36f1d99846e28be9c5e4903939ee9d5/src/mnt/mount_options.rs#L157
-        let options = OsStr::new(&format!("-o {}", options.join(",")));
+        let opt_string = format!("-o {}", options.join(","));
+        let options = OsStr::new(&opt_string);
 
-        mount(fs, mount_point, &[options.as_ref()])?;
+        mount(fs, mount_point, &[options])?;
 
         Ok(())
     }

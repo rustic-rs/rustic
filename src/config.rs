@@ -146,7 +146,7 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
 
-    /// Check if index matches pack files and read pack headers if neccessary
+    /// Check if index matches pack files and read pack headers if necessary
     #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub check_index: bool,

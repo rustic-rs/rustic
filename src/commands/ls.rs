@@ -69,7 +69,7 @@ impl Runnable for LsCmd {
     }
 }
 
-/// Sumary of a ls command
+/// Summary of a ls command
 ///
 /// This struct is used to print a summary of the ls command.
 #[derive(Default)]

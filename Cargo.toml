@@ -52,8 +52,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.4.2", features = ["cli"] }
-rustic_core = { version = "0.5.5", features = ["cli"] }
+rustic_backend = { version = "0.5.0", features = ["cli"] }
+rustic_core = { version = "0.6.0", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -124,7 +124,7 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.23"
-rustic_testing = "0.2.3"
+rustic_testing = "0.3.0"
 tempfile = "3.13"
 toml = "0.8"
 

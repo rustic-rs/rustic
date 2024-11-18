@@ -4216,8 +4216,8 @@ dependencies = [
 
 [[package]]
 name = "rustic_backend"
-version = "0.4.2"
-source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#8ce88bfadbe0e223f0e785ae5319a42763626d81"
+version = "0.5.0"
+source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#7a3b68edbd1c61836e22bbc2b0332e20460908ec"
 dependencies = [
  "aho-corasick",
  "aws-lc-sys",
@@ -4256,8 +4256,8 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 
 [[package]]
 name = "rustic_core"
-version = "0.5.5"
-source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#8ce88bfadbe0e223f0e785ae5319a42763626d81"
+version = "0.6.0"
+source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#7a3b68edbd1c61836e22bbc2b0332e20460908ec"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4313,8 +4313,8 @@ dependencies = [
 
 [[package]]
 name = "rustic_testing"
-version = "0.2.3"
-source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#8ce88bfadbe0e223f0e785ae5319a42763626d81"
+version = "0.3.0"
+source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#7a3b68edbd1c61836e22bbc2b0332e20460908ec"
 dependencies = [
  "aho-corasick",
  "anyhow",

@@ -162,6 +162,10 @@ codegen-units = 1
 strip = true
 panic = "abort"
 
+[profile.max-perf-at-small-bin]
+inherits = "release"
+opt-level = "z"
+
 [profile.test]
 opt-level = 1
 debug = true

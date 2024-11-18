@@ -1,3 +1,8 @@
+[patch.crates-io]
+rustic_core = { git = "https://www.github.com/rustic-rs/rustic_core", branch = "main", package = "rustic_core" }
+rustic_backend = { git = "https://www.github.com/rustic-rs/rustic_core", branch = "main", package = "rustic_backend" }
+rustic_testing = { git = "https://www.github.com/rustic-rs/rustic_core", branch = "main", package = "rustic_testing" }
+
 [package]
 name = "rustic-rs"
 version = "0.9.4"
@@ -91,7 +96,7 @@ bytesize = "1"
 cached = "0.53.1"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
-conflate = "0.2"
+conflate = "0.3.1"
 convert_case = "0.6.0"
 dateparser = "0.2.1"
 derive_more = { version = "1", features = ["debug"] }

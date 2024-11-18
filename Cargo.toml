@@ -1,8 +1,3 @@
-[patch.crates-io]
-rustic_core = { git = "https://www.github.com/rustic-rs/rustic_core", branch = "main", package = "rustic_core" }
-rustic_backend = { git = "https://www.github.com/rustic-rs/rustic_core", branch = "main", package = "rustic_backend" }
-rustic_testing = { git = "https://www.github.com/rustic-rs/rustic_core", branch = "main", package = "rustic_testing" }
-
 [package]
 name = "rustic-rs"
 version = "0.9.4"

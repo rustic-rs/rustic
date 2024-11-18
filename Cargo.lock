@@ -4217,7 +4217,8 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.0"
-source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#7a3b68edbd1c61836e22bbc2b0332e20460908ec"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34e6246c97ad65881e6353bf5d6b000652db7b75007a531d8575b268145c554c"
 dependencies = [
  "aho-corasick",
  "aws-lc-sys",
@@ -4257,7 +4258,8 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.6.0"
-source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#7a3b68edbd1c61836e22bbc2b0332e20460908ec"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ced8fa06db8411fa55828c4469f8c43f02fa35ad87ab678531da70fd9dfc8f8c"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4314,7 +4316,8 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.3.0"
-source = "git+https://www.github.com/rustic-rs/rustic_core?branch=main#7a3b68edbd1c61836e22bbc2b0332e20460908ec"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bbeadfcd443c4c129fa5edb1cc05f3b9522b24de65e815b47a9eb32c2af9d4f"
 dependencies = [
  "aho-corasick",
  "anyhow",

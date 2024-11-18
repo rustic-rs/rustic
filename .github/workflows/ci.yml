@@ -54,6 +54,8 @@ jobs:
     name: Test
     runs-on: ${{ matrix.job.os }}
     strategy:
+      # Don't fail fast, so we can actually see all the results
+      fail-fast: false
       matrix:
         rust: [stable]
         feature: [release]

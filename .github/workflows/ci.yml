@@ -80,7 +80,16 @@ jobs:
       - uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab # v2
       - name: Run Cargo Test
         run: cargo test -r --all-targets --features ${{ matrix.feature }} --workspace
+        id: run_tests
+        env:
+          INSTA_UPDATE: new
 
+      - name: Upload snapshots of failed tests
+        if: ${{ failure() && steps.run_tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
+        with:
+          name: failed-snapshots-${{ matrix.job.os }}
+          path: "**/snapshots/*.snap.new"
   docs:
     name: Build docs
     runs-on: ${{ matrix.job.os }}

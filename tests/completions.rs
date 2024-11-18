@@ -46,7 +46,16 @@ fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
 
     cmd.stdout().read_to_string(&mut output)?;
 
-    assert_snapshot!(shell, output);
+    #[cfg(target_os = "windows")]
+    let os = "windows";
+    #[cfg(target_os = "linux")]
+    let os = "linux";
+    #[cfg(target_os = "macos")]
+    let os = "macos";
+
+    let name = format!("completions-{}-{}", shell, os);
+
+    assert_snapshot!(name, output);
 
     cmd.wait()?.expect_success();
 

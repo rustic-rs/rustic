@@ -37,7 +37,7 @@ fn cmd_runner() -> CmdRunner {
 #[case("fish")]
 #[case("zsh")]
 #[case("powershell")]
-// #[ignore = "This test is only being run during release process"]
+#[ignore = "This test is only being run during release process"]
 fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
     let mut runner = cmd_runner();
 

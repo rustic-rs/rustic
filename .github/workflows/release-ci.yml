@@ -1,42 +1,17 @@
 name: Check release
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - "release/**"
-  # TODO!: We might want to do it manually? Not sure.
-  # workflow_dispatch:
-  #   inputs:
-  #     crate:
-  #       description: Crate to release
-  #       required: true
-  #       type: choice
-  #       options:
-  #         - rustic-rs
-  #         - rustic_testing
+      - "release-plz-**"
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  # determine-package:
-  #   name: Determine package to release
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     package: ${{ steps.determine-package-name.outputs.package }}
-  #   steps:
-  #     - name: Determine package
-  #       id: determine-package-name
-  #       run: |
-  #         if [[ ${{ github.ref }} == *"rustic_core"* ]]; then
-  #         echo "package=rustic_core" >> $GITHUB_OUTPUT
-  #         elif [[ ${{ github.ref }} == *"rustic_testing"* ]]; then
-  #         echo "package=rustic_testing" >> $GITHUB_OUTPUT
-  #         elif [[ ${{ github.ref }} == *"rustic-"* ]]; then
-  #         echo "package=rustic-rs" >> $GITHUB_OUTPUT
-  #         fi
-
   breaking-cli:
     name: Check breaking CLI changes
     if: ${{ github.repository_owner == 'rustic-rs' }}
@@ -50,28 +25,4 @@ jobs:
           toolchain: stable
       - uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab # v2
       - name: Run Cargo Test
-        run: cargo test --release -p rustic-rs --test completions -- --ignored
-#
-# FIXME: This is broken, when rustic-rs is released, we should fix it.
-# semver-check:
-#   name: Check SemVer
-#   runs-on: ubuntu-latest
-#   strategy:
-#     matrix:
-#       rust: [stable]
-#       job:
-#         - os: ubuntu-latest
-#         # - os: windows-latest # Panics
-#         # - os: macos-latest # Panics
-#   steps:
-#     - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
-#     - name: Install Rust toolchain
-#       uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1
-#       with:
-#         toolchain: stable
-#     - uses: Swatinem/rust-cache@a95ba195448af2da9b00fb742d14ffaaf3c21f43 # v2
-
-#     - name: Check semver
-#       uses: obi1kenobi/cargo-semver-checks-action@e275dda72e250d4df5b564e969e1348d67fefa52 # v2
-#       with:
-#         package: rustic-rs
+        run: cargo test -F release -p rustic-rs --test completions -- --ignored

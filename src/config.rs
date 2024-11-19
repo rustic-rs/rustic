@@ -146,7 +146,7 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
 
-    /// Check if index matches pack files and read pack headers if neccessary
+    /// Check if index matches pack files and read pack headers if necessary
     #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub check_index: bool,
@@ -176,7 +176,7 @@ pub struct GlobalOptions {
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
-    #[merge(strategy = conflate::hashmap::ignore)]
+    #[merge(strategy = conflate::hashmap::append_or_ignore)]
     pub env: HashMap<String, String>,
 }
 
@@ -240,4 +240,17 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[cfg(not(any(target_os = "windows", target_os = "ios", target_arch = "wasm32")))]
 fn get_global_config_path() -> Option<PathBuf> {
     Some(PathBuf::from("/etc/rustic"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use insta::assert_debug_snapshot;
+
+    #[test]
+    fn test_default_config_passes() {
+        let config = RusticConfig::default();
+
+        assert_debug_snapshot!(config);
+    }
 }

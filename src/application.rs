@@ -72,7 +72,7 @@ impl Application for RusticApp {
         &mut self,
         command: &Self::Cmd,
     ) -> Result<Vec<Box<dyn Component<Self>>>, FrameworkError> {
-        // we only ue the terminal component
+        // we only use the terminal component
         let terminal = Terminal::new(self.term_colors(command));
 
         Ok(vec![Box::new(terminal)])

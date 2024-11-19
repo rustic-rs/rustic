@@ -241,3 +241,16 @@ fn get_global_config_path() -> Option<PathBuf> {
 fn get_global_config_path() -> Option<PathBuf> {
     Some(PathBuf::from("/etc/rustic"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use insta::assert_debug_snapshot;
+
+    #[test]
+    fn test_default_config_passes() {
+        let config = RusticConfig::default();
+
+        assert_debug_snapshot!(config);
+    }
+}

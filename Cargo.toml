@@ -112,6 +112,7 @@ toml = "0.8"
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }
 assert_cmd = "2.0.16"
+cfg-if = "1.0.0"
 dircmp = "0.2"
 insta = { version = "1.40.0", features = ["ron"] }
 predicates = "3.1.2"

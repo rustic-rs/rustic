@@ -10,15 +10,13 @@
 //     unused_qualifications
 // )]
 
-use std::{
-    io::{Read, Write},
-    path::PathBuf,
-    sync::LazyLock,
-};
+use std::{io::Read, sync::LazyLock};
 
 use abscissa_core::testing::prelude::*;
+use insta::assert_snapshot;
+use rstest::rstest;
 
-use rustic_testing::{files_differ, get_temp_file, TestResult};
+use rustic_testing::TestResult;
 
 // Storing this value as a [`Lazy`] static ensures that all instances of
 /// the runner acquire a mutex when executing commands and inspecting
@@ -34,106 +32,38 @@ fn cmd_runner() -> CmdRunner {
     LAZY_RUNNER.clone()
 }
 
-fn fixtures_dir() -> PathBuf {
-    ["tests", "completions-fixtures"].iter().collect()
-}
+#[rstest]
+#[case("bash")]
+#[case("fish")]
+#[case("zsh")]
+#[case("powershell")]
+#[ignore = "This test is only being run during release process"]
+fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
+    let mut runner = cmd_runner();
 
-#[test]
-#[ignore = "breaking changes, run before releasing"]
-fn test_bash_completions_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("bash.txt");
-    let mut file = get_temp_file()?;
+    let mut cmd = runner.args(["completions", shell]).run();
 
-    {
-        let file = file.as_file_mut();
-        let mut runner = cmd_runner();
-        let mut cmd = runner.args(["completions", "bash"]).run();
+    let mut output = String::new();
 
-        let mut output = String::new();
-        cmd.stdout().read_to_string(&mut output)?;
-        file.write_all(output.as_bytes())?;
-        file.sync_all()?;
-        cmd.wait()?.expect_success();
+    cmd.stdout().read_to_string(&mut output)?;
+
+    cfg_if::cfg_if! {
+        if #[cfg(target_os = "windows")] {
+            let os = "windows";
+        } else if #[cfg(target_os = "linux")] {
+            let os = "linux";
+        } else if #[cfg(target_os = "macos")] {
+            let os = "macos";
+        } else {
+            let os = "generic";
+        }
     }
 
-    if files_differ(fixture_path, file.path())? {
-        panic!("generated completions for bash shell differ, breaking change!");
-    }
+    let name = format!("completions-{}-{}", shell, os);
 
-    Ok(())
-}
+    assert_snapshot!(name, output);
 
-#[test]
-#[ignore = "breaking changes, run before releasing"]
-fn test_fish_completions_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("fish.txt");
-    let mut file = get_temp_file()?;
-
-    {
-        let file = file.as_file_mut();
-        let mut runner = cmd_runner();
-        let mut cmd = runner.args(["completions", "fish"]).run();
-
-        let mut output = String::new();
-        cmd.stdout().read_to_string(&mut output)?;
-        file.write_all(output.as_bytes())?;
-        file.sync_all()?;
-        cmd.wait()?.expect_success();
-    }
-
-    if files_differ(fixture_path, file.path())? {
-        panic!("generated completions for fish shell differ, breaking change!");
-    }
-
-    Ok(())
-}
-
-#[test]
-#[ignore = "breaking changes, run before releasing"]
-fn test_zsh_completions_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("zsh.txt");
-    let mut file = get_temp_file()?;
-
-    {
-        let file = file.as_file_mut();
-        let mut runner = cmd_runner();
-        let mut cmd = runner.args(["completions", "zsh"]).run();
-
-        let mut output = String::new();
-        cmd.stdout().read_to_string(&mut output)?;
-        file.write_all(output.as_bytes())?;
-        file.sync_all()?;
-        cmd.wait()?.expect_success();
-    }
-
-    if files_differ(fixture_path, file.path())? {
-        panic!("generated completions for zsh shell differ, breaking change!");
-    }
-
-    Ok(())
-}
-
-#[test]
-#[ignore = "breaking changes, run before releasing"]
-fn test_powershell_completions_passes() -> TestResult<()> {
-    let fixture_path = fixtures_dir().join("powershell.txt");
-    let mut file = get_temp_file()?;
-
-    {
-        let file = file.as_file_mut();
-        let mut runner = cmd_runner();
-        let mut cmd = runner.args(["completions", "powershell"]).run();
-
-        let mut output = String::new();
-        cmd.stdout().read_to_string(&mut output)?;
-        file.write_all(output.as_bytes())?;
-        file.sync_all()?;
-        cmd.wait()?.expect_success();
-    }
-
-    if files_differ(fixture_path, file.path())? {
-        panic!("generated completions for powershell differ, breaking change!");
-    }
+    cmd.wait()?.expect_success();
 
     Ok(())
 }

@@ -37,6 +37,7 @@ fn cmd_runner() -> CmdRunner {
 #[case("fish")]
 #[case("zsh")]
 #[case("powershell")]
+// #[ignore = "This test is only being run during release process"]
 fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
     let mut runner = cmd_runner();
 
@@ -46,12 +47,17 @@ fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
 
     cmd.stdout().read_to_string(&mut output)?;
 
-    #[cfg(target_os = "windows")]
-    let os = "windows";
-    #[cfg(target_os = "linux")]
-    let os = "linux";
-    #[cfg(target_os = "macos")]
-    let os = "macos";
+    cfg_if::cfg_if! {
+        if #[cfg(target_os = "windows")] {
+            let os = "windows";
+        } else if #[cfg(target_os = "linux")] {
+            let os = "linux";
+        } else if #[cfg(target_os = "macos")] {
+            let os = "macos";
+        } else {
+            let os = "generic";
+        }
+    }
 
     let name = format!("completions-{}-{}", shell, os);
 

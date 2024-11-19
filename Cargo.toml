@@ -47,8 +47,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
-rustic_backend = { git = "https://github.com/rustic-rs/rustic_core", package = "rustic_backend", branch = "feat/tracing-logging", version = "0.4.2", features = ["cli"] }
-rustic_core = { git = "https://github.com/rustic-rs/rustic_core", package = "rustic_core", branch = "feat/tracing-logging", version = "0.5.5", features = ["cli"] }
+rustic_backend = { version = "0.5.0", features = ["cli"] }
+rustic_core = { version = "0.6.0", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -88,7 +88,7 @@ cached = "0.53.1"
 canonical-path = "2.0.2"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
-conflate = "0.2"
+conflate = "0.3.1"
 convert_case = "0.6.0"
 dateparser = "0.2.1"
 derive-getters = { version = "0.5.0", features = ["auto_copy_getters"] }
@@ -110,14 +110,17 @@ toml = "0.8"
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }
 assert_cmd = "2.0.16"
+cfg-if = "1.0.0"
 dircmp = "0.2"
+flate2 = "1.0.34"
 insta = { version = "1.40.0", features = ["ron"] }
 predicates = "3.1.2"
 pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.23"
-rustic_testing = "0.2.3"
+rustic_testing = "0.3.0"
+tar = "0.4.42"
 tempfile = "3.13"
 toml = "0.8"
 

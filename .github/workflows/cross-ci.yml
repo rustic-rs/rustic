@@ -35,11 +35,12 @@ jobs:
             target: x86_64-pc-windows-msvc
             architecture: x86_64
             use-cross: false
-          - os: windows-latest
-            os-name: windows
-            target: x86_64-pc-windows-gnu
-            architecture: x86_64
-            use-cross: false
+          # FIXME: `aws-lc-sys` doesn't cross compile
+          # - os: windows-latest
+          #   os-name: windows
+          #   target: x86_64-pc-windows-gnu
+          #   architecture: x86_64
+          #   use-cross: false
           - os: macos-13
             os-name: macos
             target: x86_64-apple-darwin
@@ -67,19 +68,26 @@ jobs:
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
-            target: i686-unknown-linux-gnu
-            architecture: i686
-            use-cross: true
-          - os: ubuntu-latest
-            os-name: netbsd
-            target: x86_64-unknown-netbsd
-            architecture: x86_64
+            target: aarch64-unknown-linux-musl
+            architecture: arm64
             use-cross: true
           - os: ubuntu-latest
             os-name: linux
-            target: armv7-unknown-linux-gnueabihf
-            architecture: armv7
+            target: i686-unknown-linux-gnu
+            architecture: i686
             use-cross: true
+          # FIXME: `aws-lc-sys` doesn't cross compile
+          # - os: ubuntu-latest
+          #   os-name: netbsd
+          #   target: x86_64-unknown-netbsd
+          #   architecture: x86_64
+          #   use-cross: true
+          # FIXME: `aws-lc-sys` doesn't cross compile
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: armv7-unknown-linux-gnueabihf
+          #   architecture: armv7
+          #   use-cross: true
 
     steps:
       - name: Checkout repository

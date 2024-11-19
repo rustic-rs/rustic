@@ -1,18 +1,10 @@
 //! Config profile test: runs the application as a subprocess and asserts its
 //! output for the `show-config` command
 
-// #![forbid(unsafe_code)]
-// #![warn(
-//     missing_docs,
-//     rust_2018_idioms,
-//     trivial_casts,
-//     unused_lifetimes,
-//     unused_qualifications
-// )]
-
 use std::{io::Read, sync::LazyLock};
 
 use abscissa_core::testing::prelude::*;
+use insta::assert_snapshot;
 
 use rustic_testing::TestResult;
 
@@ -32,20 +24,19 @@ fn cmd_runner() -> CmdRunner {
 
 #[test]
 fn test_show_config_passes() -> TestResult<()> {
+    
+    let mut runner = cmd_runner();
+
+    let mut cmd = runner.args(["show-config"]).run();
+
     let mut output = String::new();
 
-    {
-        _ = cmd_runner()
-            .args(["show-config"])
-            .run()
-            .stdout()
-            .read_to_string(&mut output)?;
-    }
+    cmd.stdout().read_to_string(&mut output)?;
 
-    // remove the first three lines of the output
-    output = output.lines().skip(3).collect::<Vec<&str>>().join("\n");
+    assert_snapshot!(output);
 
-    insta::assert_snapshot!(output);
+    cmd.wait()?.expect_success();
+    
 
     Ok(())
 }

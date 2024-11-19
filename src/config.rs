@@ -7,8 +7,7 @@
 pub(crate) mod hooks;
 pub(crate) mod progress_options;
 
-use std::fmt::Debug;
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 
 use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
 use anyhow::Result;
@@ -176,8 +175,8 @@ pub struct GlobalOptions {
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
-    #[merge(strategy = conflate::hashmap::append_or_ignore)]
-    pub env: HashMap<String, String>,
+    #[merge(strategy = conflate::btreemap::append_or_ignore)]
+    pub env: BTreeMap<String, String>,
 }
 
 /// Get the paths to the config file

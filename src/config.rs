@@ -176,7 +176,7 @@ pub struct GlobalOptions {
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
-    #[merge(strategy = conflate::hashmap::ignore)]
+    #[merge(strategy = conflate::hashmap::append_or_ignore)]
     pub env: HashMap<String, String>,
 }
 

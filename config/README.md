@@ -203,7 +203,7 @@ can be overwritten in the source-specific configuration, see below.
 | ignore-inode          | If true, ignore file inode for the backup.                                              | false                 |               | --ignore-inode          |
 | init                  | If true, initialize repository if it doesn't exist, yet.                                | false                 |               | --init                  |
 | json                  | If true, returns output of the command as json.                                         | false                 |               | --json                  |
-| label                 | Set label fot the snapshot.                                                             | Not set               |               | --label                 |
+| label                 | Set label for the snapshot.                                                             | Not set               |               | --label                 |
 | no-require-git        | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.    | false                 |               | --no-require-git        |
 | no-scan               | Don't scan the backup source for its size (disables ETA).                               | false                 |               | --no-scan               |
 | one-file-system       | If true, only backs up files from the same filesystem as the source.                    | false                 |               | --one-file-system       |
@@ -219,7 +219,7 @@ can be overwritten in the source-specific configuration, see below.
 
 These external commands are run before and after each backup, respectively.
 
-**Note**: Global hooks and repository hooks are run additionaly.
+**Note**: Global hooks and repository hooks are run additionally.
 
 See [Global Hooks](#global-hooks-globalhooks).
 

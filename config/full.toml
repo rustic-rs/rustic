@@ -19,7 +19,7 @@ check-index = false
 # Global hooks: The given commands are called for every command
 [global.hooks]
 run-before = [
-  # long form giving command and args explicitely and allow to specify failure behavior
+  # long form giving command and args explicitly and allow to specify failure behavior
   { command = "echo", args = ["before"], on-failure = "warn" }, # allowed values for on-failure: "error" (default), "warn", "ignore"
 ] # Default: []
 run-after = ["echo after"] # Run after if successful, short version, default: []
@@ -190,9 +190,9 @@ keep-yearly = 10
 keep-within = "0s"
 keep-within-daily = "0 seconds"
 keep-within-weekly = "2 months"
-keep-withing-monthly = "1 year"
-keep-withing-quarter-yearly = "0 year"
-keep-withing-half-yearly = "1 year"
+keep-within-monthly = "1 year"
+keep-within-quarter-yearly = "0 year"
+keep-within-half-yearly = "1 year"
 keep-within-yearly = "10 years"
 
 [copy]

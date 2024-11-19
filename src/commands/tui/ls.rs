@@ -245,7 +245,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                                 .any(|p| Path::new(p).is_absolute());
                             let path = self.path.join(node.name());
                             let path = path.display();
-                            let default_targt = if is_absolute {
+                            let default_target = if is_absolute {
                                 format!("/{path}")
                             } else {
                                 format!("{path}")
@@ -254,7 +254,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                                 self.repo,
                                 node.clone(),
                                 format!("{}:/{path}", self.snapshot.id),
-                                &default_targt,
+                                &default_target,
                             );
                             self.current_screen = CurrentScreen::Restore(restore);
                         }

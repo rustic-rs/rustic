@@ -74,10 +74,8 @@ ignore = [
   # FIXME!: See https://github.com/RustCrypto/RSA/issues/19#issuecomment-1822995643.
   # There is no workaround available yet.
   "RUSTSEC-2023-0071",
-  # FIXME!: proc-macro-error's maintainer seems to be unreachable, we use `merge` which is using this.
-  # `merge` is self-hosted on another platform, we should check if and how to replace it/open upstream
-  # issue for updating the dependency.
-  "RUSTSEC-2024-0370",
+  # FIXME: `Instant` is still being used by deny. We need to wait for a new version.
+  "RUSTSEC-2024-0384",
   # { id = "RUSTSEC-0000-0000", reason = "you can specify a reason the advisory is ignored" },
   # "a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
   # { crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
@@ -107,6 +105,7 @@ allow = [
   "OpenSSL",
   "CC0-1.0",
   "Zlib",
+  "Unicode-3.0",
 ]
 # The confidence threshold for detecting a license from license text.
 # The higher the value, the more closely the license text must be to the

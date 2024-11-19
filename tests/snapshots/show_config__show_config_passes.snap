@@ -1,3 +1,7 @@
+---
+source: tests/show-config.rs
+expression: output
+---
 [global]
 use-profiles = []
 dry-run = false
@@ -83,4 +87,3 @@ filter-tags-exact = []
 
 [webdav]
 symlinks = false
-

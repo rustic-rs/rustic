@@ -17,7 +17,7 @@ use fuse_mt::{mount, FuseMT};
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
+#[derive(Clone, Command, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct MountCmd {
     /// The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]
@@ -31,14 +31,14 @@ pub struct MountCmd {
     time_template: Option<String>,
 
     /// Don't allow other users to access the mount point
-    #[clap(long)]
+    #[clap(short, long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
     exclusive: bool,
 
     /// How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]
     #[clap(long)]
     #[merge(strategy=conflate::option::overwrite_none)]
-    file_access: Option<String>,
+    file_access: Option<FilePolicy>,
 
     /// The mount point to use
     #[clap(value_name = "PATH")]
@@ -51,16 +51,22 @@ pub struct MountCmd {
     snapshot_path: Option<String>,
 
     /// Other options to use for mount
-    #[clap(skip)]
-    options: MountOpts,
+    #[clap(short, long = "option", value_name = "OPTION")]
+    #[merge(strategy = conflate::vec::overwrite_empty)]
+    options: Vec<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Merge)]
-pub(crate) struct MountOpts(#[merge(strategy = conflate::vec::append)] pub(crate) Vec<String>);
-
-impl Default for MountOpts {
+impl Default for MountCmd {
     fn default() -> Self {
-        Self(vec![String::from("kernel_cache")])
+        Self {
+            path_template: Some(String::from("[{hostname}]/[{label}]/{time}")),
+            time_template: Some(String::from("%Y-%m-%d_%H-%M-%S")),
+            exclusive: false,
+            file_access: None,
+            mount_point: None,
+            snapshot_path: None,
+            options: vec![String::from("kernel_cache")],
+        }
     }
 }
 
@@ -126,39 +132,43 @@ impl MountCmd {
             )?
         };
 
-        let mut options = self.options.0.clone();
+        let mut mount_options = if config.mount.options.is_empty() {
+            vec!["kernel_cache".to_string()]
+        } else {
+            config.mount.options.clone()
+        };
 
-        options.extend_from_slice(&[format!("fsname=rusticfs:{}", repo.config().id)]);
+        mount_options.push(format!("fsname=rusticfs:{}", repo.config().id));
 
         if !config.mount.exclusive {
-            options
+            mount_options
                 .extend_from_slice(&["allow_other".to_string(), "default_permissions".to_string()]);
         }
 
         let file_access = config.mount.file_access.as_ref().map_or_else(
             || {
                 if repo.config().is_hot == Some(true) {
-                    Ok(FilePolicy::Forbidden)
+                    FilePolicy::Forbidden
                 } else {
-                    Ok(FilePolicy::Read)
+                    FilePolicy::Read
                 }
             },
-            |s| s.parse(),
-        )?;
+            |s| *s,
+        );
 
         let fs = FuseMT::new(FuseFS::new(repo, vfs, file_access), 1);
 
         // Sort and deduplicate options
-        options.sort_unstable();
-        options.dedup();
+        mount_options.sort_unstable();
+        mount_options.dedup();
 
         // join options into a single comma-delimited string and prepent "-o "
         // this should be parsed just fine by fuser, here
         // https://github.com/cberner/fuser/blob/9f6ced73a36f1d99846e28be9c5e4903939ee9d5/src/mnt/mount_options.rs#L157
-        let opt_string = format!("-o {}", options.join(","));
-        let options = OsStr::new(&opt_string);
+        let opt_string = format!("-o {}", mount_options.join(","));
+        let mount_options = OsStr::new(&opt_string);
 
-        mount(fs, mount_point, &[options])?;
+        mount(fs, mount_point, &[mount_options])?;
 
         Ok(())
     }

@@ -4259,9 +4259,9 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 
 [[package]]
 name = "rustic_core"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced8fa06db8411fa55828c4469f8c43f02fa35ad87ab678531da70fd9dfc8f8c"
+checksum = "fc1b5cf696737fe234607d2e0dfb7e04a9eb3ae535b3b8090d77555992d097a7"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",

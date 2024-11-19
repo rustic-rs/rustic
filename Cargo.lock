@@ -1259,6 +1259,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive-getters"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74ef43543e701c01ad77d3a5922755c6a1d71b22d942cb8042be4994b380caff"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "derive_destructure2"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4190,7 +4201,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core 0.5.5 (git+https://github.com/rustic-rs/rustic_core?branch=feat/tracing-logging)",
+ "rustic_core",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -4237,7 +4248,6 @@ dependencies = [
  "strum_macros",
  "thiserror 2.0.3",
  "tokio",
- "tracing",
  "typed-path",
  "url",
  "walkdir",
@@ -4260,59 +4270,6 @@ dependencies = [
  "bytes",
  "bytesize",
  "cached 0.54.0",
- "cachedir",
- "chrono",
- "crossbeam-channel",
- "derivative",
- "derive_more",
- "derive_setters",
- "dirs",
- "displaydoc",
- "dunce",
- "enum-map",
- "enum-map-derive",
- "enumset",
- "filetime",
- "gethostname",
- "hex",
- "humantime",
- "ignore",
- "integer-sqrt",
- "itertools",
- "log",
- "nix",
- "pariter",
- "path-dedot",
- "quick_cache",
- "rand",
- "rayon",
- "runtime-format",
- "scrypt",
- "serde",
- "serde-aux",
- "serde_derive",
- "serde_json",
- "serde_with",
- "sha2",
- "shell-words",
- "strum",
- "thiserror",
- "walkdir",
- "xattr",
- "zstd",
-]
-
-[[package]]
-name = "rustic_core"
-version = "0.5.5"
-source = "git+https://github.com/rustic-rs/rustic_core?branch=feat/tracing-logging#350eed0a572f039d1715cc59c957e12b3196fe67"
-dependencies = [
- "aes256ctr_poly1305aes",
- "anyhow",
- "binrw",
- "bytes",
- "bytesize",
- "cached",
  "cachedir",
  "chrono",
  "clap",
@@ -4355,7 +4312,6 @@ dependencies = [
  "shell-words",
  "strum",
  "thiserror 2.0.3",
- "tracing",
  "walkdir",
  "xattr",
  "zstd",
@@ -4371,15 +4327,15 @@ dependencies = [
  "anyhow",
  "bytes",
  "enum-map",
- "rustic_core 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustic_core",
  "tempfile",
 ]
 
 [[package]]
 name = "rustix"
-version = "0.38.40"
+version = "0.38.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99e4ea3e1cdc4b559b8e5650f9c8e5998e3e5c1343b4eaf034565f32318d63c0"
+checksum = "d7f649912bc1495e167a6edee79151c84b1bad49748cb4f1f1167f459f6224f6"
 dependencies = [
  "bitflags 2.6.0",
  "errno",

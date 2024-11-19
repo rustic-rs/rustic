@@ -1,6 +1,5 @@
 ---
 source: tests/completions.rs
-assertion_line: 58
 expression: output
 ---
 using namespace System.Management.Automation

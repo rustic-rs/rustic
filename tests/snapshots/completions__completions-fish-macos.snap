@@ -1,6 +1,5 @@
 ---
 source: tests/completions.rs
-assertion_line: 58
 expression: output
 ---
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.

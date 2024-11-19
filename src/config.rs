@@ -252,4 +252,19 @@ mod tests {
 
         assert_debug_snapshot!(config);
     }
+
+    #[test]
+    fn test_global_env_deserialization_passes() {
+        let config = r#"
+            [global.env]
+            KEY1 = "VALUE1"
+            KEY2 = "VALUE2"
+        "#;
+
+        let config: RusticConfig = toml::from_str(config).unwrap();
+
+        assert_eq!(config.global.env.len(), 2);
+        assert_eq!(config.global.env.get("KEY1"), Some(&"VALUE1".to_string()));
+        assert_eq!(config.global.env.get("KEY2"), Some(&"VALUE2".to_string()));
+    }
 }

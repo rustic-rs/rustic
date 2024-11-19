@@ -81,7 +81,7 @@ All notable changes to this project will be documented in this file.
 
 - [**breaking**] copy: Use config profile as target
   ([#1131](https://github.com/rustic-rs/rustic/pull/1131))
-- backup: Add option `stdin-command` 
+- backup: Add option `stdin-command`
   ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.3.0))
 - Add list indexpacks and list indexcontent commands
   ([#1254](https://github.com/rustic-rs/rustic/pull/1254))
@@ -245,7 +245,7 @@ All notable changes to this project will be documented in this file.
 - Show diff statistics
   ([#1178](https://github.com/rustic-rs/rustic/issues/1178))
 
-### Documentaton
+### Documentation
 
 - Update configuration README
   ([#1088](https://github.com/rustic-rs/rustic/issues/1088))
@@ -408,7 +408,7 @@ All notable changes to this project will be documented in this file.
 - New global configuration paths are available, located at `/etc/rustic/*.toml`
   or `%PROGRAMDATA%/rustic/config/*.toml`, depending on your platform.
 - REST backend: Now allows to use custom TLS root certificates.
-- Environment variables for programms called by rustic can now be set in the
+- Environment variables for programs called by rustic can now be set in the
   config files.
 - Creation of new keys now enforces confirmation of entered key. This helps to
   prevent mistype of passwords during the initial entry
@@ -968,7 +968,7 @@ All notable changes to this project will be documented in this file.
 - prune: Repacking is now parallel.
 - New commands repair index/snapshots.
 - Better support for using latest as snapshot.
-- UI/progress bars: Added support for env variable RUSTIC_PROGRESS_INTERVALL.
+- UI/progress bars: Added support for env variable RUSTIC_PROGRESS_INTERVAL.
 - Simplified the code in some places.
 
 ### Other Changes
@@ -1273,7 +1273,7 @@ self-update. Please download the binaries manually instead.
 ### Prune
 
 - Add waiting options
-- Remove unneded pack files from cache and add option --cache-only
+- Remove unneeded pack files from cache and add option --cache-only
 - Repack packs which are too small or too large
 
 ### Restore
@@ -1443,7 +1443,7 @@ self-update. Please download the binaries manually instead.
 
 ### Prune
 
-- Do not recover uneccessarily
+- Do not recover unnecessarily
 
 ## [0.2.0-rc1] - 2022-06-04
 

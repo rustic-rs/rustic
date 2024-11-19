@@ -36,12 +36,13 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: windows-latest
-            os-name: windows
-            target: x86_64-pc-windows-gnu
-            architecture: x86_64
-            binary-postfix: ".exe"
-            use-cross: false
+          # FIXME: `aws-lc-sys` doesn't cross compile
+          # - os: windows-latest
+          #   os-name: windows
+          #   target: x86_64-pc-windows-gnu
+          #   architecture: x86_64
+          #   binary-postfix: ".exe"
+          #   use-cross: false
           - os: macos-13
             os-name: macos
             target: x86_64-apple-darwin
@@ -84,19 +85,20 @@ jobs:
             architecture: i686
             binary-postfix: ""
             use-cross: true
-          # TODO!: This needs a fix, linking `execinfo` fails
+          # FIXME: `aws-lc-sys` doesn't cross compile
           # - os: ubuntu-latest
           #   os-name: netbsd
           #   target: x86_64-unknown-netbsd
           #   architecture: x86_64
           #   binary-postfix: ""
           #   use-cross: true
-          - os: ubuntu-latest
-            os-name: linux
-            target: armv7-unknown-linux-gnueabihf
-            architecture: armv7
-            binary-postfix: ""
-            use-cross: true
+          # FIXME: `aws-lc-sys` doesn't cross compile
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: armv7-unknown-linux-gnueabihf
+          #   architecture: armv7
+          #   binary-postfix: ""
+          #   use-cross: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

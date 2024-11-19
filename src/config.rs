@@ -88,8 +88,8 @@ pub struct RusticConfig {
 
 impl Display for RusticConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let config =
-            toml::to_string_pretty(self).unwrap_or_else(|_| "<Error serializing config>".to_string());
+        let config = toml::to_string_pretty(self)
+            .unwrap_or_else(|_| "<Error serializing config>".to_string());
 
         write!(f, "{config}",)
     }

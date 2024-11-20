@@ -35,7 +35,7 @@ pub(crate) struct Restore<'a, P, S> {
 impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
     pub fn new(repo: &'a Repository<P, S>, node: Node, source: String, path: &str) -> Self {
         let opts = RestoreOptions::default();
-        let title = format!("restore {} to:", source);
+        let title = format!("restore {source} to:");
         let popup = popup_input(title, "enter restore destination", path, 1);
         Self {
             current_screen: CurrentScreen::GetDestination(popup),
@@ -87,7 +87,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
     }
 
     pub fn input(&mut self, event: Event) -> Result<bool> {
-        use KeyCode::*;
+        use KeyCode::{Char, Enter, Esc};
         match &mut self.current_screen {
             CurrentScreen::GetDestination(prompt) => match prompt.input(event) {
                 TextInputResult::Cancel => return Ok(true),
@@ -139,7 +139,7 @@ Do you want to proceed (y/n)?
             },
             CurrentScreen::RestoreDone(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    if matches!(key.code, Char('q') | Esc | Enter | Char(' ')) {
+                    if matches!(key.code, Char('q' | ' ') | Esc | Enter) {
                         return Ok(true);
                     }
                 }

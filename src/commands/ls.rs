@@ -116,8 +116,7 @@ impl NodeLs for Node {
             },
             self.meta
                 .mode
-                .map(parse_permissions)
-                .unwrap_or_else(|| "?????????".to_string())
+                .map_or_else(|| "?????????".to_string(), parse_permissions)
         )
     }
     fn link_str(&self) -> String {
@@ -201,10 +200,10 @@ pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
         }
         .unwrap_or_else(|| "?".to_string()),
         node.meta.size,
-        node.meta
-            .mtime
-            .map(|t| t.format("%_d %b %Y %H:%M").to_string())
-            .unwrap_or_else(|| "?".to_string()),
+        node.meta.mtime.map_or_else(
+            || "?".to_string(),
+            |t| t.format("%_d %b %Y %H:%M").to_string()
+        ),
         node.link_str(),
     );
 }

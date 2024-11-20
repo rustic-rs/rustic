@@ -2,7 +2,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Paragraph},
+};
 use rustic_core::{
     repofile::{Node, SnapshotFile, Tree},
     vfs::OpenFile,
@@ -35,7 +38,7 @@ enum CurrentScreen<'a, P, S> {
 const INFO_TEXT: &str =
     "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
 
-const HELP_TEXT: &str = r#"
+const HELP_TEXT: &str = r"
 General Commands:
 
       q,Esc : exit
@@ -46,7 +49,7 @@ General Commands:
           n : toggle numeric IDs
           ? : show this help page
 
- "#;
+ ";
 
 pub(crate) struct Snapshot<'a, P, S> {
     current_screen: CurrentScreen<'a, P, S>,
@@ -105,11 +108,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         };
         let name = node.name().to_string_lossy().to_string();
         let size = node.meta.size.to_string();
-        let mtime = node
-            .meta
-            .mtime
-            .map(|t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")))
-            .unwrap_or_else(|| "?".to_string());
+        let mtime = node.meta.mtime.map_or_else(
+            || "?".to_string(),
+            |t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")),
+        );
         [name, size, node.mode_str(), user, group, mtime]
             .into_iter()
             .map(Text::from)
@@ -188,7 +190,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
     }
 
     pub fn input(&mut self, event: Event) -> Result<SnapshotResult> {
-        use KeyCode::*;
+        use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
         match &mut self.current_screen {
             CurrentScreen::Snapshot => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
@@ -271,7 +273,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             },
             CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    if matches!(key.code, Char('q') | Esc | Enter | Char(' ') | Char('?')) {
+                    if matches!(key.code, Char('q' | ' ' | '?') | Esc | Enter) {
                         self.current_screen = CurrentScreen::Snapshot;
                     }
                 }

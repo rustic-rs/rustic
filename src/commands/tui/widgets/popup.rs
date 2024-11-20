@@ -1,4 +1,4 @@
-use super::*;
+use super::{Clear, Constraint, Draw, Event, Frame, Layout, ProcessEvent, Rect, SizedWidget};
 
 // Make a popup from a SizedWidget
 pub struct PopUp<T>(pub T);

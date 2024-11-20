@@ -1,4 +1,4 @@
-use super::*;
+use super::{Draw, Frame, Paragraph, Rect, SizedWidget, Text};
 
 pub struct SizedParagraph {
     p: Paragraph<'static>,

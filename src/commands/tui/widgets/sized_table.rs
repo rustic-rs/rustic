@@ -1,4 +1,4 @@
-use super::*;
+use super::{Constraint, Draw, Frame, Rect, Row, SizedWidget, Table, Text};
 
 pub struct SizedTable {
     table: Table<'static>,
@@ -20,14 +20,14 @@ impl SizedTable {
                 row.iter()
                     .zip(widths.iter())
                     .map(|(r, w)| r.max(w))
-                    .cloned()
+                    .copied()
                     .collect()
             })
             .unwrap_or_default();
 
         let width = widths
             .iter()
-            .cloned()
+            .copied()
             .reduce(|width, w| width + w + 1) // +1 because of space between entries
             .unwrap_or_default();
 

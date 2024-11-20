@@ -128,7 +128,7 @@ impl CopyCmd {
 
         let mut table =
             table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);
-        for CopySnapshot { relevant, sn } in snaps.iter() {
+        for CopySnapshot { relevant, sn } in &snaps {
             let tags = sn.tags.formatln();
             let paths = sn.paths.formatln();
             let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();

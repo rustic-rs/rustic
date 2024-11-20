@@ -1,4 +1,4 @@
-use super::*;
+use super::{Color, Draw, Frame, Gauge, Rect, SizedWidget, Span, Style};
 
 pub struct SizedGauge {
     p: Gauge<'static>,

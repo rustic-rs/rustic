@@ -89,10 +89,9 @@ fn run_app<B: Backend, P: ProgressBars, S: IndexedFull>(
     loop {
         _ = terminal.write().unwrap().draw(|f| ui(f, &mut app))?;
         let event = event::read()?;
-        use KeyCode::*;
 
         if let Event::Key(KeyEvent {
-            code: Char('c'),
+            code: KeyCode::Char('c'),
             modifiers: KeyModifiers::CONTROL,
             kind: KeyEventKind::Press,
             ..

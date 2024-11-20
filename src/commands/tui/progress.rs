@@ -97,7 +97,7 @@ impl TuiProgress {
         };
         let eta = match ratio {
             r if r < 0.01 => " ETA: -".to_string(),
-            r if r > 0.999999 => String::new(),
+            r if r > 0.999_999 => String::new(),
             r => {
                 format!(
                     " ETA: {}",

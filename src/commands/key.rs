@@ -73,7 +73,7 @@ impl AddCmd {
 
         let pass = pass_opts
             .evaluate_password()
-            .map_err(|err| err.into())
+            .map_err(Into::into)
             .transpose()
             .unwrap_or_else(|| -> Result<_> {
                 Ok(Password::new()

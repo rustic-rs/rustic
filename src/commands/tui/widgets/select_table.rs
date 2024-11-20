@@ -1,4 +1,8 @@
-use super::*;
+use super::{
+    layout, style, Color, Constraint, Draw, Event, Frame, KeyCode, KeyEventKind, Layout, Modifier,
+    ProcessEvent, Rect, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, SizedWidget, Style,
+    Stylize, Table, TableState, Text,
+};
 use std::iter::once;
 use style::palette::tailwind;
 
@@ -67,7 +71,7 @@ impl SelectTable {
                 row.iter()
                     .zip(widths.iter())
                     .map(|(r, w)| r.max(w))
-                    .cloned()
+                    .copied()
                     .collect()
             })
             .unwrap_or_default();
@@ -161,7 +165,7 @@ impl SelectTable {
 impl ProcessEvent for SelectTable {
     type Result = ();
     fn input(&mut self, event: Event) {
-        use KeyCode::*;
+        use KeyCode::{Down, End, Home, PageDown, PageUp, Up};
         match event {
             Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
                 Down => self.next(),

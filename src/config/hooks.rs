@@ -80,9 +80,9 @@ impl Hooks {
     /// or error depending on the `on_failure` setting.
     pub fn use_with<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
         match self.run_before() {
-            Ok(_) => match f() {
+            Ok(()) => match f() {
                 Ok(result) => match self.run_after() {
-                    Ok(_) => {
+                    Ok(()) => {
                         self.run_finally()?;
                         Ok(result)
                     }

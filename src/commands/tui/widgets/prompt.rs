@@ -1,4 +1,4 @@
-use super::*;
+use super::{Draw, Event, Frame, KeyCode, KeyEventKind, ProcessEvent, Rect, SizedWidget};
 
 pub struct Prompt<T>(pub T);
 
@@ -26,11 +26,11 @@ impl<T: Draw> Draw for Prompt<T> {
 impl<T> ProcessEvent for Prompt<T> {
     type Result = PromptResult;
     fn input(&mut self, event: Event) -> PromptResult {
-        use KeyCode::*;
+        use KeyCode::{Char, Enter, Esc};
         match event {
             Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
-                Char('q') | Char('n') | Char('c') | Esc => PromptResult::Cancel,
-                Enter | Char('y') | Char('j') | Char(' ') => PromptResult::Ok,
+                Char('q' | 'n' | 'c') | Esc => PromptResult::Cancel,
+                Enter | Char('y' | 'j' | ' ') => PromptResult::Ok,
                 _ => PromptResult::None,
             },
             _ => PromptResult::None,

@@ -99,7 +99,7 @@ impl Application for RusticApp {
         self.state.components_mut().after_config(&config)?;
 
         // set all given environment variables
-        for (env, value) in config.global.env.iter() {
+        for (env, value) in &config.global.env {
             env::set_var(env, value);
         }
 

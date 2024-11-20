@@ -1,4 +1,4 @@
-use super::*;
+use super::{Draw, Event, Frame, KeyCode, KeyEvent, ProcessEvent, Rect, SizedWidget, Style};
 
 use crossterm::event::KeyModifiers;
 use tui_textarea::{CursorMove, TextArea};
@@ -53,14 +53,13 @@ impl ProcessEvent for TextInput {
             let KeyEvent {
                 code, modifiers, ..
             } = key;
-            use KeyCode::*;
             if self.changeable {
                 match (code, modifiers) {
-                    (Esc, _) => return TextInputResult::Cancel,
-                    (Enter, _) if self.lines == 1 => {
+                    (KeyCode::Esc, _) => return TextInputResult::Cancel,
+                    (KeyCode::Enter, _) if self.lines == 1 => {
                         return TextInputResult::Input(self.textarea.lines().join("\n"));
                     }
-                    (Char('s'), KeyModifiers::CONTROL) => {
+                    (KeyCode::Char('s'), KeyModifiers::CONTROL) => {
                         return TextInputResult::Input(self.textarea.lines().join("\n"));
                     }
                     _ => {
@@ -69,14 +68,16 @@ impl ProcessEvent for TextInput {
                 }
             } else {
                 match (code, modifiers) {
-                    (Esc | Enter | Char('q') | Char('x'), _) => return TextInputResult::Cancel,
-                    (Home, _) => {
+                    (KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q' | 'x'), _) => {
+                        return TextInputResult::Cancel
+                    }
+                    (KeyCode::Home, _) => {
                         self.textarea.move_cursor(CursorMove::Top);
                     }
-                    (End, _) => {
+                    (KeyCode::End, _) => {
                         self.textarea.move_cursor(CursorMove::Bottom);
                     }
-                    (PageDown | PageUp | Up | Down, _) => {
+                    (KeyCode::PageDown | KeyCode::PageUp | KeyCode::Up | KeyCode::Down, _) => {
                         _ = self.textarea.input(key);
                     }
                     _ => {}

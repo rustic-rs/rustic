@@ -20,7 +20,10 @@ pub use with_block::*;
 use crossterm::event::Event;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::prelude::*;
-use ratatui::widgets::*;
+use ratatui::widgets::{
+    Block, Clear, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
+    TableState,
+};
 
 pub trait ProcessEvent {
     type Result;

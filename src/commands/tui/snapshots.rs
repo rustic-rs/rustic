@@ -4,7 +4,10 @@ use anyhow::Result;
 use chrono::Local;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use itertools::Itertools;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Paragraph},
+};
 use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
     IndexedFull, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion, StringList,
@@ -74,7 +77,7 @@ enum SnapshotNode {
 const INFO_TEXT: &str =
     "(Esc) quit | (F5) reload snapshots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
-const HELP_TEXT: &str = r#"General Commands:
+const HELP_TEXT: &str = r"General Commands:
   q, Esc : exit
       F5 : re-read all snapshots from repository
    Enter : show snapshot contents
@@ -105,7 +108,7 @@ const HELP_TEXT: &str = r#"General Commands:
        r : remove tag(s) for snapshot(s)
        p : set delete protection for snapshot(s)
   Ctrl-p : remove delete protection for snapshot(s)
-"#;
+";
 
 pub(crate) struct Snapshots<'a, P, S> {
     current_screen: CurrentScreen<'a, P, S>,
@@ -362,11 +365,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 let paths = group
                     .paths
                     .as_ref()
-                    .map_or_else(String::default, |p| p.formatln());
+                    .map_or_else(String::default, StringList::formatln);
                 let tags = group
                     .tags
                     .as_ref()
-                    .map_or_else(String::default, |t| t.formatln());
+                    .map_or_else(String::default, StringList::formatln);
                 [
                     mark.to_string(),
                     format!("{collapse}{modified}{del}group"),
@@ -437,7 +440,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn clear_marks(&mut self) {
-        for status in self.snaps_status.iter_mut() {
+        for status in &mut self.snaps_status {
             status.marked = false;
         }
         self.update_table();
@@ -650,7 +653,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn clear_to_forget(&mut self) {
-        for status in self.snaps_status.iter_mut() {
+        for status in &mut self.snaps_status {
             status.to_forget = false;
         }
         self.update_table();
@@ -718,7 +721,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn input(&mut self, event: Event) -> Result<bool> {
-        use KeyCode::*;
+        use KeyCode::{Char, Enter, Esc, Left, Right, F};
         match &mut self.current_screen {
             CurrentScreen::Snapshots => {
                 match event {
@@ -846,10 +849,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             }
             CurrentScreen::SnapshotDetails(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    if matches!(
-                        key.code,
-                        Char('q') | Esc | Enter | Char(' ') | Char('i') | Char('?')
-                    ) {
+                    if matches!(key.code, Char('q' | ' ' | 'i' | '?') | Esc | Enter) {
                         self.current_screen = CurrentScreen::Snapshots;
                     }
                 }

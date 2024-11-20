@@ -4176,6 +4176,7 @@ dependencies = [
  "dircmp",
  "directories",
  "displaydoc",
+ "flate2",
  "fuse_mt",
  "gethostname",
  "globset",

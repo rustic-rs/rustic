@@ -7,8 +7,11 @@
 pub(crate) mod hooks;
 pub(crate) mod progress_options;
 
-use std::fmt::Debug;
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Display, Formatter},
+    path::PathBuf,
+};
 
 use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
 use anyhow::Result;
@@ -81,6 +84,15 @@ pub struct RusticConfig {
     #[cfg(not(feature = "webdav"))]
     #[merge(skip)]
     pub webdav: Option<Value>,
+}
+
+impl Display for RusticConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let config = toml::to_string_pretty(self)
+            .unwrap_or_else(|_| "<Error serializing config>".to_string());
+
+        write!(f, "{config}",)
+    }
 }
 
 impl RusticConfig {
@@ -176,8 +188,8 @@ pub struct GlobalOptions {
 
     /// List of environment variables to set (only in config file)
     #[clap(skip)]
-    #[merge(strategy = conflate::hashmap::append_or_ignore)]
-    pub env: HashMap<String, String>,
+    #[merge(strategy = conflate::btreemap::append_or_ignore)]
+    pub env: BTreeMap<String, String>,
 }
 
 /// Get the paths to the config file
@@ -245,12 +257,43 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use insta::assert_debug_snapshot;
+    use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]
     fn test_default_config_passes() {
         let config = RusticConfig::default();
 
         assert_debug_snapshot!(config);
+    }
+
+    #[test]
+    fn test_default_config_display_passes() {
+        let config = RusticConfig::default();
+
+        assert_snapshot!(config);
+    }
+
+    #[test]
+    fn test_global_env_roundtrip_passes() {
+        let mut config = RusticConfig::default();
+
+        for i in 0..10 {
+            let _ = config
+                .global
+                .env
+                .insert(format!("KEY{}", i), format!("VALUE{}", i));
+        }
+
+        let serialized = toml::to_string(&config).unwrap();
+
+        // Check Serialization
+        assert_snapshot!(serialized);
+
+        let deserialized: RusticConfig = toml::from_str(&serialized).unwrap();
+        // Check Deserialization and Display
+        assert_snapshot!(deserialized);
+
+        // Check Debug
+        assert_debug_snapshot!(deserialized);
     }
 }

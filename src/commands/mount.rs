@@ -113,15 +113,15 @@ impl MountCmd {
         // default values into a single struct. Now we can use the values.
         // If a value is missing, we can return an error.
         let Some(path_template) = config.mount.path_template.clone() else {
-            bail!("please specify a path template");
+            bail!("Please specify a path template!");
         };
 
         let Some(time_template) = config.mount.time_template.clone() else {
-            bail!("please specify a time template");
+            bail!("Please specify a time template!");
         };
 
         let Some(mount_point) = config.mount.mount_point.clone() else {
-            bail!("please specify a mount point");
+            bail!("Please specify a mount point!");
         };
 
         let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
@@ -139,6 +139,7 @@ impl MountCmd {
             )?
         };
 
+        // Prepare the mount options
         let mut mount_options = config.mount.options.clone();
 
         mount_options.push(format!("fsname=rusticfs:{}", repo.config().id));
@@ -169,9 +170,8 @@ impl MountCmd {
         // this should be parsed just fine by fuser, here
         // https://github.com/cberner/fuser/blob/9f6ced73a36f1d99846e28be9c5e4903939ee9d5/src/mnt/mount_options.rs#L157
         let opt_string = format!("-o {}", mount_options.join(","));
-        let mount_options = OsStr::new(&opt_string);
 
-        mount(fs, mount_point, &[mount_options])?;
+        mount(fs, mount_point, &[OsStr::new(&opt_string)])?;
 
         Ok(())
     }

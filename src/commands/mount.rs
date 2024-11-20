@@ -6,18 +6,19 @@
 mod fusefs;
 use fusefs::FuseFS;
 
+use abscissa_core::{
+    config::Override, Command, FrameworkError, FrameworkErrorKind::ParseError, Runnable, Shutdown,
+};
+use anyhow::{bail, Result};
+use clap::Parser;
+use conflate::{Merge, MergePrecedence};
+use fuse_mt::{mount, FuseMT};
+use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
 
-use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
-use anyhow::{anyhow, Result};
-use conflate::Merge;
-use fuse_mt::{mount, FuseMT};
-use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Command, Debug, clap::Parser, Serialize, Deserialize, Merge)]
+#[derive(Clone, Debug, Default, Command, Parser, Merge, serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct MountCmd {
     /// The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]
@@ -56,29 +57,28 @@ pub struct MountCmd {
     options: Vec<String>,
 }
 
-impl Default for MountCmd {
-    fn default() -> Self {
-        Self {
-            path_template: Some(String::from("[{hostname}]/[{label}]/{time}")),
-            time_template: Some(String::from("%Y-%m-%d_%H-%M-%S")),
-            exclusive: false,
-            file_access: None,
-            mount_point: None,
-            snapshot_path: None,
-            options: vec![String::from("kernel_cache")],
-        }
-    }
-}
-
 impl Override<RusticConfig> for MountCmd {
     // Process the given command line options, overriding settings from
     // a configuration file using explicit flags taken from command-line
     // arguments.
     fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
-        let mut self_config = self.clone();
-        // merge "mount" section from config file, if given
-        self_config.merge(config.mount);
+        // Merge by precedence, cli <- config <- default
+        let mut self_config = self.clone().merge_precedence(config.mount, Self::new());
+
+        // Other values
+        if self_config.mount_point.is_none() {
+            return Err(ParseError
+                .context("Please specify a valid mount point!")
+                .into());
+        }
+
+        if self_config.options.is_empty() {
+            self_config.options = vec!["kernel_cache".to_string()];
+        };
+
+        // rewrite the "mount" section in the config file
         config.mount = self_config;
+
         Ok(config)
     }
 }
@@ -97,25 +97,32 @@ impl Runnable for MountCmd {
 }
 
 impl MountCmd {
+    fn new() -> Self {
+        Self {
+            path_template: Some(String::from("[{hostname}]/[{label}]/{time}")),
+            time_template: Some(String::from("%Y-%m-%d_%H-%M-%S")),
+            options: vec![String::from("kernel_cache")],
+            ..Default::default()
+        }
+    }
+
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let mount_point = config
-            .mount
-            .mount_point
-            .as_ref()
-            .ok_or_else(|| anyhow!("please specify a mountpoint"))?;
 
-        let path_template = config
-            .mount
-            .path_template
-            .clone()
-            .unwrap_or_else(|| "[{hostname}]/[{label}]/{time}".to_string());
+        // We have merged the config file, the command line options, and the
+        // default values into a single struct. Now we can use the values.
+        // If a value is missing, we can return an error.
+        let Some(path_template) = config.mount.path_template.clone() else {
+            bail!("please specify a path template");
+        };
 
-        let time_template = config
-            .mount
-            .time_template
-            .clone()
-            .unwrap_or_else(|| "%Y-%m-%d_%H-%M-%S".to_string());
+        let Some(time_template) = config.mount.time_template.clone() else {
+            bail!("please specify a time template");
+        };
+
+        let Some(mount_point) = config.mount.mount_point.clone() else {
+            bail!("please specify a mount point");
+        };
 
         let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
         let vfs = if let Some(snap_path) = &config.mount.snapshot_path {
@@ -132,11 +139,7 @@ impl MountCmd {
             )?
         };
 
-        let mut mount_options = if config.mount.options.is_empty() {
-            vec!["kernel_cache".to_string()]
-        } else {
-            config.mount.options.clone()
-        };
+        let mut mount_options = config.mount.options.clone();
 
         mount_options.push(format!("fsname=rusticfs:{}", repo.config().id));
 

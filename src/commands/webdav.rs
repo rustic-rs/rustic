@@ -81,6 +81,11 @@ impl WebDavCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
+        // webdav only works with async compatible repo
+        if !repo.is_async_compatible() {
+            return Err(anyhow!("Webdav is currently incompatible with the backend you are using. See https://github.com/rustic-rs/rustic/issues/1181 for more details."));
+        }
+
         let path_template = config
             .webdav
             .path_template

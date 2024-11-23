@@ -3,6 +3,9 @@
 // ignore markdown clippy lints as we use doc-comments to generate clap help texts
 #![allow(clippy::doc_markdown)]
 
+mod webdavfs;
+use webdavfs::WebDavFS;
+
 use std::net::ToSocketAddrs;
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
@@ -127,8 +130,9 @@ impl WebDavCmd {
             |s| s.parse(),
         )?;
 
+        let webdavfs = WebDavFS::new(repo, vfs, file_access);
         let dav_server = DavHandler::builder()
-            .filesystem(vfs.into_webdav_fs(repo, file_access))
+            .filesystem(Box::new(webdavfs))
             .build_handler();
 
         tokio::runtime::Builder::new_current_thread()

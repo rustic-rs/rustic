@@ -32,30 +32,28 @@ pub(crate) mod tui;
 pub(crate) mod webdav;
 
 use std::fmt::Debug;
-use std::fs::File;
-use std::path::PathBuf;
-use std::str::FromStr;
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
+    application::RusticPaths,
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
-        forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
-        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
-        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
-        tag::TagCmd,
+        find::FindCmd, forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd,
+        merge::MergeCmd, prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd,
+        restore::RestoreCmd, self_update::SelfUpdateCmd, show_config::ShowConfigCmd,
+        snapshots::SnapshotCmd, tag::TagCmd,
     },
     config::RusticConfig,
-    Application, RUSTIC_APP,
 };
 
 use abscissa_core::{
-    config::Override, terminal::ColorChoice, Command, Configurable, FrameworkError,
-    FrameworkErrorKind, Runnable, Shutdown,
+    config::Override,
+    tracing::log::{log, Level},
+    Command, Configurable, FrameworkError, Runnable,
 };
 use anyhow::Result;
 use clap::builder::{
@@ -64,10 +62,6 @@ use clap::builder::{
 };
 use convert_case::{Case, Casing};
 use human_panic::setup_panic;
-use log::{log, Level};
-use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
-
-use self::find::FindCmd;
 
 /// Rustic Subcommands
 /// Subcommands need to be listed in an enum.
@@ -172,6 +166,14 @@ pub struct EntryPoint {
 
     #[command(subcommand)]
     commands: RusticCmd,
+
+    /// Enable verbose logging
+    #[arg(short, long)]
+    pub verbose: bool,
+
+    /// Paths used by the application
+    #[clap(skip)]
+    pub paths: RusticPaths,
 }
 
 impl Runnable for EntryPoint {
@@ -180,27 +182,11 @@ impl Runnable for EntryPoint {
         setup_panic!();
 
         self.commands.run();
-        RUSTIC_APP.shutdown(Shutdown::Graceful)
     }
 }
 
-/// This trait allows you to define how application configuration is loaded.
-impl Configurable<RusticConfig> for EntryPoint {
-    /// Location of the configuration file
-    fn config_path(&self) -> Option<PathBuf> {
-        // Actually abscissa itself reads a config from `config_path`, but I have now returned None,
-        // i.e. no config is read.
-        None
-    }
-
-    /// Apply changes to the config after it's been loaded, e.g. overriding
-    /// values in a config file using command-line options.
-    fn process_config(&self, _config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
-        // Note: The config that is "not read" is then read here in `process_config()` by the
-        // rustic logic and merged with the CLI options.
-        // That's why it says `_config`, because it's not read at all and therefore not needed.
-        let mut config = self.config.clone();
-
+impl Override<RusticConfig> for EntryPoint {
+    fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
         // collect "RUSTIC_REPO_OPT*" and "OPENDAL_*" env variables
         for (var, value) in std::env::vars() {
             if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPT_") {
@@ -221,58 +207,14 @@ impl Configurable<RusticConfig> for EntryPoint {
         // collect logs during merging as we start the logger *after* merging
         let mut merge_logs = Vec::new();
 
+        let config_paths = self.paths.configs();
+
         // get global options from command line / env and config file
         if config.global.use_profiles.is_empty() {
-            config.merge_profile("rustic", &mut merge_logs, Level::Info)?;
+            config.merge_profile("rustic", &mut merge_logs, Level::Info, config_paths)?;
         } else {
             for profile in &config.global.use_profiles.clone() {
-                config.merge_profile(profile, &mut merge_logs, Level::Warn)?;
-            }
-        }
-
-        // start logger
-        let level_filter = match &config.global.log_level {
-            Some(level) => LevelFilter::from_str(level)
-                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
-            None => LevelFilter::Info,
-        };
-        let term_config = simplelog::ConfigBuilder::new()
-            .set_time_level(LevelFilter::Off)
-            .build();
-        match &config.global.log_file {
-            None => TermLogger::init(
-                level_filter,
-                term_config,
-                TerminalMode::Stderr,
-                ColorChoice::Auto,
-            )
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
-
-            Some(file) => {
-                let file_config = simplelog::ConfigBuilder::new()
-                    .set_time_format_rfc3339()
-                    .build();
-                let file = File::options()
-                    .create(true)
-                    .append(true)
-                    .open(file)
-                    .map_err(|e| {
-                        FrameworkErrorKind::PathError {
-                            name: Some(file.clone()),
-                        }
-                        .context(e)
-                    })?;
-                let term_logger = TermLogger::new(
-                    level_filter.min(LevelFilter::Warn),
-                    term_config,
-                    TerminalMode::Stderr,
-                    ColorChoice::Auto,
-                );
-                CombinedLogger::init(vec![
-                    term_logger,
-                    WriteLogger::new(level_filter, file_config, file),
-                ])
-                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
+                config.merge_profile(profile, &mut merge_logs, Level::Warn, config_paths)?;
             }
         }
 
@@ -292,6 +234,15 @@ impl Configurable<RusticConfig> for EntryPoint {
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),
         }
+    }
+}
+
+/// This trait allows you to define how application configuration is loaded.
+impl Configurable<RusticConfig> for EntryPoint {
+    /// Apply changes to the config after it's been loaded, e.g. overriding
+    /// values in a config file using command-line options.
+    fn process_config(&self, config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
+        self.override_config(config)
     }
 }
 

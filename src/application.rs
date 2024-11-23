@@ -1,17 +1,28 @@
 //! Rustic Abscissa Application
-use std::{env, process};
+use std::{
+    env,
+    path::{Path, PathBuf},
+    process,
+};
 
 use abscissa_core::{
     application::{self, fatal_error, AppCell},
     config::{self, CfgCell},
+    path::{AbsPath, AbsPathBuf, ExePath, RootPath, SecretsPath},
     terminal::component::Terminal,
-    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
+    trace::{self, Tracing},
+    tracing::debug,
+    Application, Component, Configurable, FrameworkError, FrameworkErrorKind, Shutdown,
 };
-
 use anyhow::Result;
+use derive_getters::Getters;
+use directories::ProjectDirs;
 
 // use crate::helpers::*;
-use crate::{commands::EntryPoint, config::RusticConfig};
+use crate::{
+    commands::EntryPoint,
+    config::{get_global_config_path, RusticConfig},
+};
 
 /// Application state
 pub static RUSTIC_APP: AppCell<RusticApp> = AppCell::new();
@@ -22,8 +33,10 @@ pub mod constants {
     pub const RUSTIC_DEV_DOCS_URL: &str = "https://rustic.cli.rs/dev-docs";
     pub const RUSTIC_CONFIG_DOCS_URL: &str =
         "https://github.com/rustic-rs/rustic/blob/main/config/README.md";
+    /// Name of the application's secrets directory
+    pub(crate) const SECRETS_DIR: &str = "secrets";
+    pub(crate) const LOGS_DIR: &str = "logs";
 }
-
 /// Rustic Application
 #[derive(Debug)]
 pub struct RusticApp {
@@ -32,6 +45,123 @@ pub struct RusticApp {
 
     /// Application state.
     state: application::State<Self>,
+}
+
+#[derive(Clone, Debug, Getters)]
+pub struct RusticPaths {
+    /// Path to the application's executable.
+    exe: AbsPathBuf,
+
+    /// Path to the application's root directory
+    root: AbsPathBuf,
+
+    /// Path to the application's secrets
+    secrets: AbsPathBuf,
+
+    /// Path to the application's cache directory
+    cache: AbsPathBuf,
+
+    /// Path to the application's log directory
+    logs: AbsPathBuf,
+
+    /// Path to the application's configuration directories
+    configs: Vec<AbsPathBuf>,
+}
+
+impl ExePath for RusticPaths {
+    fn exe(&self) -> &AbsPath {
+        self.exe.as_ref()
+    }
+}
+
+impl RootPath for RusticPaths {
+    fn root(&self) -> &AbsPath {
+        self.root.as_ref()
+    }
+}
+
+impl SecretsPath for RusticPaths {
+    fn secrets(&self) -> &AbsPath {
+        self.secrets.as_ref()
+    }
+}
+
+impl RusticPaths {
+    fn from_project_dirs() -> Result<Self, FrameworkError> {
+        let project_dirs = ProjectDirs::from("", "", "rustic").ok_or_else(|| {
+            FrameworkErrorKind::PathError {
+                name: Some("project_dirs".into()),
+            }
+            .context("failed to determine project directories")
+        })?;
+
+        let data = project_dirs.data_dir();
+        let root = data.parent().ok_or_else(|| {
+            FrameworkErrorKind::PathError {
+                name: Some(data.to_path_buf()),
+            }
+            .context("failed to determine parent directory")
+        })?;
+        let secrets = data.join(constants::SECRETS_DIR);
+        let logs = root.join(constants::LOGS_DIR);
+        let config = project_dirs.config_dir();
+        let cache = project_dirs.cache_dir();
+
+        let global_config = get_global_config_path().ok_or_else(|| {
+            FrameworkErrorKind::PathError {
+                name: Some("global config path".into()),
+            }
+            .context("failed to determine global config paths")
+        })?;
+
+        let tmp_config = PathBuf::from(".");
+
+        let dirs = [
+            root,
+            data,
+            secrets.as_path(),
+            logs.as_path(),
+            config,
+            global_config.as_path(),
+            cache,
+        ];
+
+        Self::create_dirs(&dirs)?;
+
+        Ok(Self {
+            exe: canonical_path::current_exe()?,
+            root: canonical_path::CanonicalPathBuf::new(root.canonicalize()?)?,
+            secrets: canonical_path::CanonicalPathBuf::new(secrets.canonicalize()?)?,
+            logs: canonical_path::CanonicalPathBuf::new(logs.canonicalize()?)?,
+            cache: canonical_path::CanonicalPathBuf::new(cache.canonicalize()?)?,
+            configs: vec![
+                canonical_path::CanonicalPathBuf::new(config.canonicalize()?)?,
+                canonical_path::CanonicalPathBuf::new(global_config.canonicalize()?)?,
+                canonical_path::CanonicalPathBuf::new(tmp_config.canonicalize()?)?,
+            ],
+        })
+    }
+
+    fn create_dirs(dirs: &[&Path]) -> Result<(), FrameworkError> {
+        for dir in dirs {
+            if !dir.exists() {
+                debug!("Creating directory: {}", dir.display());
+                std::fs::create_dir_all(dir).map_err(|err| {
+                    FrameworkErrorKind::PathError {
+                        name: Some(dir.to_path_buf()),
+                    }
+                    .context(err)
+                })?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Default for RusticPaths {
+    fn default() -> Self {
+        Self::from_project_dirs().expect("failed to populate default impl for RusticPaths")
+    }
 }
 
 /// Initialize a new application instance.
@@ -55,7 +185,7 @@ impl Application for RusticApp {
     type Cfg = RusticConfig;
 
     /// Paths to resources within the application.
-    type Paths = StandardPaths;
+    type Paths = RusticPaths;
 
     /// Accessor for application configuration.
     fn config(&self) -> config::Reader<RusticConfig> {
@@ -67,15 +197,34 @@ impl Application for RusticApp {
         &self.state
     }
 
-    /// Returns the framework components used by this application.
+    /// Load this application's configuration and initialize its components.
+    fn init(&mut self, command: &Self::Cmd) -> Result<(), FrameworkError> {
+        // Create and register components with the application.
+        // We do this first to calculate a proper dependency ordering before
+        // application configuration is processed
+        self.register_components(command)?;
+
+        // Load configuration
+        let config = command.config.clone();
+
+        // Fire callback regardless of whether any config was loaded to
+        // in order to signal state in the application lifecycle
+        self.after_config(command.process_config(config)?)?;
+
+        Ok(())
+    }
+
+    /// Initialize the framework's default set of components, potentially
+    /// sourcing terminal and tracing options from command line arguments.
     fn framework_components(
         &mut self,
         command: &Self::Cmd,
     ) -> Result<Vec<Box<dyn Component<Self>>>, FrameworkError> {
-        // we only use the terminal component
         let terminal = Terminal::new(self.term_colors(command));
+        let tracing = Tracing::new(self.tracing_config(command), self.term_colors(command))
+            .expect("tracing subsystem failed to initialize");
 
-        Ok(vec![Box::new(terminal)])
+        Ok(vec![Box::new(terminal), Box::new(tracing)])
     }
 
     /// Register all components used by this application.
@@ -136,5 +285,21 @@ impl Application for RusticApp {
         }
 
         process::exit(exit_code);
+    }
+
+    /// Get tracing configuration from command-line options
+    fn tracing_config(&self, command: &EntryPoint) -> trace::Config {
+        if command.verbose {
+            trace::Config::verbose()
+        } else {
+            command
+                .config
+                .global
+                .log_level
+                .as_ref()
+                .map_or_else(trace::Config::default, |level| {
+                    trace::Config::from(level.to_owned())
+                })
+        }
     }
 }

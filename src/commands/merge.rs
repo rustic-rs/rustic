@@ -1,9 +1,8 @@
 //! `merge` subcommand
 
 use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
-use abscissa_core::{Command, Runnable, Shutdown};
+use abscissa_core::{tracing::info, Command, Runnable, Shutdown};
 use anyhow::Result;
-use log::info;
 
 use chrono::Local;
 

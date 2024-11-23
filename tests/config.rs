@@ -15,3 +15,8 @@ fn test_parse_rustic_configs_is_ok(
 
     Ok(())
 }
+
+#[test]
+fn test_debug_config_passes() {
+    insta::assert_debug_snapshot!(RusticConfig::default());
+}

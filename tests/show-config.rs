@@ -5,6 +5,7 @@ use std::{io::Read, sync::LazyLock};
 
 use abscissa_core::testing::prelude::*;
 use insta::assert_snapshot;
+
 use rustic_testing::TestResult;
 
 // Storing this value as a [`Lazy`] static ensures that all instances of
@@ -23,19 +24,19 @@ fn cmd_runner() -> CmdRunner {
 
 #[test]
 fn test_show_config_passes() -> TestResult<()> {
-    {
-        let mut runner = cmd_runner();
+    
+    let mut runner = cmd_runner();
 
-        let mut cmd = runner.args(["show-config"]).run();
+    let mut cmd = runner.args(["show-config"]).run();
 
-        let mut output = String::new();
+    let mut output = String::new();
 
-        cmd.stdout().read_to_string(&mut output)?;
+    cmd.stdout().read_to_string(&mut output)?;
 
-        assert_snapshot!(output);
+    assert_snapshot!(output);
 
-        cmd.wait()?.expect_success();
-    }
+    cmd.wait()?.expect_success();
+    
 
     Ok(())
 }

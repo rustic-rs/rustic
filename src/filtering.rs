@@ -1,8 +1,8 @@
 use crate::error::RhaiErrorKinds;
 
+use abscissa_core::tracing::warn;
 use bytesize::ByteSize;
 use derive_more::derive::Display;
-use log::warn;
 use rustic_core::{repofile::SnapshotFile, StringList};
 use std::{
     error::Error,

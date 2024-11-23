@@ -13,13 +13,12 @@ use std::{
     path::PathBuf,
 };
 
-use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
+use abscissa_core::{config::Config, path::AbsPathBuf, tracing::log::Level, FrameworkError};
 use anyhow::Result;
+use canonical_path::CanonicalPathBuf;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
-use directories::ProjectDirs;
 use itertools::Itertools;
-use log::Level;
 use serde::{Deserialize, Serialize};
 #[cfg(not(all(feature = "mount", feature = "webdav")))]
 use toml::Value;
@@ -109,20 +108,31 @@ impl RusticConfig {
         profile: &str,
         merge_logs: &mut Vec<(Level, String)>,
         level_missing: Level,
+        paths: &[CanonicalPathBuf],
     ) -> Result<(), FrameworkError> {
-        let profile_filename = profile.to_string() + ".toml";
-        let paths = get_config_paths(&profile_filename);
+        let paths_with_filenames: Vec<PathBuf> = paths
+            .iter()
+            .map(|path| {
+                let mut path = (*path).clone().into_path_buf();
+                path.push(profile.to_string() + ".toml");
+                path
+            })
+            .collect();
 
-        if let Some(path) = paths.iter().find(|path| path.exists()) {
+        if let Some(path) = paths_with_filenames.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
+
             let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profiles.clone() {
-                config.merge_profile(profile, merge_logs, Level::Warn)?;
+                config.merge_profile(profile, merge_logs, Level::Warn, paths)?;
             }
             self.merge(config);
         } else {
-            let paths_string = paths.iter().map(|path| path.display()).join(", ");
+            let paths_string = paths_with_filenames
+                .iter()
+                .map(|path| path.display())
+                .join(", ");
             merge_logs.push((
                 level_missing,
                 format!(
@@ -192,32 +202,6 @@ pub struct GlobalOptions {
     pub env: BTreeMap<String, String>,
 }
 
-/// Get the paths to the config file
-///
-/// # Arguments
-///
-/// * `filename` - name of the config file
-///
-/// # Returns
-///
-/// A vector of [`PathBuf`]s to the config files
-fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    [
-        ProjectDirs::from("", "", "rustic")
-            .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
-        get_global_config_path(),
-        Some(PathBuf::from(".")),
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        path.map(|mut p| {
-            p.push(filename);
-            p
-        })
-    })
-    .collect()
-}
-
 /// Get the path to the global config directory on Windows.
 ///
 /// # Returns
@@ -225,7 +209,7 @@ fn get_config_paths(filename: &str) -> Vec<PathBuf> {
 /// The path to the global config directory on Windows.
 /// If the environment variable `PROGRAMDATA` is not set, `None` is returned.
 #[cfg(target_os = "windows")]
-fn get_global_config_path() -> Option<PathBuf> {
+pub(crate) fn get_global_config_path() -> Option<PathBuf> {
     std::env::var_os("PROGRAMDATA").map(|program_data| {
         let mut path = PathBuf::from(program_data);
         path.push(r"rustic\config");
@@ -239,7 +223,7 @@ fn get_global_config_path() -> Option<PathBuf> {
 ///
 /// `None` is returned.
 #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
-fn get_global_config_path() -> Option<PathBuf> {
+pub(crate) fn get_global_config_path() -> Option<PathBuf> {
     None
 }
 
@@ -250,7 +234,7 @@ fn get_global_config_path() -> Option<PathBuf> {
 ///
 /// "/etc/rustic" is returned.
 #[cfg(not(any(target_os = "windows", target_os = "ios", target_arch = "wasm32")))]
-fn get_global_config_path() -> Option<PathBuf> {
+pub(crate) fn get_global_config_path() -> Option<PathBuf> {
     Some(PathBuf::from("/etc/rustic"))
 }
 

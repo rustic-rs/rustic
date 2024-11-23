@@ -64,7 +64,6 @@ use clap::builder::{
     Styles,
 };
 use convert_case::{Case, Casing};
-use ctrlc;
 use human_panic::setup_panic;
 use log::{info, log, Level};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};

@@ -19,7 +19,7 @@ use futures::FutureExt;
 use tokio::sync::{mpsc, oneshot};
 
 use rustic_core::{
-    refile::Node,
+    repofile::Node,
     vfs::{FilePolicy, OpenFile, Vfs},
     IndexedFull, Repository,
 };

@@ -13,6 +13,9 @@ use dav_server::{warp::dav_handler, DavHandler};
 use serde::{Deserialize, Serialize};
 
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
+use webdavfs::WebDavFS;
+
+mod webdavfs;
 
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -132,8 +135,9 @@ impl WebDavCmd {
             |s| s.parse(),
         )?;
 
+        let webdavfs = WebDavFS::new(repo, vfs, file_access);
         let dav_server = DavHandler::builder()
-            .filesystem(vfs.into_webdav_fs(repo, file_access))
+            .filesystem(Box::new(webdavfs))
             .build_handler();
 
         tokio::runtime::Builder::new_current_thread()

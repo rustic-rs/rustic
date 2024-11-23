@@ -7,9 +7,11 @@ use std::time::SystemTime;
 
 use bytes::{Buf, Bytes};
 use futures::FutureExt;
-use rustic_core::repofile::Node;
-use rustic_core::vfs::{FilePolicy, OpenFile, Vfs};
-use rustic_core::{IndexedFull, Repository};
+use rustic_core::{
+    repofile::Node,
+    vfs::{FilePolicy, OpenFile, Vfs},
+    IndexedFull, Repository,
+};
 
 use dav_server::{
     davpath::DavPath,

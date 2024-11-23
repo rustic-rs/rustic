@@ -1,24 +1,26 @@
-use std::fmt::{Debug, Formatter};
-use std::io::SeekFrom;
 #[cfg(not(windows))]
 use std::os::unix::ffi::OsStrExt;
-use std::sync::{Arc, OnceLock};
-use std::time::SystemTime;
-
-use bytes::{Buf, Bytes};
-use futures::FutureExt;
-use rustic_core::{
-    repofile::Node,
-    vfs::{FilePolicy, OpenFile, Vfs},
-    IndexedFull, Repository,
+use std::{
+    fmt::{Debug, Formatter},
+    io::SeekFrom,
+    sync::{Arc, OnceLock},
+    time::SystemTime,
 };
 
+use bytes::{Buf, Bytes};
 use dav_server::{
     davpath::DavPath,
     fs::{
         DavDirEntry, DavFile, DavFileSystem, DavMetaData, FsError, FsFuture, FsResult, FsStream,
         OpenOptions, ReadDirMeta,
     },
+};
+use futures::FutureExt;
+
+use rustic_core::{
+    repofile::Node,
+    vfs::{FilePolicy, OpenFile, Vfs},
+    IndexedFull, Repository,
 };
 
 fn now() -> SystemTime {

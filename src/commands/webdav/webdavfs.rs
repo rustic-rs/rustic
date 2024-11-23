@@ -418,7 +418,7 @@ impl DavFile for DavFsFile {
                 }
                 SeekFrom::Current(delta) => {
                     self.seek = usize::try_from(
-                        i64::try_from(self.seek).expect("i64 wrapped around") + delta,
+                        i64::try_from(self.seek).expect("i64 should not wrap around") + delta,
                     )
                     .expect("usize overflow should not happen");
                 }

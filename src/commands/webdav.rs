@@ -3,6 +3,9 @@
 // ignore markdown clippy lints as we use doc-comments to generate clap help texts
 #![allow(clippy::doc_markdown)]
 
+mod webdavfs;
+use webdavfs::WebDavFS;
+
 use std::net::ToSocketAddrs;
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
@@ -13,9 +16,6 @@ use dav_server::{warp::dav_handler, DavHandler};
 use serde::{Deserialize, Serialize};
 
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
-use webdavfs::WebDavFS;
-
-mod webdavfs;
 
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]

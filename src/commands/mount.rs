@@ -63,7 +63,10 @@ impl Override<RusticConfig> for MountCmd {
     // arguments.
     fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
         // Merge by precedence, cli <- config <- default
-        let mut self_config = self.clone().merge_precedence(config.mount, Self::new());
+        let mut self_config = self
+            .clone()
+            .merge_from(config.mount)
+            .merge_from(Self::with_default_config());
 
         // Other values
         if self_config.mount_point.is_none() {
@@ -71,10 +74,6 @@ impl Override<RusticConfig> for MountCmd {
                 .context("Please specify a valid mount point!")
                 .into());
         }
-
-        if self_config.options.is_empty() {
-            self_config.options = vec!["kernel_cache".to_string()];
-        };
 
         // rewrite the "mount" section in the config file
         config.mount = self_config;
@@ -97,7 +96,7 @@ impl Runnable for MountCmd {
 }
 
 impl MountCmd {
-    fn new() -> Self {
+    fn with_default_config() -> Self {
         Self {
             path_template: Some(String::from("[{hostname}]/[{label}]/{time}")),
             time_template: Some(String::from("%Y-%m-%d_%H-%M-%S")),

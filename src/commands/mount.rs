@@ -11,7 +11,7 @@ use abscissa_core::{
 };
 use anyhow::{bail, Result};
 use clap::Parser;
-use conflate::{Merge, MergePrecedence};
+use conflate::{Merge, MergeFrom};
 use fuse_mt::{mount, FuseMT};
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};

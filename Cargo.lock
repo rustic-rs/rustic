@@ -612,25 +612,11 @@ checksum = "a3e368af43e418a04d52505cf3dbc23dda4e3407ae2fa99fd0e4f308ce546acc"
 
 [[package]]
 name = "cached"
-version = "0.53.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4d73155ae6b28cf5de4cfc29aeb02b8a1c6dab883cb015d15cd514e42766846"
-dependencies = [
- "ahash",
- "cached_proc_macro",
- "cached_proc_macro_types",
- "hashbrown 0.14.5",
- "once_cell",
- "thiserror 1.0.69",
- "web-time",
-]
-
-[[package]]
-name = "cached"
 version = "0.54.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9718806c4a2fe9e8a56fd736f97b340dd10ed1be8ed733ed50449f351dc33cae"
 dependencies = [
+ "ahash",
  "cached_proc_macro",
  "cached_proc_macro_types",
  "hashbrown 0.14.5",
@@ -4171,7 +4157,7 @@ dependencies = [
  "assert_cmd",
  "bytes",
  "bytesize",
- "cached 0.53.1",
+ "cached",
  "cfg-if 1.0.0",
  "chrono",
  "clap",
@@ -4222,7 +4208,7 @@ dependencies = [
  "simplelog",
  "tar",
  "tempfile",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
  "tokio",
  "toml",
  "tui-textarea",
@@ -4231,9 +4217,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_backend"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34e6246c97ad65881e6353bf5d6b000652db7b75007a531d8575b268145c554c"
+checksum = "21e5f6b0741323387f63a572b7ec3ffc5a704418a1787465a14da92cc6bc077d"
 dependencies = [
  "aho-corasick",
  "aws-lc-sys",
@@ -4272,21 +4258,20 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 
 [[package]]
 name = "rustic_core"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced8fa06db8411fa55828c4469f8c43f02fa35ad87ab678531da70fd9dfc8f8c"
+checksum = "a9473e4ee30784175805d0d571970fb6d5fceaacb7fd5655e59c0cda69299841"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
  "bytes",
  "bytesize",
- "cached 0.54.0",
+ "cached",
  "cachedir",
  "chrono",
  "clap",
  "conflate",
  "crossbeam-channel",
- "dav-server",
  "derive_more",
  "derive_setters",
  "dirs",
@@ -4297,7 +4282,6 @@ dependencies = [
  "enum-map-derive",
  "enumset",
  "filetime",
- "futures",
  "gethostname",
  "hex",
  "humantime",
@@ -4330,9 +4314,9 @@ dependencies = [
 
 [[package]]
 name = "rustic_testing"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bbeadfcd443c4c129fa5edb1cc05f3b9522b24de65e815b47a9eb32c2af9d4f"
+checksum = "25ea1d0898b1c4420f97e39d8f17ab70a5a888bca38b32fcb6efb9844117d6bc"
 dependencies = [
  "aho-corasick",
  "anyhow",

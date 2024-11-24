@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::{
     fmt::{Debug, Formatter},
     io::SeekFrom,
-    sync::OnceLock,
+    sync::{Arc, OnceLock},
     time::SystemTime,
 };
 
@@ -16,13 +16,12 @@ use dav_server::{
     },
 };
 use futures::FutureExt;
-use tokio::sync::{mpsc, oneshot};
-
 use rustic_core::{
     repofile::Node,
     vfs::{FilePolicy, OpenFile, Vfs},
     IndexedFull, Repository,
 };
+use tokio::task::spawn_blocking;
 
 fn now() -> SystemTime {
     static NOW: OnceLock<SystemTime> = OnceLock::new();
@@ -41,102 +40,6 @@ struct DavFsInner<P, S> {
     file_policy: FilePolicy,
 }
 
-impl<P, S: IndexedFull> DavFsInner<P, S> {
-    /// Get a [`Node`] from the specified [`DavPath`].
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The path to get the [`Tree`] at
-    ///
-    /// # Errors
-    ///
-    /// * If the [`Tree`] could not be found
-    ///
-    /// # Returns
-    ///
-    /// The [`Node`] at the specified path
-    ///
-    /// [`Tree`]: crate::repofile::Tree
-    fn node_from_path(&self, path: &DavPath) -> Result<Node, FsError> {
-        self.vfs
-            .node_from_path(&self.repo, &path.as_pathbuf())
-            .map_err(|_| FsError::GeneralFailure)
-    }
-
-    /// Get a list of [`Node`]s from the specified directory path.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The path to get the [`Tree`] at
-    ///
-    /// # Errors
-    ///
-    /// * If the [`Tree`] could not be found
-    ///
-    /// # Returns
-    ///
-    /// The list of [`Node`]s at the specified path
-    ///
-    /// [`Tree`]: crate::repofile::Tree
-    fn dir_entries_from_path(&self, path: &DavPath) -> Result<Vec<Node>, FsError> {
-        self.vfs
-            .dir_entries_from_path(&self.repo, &path.as_pathbuf())
-            .map_err(|_| FsError::GeneralFailure)
-    }
-
-    fn open(&self, node: &Node, options: OpenOptions) -> Result<OpenFile, FsError> {
-        if options.write
-            || options.append
-            || options.truncate
-            || options.create
-            || options.create_new
-        {
-            return Err(FsError::Forbidden);
-        }
-
-        if matches!(self.file_policy, FilePolicy::Forbidden) {
-            return Err(FsError::Forbidden);
-        }
-
-        let open = self
-            .repo
-            .open_file(node)
-            .map_err(|_err| FsError::GeneralFailure)?;
-        Ok(open)
-    }
-
-    fn read_bytes(
-        &self,
-        file: OpenFile,
-        seek: usize,
-        count: usize,
-    ) -> Result<(Bytes, OpenFile), FsError> {
-        let data = self
-            .repo
-            .read_file_at(&file, seek, count)
-            .map_err(|_err| FsError::GeneralFailure)?;
-        Ok((data, file))
-    }
-}
-
-/// Messages used
-#[allow(clippy::large_enum_variant)]
-enum DavFsInnerCommand {
-    Node(DavPath, oneshot::Sender<Result<Node, FsError>>),
-    DirEntries(DavPath, oneshot::Sender<Result<Vec<Node>, FsError>>),
-    Open(
-        Node,
-        OpenOptions,
-        oneshot::Sender<Result<OpenFile, FsError>>,
-    ),
-    ReadBytes(
-        OpenFile,
-        usize,
-        usize,
-        oneshot::Sender<Result<(Bytes, OpenFile), FsError>>,
-    ),
-}
-
 impl<P, S> Debug for DavFsInner<P, S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DavFS")
@@ -147,12 +50,12 @@ impl<P, S> Debug for DavFsInner<P, S> {
 ///
 /// This is the main entry point for the DAV filesystem.
 /// It implements [`DavFileSystem`] and can be used to serve a [`Repository`] via DAV.
-#[derive(Debug, Clone)]
-pub struct WebDavFS {
-    send: mpsc::Sender<DavFsInnerCommand>,
+#[derive(Debug)]
+pub struct WebDavFS<P, S> {
+    inner: Arc<DavFsInner<P, S>>,
 }
 
-impl WebDavFS {
+impl<P: Send + Sync + 'static, S: IndexedFull + Send + Sync + 'static> WebDavFS<P, S> {
     /// Create a new [`WebDavFS`] instance.
     ///
     /// # Arguments
@@ -164,44 +67,16 @@ impl WebDavFS {
     /// # Returns
     ///
     /// A new [`WebDavFS`] instance
-    pub(crate) fn new<P: Send + 'static, S: IndexedFull + Send + 'static>(
-        repo: Repository<P, S>,
-        vfs: Vfs,
-        file_policy: FilePolicy,
-    ) -> Self {
+    pub(crate) fn new(repo: Repository<P, S>, vfs: Vfs, file_policy: FilePolicy) -> Self {
         let inner = DavFsInner {
             repo,
             vfs,
             file_policy,
         };
 
-        let (send, mut rcv) = mpsc::channel(1);
-
-        let _ = std::thread::spawn(move || -> Result<_, FsError> {
-            while let Some(task) = rcv.blocking_recv() {
-                match task {
-                    DavFsInnerCommand::Node(path, res) => {
-                        res.send(inner.node_from_path(&path))
-                            .map_err(|_err| FsError::GeneralFailure)?;
-                    }
-                    DavFsInnerCommand::DirEntries(path, res) => {
-                        res.send(inner.dir_entries_from_path(&path))
-                            .map_err(|_err| FsError::GeneralFailure)?;
-                    }
-                    DavFsInnerCommand::Open(path, open_options, res) => {
-                        res.send(inner.open(&path, open_options))
-                            .map_err(|_err| FsError::GeneralFailure)?;
-                    }
-                    DavFsInnerCommand::ReadBytes(file, seek, count, res) => {
-                        res.send(inner.read_bytes(file, seek, count))
-                            .map_err(|_err| FsError::GeneralFailure)?;
-                    }
-                }
-            }
-            Ok(())
-        });
-
-        Self { send }
+        Self {
+            inner: Arc::new(inner),
+        }
     }
 
     /// Get a [`Node`] from the specified [`DavPath`].
@@ -220,12 +95,16 @@ impl WebDavFS {
     ///
     /// [`Tree`]: crate::repofile::Tree
     async fn node_from_path(&self, path: &DavPath) -> Result<Node, FsError> {
-        let (send, rcv) = oneshot::channel();
-        self.send
-            .send(DavFsInnerCommand::Node(path.clone(), send))
-            .await
-            .map_err(|_err| FsError::GeneralFailure)?;
-        rcv.await.map_err(|_err| FsError::GeneralFailure)?
+        let inner = self.inner.clone();
+        let path = path.as_pathbuf();
+        spawn_blocking(move || {
+            inner
+                .vfs
+                .node_from_path(&inner.repo, &path)
+                .map_err(|_| FsError::GeneralFailure)
+        })
+        .await
+        .map_err(|_| FsError::GeneralFailure)?
     }
 
     /// Get a list of [`Node`]s from the specified directory path.
@@ -244,38 +123,30 @@ impl WebDavFS {
     ///
     /// [`Tree`]: crate::repofile::Tree
     async fn dir_entries_from_path(&self, path: &DavPath) -> Result<Vec<Node>, FsError> {
-        let (send, rcv) = oneshot::channel();
-        self.send
-            .send(DavFsInnerCommand::DirEntries(path.clone(), send))
-            .await
-            .map_err(|_err| FsError::GeneralFailure)?;
-        rcv.await.map_err(|_err| FsError::GeneralFailure)?
-    }
-
-    async fn open(&self, node: &Node, options: OpenOptions) -> Result<OpenFile, FsError> {
-        let (send, rcv) = oneshot::channel();
-        self.send
-            .send(DavFsInnerCommand::Open(node.clone(), options, send))
-            .await
-            .map_err(|_err| FsError::GeneralFailure)?;
-        rcv.await.map_err(|_err| FsError::GeneralFailure)?
-    }
-    async fn read_bytes(
-        &self,
-        file: OpenFile,
-        seek: usize,
-        count: usize,
-    ) -> Result<(Bytes, OpenFile), FsError> {
-        let (send, rcv) = oneshot::channel();
-        self.send
-            .send(DavFsInnerCommand::ReadBytes(file, seek, count, send))
-            .await
-            .map_err(|_err| FsError::GeneralFailure)?;
-        rcv.await.map_err(|_err| FsError::GeneralFailure)?
+        let inner = self.inner.clone();
+        let path = path.as_pathbuf();
+        spawn_blocking(move || {
+            inner
+                .vfs
+                .dir_entries_from_path(&inner.repo, &path)
+                .map_err(|_| FsError::GeneralFailure)
+        })
+        .await
+        .map_err(|_| FsError::GeneralFailure)?
     }
 }
 
-impl DavFileSystem for WebDavFS {
+impl<P, S: IndexedFull> Clone for WebDavFS<P, S> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<P: Debug + Send + Sync + 'static, S: IndexedFull + Debug + Send + Sync + 'static> DavFileSystem
+    for WebDavFS<P, S>
+{
     fn metadata<'a>(&'a self, davpath: &'a DavPath) -> FsFuture<'_, Box<dyn DavMetaData>> {
         self.symlink_metadata(davpath)
     }
@@ -312,13 +183,36 @@ impl DavFileSystem for WebDavFS {
         options: OpenOptions,
     ) -> FsFuture<'_, Box<dyn DavFile>> {
         async move {
+            if options.write
+                || options.append
+                || options.truncate
+                || options.create
+                || options.create_new
+            {
+                return Err(FsError::Forbidden);
+            }
+
             let node = self.node_from_path(path).await?;
-            let file = self.open(&node, options).await?;
+            if matches!(self.inner.file_policy, FilePolicy::Forbidden) {
+                return Err(FsError::Forbidden);
+            }
+
+            let inner = self.inner.clone();
+            let node_copy = node.clone();
+            let open = spawn_blocking(move || {
+                inner
+                    .repo
+                    .open_file(&node_copy)
+                    .map_err(|_err| FsError::GeneralFailure)
+            })
+            .await
+            .map_err(|_| FsError::GeneralFailure)??;
+
             let file: Box<dyn DavFile> = Box::new(DavFsFile {
-                open: Some(file),
-                seek: 0,
-                fs: self.clone(),
                 node,
+                open: Arc::new(open),
+                fs: self.inner.clone(),
+                seek: 0,
             });
             Ok(file)
         }
@@ -358,25 +252,29 @@ impl DavDirEntry for DavFsDirEntry {
 /// A [`DavFile`] implementation for [`Node`]s.
 ///
 /// This is a read-only file.
-struct DavFsFile {
+struct DavFsFile<P, S> {
     /// The [`Node`] this file is for
     node: Node,
 
     /// The [`OpenFile`] for this file
-    open: Option<OpenFile>,
+    open: Arc<OpenFile>,
+
+    /// The [`DavFsInner`] this file belongs to
+    fs: Arc<DavFsInner<P, S>>,
 
     /// The current seek position
     seek: usize,
-    fs: WebDavFS,
 }
 
-impl Debug for DavFsFile {
+impl<P, S> Debug for DavFsFile<P, S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DavFile")
     }
 }
 
-impl DavFile for DavFsFile {
+impl<P: Debug + Send + Sync + 'static, S: IndexedFull + Debug + Send + Sync + 'static> DavFile
+    for DavFsFile<P, S>
+{
     fn metadata(&mut self) -> FsFuture<'_, Box<dyn DavMetaData>> {
         async move {
             let meta: Box<dyn DavMetaData> = Box::new(DavFsMetaData(self.node.clone()));
@@ -394,17 +292,18 @@ impl DavFile for DavFsFile {
     }
 
     fn read_bytes(&mut self, count: usize) -> FsFuture<'_, Bytes> {
+        let fs = self.fs.clone();
+        let seek = self.seek;
+        let open = self.open.clone();
         async move {
-            let (data, open) = self
-                .fs
-                .read_bytes(
-                    self.open.take().ok_or(FsError::GeneralFailure)?,
-                    self.seek,
-                    count,
-                )
-                .await?;
+            let data = spawn_blocking(move || {
+                fs.repo
+                    .read_file_at(&open, seek, count)
+                    .map_err(|_err| FsError::GeneralFailure)
+            })
+            .await
+            .map_err(|_| FsError::GeneralFailure)??;
             self.seek += data.len();
-            self.open = Some(open);
             Ok(data)
         }
         .boxed()
@@ -418,7 +317,7 @@ impl DavFile for DavFsFile {
                 }
                 SeekFrom::Current(delta) => {
                     self.seek = usize::try_from(
-                        i64::try_from(self.seek).expect("i64 should not wrap around") + delta,
+                        i64::try_from(self.seek).expect("i64 wrapped around") + delta,
                     )
                     .expect("usize overflow should not happen");
                 }

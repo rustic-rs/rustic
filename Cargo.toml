@@ -32,7 +32,6 @@ webdav = [
   "dep:dav-server",
   "dep:warp",
   "dep:tokio",
-  "rustic_core/webdav",
   "dep:bytes",
   "dep:futures",
 ]

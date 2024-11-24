@@ -63,7 +63,7 @@ impl Override<RusticConfig> for MountCmd {
     // arguments.
     fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
         // Merge by precedence, cli <- config <- default
-        let mut self_config = self
+        let self_config = self
             .clone()
             .merge_from(config.mount)
             .merge_from(Self::with_default_config());

@@ -16,12 +16,12 @@ use dav_server::{
     },
 };
 use futures::FutureExt;
-
 use rustic_core::{
     repofile::Node,
     vfs::{FilePolicy, OpenFile, Vfs},
     IndexedFull, Repository,
 };
+use tokio::task::spawn_blocking;
 
 fn now() -> SystemTime {
     static NOW: OnceLock<SystemTime> = OnceLock::new();
@@ -55,7 +55,7 @@ pub struct WebDavFS<P, S> {
     inner: Arc<DavFsInner<P, S>>,
 }
 
-impl<P, S: IndexedFull> WebDavFS<P, S> {
+impl<P: Send + Sync + 'static, S: IndexedFull + Send + Sync + 'static> WebDavFS<P, S> {
     /// Create a new [`WebDavFS`] instance.
     ///
     /// # Arguments
@@ -94,11 +94,17 @@ impl<P, S: IndexedFull> WebDavFS<P, S> {
     /// The [`Node`] at the specified path
     ///
     /// [`Tree`]: crate::repofile::Tree
-    fn node_from_path(&self, path: &DavPath) -> Result<Node, FsError> {
-        self.inner
-            .vfs
-            .node_from_path(&self.inner.repo, &path.as_pathbuf())
-            .map_err(|_| FsError::GeneralFailure)
+    async fn node_from_path(&self, path: &DavPath) -> Result<Node, FsError> {
+        let inner = self.inner.clone();
+        let path = path.as_pathbuf();
+        spawn_blocking(move || {
+            inner
+                .vfs
+                .node_from_path(&inner.repo, &path)
+                .map_err(|_| FsError::GeneralFailure)
+        })
+        .await
+        .map_err(|_| FsError::GeneralFailure)?
     }
 
     /// Get a list of [`Node`]s from the specified directory path.
@@ -116,11 +122,17 @@ impl<P, S: IndexedFull> WebDavFS<P, S> {
     /// The list of [`Node`]s at the specified path
     ///
     /// [`Tree`]: crate::repofile::Tree
-    fn dir_entries_from_path(&self, path: &DavPath) -> Result<Vec<Node>, FsError> {
-        self.inner
-            .vfs
-            .dir_entries_from_path(&self.inner.repo, &path.as_pathbuf())
-            .map_err(|_| FsError::GeneralFailure)
+    async fn dir_entries_from_path(&self, path: &DavPath) -> Result<Vec<Node>, FsError> {
+        let inner = self.inner.clone();
+        let path = path.as_pathbuf();
+        spawn_blocking(move || {
+            inner
+                .vfs
+                .dir_entries_from_path(&inner.repo, &path)
+                .map_err(|_| FsError::GeneralFailure)
+        })
+        .await
+        .map_err(|_| FsError::GeneralFailure)?
     }
 }
 
@@ -141,7 +153,7 @@ impl<P: Debug + Send + Sync + 'static, S: IndexedFull + Debug + Send + Sync + 's
 
     fn symlink_metadata<'a>(&'a self, davpath: &'a DavPath) -> FsFuture<'_, Box<dyn DavMetaData>> {
         async move {
-            let node = self.node_from_path(davpath)?;
+            let node = self.node_from_path(davpath).await?;
             let meta: Box<dyn DavMetaData> = Box::new(DavFsMetaData(node));
             Ok(meta)
         }
@@ -154,7 +166,7 @@ impl<P: Debug + Send + Sync + 'static, S: IndexedFull + Debug + Send + Sync + 's
         _meta: ReadDirMeta,
     ) -> FsFuture<'_, FsStream<Box<dyn DavDirEntry>>> {
         async move {
-            let entries = self.dir_entries_from_path(davpath)?;
+            let entries = self.dir_entries_from_path(davpath).await?;
             let entry_iter = entries.into_iter().map(|e| {
                 let entry: Box<dyn DavDirEntry> = Box::new(DavFsDirEntry(e));
                 Ok(entry)
@@ -180,19 +192,25 @@ impl<P: Debug + Send + Sync + 'static, S: IndexedFull + Debug + Send + Sync + 's
                 return Err(FsError::Forbidden);
             }
 
-            let node = self.node_from_path(path)?;
+            let node = self.node_from_path(path).await?;
             if matches!(self.inner.file_policy, FilePolicy::Forbidden) {
                 return Err(FsError::Forbidden);
             }
 
-            let open = self
-                .inner
-                .repo
-                .open_file(&node)
-                .map_err(|_err| FsError::GeneralFailure)?;
+            let inner = self.inner.clone();
+            let node_copy = node.clone();
+            let open = spawn_blocking(move || {
+                inner
+                    .repo
+                    .open_file(&node_copy)
+                    .map_err(|_err| FsError::GeneralFailure)
+            })
+            .await
+            .map_err(|_| FsError::GeneralFailure)??;
+
             let file: Box<dyn DavFile> = Box::new(DavFsFile {
                 node,
-                open,
+                open: Arc::new(open),
                 fs: self.inner.clone(),
                 seek: 0,
             });
@@ -239,7 +257,7 @@ struct DavFsFile<P, S> {
     node: Node,
 
     /// The [`OpenFile`] for this file
-    open: OpenFile,
+    open: Arc<OpenFile>,
 
     /// The [`DavFsInner`] this file belongs to
     fs: Arc<DavFsInner<P, S>>,
@@ -254,7 +272,9 @@ impl<P, S> Debug for DavFsFile<P, S> {
     }
 }
 
-impl<P: Debug + Send + Sync, S: IndexedFull + Debug + Send + Sync> DavFile for DavFsFile<P, S> {
+impl<P: Debug + Send + Sync + 'static, S: IndexedFull + Debug + Send + Sync + 'static> DavFile
+    for DavFsFile<P, S>
+{
     fn metadata(&mut self) -> FsFuture<'_, Box<dyn DavMetaData>> {
         async move {
             let meta: Box<dyn DavMetaData> = Box::new(DavFsMetaData(self.node.clone()));
@@ -272,12 +292,17 @@ impl<P: Debug + Send + Sync, S: IndexedFull + Debug + Send + Sync> DavFile for D
     }
 
     fn read_bytes(&mut self, count: usize) -> FsFuture<'_, Bytes> {
+        let fs = self.fs.clone();
+        let seek = self.seek;
+        let open = self.open.clone();
         async move {
-            let data = self
-                .fs
-                .repo
-                .read_file_at(&self.open, self.seek, count)
-                .map_err(|_err| FsError::GeneralFailure)?;
+            let data = spawn_blocking(move || {
+                fs.repo
+                    .read_file_at(&open, seek, count)
+                    .map_err(|_err| FsError::GeneralFailure)
+            })
+            .await
+            .map_err(|_| FsError::GeneralFailure)??;
             self.seek += data.len();
             Ok(data)
         }

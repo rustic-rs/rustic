@@ -164,7 +164,6 @@ impl<P, S: IndexedFull> FilesystemMT for FuseFS<P, S> {
         fh: u64,
         offset: u64,
         size: u32,
-
         callback: impl FnOnce(ResultSlice<'_>) -> CallbackResult,
     ) -> CallbackResult {
         if let Some(open_file) = self.open_files.read().unwrap().get(&fh) {

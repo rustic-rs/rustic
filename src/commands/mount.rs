@@ -6,18 +6,19 @@
 mod fusefs;
 use fusefs::FuseFS;
 
+use abscissa_core::{
+    config::Override, Command, FrameworkError, FrameworkErrorKind::ParseError, Runnable, Shutdown,
+};
+use anyhow::{bail, Result};
+use clap::Parser;
+use conflate::{Merge, MergeFrom};
+use fuse_mt::{mount, FuseMT};
+use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};
 
 use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
 
-use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
-use anyhow::{anyhow, Result};
-use conflate::Merge;
-use fuse_mt::{mount, FuseMT};
-use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
+#[derive(Clone, Debug, Default, Command, Parser, Merge, serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct MountCmd {
     /// The path template to use for snapshots. {id}, {id_long}, {time}, {username}, {hostname}, {label}, {tags}, {backup_start}, {backup_end} are replaced. [default: "[{hostname}]/[{label}]/{time}"]
@@ -31,24 +32,29 @@ pub struct MountCmd {
     time_template: Option<String>,
 
     /// Don't allow other users to access the mount point
-    #[clap(long)]
+    #[clap(short, long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
-    no_allow_other: bool,
+    exclusive: bool,
 
     /// How to handle access to files. [default: "forbidden" for hot/cold repositories, else "read"]
     #[clap(long)]
     #[merge(strategy=conflate::option::overwrite_none)]
-    file_access: Option<String>,
+    file_access: Option<FilePolicy>,
 
     /// The mount point to use
     #[clap(value_name = "PATH")]
     #[merge(strategy=conflate::option::overwrite_none)]
-    mountpoint: Option<PathBuf>,
+    mount_point: Option<PathBuf>,
 
     /// Specify directly which snapshot/path to mount
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     #[merge(strategy=conflate::option::overwrite_none)]
     snapshot_path: Option<String>,
+
+    /// Other options to use for mount
+    #[clap(short, long = "option", value_name = "OPTION")]
+    #[merge(strategy = conflate::vec::overwrite_empty)]
+    options: Vec<String>,
 }
 
 impl Override<RusticConfig> for MountCmd {
@@ -56,10 +62,22 @@ impl Override<RusticConfig> for MountCmd {
     // a configuration file using explicit flags taken from command-line
     // arguments.
     fn override_config(&self, mut config: RusticConfig) -> Result<RusticConfig, FrameworkError> {
-        let mut self_config = self.clone();
-        // merge "mount" section from config file, if given
-        self_config.merge(config.mount);
+        // Merge by precedence, cli <- config <- default
+        let self_config = self
+            .clone()
+            .merge_from(config.mount)
+            .merge_from(Self::with_default_config());
+
+        // Other values
+        if self_config.mount_point.is_none() {
+            return Err(ParseError
+                .context("Please specify a valid mount point!")
+                .into());
+        }
+
+        // rewrite the "mount" section in the config file
         config.mount = self_config;
+
         Ok(config)
     }
 }
@@ -78,24 +96,32 @@ impl Runnable for MountCmd {
 }
 
 impl MountCmd {
+    fn with_default_config() -> Self {
+        Self {
+            path_template: Some(String::from("[{hostname}]/[{label}]/{time}")),
+            time_template: Some(String::from("%Y-%m-%d_%H-%M-%S")),
+            options: vec![String::from("kernel_cache")],
+            ..Default::default()
+        }
+    }
+
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let mountpoint = config
-            .mount
-            .mountpoint
-            .as_ref()
-            .ok_or_else(|| anyhow!("please specify a mountpoint"))?;
 
-        let path_template = config
-            .mount
-            .path_template
-            .clone()
-            .unwrap_or_else(|| "[{hostname}]/[{label}]/{time}".to_string());
-        let time_template = config
-            .mount
-            .time_template
-            .clone()
-            .unwrap_or_else(|| "%Y-%m-%d_%H-%M-%S".to_string());
+        // We have merged the config file, the command line options, and the
+        // default values into a single struct. Now we can use the values.
+        // If a value is missing, we can return an error.
+        let Some(path_template) = config.mount.path_template.clone() else {
+            bail!("Please specify a path template!");
+        };
+
+        let Some(time_template) = config.mount.time_template.clone() else {
+            bail!("Please specify a time template!");
+        };
+
+        let Some(mount_point) = config.mount.mount_point.clone() else {
+            bail!("Please specify a mount point!");
+        };
 
         let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
         let vfs = if let Some(snap_path) = &config.mount.snapshot_path {
@@ -112,36 +138,39 @@ impl MountCmd {
             )?
         };
 
-        let name_opt = format!("fsname=rusticfs:{}", repo.config().id);
-        let mut options = vec![
-            OsStr::new("-o"),
-            OsStr::new(&name_opt),
-            OsStr::new("-o"),
-            OsStr::new("kernel_cache"),
-        ];
+        // Prepare the mount options
+        let mut mount_options = config.mount.options.clone();
 
-        if !config.mount.no_allow_other {
-            options.extend_from_slice(&[
-                OsStr::new("-o"),
-                OsStr::new("allow_other"),
-                OsStr::new("-o"),
-                OsStr::new("default_permissions"),
-            ]);
+        mount_options.push(format!("fsname=rusticfs:{}", repo.config().id));
+
+        if !config.mount.exclusive {
+            mount_options
+                .extend_from_slice(&["allow_other".to_string(), "default_permissions".to_string()]);
         }
 
         let file_access = config.mount.file_access.as_ref().map_or_else(
             || {
                 if repo.config().is_hot == Some(true) {
-                    Ok(FilePolicy::Forbidden)
+                    FilePolicy::Forbidden
                 } else {
-                    Ok(FilePolicy::Read)
+                    FilePolicy::Read
                 }
             },
-            |s| s.parse(),
-        )?;
+            |s| *s,
+        );
 
         let fs = FuseMT::new(FuseFS::new(repo, vfs, file_access), 1);
-        mount(fs, mountpoint, &options)?;
+
+        // Sort and deduplicate options
+        mount_options.sort_unstable();
+        mount_options.dedup();
+
+        // join options into a single comma-delimited string and prepent "-o "
+        // this should be parsed just fine by fuser, here
+        // https://github.com/cberner/fuser/blob/9f6ced73a36f1d99846e28be9c5e4903939ee9d5/src/mnt/mount_options.rs#L157
+        let opt_string = format!("-o {}", mount_options.join(","));
+
+        mount(fs, mount_point, &[OsStr::new(&opt_string)])?;
 
         Ok(())
     }

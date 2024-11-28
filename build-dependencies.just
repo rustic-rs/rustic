@@ -15,17 +15,17 @@ install-default-aarch64-unknown-linux-musl:
 # Install dependencies for the mount feature on x86_64-unknown-linux-gnu
 install-mount-x86_64-unknown-linux-gnu:
     sudo apt-get update
-    sudo apt-get install -y fuse3 libfuse3-dev pkg-config
+    sudo apt-get install -y libfuse-dev pkg-config
 
 # Install dependencies for the mount feature on aarch64-unknown-linux-gnu
 install-mount-aarch64-unknown-linux-gnu:
     sudo apt-get update
-    sudo apt-get install -y fuse3 libfuse3-dev pkg-config
+    sudo apt-get install -y libfuse-dev pkg-config
 
 # Install dependencies for the mount feature on i686-unknown-linux-gnu
 install-mount-i686-unknown-linux-gnu:
     sudo apt-get update
-    sudo apt-get install -y fuse3 libfuse3-dev pkg-config
+    sudo apt-get install -y libfuse-dev pkg-config
 
 # Install dependencies for the mount feature on x86_64-apple-darwin
 install-mount-x86_64-apple-darwin:

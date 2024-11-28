@@ -20,7 +20,8 @@
     ],
     "excludes": [
         "target/**/*",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "dist-workspace.toml"
     ],
     "plugins": [
         "https://plugins.dprint.dev/markdown-0.17.8.wasm",

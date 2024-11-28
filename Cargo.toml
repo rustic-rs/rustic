@@ -189,6 +189,11 @@ lto = true
 debug-assertions = false
 codegen-units = 1
 
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
 # Allows quick RPM file generation, if "cargo-generate-rpm" is installed:
 #  cargo build --release; cargo generate-rpm
 # will result in a file like target/generate-rpm/rustic-rs-0.6.1-1.x86_64.rpm
@@ -196,3 +201,9 @@ codegen-units = 1
 assets = [
   { source = "target/release/rustic", dest = "/usr/bin/rustic", mode = "0755", config = false, doc = false, user = "root", group = "root" },
 ]
+
+[package.metadata.wix]
+upgrade-guid = "39C94FD6-39A2-4626-B886-DF943C3FBE38"
+path-guid = "8278131B-7918-40A8-BBA3-4A4756597706"
+license = false
+eula = false

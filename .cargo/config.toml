@@ -2,3 +2,9 @@
 rustdocflags = ["--document-private-items"]
 # rustflags = "-C target-cpu=native -D warnings"
 # incremental = true
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"

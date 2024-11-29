@@ -245,6 +245,7 @@ hooks when backing up the defined sources into a snapshot.
 | -------------------------- | ----------------------------------------------------------------------- | ------------------ | ---------------------- | ---------------------------- |
 | group-by                   | Group snapshots by given criteria before applying keep policies.        | "host,label,paths" |                        | --group-by                   |
 | keep-last                  | Number of most recent snapshots to keep.                                | Not set            | 15                     | --keep-last, -l              |
+| keep-minutely, -M          | Number of minutely snapshots to keep.                                   | Not set            |                        | --keep-minutely              |
 | keep-hourly, -H            | Number of hourly snapshots to keep.                                     | Not set            |                        | --keep-hourly                |
 | keep-daily, -d             | Number of daily snapshots to keep.                                      | Not set            | 8                      | --keep-daily                 |
 | keep-weekly, -w            | Number of weekly snapshots to keep.                                     | Not set            |                        | --keep-weekly                |
@@ -252,6 +253,7 @@ hooks when backing up the defined sources into a snapshot.
 | keep-quarter-yearly        | Number of quarter-yearly snapshots to keep.                             | Not set            |                        | --keep-quarter-yearly        |
 | keep-half-yearly           | Number of half-yearly snapshots to keep.                                | Not set            |                        | --keep-half-yearly           |
 | keep-yearly, -y            | Number of yearly snapshots to keep.                                     | Not set            |                        | --keep-yearly                |
+| keep-within-minutely       | The time duration within which minutely snapshots will be kept.         | Not set            | "2 hours"              | --keep-within-minutely       |
 | keep-within-hourly         | The time duration within which hourly snapshots will be kept.           | Not set            | "1 day"                | --keep-within-hourly         |
 | keep-within-daily          | The time duration within which daily snapshots will be kept.            | Not set            | "7 days"               | --keep-within-daily          |
 | keep-within-weekly         | The time duration within which weekly snapshots will be kept.           | Not set            |                        | --keep-within-weekly         |

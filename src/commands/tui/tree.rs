@@ -98,7 +98,7 @@ pub struct TreeIterItem<'a, Data, LeadData> {
     pub tree: &'a Tree<Data, LeadData>,
 }
 
-impl<'a, Data, LeafData> TreeIterItem<'a, Data, LeafData> {
+impl<Data, LeafData> TreeIterItem<'_, Data, LeafData> {
     pub fn leaf_data(&self) -> Option<&LeafData> {
         self.tree.leaf_data()
     }

@@ -141,7 +141,7 @@ struct OpenFileReader<'a> {
     offset: usize,
 }
 
-impl<'a> Read for OpenFileReader<'a> {
+impl Read for OpenFileReader<'_> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let data = self
             .repo

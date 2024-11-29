@@ -51,6 +51,12 @@ Application based on the [Abscissa] framework.
     clippy::trivially_copy_pass_by_ref
 )]
 #![allow(
+    // Popped up in 1.83.0
+    non_local_definitions,
+    // False-positive in WebDavFs
+    clippy::needless_lifetimes,
+    // False-positive in WebDavFs
+    elided_named_lifetimes,
     clippy::module_name_repetitions,
     clippy::redundant_pub_crate,
     clippy::missing_const_for_fn

@@ -18,7 +18,7 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 """
 
 [features]
-default = ["tui", "webdav"]
+default = ["tui", "webdav", "rhai", "jq"]
 release = ["default", "self-update"]
 
 # Allocators
@@ -36,6 +36,10 @@ webdav = [
   "dep:futures",
 ]
 mount = ["dep:fuse_mt"]
+
+# Filtering
+rhai = ["dep:rhai"]
+jq = ["dep:jaq-core", "dep:jaq-std", "dep:jaq-json"]
 
 [[bin]]
 name = "rustic"
@@ -87,7 +91,6 @@ serde_with = { version = "3", features = ["base64"] }
 aho-corasick = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 comfy-table = "7"
-rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"] }
 scopeguard = "1"
 semver = { version = "1", optional = true }
 simplelog = "0.12"
@@ -100,6 +103,7 @@ clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
 conflate = "0.3.3"
 convert_case = "0.6.0"
+ctrlc = { version = "3.4.5", features = ["termination"] }
 dateparser = "0.2.1"
 derive_more = { version = "1", features = ["debug"] }
 dialoguer = "0.11.0"
@@ -118,6 +122,12 @@ tar = "0.4.43"
 toml = "0.8"
 flate2 = "1.0.34"
 zip = { version = "2.2.0", default-features = false, features = ["deflate", "chrono"] }
+
+# filtering
+jaq-core = { version = "2", optional = true }
+jaq-json = { version = "1", features = ["serde_json"], optional = true }
+jaq-std = { version = "2", optional = true }
+rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"], optional = true }
 
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }

@@ -159,21 +159,22 @@ See [Global Hooks](#global-hooks-globalhooks).
 
 ### Snapshot-Filter Options `[snapshot-filter]`
 
-| Attribute          | Description                                                            | Default Value | Example Value            | CLI Option           |
-| ------------------ | ---------------------------------------------------------------------- | ------------- | ------------------------ | -------------------- |
-| filter-hosts       | Array of hosts to filter snapshots.                                    | Not set       | ["myhost", "host2"]      | --filter-host        |
-| filter-labels      | Array of labels to filter snapshots.                                   | Not set       | ["mylabal"]              | --filter-label       |
-| filter-paths       | Array of pathlists to filter snapshots.                                | Not set       | ["/home,/root"]          | --filter-paths       |
-| filter-paths-exact | Array or string of paths to filter snapshots. Exact match.             | Not set       | ["path1,path2", "path3"] | --filter-paths-exact |
-| filter-tags        | Array of taglists to filter snapshots.                                 | Not set       | ["tag1,tag2"]            | --filter-tags        |
-| filter-tags-exact  | Array or string of tags to filter snapshots. Exact match.              | Not set       | ["tag1,tag2", "tag3"]    | --filter-tags-exact  |
-| filter-before      | Filter snapshots before the given date/time                            | Not set       | "2024-01-01"             | --filter-before      |
-| filter-after       | Filter snapshots after the given date/time                             | Not set       | "2023-01-01 11:15:23"    | --filter-after       |
-| filter-size        | Filter snapshots for a total size in the size range.                   | Not set       | "1MB..1GB"               | --filter-size        |
-|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                  |                      |
-| filter-size-added  | Filter snapshots for a size added to the repository in the size range. | Not set       | "1MB..1GB"               | --filter-size-added  |
-|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                  |                      |
-| filter-fn          | Custom filter function for snapshots.                                  | Not set       |                          | --filter-fn          |
+| Attribute          | Description                                                            | Default Value | Example Value              | CLI Option           |
+| ------------------ | ---------------------------------------------------------------------- | ------------- | -------------------------- | -------------------- |
+| filter-hosts       | Array of hosts to filter snapshots.                                    | Not set       | ["myhost", "host2"]        | --filter-host        |
+| filter-labels      | Array of labels to filter snapshots.                                   | Not set       | ["mylabal"]                | --filter-label       |
+| filter-paths       | Array of pathlists to filter snapshots.                                | Not set       | ["/home,/root"]            | --filter-paths       |
+| filter-paths-exact | Array or string of paths to filter snapshots. Exact match.             | Not set       | ["path1,path2", "path3"]   | --filter-paths-exact |
+| filter-tags        | Array of taglists to filter snapshots.                                 | Not set       | ["tag1,tag2"]              | --filter-tags        |
+| filter-tags-exact  | Array or string of tags to filter snapshots. Exact match.              | Not set       | ["tag1,tag2", "tag3"]      | --filter-tags-exact  |
+| filter-before      | Filter snapshots before the given date/time                            | Not set       | "2024-01-01"               | --filter-before      |
+| filter-after       | Filter snapshots after the given date/time                             | Not set       | "2023-01-01 11:15:23"      | --filter-after       |
+| filter-size        | Filter snapshots for a total size in the size range.                   | Not set       | "1MB..1GB"                 | --filter-size        |
+|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                    |                      |
+| filter-size-added  | Filter snapshots for a size added to the repository in the size range. | Not set       | "1MB..1GB"                 | --filter-size-added  |
+|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                    |                      |
+| filter-fn          | Custom filter function for snapshots.                                  | Not set       |                            | --filter-fn          |
+| filter-jq          | Custom filter jq function for snapshots. Should return bool            | Not set       | ".summary.files_added > 1" | --filter-jq          |
 
 ### Backup Options `[backup]`
 

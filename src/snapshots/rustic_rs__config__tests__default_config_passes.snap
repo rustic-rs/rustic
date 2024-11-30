@@ -1,6 +1,7 @@
 ---
 source: src/config.rs
 expression: config
+snapshot_kind: text
 ---
 RusticConfig {
     global: GlobalOptions {
@@ -165,6 +166,7 @@ RusticConfig {
             keep_tags: [],
             keep_ids: [],
             keep_last: None,
+            keep_minutely: None,
             keep_hourly: None,
             keep_daily: None,
             keep_weekly: None,
@@ -173,6 +175,7 @@ RusticConfig {
             keep_half_yearly: None,
             keep_yearly: None,
             keep_within: None,
+            keep_within_minutely: None,
             keep_within_hourly: None,
             keep_within_daily: None,
             keep_within_weekly: None,

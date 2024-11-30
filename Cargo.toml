@@ -121,9 +121,9 @@ tar = "0.4.43"
 toml = "0.8"
 
 # filtering
-jaq-core = { version = "2.0.0", optional = true }
-jaq-json = { version = "1.0.0", features = ["serde_json"], optional = true }
-jaq-std = { version = "2.0.0", optional = true }
+jaq-core = { version = "2", optional = true }
+jaq-json = { version = "1", features = ["serde_json"], optional = true }
+jaq-std = { version = "2", optional = true }
 rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"], optional = true }
 
 [dev-dependencies]

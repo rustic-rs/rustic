@@ -54,7 +54,7 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 [dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
 rustic_backend = { version = "0.5.2", features = ["cli"] }
-rustic_core = { version = "0.7.1", features = ["cli"] }
+rustic_core = { version = "0.7.2", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -93,7 +93,7 @@ semver = { version = "1", optional = true }
 simplelog = "0.12"
 
 # commands
-bytes = { version = "1.8.0", optional = true }
+bytes = { version = "1.9.0", optional = true }
 bytesize = "1"
 cached = "0.54.0"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
@@ -114,7 +114,7 @@ humantime = "2"
 indicatif = "0.17"
 itertools = "0.13"
 open = "5.3.1"
-self_update = { version = "0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
+self_update = { version = "=0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.43"
 toml = "0.8"
 
@@ -136,7 +136,7 @@ tempfile = "3.14"
 toml = "0.8"
 
 [target.'cfg(not(windows))'.dependencies]
-libc = "0.2.166"
+libc = "0.2.167"
 
 # cargo-binstall support
 # https://github.com/cargo-bins/cargo-binstall/blob/HEAD/SUPPORT.md

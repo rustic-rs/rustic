@@ -108,6 +108,7 @@ dateparser = "0.2.1"
 derive_more = { version = "1", features = ["debug"] }
 dialoguer = "0.11.0"
 directories = "5"
+flate2 = "1.0.34"
 fuse_mt = { version = "0.6", optional = true }
 futures = { version = "0.3.31", optional = true }
 gethostname = "0.5"
@@ -120,7 +121,6 @@ open = "5.3.1"
 self_update = { version = "=0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.43"
 toml = "0.8"
-flate2 = "1.0.34"
 zip = { version = "2.2.0", default-features = false, features = ["deflate", "chrono"] }
 
 # filtering

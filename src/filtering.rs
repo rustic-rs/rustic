@@ -9,7 +9,7 @@ use std::{
 };
 
 #[cfg(feature = "jq")]
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use bytesize::ByteSize;
 use derive_more::derive::Display;
 use log::warn;
@@ -93,11 +93,13 @@ impl FromStr for SnapshotJq {
         let programm = File { code: s, path: () };
         let loader = Loader::new(jaq_std::defs().chain(jaq_json::defs()));
         let arena = Arena::default();
-        let modules = loader.load(&arena, programm).unwrap();
+        let modules = loader
+            .load(&arena, programm)
+            .map_err(|errs| anyhow!("errors in jq: {errs:?}"))?;
         let filter = Compiler::<_, Native<_>>::default()
             .with_funs(jaq_std::funs().chain(jaq_json::funs()))
             .compile(modules)
-            .unwrap();
+            .map_err(|errs| anyhow!("errors in jq: {errs:?}"))?;
 
         Ok(Self(filter))
     }

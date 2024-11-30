@@ -1,6 +1,7 @@
 //! Error types
 
 use abscissa_core::error::{BoxError, Context};
+#[cfg(feature = "rhai")]
 use rhai::EvalAltResult;
 use std::{
     fmt::{self, Display},
@@ -18,6 +19,7 @@ pub(crate) enum ErrorKind {
 }
 
 /// Kinds of [`rhai`] errors
+#[cfg(feature = "rhai")]
 #[derive(Debug, Error)]
 pub(crate) enum RhaiErrorKinds {
     #[error(transparent)]

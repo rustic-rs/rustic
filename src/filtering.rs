@@ -1,28 +1,46 @@
+#[cfg(feature = "rhai")]
 use crate::error::RhaiErrorKinds;
 
-use bytesize::ByteSize;
-use derive_more::derive::Display;
-use log::warn;
-use rustic_core::{repofile::SnapshotFile, StringList};
+#[cfg(feature = "rhai")]
+use std::error::Error;
 use std::{
-    error::Error,
     fmt::{Debug, Display},
     str::FromStr,
 };
 
+#[cfg(feature = "jq")]
+use anyhow::{anyhow, bail};
+use bytesize::ByteSize;
+use derive_more::derive::Display;
+use log::warn;
+use rustic_core::{repofile::SnapshotFile, StringList};
+
 use cached::proc_macro::cached;
 use chrono::{DateTime, Local, NaiveTime};
 use conflate::Merge;
+
+#[cfg(feature = "jq")]
+use jaq_core::{
+    load::{Arena, File, Loader},
+    Compiler, Ctx, Filter, Native, RcIter,
+};
+#[cfg(feature = "jq")]
+use jaq_json::Val;
+#[cfg(feature = "rhai")]
 use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "jq")]
+use serde_json::Value;
 use serde_with::{serde_as, DisplayFromStr};
 
 /// A function to filter snapshots
 ///
 /// The function is called with a [`SnapshotFile`] and must return a boolean.
+#[cfg(feature = "rhai")]
 #[derive(Clone, Debug)]
 pub(crate) struct SnapshotFn(FnPtr, AST);
 
+#[cfg(feature = "rhai")]
 impl FromStr for SnapshotFn {
     type Err = RhaiErrorKinds;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -33,17 +51,7 @@ impl FromStr for SnapshotFn {
     }
 }
 
-#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
-fn string_to_fn(s: &str) -> Option<SnapshotFn> {
-    match SnapshotFn::from_str(s) {
-        Ok(filter_fn) => Some(filter_fn),
-        Err(err) => {
-            warn!("Error evaluating filter-fn {s}: {err}",);
-            None
-        }
-    }
-}
-
+#[cfg(feature = "rhai")]
 impl SnapshotFn {
     /// Call the function with a [`SnapshotFile`]
     ///
@@ -59,6 +67,75 @@ impl SnapshotFn {
         let engine = Engine::new();
         let sn: Dynamic = to_dynamic(sn)?;
         Ok(self.0.call::<T>(&engine, &self.1, (sn,))?)
+    }
+}
+
+#[cfg(feature = "rhai")]
+#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
+fn string_to_fn(s: &str) -> Option<SnapshotFn> {
+    match SnapshotFn::from_str(s) {
+        Ok(filter_fn) => Some(filter_fn),
+        Err(err) => {
+            warn!("Error evaluating filter-fn {s}: {err}",);
+            None
+        }
+    }
+}
+
+#[cfg(feature = "jq")]
+#[derive(Clone)]
+pub(crate) struct SnapshotJq(Filter<Native<Val>>);
+
+#[cfg(feature = "jq")]
+impl FromStr for SnapshotJq {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let programm = File { code: s, path: () };
+        let loader = Loader::new(jaq_std::defs().chain(jaq_json::defs()));
+        let arena = Arena::default();
+        let modules = loader
+            .load(&arena, programm)
+            .map_err(|errs| anyhow!("errors loading modules in jq: {errs:?}"))?;
+        let filter = Compiler::<_, Native<_>>::default()
+            .with_funs(jaq_std::funs().chain(jaq_json::funs()))
+            .compile(modules)
+            .map_err(|errs| anyhow!("errors during compiling filters in jq: {errs:?}"))?;
+
+        Ok(Self(filter))
+    }
+}
+
+#[cfg(feature = "jq")]
+impl SnapshotJq {
+    fn call(&self, snap: &SnapshotFile) -> Result<bool, anyhow::Error> {
+        let input = serde_json::to_value(snap)?;
+
+        let inputs = RcIter::new(core::iter::empty());
+        let res = self.0.run((Ctx::new([], &inputs), Val::from(input))).next();
+
+        match res {
+            Some(Ok(val)) => {
+                let val: Value = val.into();
+                match val.as_bool() {
+                    Some(true) => Ok(true),
+                    Some(false) => Ok(false),
+                    None => bail!("expression does not return bool"),
+                }
+            }
+            _ => bail!("expression does not return bool"),
+        }
+    }
+}
+
+#[cfg(feature = "jq")]
+#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
+fn string_to_jq(s: &str) -> Option<SnapshotJq> {
+    match SnapshotJq::from_str(s) {
+        Ok(filter_jq) => Some(filter_jq),
+        Err(err) => {
+            warn!("Error evaluating filter-fn {s}: {err}",);
+            None
+        }
     }
 }
 
@@ -125,10 +202,18 @@ pub struct SnapshotFilter {
     filter_size_added: Option<SizeRange>,
 
     /// Function to filter snapshots
+    #[cfg(feature = "rhai")]
     #[clap(long, global = true, value_name = "FUNC")]
     #[serde_as(as = "Option<DisplayFromStr>")]
     #[merge(strategy=conflate::option::overwrite_none)]
     filter_fn: Option<String>,
+
+    /// jq to filter snapshots
+    #[cfg(feature = "jq")]
+    #[clap(long, global = true, value_name = "JQ")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_jq: Option<String>,
 }
 
 impl SnapshotFilter {
@@ -143,6 +228,7 @@ impl SnapshotFilter {
     /// `true` if the snapshot matches the filter, `false` otherwise
     #[must_use]
     pub fn matches(&self, snapshot: &SnapshotFile) -> bool {
+        #[cfg(feature = "rhai")]
         if let Some(filter_fn) = &self.filter_fn {
             if let Some(func) = string_to_fn(filter_fn) {
                 match func.call::<bool>(snapshot) {
@@ -156,6 +242,26 @@ impl SnapshotFilter {
                             "Error evaluating filter-fn for snapshot {}: {err}",
                             snapshot.id
                         );
+                        return false;
+                    }
+                }
+            }
+        }
+        #[cfg(feature = "jq")]
+        if let Some(filter_jq) = &self.filter_jq {
+            if let Some(jq) = string_to_jq(filter_jq) {
+                match jq.call(snapshot) {
+                    Ok(result) => {
+                        if !result {
+                            return false;
+                        }
+                    }
+                    Err(err) => {
+                        warn!(
+                            "Error evaluating filter-jq for snapshot {}: {err}",
+                            snapshot.id
+                        );
+                        return false;
                     }
                 }
             }

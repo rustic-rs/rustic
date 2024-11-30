@@ -26,6 +26,8 @@ include = ["./config/", "CHANGELOG.md", "LICENSE-MIT", "LICENSE-APACHE", "README
 # Which actions to run on pull requests
 pr-run-mode = "upload"
 github-build-setup = "../install-arm-linkers.yml"
+# Features to pass to cargo build
+features = ["release"]
 
 [dist.github-custom-runners]
 aarch64-apple-darwin = "macos-latest"

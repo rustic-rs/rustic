@@ -95,7 +95,7 @@ impl FromStr for SnapshotJq {
         let arena = Arena::default();
         let modules = loader
             .load(&arena, programm)
-            .map_err(|errs| anyhow!("errors in jq: {errs:?}"))?;
+            .map_err(|errs| anyhow!("errors loading modules in jq: {errs:?}"))?;
         let filter = Compiler::<_, Native<_>>::default()
             .with_funs(jaq_std::funs().chain(jaq_json::funs()))
             .compile(modules)

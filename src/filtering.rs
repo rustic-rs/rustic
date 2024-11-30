@@ -99,7 +99,7 @@ impl FromStr for SnapshotJq {
         let filter = Compiler::<_, Native<_>>::default()
             .with_funs(jaq_std::funs().chain(jaq_json::funs()))
             .compile(modules)
-            .map_err(|errs| anyhow!("errors in jq: {errs:?}"))?;
+            .map_err(|errs| anyhow!("errors during compiling filters in jq: {errs:?}"))?;
 
         Ok(Self(filter))
     }

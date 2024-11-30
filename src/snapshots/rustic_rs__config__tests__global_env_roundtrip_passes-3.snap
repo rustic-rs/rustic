@@ -72,6 +72,7 @@ RusticConfig {
         filter_size: None,
         filter_size_added: None,
         filter_fn: None,
+        filter_jq: None,
     },
     backup: BackupCmd {
         cli_sources: [],
@@ -172,6 +173,7 @@ RusticConfig {
             filter_size: None,
             filter_size_added: None,
             filter_fn: None,
+            filter_jq: None,
         },
         keep: KeepOptions {
             keep_tags: [],

@@ -95,6 +95,7 @@ filter-before = "2024-02-05 12:15" # Default: not set
 filter-size = "200MiB" # Default: not set
 filter-size-added = "1 MB..10MB" # Default: not set
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
+filter-jq = '.description | contains ("test")' # Default: no jq filter function
 
 # Backup options: These options are used for all sources when calling the backup command.
 # They can be overwritten by source-specific options (see below) or command line options.
@@ -174,6 +175,7 @@ filter-before = "2024-02-05 12:15" # Default: not set
 filter-size = "200MiB" # Default: not set
 filter-size-added = "1 MB..10MB" # Default: not set
 filter-fn = '|sn| {sn.host == "host1" || sn.description.contains("test")}' # Default: no filter function
+filter-jq = '.description | contains ("test")' # Default: no jq filter function
 # The retention options follow. All of these are not set by default.
 keep-tags = ["tag1", "tag2,tag3"] # Default: not set
 keep-ids = [

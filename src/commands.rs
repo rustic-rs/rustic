@@ -35,6 +35,7 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::mpsc::channel;
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
@@ -64,7 +65,7 @@ use clap::builder::{
 };
 use convert_case::{Case, Casing};
 use human_panic::setup_panic;
-use log::{log, Level};
+use log::{info, log, Level};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 use self::find::FindCmd;
@@ -179,6 +180,20 @@ impl Runnable for EntryPoint {
         // Set up panic hook for better error messages and logs
         setup_panic!();
 
+        // Set up Ctrl-C handler
+        let (tx, rx) = channel();
+
+        ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
+            .expect("Error setting Ctrl-C handler");
+
+        _ = std::thread::spawn(move || {
+            // Wait for Ctrl-C
+            rx.recv().expect("Could not receive from channel.");
+            info!("Ctrl-C received, shutting down...");
+            RUSTIC_APP.shutdown(Shutdown::Graceful)
+        });
+
+        // Run the subcommand
         self.commands.run();
         RUSTIC_APP.shutdown(Shutdown::Graceful)
     }

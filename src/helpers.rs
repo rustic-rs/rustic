@@ -4,7 +4,6 @@ use comfy_table::{
 };
 
 /// Helpers for table output
-
 /// Create a new bold cell
 pub fn bold_cell<T: ToString>(s: T) -> Cell {
     Cell::new(s).add_attribute(Attribute::Bold)

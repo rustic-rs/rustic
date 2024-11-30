@@ -14,7 +14,7 @@ installers = ["shell", "powershell", "homebrew", "msi"]
 # A GitHub repo to push Homebrew formulas to
 tap = "rustic-rs/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "aarch64-unknown-linux-musl", "armv7-unknown-linux-gnueabihf", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc", "i686-unknown-linux-gnu"]
+targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc", "i686-unknown-linux-gnu"]
 # Path that installers should place binaries in
 install-path = "~/.rustic"
 # Publish jobs to run in CI
@@ -25,12 +25,14 @@ install-updater = true
 include = ["./config/", "CHANGELOG.md", "LICENSE-MIT", "LICENSE-APACHE", "README.md"]
 # Which actions to run on pull requests
 pr-run-mode = "upload"
+github-build-setup = "../install-arm-linkers.yml"
 
 [dist.github-custom-runners]
 aarch64-apple-darwin = "macos-latest"
 aarch64-unknown-linux-gnu = "ubuntu-latest"
 aarch64-unknown-linux-musl = "ubuntu-latest"
 armv7-unknown-linux-gnueabihf = "ubuntu-latest"
+armv7-unknown-linux-musleabihf = "ubuntu-latest"
 i686-unknown-linux-gnu = "ubuntu-latest"
 x86_64-apple-darwin = "macos-13"
 x86_64-pc-windows-gnu = "windows-latest"
@@ -43,8 +45,8 @@ nasm = '*' # Required for building `aws-lc-sys` on Windows
 
 [dist.dependencies.apt]
 gcc-aarch64-linux-gnu = { version = '*', targets = ["aarch64-unknown-linux-gnu", "aarch64-unknown-linux-musl"] }
-gcc-arm-linux-gnueabihf = { version = '*', targets = ["armv7-unknown-linux-gnueabihf"] }
+gcc-arm-linux-gnueabihf = { version = '*', targets = ["armv7-unknown-linux-gnueabihf", "armv7-unknown-linux-musleabihf"] }
 gcc-i686-linux-gnu = { version = '*', targets = ["i686-unknown-linux-gnu"] }
 gcc-multilib-i686-linux-gnu =  { version = '*', targets = ["i686-unknown-linux-gnu"] }
-musl-tools = { version = '*', targets = ["aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl"] }
-musl-dev = { version = '*', targets = ["aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl"] }
+musl-tools = { version = '*', targets = ["aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl", "armv7-unknown-linux-musleabihf"] }
+musl-dev = { version = '*', targets = ["aarch64-unknown-linux-musl", "x86_64-unknown-linux-musl", "armv7-unknown-linux-musleabihf"] }

@@ -17,3 +17,9 @@ linker = "aarch64-linux-gnu-gcc"
 
 [target.i686-unknown-linux-gnu]
 linker = "i686-linux-gnu-gcc"
+
+[env]
+CC_i686-unknown-linux-gnu = "i686-linux-gnu-gcc"
+CC_aarch64_unknown_linux_musl = "aarch64-linux-gnu-gcc"
+CC_armv7_unknown_linux_gnueabihf = "arm-linux-gnueabihf-gcc"
+CC_armv7_unknown_linux_musleabihf = "arm-linux-gnueabihf-gcc"

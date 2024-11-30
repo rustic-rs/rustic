@@ -77,7 +77,7 @@ jobs:
           - os: ubuntu-latest
             os-name: linux
             target: i686-unknown-linux-gnu
-            architecture: i686
+            architecture: i386
             binary-postfix: ""
             use-cross: true
           # FIXME: `aws-lc-sys` doesn't cross compile

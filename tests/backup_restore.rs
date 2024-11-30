@@ -7,13 +7,18 @@
 //! You can run them with 'nextest':
 //! `cargo nextest run -E 'test(backup)'`.
 
+use std::path::PathBuf;
+
 use dircmp::Comparison;
 use tempfile::{tempdir, TempDir};
 
 use assert_cmd::Command;
 use predicates::prelude::{predicate, PredicateBooleanExt};
 
-use rustic_testing::TestResult;
+mod repositories;
+use repositories::src_snapshot;
+
+use rustic_testing::{files_differ, TestResult};
 
 pub fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     let password = "test";
@@ -46,13 +51,13 @@ fn setup() -> TestResult<TempDir> {
 #[test]
 fn test_backup_and_check_passes() -> TestResult<()> {
     let temp_dir = setup()?;
-    let backup = "src/";
+    let backup = src_snapshot()?.into_path().into_path();
 
     {
         // Run `backup` for the first time
         rustic_runner(&temp_dir)?
             .arg("backup")
-            .arg(backup)
+            .arg(&backup)
             .assert()
             .success()
             .stdout(predicate::str::contains("successfully saved."));
@@ -100,20 +105,23 @@ fn test_backup_and_check_passes() -> TestResult<()> {
     Ok(())
 }
 
+fn fixture_test_tar() -> PathBuf {
+    ["tests", "dump-fixtures", "test.tar"].iter().collect()
+}
+
 #[test]
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;
     let restore_dir = temp_dir.path().join("restore");
-    let backup = "src/";
-
-    // actual repository root to backup
-    let backup_files = std::env::current_dir()?.join(backup);
+    let backup_files = src_snapshot()?.into_path().into_path();
 
     {
         // Run `backup` for the first time
         rustic_runner(&temp_dir)?
             .arg("backup")
             .arg(&backup_files)
+            .arg("--as-path")
+            .arg("/")
             .assert()
             .success()
             .stdout(predicate::str::contains("successfully saved."));
@@ -130,11 +138,23 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
     }
 
     // Compare the backup and the restored directory
-    let compare_result =
-        Comparison::default().compare(&backup_files, &restore_dir.join(&backup_files))?;
+    let compare_result = Comparison::default().compare(&backup_files, &restore_dir)?;
 
     // no differences
     assert!(compare_result.is_empty());
+
+    let dump_tar_file = restore_dir.join("test.tar");
+    {
+        // Run `dump`
+        rustic_runner(&temp_dir)?
+            .arg("dump")
+            .arg("latest")
+            .arg("--file")
+            .arg(&dump_tar_file)
+            .assert()
+            .success();
+    }
+    assert!(!files_differ(fixture_test_tar(), dump_tar_file)?);
 
     Ok(())
 }

@@ -2,6 +2,49 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.5](https://github.com/rustic-rs/rustic/compare/v0.9.4...v0.9.5) - 2024-12-02
+
+### Added
+
+- *(commands)* More dump options ([#1339](https://github.com/rustic-rs/rustic/pull/1339))
+- shut down gracefully with ctrl+c ([#1364](https://github.com/rustic-rs/rustic/pull/1364))
+- Add --filter-jq option ([#1372](https://github.com/rustic-rs/rustic/pull/1372))
+- *(commands)* Add `mount` command ([#973](https://github.com/rustic-rs/rustic/pull/973))
+- Error messages are now much improve 
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.6.0))
+
+### Fixed
+
+- *(commands)* run backup hooks before checking source dir ([#1374](https://github.com/rustic-rs/rustic/pull/1374))
+- *(commands)* Use spawn_blocking in webdav when calling rustic_core ([#1365](https://github.com/rustic-rs/rustic/pull/1365))
+- *(forget)* Add minutely timeline
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.7.2))
+- *(init)* Prevent overwriting hot repository
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.6.0))
+
+### Other
+
+- update snapshots to include minutely configuration options
+- *(deps)* update rustic_core, bytes, and libc dependencies to latest versions
+- simplify lifetime annotations in OpenFileReader and TreeIterItem implementations
+- clean up whitespace and update clippy linting allowances
+- *(deps)* update dependencies to latest versions
+- *(deps)* update lockfile to get rid of vulnerable `url` version
+- *(mount)* rename fields for clarity, add user options for mount ([#1353](https://github.com/rustic-rs/rustic/pull/1353))
+- *(deps)* update dependencies
+- *(deps)* don't use rustic_core webdav feature ([#1367](https://github.com/rustic-rs/rustic/pull/1367))
+- move `webdavfs` from `rustic_core` to `rustic-rs` ([#1363](https://github.com/rustic-rs/rustic/pull/1363))
+- *(clippy)* comment out unused lints in lib.rs
+- *(clippy)* apply fixes automatically
+- use BTreeMap for env in global options ([#1360](https://github.com/rustic-rs/rustic/pull/1360))
+- add tiny framework for testing rustic's compat with latest restic ([#1303](https://github.com/rustic-rs/rustic/pull/1303))
+- use snapshot tests for default config, show-config and completions ([#1359](https://github.com/rustic-rs/rustic/pull/1359))
+- *(deps)* update dependencies rustic_core, rustic_backend, rustic_testing, and migrate to conflate 0.3 ([#1357](https://github.com/rustic-rs/rustic/pull/1357))
+- fix typos
+- *(build)* add platform-dependent settings and remove ci flag for extra features
+- clarify `--use-profile` command in config by using long form ([#1344](https://github.com/rustic-rs/rustic/pull/1344))
+- *(deps)* update core and testing crates ([#1340](https://github.com/rustic-rs/rustic/pull/1340))
+
 ## [0.9.4](https://github.com/rustic-rs/rustic/compare/v0.9.3...v0.9.4) - 2024-10-24
 
 ### Added

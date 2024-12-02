@@ -103,6 +103,7 @@ clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
 conflate = "0.3.3"
 convert_case = "0.6.0"
+ctrlc = { version = "3.4.5", features = ["termination"] }
 dateparser = "0.2.1"
 derive_more = { version = "1", features = ["debug"] }
 dialoguer = "0.11.0"

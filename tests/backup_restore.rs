@@ -7,8 +7,6 @@
 //! You can run them with 'nextest':
 //! `cargo nextest run -E 'test(backup)'`.
 
-use std::path::PathBuf;
-
 use dircmp::Comparison;
 use tempfile::{tempdir, TempDir};
 

@@ -184,47 +184,47 @@ impl BackupCmd {
         }
         .to_indexed_ids()?;
 
-        let config_snapshot_sources: Vec<_> = snapshot_opts
-            .iter()
-            .map(|opt| -> Result<_> {
-                Ok(PathList::from_iter(&opt.sources)
-                    .sanitize()
-                    .with_context(|| {
-                        format!(
-                            "error sanitizing sources=\"{:?}\" in config file",
-                            opt.sources
-                        )
-                    })?
-                    .merge())
-            })
-            .filter_map(|p| match p {
-                Ok(paths) => Some(paths),
-                Err(err) => {
-                    warn!("{err}");
-                    None
-                }
-            })
-            .collect();
-
-        let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
-            (false, _) => {
-                let item = PathList::from_iter(&self.cli_sources).sanitize()?;
-                vec![item]
-            }
-            (true, false) => {
-                info!("using all backup sources from config file.");
-                config_snapshot_sources.clone()
-            }
-            (true, true) => {
-                bail!("no backup source given.");
-            }
-        };
-        if snapshot_sources.is_empty() {
-            return Ok(());
-        }
-
         let hooks = config.backup.hooks.with_context("backup");
         hooks.use_with(|| -> Result<_> {
+            let config_snapshot_sources: Vec<_> = snapshot_opts
+                .iter()
+                .map(|opt| -> Result<_> {
+                    Ok(PathList::from_iter(&opt.sources)
+                        .sanitize()
+                        .with_context(|| {
+                            format!(
+                                "error sanitizing sources=\"{:?}\" in config file",
+                                opt.sources
+                            )
+                        })?
+                        .merge())
+                })
+                .filter_map(|p| match p {
+                    Ok(paths) => Some(paths),
+                    Err(err) => {
+                        warn!("{err}");
+                        None
+                    }
+                })
+                .collect();
+
+            let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
+                (false, _) => {
+                    let item = PathList::from_iter(&self.cli_sources).sanitize()?;
+                    vec![item]
+                }
+                (true, false) => {
+                    info!("using all backup sources from config file.");
+                    config_snapshot_sources.clone()
+                }
+                (true, true) => {
+                    bail!("no backup source given.");
+                }
+            };
+            if snapshot_sources.is_empty() {
+                return Ok(());
+            }
+
             let mut is_err = false;
             for sources in snapshot_sources {
                 let mut opts = self.clone();

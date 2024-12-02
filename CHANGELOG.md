@@ -9,18 +9,21 @@ All notable changes to this project will be documented in this file.
 - *(commands)* More dump options ([#1339](https://github.com/rustic-rs/rustic/pull/1339))
 - shut down gracefully with ctrl+c ([#1364](https://github.com/rustic-rs/rustic/pull/1364))
 - Add --filter-jq option ([#1372](https://github.com/rustic-rs/rustic/pull/1372))
-- *(async)* use `is_async_compatible()` to determine backend incompatibility and error out ([#1355](https://github.com/rustic-rs/rustic/pull/1355))
 - *(commands)* Add `mount` command ([#973](https://github.com/rustic-rs/rustic/pull/973))
+- Error messages are now much improve 
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.6.0))
 
 ### Fixed
 
 - *(commands)* run backup hooks before checking source dir ([#1374](https://github.com/rustic-rs/rustic/pull/1374))
 - *(commands)* Use spawn_blocking in webdav when calling rustic_core ([#1365](https://github.com/rustic-rs/rustic/pull/1365))
-- *(filesystem)* Use channels to communicate within webdav filesystem ([#1361](https://github.com/rustic-rs/rustic/pull/1361))
+- *(forget)* Add minutely timeline
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.7.2))
+- *(init)* Prevent overwriting hot repository
+  ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.6.0))
 
 ### Other
 
-- Add documentation for `minutely` keep option ([#1371](https://github.com/rustic-rs/rustic/pull/1371))
 - update snapshots to include minutely configuration options
 - *(deps)* update rustic_core, bytes, and libc dependencies to latest versions
 - simplify lifetime annotations in OpenFileReader and TreeIterItem implementations
@@ -30,8 +33,6 @@ All notable changes to this project will be documented in this file.
 - *(mount)* rename fields for clarity, add user options for mount ([#1353](https://github.com/rustic-rs/rustic/pull/1353))
 - *(deps)* update dependencies
 - *(deps)* don't use rustic_core webdav feature ([#1367](https://github.com/rustic-rs/rustic/pull/1367))
-- Revert "fix(filesystem): Use channels to communicate within webdav filesystem ([#1361](https://github.com/rustic-rs/rustic/pull/1361))"
-- Revert "feat(async): use `is_async_compatible()` to determine backend incompatibility and error out ([#1355](https://github.com/rustic-rs/rustic/pull/1355))"
 - move `webdavfs` from `rustic_core` to `rustic-rs` ([#1363](https://github.com/rustic-rs/rustic/pull/1363))
 - *(clippy)* comment out unused lints in lib.rs
 - *(clippy)* apply fixes automatically

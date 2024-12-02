@@ -8,7 +8,7 @@ use tar::Archive;
 use tempfile::{tempdir, TempDir};
 
 #[derive(Debug)]
-struct TestSource(TempDir);
+pub struct TestSource(TempDir);
 
 impl TestSource {
     pub fn new(tmp: TempDir) -> Self {
@@ -57,7 +57,7 @@ fn rustic_copy_repo() -> Result<TestSource> {
 }
 
 #[fixture]
-fn src_snapshot() -> Result<TestSource> {
+pub fn src_snapshot() -> Result<TestSource> {
     let dir = tempdir()?;
     let path = "tests/repository-fixtures/src-snapshot.tar.gz";
     open_and_unpack(path, &dir)?;

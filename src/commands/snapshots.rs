@@ -9,12 +9,14 @@ use crate::{
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use comfy_table::Cell;
+use derive_more::From;
 use humantime::format_duration;
 use itertools::Itertools;
+use serde::Serialize;
 
 use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
-    SnapshotGroupCriterion,
+    SnapshotGroup, SnapshotGroupCriterion,
 };
 
 #[cfg(feature = "tui")]
@@ -81,15 +83,26 @@ impl SnapshotCmd {
         })?;
 
         if self.json {
+            #[derive(Serialize, From)]
+            struct SnapshotsGroup {
+                group_key: SnapshotGroup,
+                snapshots: Vec<SnapshotFile>,
+            }
+            let groups: Vec<SnapshotsGroup> = groups.into_iter().map(|g| g.into()).collect();
             let mut stdout = std::io::stdout();
-            serde_json::to_writer_pretty(&mut stdout, &groups)?;
+            if groups.len() == 1 && groups[0].group_key.is_empty() {
+                // we don't use grouping, only output snapshots list
+                serde_json::to_writer_pretty(&mut stdout, &groups[0].snapshots)?;
+            } else {
+                serde_json::to_writer_pretty(&mut stdout, &groups)?;
+            }
             return Ok(());
         }
 
         let mut total_count = 0;
-        for (group, mut snapshots) in groups {
-            if !group.is_empty() {
-                println!("\nsnapshots for {group}");
+        for (group_key, mut snapshots) in groups {
+            if !group_key.is_empty() {
+                println!("\nsnapshots for {group_key}");
             }
             snapshots.sort_unstable();
             let count = snapshots.len();

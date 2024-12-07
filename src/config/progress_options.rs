@@ -43,10 +43,6 @@ pub struct ProgressOptions {
 
 impl ProgressOptions {
     /// Get the progress interval
-    ///
-    /// # Returns
-    ///
-    /// `Duration::ZERO` if no progress is enabled
     fn progress_interval(&self) -> Duration {
         self.progress_interval
             .map_or(constants::DEFAULT_INTERVAL, |i| *i)

@@ -12,6 +12,12 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use rustic_core::{Progress, ProgressBars};
 
+mod constants {
+    use std::time::Duration;
+
+    pub(super) const DEFAULT_INTERVAL: Duration = Duration::from_millis(100);
+}
+
 /// Progress Bar Config
 #[serde_as]
 #[derive(Default, Debug, Parser, Clone, Copy, Deserialize, Serialize, Merge)]
@@ -22,7 +28,7 @@ pub struct ProgressOptions {
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub no_progress: bool,
 
-    /// Interval to update progress bars
+    /// Interval to update progress bars (default: 100ms)
     #[clap(
         long,
         global = true,
@@ -37,12 +43,9 @@ pub struct ProgressOptions {
 
 impl ProgressOptions {
     /// Get the progress interval
-    ///
-    /// # Returns
-    ///
-    /// `Duration::ZERO` if no progress is enabled
     fn progress_interval(&self) -> Duration {
-        self.progress_interval.map_or(Duration::ZERO, |i| *i)
+        self.progress_interval
+            .map_or(constants::DEFAULT_INTERVAL, |i| *i)
     }
 
     /// Create a hidden progress bar

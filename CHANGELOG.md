@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.6](https://github.com/rustic-rs/rustic/compare/v0.9.5...v0.9.6) - 2024-12-10
+
+### Fixed
+
+- *(config)* set a non-zero default progress interval for progress options ([#1378](https://github.com/rustic-rs/rustic/pull/1378))
+
 ## [0.9.5](https://github.com/rustic-rs/rustic/compare/v0.9.4...v0.9.5) - 2024-12-02
 
 ### Added

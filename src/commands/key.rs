@@ -204,7 +204,11 @@ impl Runnable for PasswordCmd {
 impl PasswordCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let pass = self.pass_opts.pass("enter new password")?;
-        let key_opts = KeyOptions::default();
+        let old_key: KeyFile = repo.get_file(repo.key_id())?;
+        let key_opts = KeyOptions::default()
+            .hostname(old_key.hostname)
+            .username(old_key.username)
+            .with_created(old_key.created.is_some());
         let id = repo.add_key(&pass, &key_opts)?;
         info!("key {id} successfully added.");
 

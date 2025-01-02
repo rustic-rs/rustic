@@ -230,6 +230,12 @@ impl Configurable<RusticConfig> for EntryPoint {
             } else if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPTCOLD_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
                 _ = config.repository.be.options_cold.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("OPENDAL_HOT_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
+                _ = config.repository.be.options_hot.insert(var, value);
+            } else if let Some(var) = var.strip_prefix("OPENDAL_COLD_") {
+                let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
+                _ = config.repository.be.options_cold.insert(var, value);
             }
         }
 

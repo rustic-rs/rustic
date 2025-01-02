@@ -155,6 +155,27 @@ pub struct BackupCmd {
     metrics_labels: BTreeMap<String, String>,
 }
 
+impl BackupCmd {
+    fn validate(&self) -> Result<(), &str> {
+        // manually check for a "source" field, check is not done by serde, see above.
+        if !self.sources.is_empty() {
+            return Err("key \"sources\" is not valid in the [backup] section!");
+        }
+
+        // manually check for a "name" field, check is not done by serde, see above.
+        if self.name.is_some() {
+            return Err("key \"name\" is not valid in the [backup] section!");
+        }
+
+        let snapshot_opts = &self.snapshots;
+        // manually check for a "sources" field, check is not done by serde, see above.
+        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
+            return Err("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
+        }
+        Ok(())
+    }
+}
+
 /// Merge backup snapshots to generate
 ///
 /// If a snapshot is already defined on left, use that. Else add it.
@@ -177,17 +198,8 @@ pub(crate) fn merge_snapshots(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCm
 impl Runnable for BackupCmd {
     fn run(&self) {
         let config = RUSTIC_APP.config();
-
-        // manually check for a "source" field, check is not done by serde, see above.
-        if !config.backup.sources.is_empty() {
-            status_err!("key \"sources\" is not valid in the [backup] section!");
-            RUSTIC_APP.shutdown(Shutdown::Crash);
-        }
-
-        let snapshot_opts = &config.backup.snapshots;
-        // manually check for a "sources" field, check is not done by serde, see above.
-        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
-            status_err!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
+        if let Err(err) = config.backup.validate() {
+            status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 

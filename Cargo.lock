@@ -3931,7 +3931,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.7.3",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -3953,8 +3953,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56e9176f9b6c75a2073776726110de99d10a0db1fdef9c9fb7a810ccb54cfbf5"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=more-key-control#d456270e865020971a10ef696cc625b2b102349a"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -3972,7 +3971,7 @@ dependencies = [
  "rand",
  "rayon",
  "reqwest 0.12.9",
- "rustic_core",
+ "rustic_core 0.7.3",
  "semver",
  "serde",
  "strum",
@@ -3995,6 +3994,59 @@ name = "rustic_core"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8a9c8d085732c1831d3742708b07f9a38516b6418cd43476227b98fa3b2d0d2"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "chrono",
+ "crossbeam-channel",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "ecow",
+ "enum-map",
+ "enum-map-derive",
+ "enumset",
+ "filetime",
+ "gethostname",
+ "hex",
+ "humantime",
+ "ignore",
+ "integer-sqrt",
+ "itertools",
+ "log",
+ "nix",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand",
+ "rayon",
+ "runtime-format",
+ "rustic_cdc",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "shell-words",
+ "strum",
+ "thiserror 2.0.3",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
+name = "rustic_core"
+version = "0.7.3"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=more-key-control#d456270e865020971a10ef696cc625b2b102349a"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4056,7 +4108,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "enum-map",
- "rustic_core",
+ "rustic_core 0.7.2",
  "tempfile",
 ]
 

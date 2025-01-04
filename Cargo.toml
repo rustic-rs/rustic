@@ -57,8 +57,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.5.2", features = ["cli"] }
-rustic_core = { version = "0.7.2", features = ["cli"] }
+rustic_backend = { git = "https://github.com/rustic-rs/rustic_core.git", branch = "more-key-control", features = ["cli"] }
+rustic_core = { git = "https://github.com/rustic-rs/rustic_core.git", branch = "more-key-control", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }

@@ -66,6 +66,8 @@ pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod filtering;
 pub(crate) mod helpers;
+#[cfg(feature = "prometheus")]
+pub(crate) mod prometheus;
 pub(crate) mod repository;
 
 // rustic_cli Public API

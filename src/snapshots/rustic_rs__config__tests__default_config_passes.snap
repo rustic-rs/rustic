@@ -1,7 +1,6 @@
 ---
 source: src/config.rs
 expression: config
-snapshot_kind: text
 ---
 RusticConfig {
     global: GlobalOptions {
@@ -74,6 +73,9 @@ RusticConfig {
         },
         no_scan: false,
         json: false,
+        prometheus: None,
+        prometheus_job: "",
+        prometheus_labels: [],
         long: false,
         quiet: false,
         init: false,

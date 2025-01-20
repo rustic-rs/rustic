@@ -72,6 +72,27 @@ pub struct BackupCmd {
     #[merge(strategy=conflate::bool::overwrite_false)]
     json: bool,
 
+    /// Push metrics to a Prometheus Pushgateway
+    ///
+    /// If the Pushgateway requires authentication, then the login/password can be passed in
+    /// the `PUSHGATEWAY_USER` and `PUSHGATEWAY_PASS` environment variables.
+    #[cfg(feature = "prometheus")]
+    #[clap(long, value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus: Option<String>,
+
+    /// Job name for the Pushgateway push
+    #[cfg(feature = "prometheus")]
+    #[clap(long, value_name = "JOB_NAME", default_value = "rustic")]
+    #[merge(skip)]
+    prometheus_job: String,
+
+    /// Additional labels to set to generated Prometheus metrics
+    #[cfg(feature = "prometheus")]
+    #[clap(long, value_name = "NAME=VALUE", value_parser = crate::prometheus::parse_label)]
+    #[merge(strategy=conflate::vec::append)]
+    prometheus_labels: Vec<(String, String)>,
+
     /// Show detailed information about generated snapshot
     #[clap(long, conflicts_with = "json")]
     #[merge(strategy=conflate::bool::overwrite_false)]
@@ -304,7 +325,7 @@ impl BackupCmd {
 
             println!("{table}");
         } else if !self.quiet {
-            let summary = snap.summary.unwrap();
+            let summary = snap.summary.as_ref().unwrap();
             println!(
                 "Files:       {} new, {} changed, {} unchanged",
                 summary.files_new, summary.files_changed, summary.files_unmodified
@@ -327,6 +348,11 @@ impl BackupCmd {
                 bytes_size_to_string(summary.total_bytes_processed)
             );
             println!("snapshot {} successfully saved.", snap.id);
+        }
+
+        #[cfg(feature = "prometheus")]
+        if let Some(pushgateway_url) = self.prometheus {
+            crate::prometheus::publish_metrics(&pushgateway_url, &self.prometheus_job, &snap, self.prometheus_labels)?;
         }
 
         info!("backup of {source} done.");

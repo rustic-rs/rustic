@@ -75,7 +75,7 @@ pub struct BackupCmd {
     /// Push metrics to a Prometheus Pushgateway
     ///
     /// If the Pushgateway requires authentication, then the login/password can be passed in
-    /// the `PUSHGATEWAY_USER` and `PUSHGATEWAY_PASS` environment variables.
+    /// the `RUSTIC_PUSHGATEWAY_USER` and `RUSTIC_PUSHGATEWAY_PASS` environment variables.
     #[cfg(feature = "prometheus")]
     #[clap(long, value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url)]
     #[merge(strategy=conflate::option::overwrite_none)]
@@ -83,9 +83,9 @@ pub struct BackupCmd {
 
     /// Job name for the Pushgateway push
     #[cfg(feature = "prometheus")]
-    #[clap(long, value_name = "JOB_NAME", default_value = "rustic")]
-    #[merge(skip)]
-    prometheus_job: String,
+    #[clap(long, value_name = "JOB_NAME")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_job: Option<String>,
 
     /// Additional labels to set to generated Prometheus metrics
     #[cfg(feature = "prometheus")]
@@ -352,7 +352,12 @@ impl BackupCmd {
 
         #[cfg(feature = "prometheus")]
         if let Some(pushgateway_url) = self.prometheus {
-            crate::prometheus::publish_metrics(&pushgateway_url, &self.prometheus_job, &snap, self.prometheus_labels)?;
+            crate::prometheus::publish_metrics(
+                &pushgateway_url,
+                self.prometheus_job.as_deref().unwrap_or("rustic"),
+                &snap,
+                self.prometheus_labels,
+            )?;
         }
 
         info!("backup of {source} done.");

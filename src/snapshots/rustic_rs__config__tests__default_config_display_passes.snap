@@ -46,7 +46,6 @@ with-atime = false
 ignore-devid = false
 no-scan = false
 json = false
-prometheus-job = ""
 prometheus-labels = []
 long = false
 quiet = false

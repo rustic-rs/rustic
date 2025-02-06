@@ -14,13 +14,15 @@ use std::{
 };
 
 use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 #[cfg(not(all(feature = "mount", feature = "webdav")))]
 use toml::Value;
 
@@ -138,6 +140,7 @@ impl RusticConfig {
 /// Global options
 ///
 /// These options are available for all commands.
+#[serde_as]
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
@@ -190,6 +193,90 @@ pub struct GlobalOptions {
     #[clap(skip)]
     #[merge(strategy = conflate::btreemap::append_or_ignore)]
     pub env: BTreeMap<String, String>,
+
+    /// Push metrics to a Prometheus Pushgateway
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url, env = "RUSTIC_PROMETHEUS")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus: Option<Url>,
+
+    /// Authenticate to Prometheus Pushgateway using this user
+    #[clap(long, value_name = "USER", env = "RUSTIC_PROMETHEUS_USER")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_user: Option<String>,
+
+    /// Authenticate to Prometheus Pushgateway using this password
+    #[clap(long, value_name = "PASSWORD", env = "RUSTIC_PROMETHEUS_PASS")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_pass: Option<String>,
+
+    /// Job name for the Pushgateway push
+    #[clap(long, value_name = "JOB_NAME", env = "RUSTIC_PROMETHEUS_JOB")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_job: Option<String>,
+
+    /// Additional labels to set to generated Prometheus metrics
+    #[cfg(feature = "prometheus")]
+    #[clap(skip)]
+    #[merge(strategy=conflate::vec::append)]
+    prometheus_labels: Vec<(String, String)>,
+}
+
+pub fn parse_label(s: &str) -> Result<(String, String)> {
+    let pos = s
+        .find('=')
+        .ok_or_else(|| anyhow!("invalid prometheus label definition: no `=` found in `{s}`"))?;
+    Ok((s[..pos].to_owned(), s[pos + 1..].to_owned()))
+}
+
+impl GlobalOptions {
+    pub fn is_prometheus_configured(&self) -> bool {
+        self.prometheus.is_some()
+    }
+
+    #[cfg(not(feature = "prometheus"))]
+    pub fn push_metrics(&self) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(feature = "prometheus")]
+    pub fn push_metrics(&self, extra_labels: Vec<(String, String)>) -> Result<()> {
+        use http_auth_basic::Credentials;
+        use prometheus_push::prometheus_crate::PrometheusMetricsPusherBlocking;
+        use reqwest::{
+            blocking::Client,
+            header::{HeaderMap, HeaderValue, AUTHORIZATION},
+        };
+
+        let Some(url) = &self.prometheus else {
+            return Ok(());
+        };
+
+        let mut builder = Client::builder();
+
+        if let Some(username) = &self.prometheus_user {
+            let password = self.prometheus_pass.as_deref().unwrap_or("");
+            let cred = Credentials::new(username, password);
+            let mut auth_value = HeaderValue::from_str(&cred.as_http_header())?;
+            auth_value.set_sensitive(true);
+            let headers: HeaderMap = std::iter::once((AUTHORIZATION, auth_value)).collect();
+            builder = builder.default_headers(headers);
+        };
+
+        let client = builder.build()?;
+        let metrics_pusher = PrometheusMetricsPusherBlocking::from(client, url)?;
+
+        let labels = self
+            .prometheus_labels
+            .iter()
+            .chain(extra_labels.iter())
+            .map(|(a, b)| (a.as_str(), b.as_str()))
+            .collect();
+
+        let job_name = self.prometheus_job.as_deref().unwrap_or("rustic");
+        metrics_pusher.push_all(job_name, &labels, prometheus::gather())?;
+        Ok(())
+    }
 }
 
 /// Get the paths to the config file

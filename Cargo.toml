@@ -27,7 +27,7 @@ jemallocator = ["dep:jemallocator-global"]
 
 # Commands
 mount = ["dep:fuse_mt"]
-prometheus = ["dep:prometheus"]
+prometheus = ["dep:prometheus", "dep:prometheus_push", "dep:http-auth-basic"]
 self-update = ["dep:self_update", "dep:semver"]
 tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = [
@@ -116,10 +116,13 @@ gethostname = "0.5"
 globset = "0.4.15"
 human-panic = "2"
 humantime = "2"
+http-auth-basic = { version = "0.3.5", optional = true }
 indicatif = "0.17"
 itertools = "0.13"
 open = "5.3.1"
-prometheus = { version = "0.13.4", features = ["push"], optional = true }
+prometheus = { version = "0.13.4", optional = true }
+prometheus_push = { version = "0.4.5", default-features = false, features = ["with_reqwest_blocking", "prometheus_crate"], optional = true }
+reqwest = { version = "0.12.9", default-features = false, features = ["rustls-tls-native-roots", "blocking"] }
 self_update = { version = "=0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.43"
 toml = "0.8"

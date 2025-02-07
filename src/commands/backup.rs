@@ -1,11 +1,11 @@
 //! `backup` subcommand
 
-use std::env;
 use std::path::PathBuf;
+use std::{collections::BTreeMap, env};
 
 use crate::{
     commands::{init::init, snapshots::fill_table},
-    config::{hooks::Hooks, parse_label},
+    config::{hooks::Hooks, parse_labels},
     helpers::{bold_cell, bytes_size_to_string, table},
     repository::CliRepo,
     status_err, Application, RUSTIC_APP,
@@ -74,11 +74,6 @@ pub struct BackupCmd {
     #[merge(strategy=conflate::bool::overwrite_false)]
     json: bool,
 
-    /// Additional labels to set to generated Prometheus metrics
-    #[clap(long, value_name = "NAME=VALUE", value_parser = parse_label)]
-    #[merge(strategy=conflate::vec::append)]
-    prometheus_labels: Vec<(String, String)>,
-
     /// Show detailed information about generated snapshot
     #[clap(long, conflicts_with = "json")]
     #[merge(strategy=conflate::bool::overwrite_false)]
@@ -134,6 +129,16 @@ pub struct BackupCmd {
     #[clap(skip)]
     #[merge(skip)]
     sources: Vec<String>,
+
+    /// Job name for the Prometheus Pushgateway push. Default: rustic-backup
+    #[clap(long, value_name = "JOB_NAME", env = "RUSTIC_PROMETHEUS_JOB")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_job: Option<String>,
+
+    /// Additional labels to set to generated Prometheus metrics
+    #[clap(long, value_name = "NAME=VALUE", value_parser = parse_labels, default_value = "")]
+    #[merge(strategy=conflate::btreemap::append_or_ignore)]
+    prometheus_labels: BTreeMap<String, String>,
 }
 
 /// Merge backup snapshots to generate
@@ -338,7 +343,9 @@ impl BackupCmd {
 
         #[cfg(feature = "prometheus")]
         if config.global.is_prometheus_configured() {
-            publish_metrics(&snap, self.prometheus_labels)?;
+            if let Err(err) = publish_metrics(&snap, self.prometheus_job, self.prometheus_labels) {
+                warn!("error pushing prometheus metrics: {err}");
+            }
         }
 
         info!("backup of {source} done.");
@@ -347,7 +354,11 @@ impl BackupCmd {
 }
 
 #[cfg(feature = "prometheus")]
-fn publish_metrics(snap: &SnapshotFile, user_labels: Vec<(String, String)>) -> Result<()> {
+fn publish_metrics(
+    snap: &SnapshotFile,
+    job_name: Option<String>,
+    extra_labels: BTreeMap<String, String>,
+) -> Result<()> {
     use prometheus::register_gauge;
 
     let summary = snap.summary.as_ref().expect("Reaching the 'push to prometheus' point should only happen for successful backups, which must have a summary set.");
@@ -504,7 +515,8 @@ fn publish_metrics(snap: &SnapshotFile, user_labels: Vec<(String, String)>) -> R
     if !tags.is_empty() {
         labels.push(("tags".to_string(), tags));
     }
-    labels.extend(user_labels);
+    labels.extend(extra_labels);
 
-    RUSTIC_APP.config().global.push_metrics(labels)
+    let job_name = job_name.as_deref().unwrap_or("rustic_backup");
+    RUSTIC_APP.config().global.push_metrics(job_name, labels)
 }

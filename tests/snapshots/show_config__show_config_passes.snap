@@ -16,7 +16,11 @@ run-finally = []
 
 [global.env]
 
+[global.prometheus-labels]
+
 [repository]
+repository = "local:/tmp/repo"
+password = "testx"
 no-cache = false
 warm-up = false
 
@@ -27,7 +31,10 @@ warm-up = false
 [repository.options-cold]
 
 [repository.hooks]
-run-before = []
+run-before = [
+    "echo before",
+    "echo before1",
+]
 run-after = []
 run-failed = []
 run-finally = []
@@ -46,7 +53,38 @@ with-atime = false
 ignore-devid = false
 no-scan = false
 json = false
-prometheus-labels = []
+long = false
+quiet = false
+init = false
+skip-identical-parent = false
+force = false
+ignore-ctime = false
+ignore-inode = false
+globs = []
+iglobs = []
+glob-files = []
+iglob-files = []
+git-ignore = false
+no-require-git = false
+custom-ignorefiles = []
+exclude-if-present = []
+one-file-system = false
+tags = []
+delete-never = false
+sources = []
+
+[backup.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
+[[backup.snapshots]]
+stdin-filename = ""
+with-atime = false
+ignore-devid = false
+no-scan = false
+json = false
 long = false
 quiet = false
 init = false
@@ -66,13 +104,95 @@ one-file-system = false
 tags = []
 delete-never = false
 snapshots = []
-sources = []
+sources = ["-"]
 
-[backup.hooks]
+[backup.snapshots.stdin-command]
+command = "echo"
+args = ["test"]
+on-failure = "warn"
+
+[backup.snapshots.hooks]
 run-before = []
 run-after = []
 run-failed = []
 run-finally = []
+
+[backup.snapshots.prometheus-labels]
+
+[[backup.snapshots]]
+stdin-filename = ""
+with-atime = false
+ignore-devid = false
+no-scan = false
+json = false
+long = false
+quiet = false
+init = false
+skip-identical-parent = false
+force = false
+ignore-ctime = false
+ignore-inode = false
+globs = []
+iglobs = []
+glob-files = []
+iglob-files = []
+git-ignore = false
+no-require-git = false
+custom-ignorefiles = []
+exclude-if-present = []
+one-file-system = false
+tags = []
+delete-never = false
+snapshots = []
+sources = ["src/commands"]
+
+[backup.snapshots.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
+[backup.snapshots.prometheus-labels]
+
+[[backup.snapshots]]
+stdin-filename = ""
+with-atime = false
+ignore-devid = false
+no-scan = false
+json = false
+long = false
+quiet = false
+init = false
+skip-identical-parent = false
+force = false
+ignore-ctime = false
+ignore-inode = false
+globs = []
+iglobs = []
+glob-files = []
+iglob-files = []
+git-ignore = false
+no-require-git = false
+custom-ignorefiles = []
+exclude-if-present = []
+one-file-system = false
+tags = []
+delete-never = false
+snapshots = []
+sources = [
+    "src/commands",
+    "src/config",
+]
+
+[backup.snapshots.hooks]
+run-before = []
+run-after = []
+run-failed = []
+run-finally = []
+
+[backup.snapshots.prometheus-labels]
+
+[backup.prometheus-labels]
 
 [copy]
 targets = []

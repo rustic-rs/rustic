@@ -32,6 +32,10 @@ RusticConfig {
             "KEY8": "VALUE8",
             "KEY9": "VALUE9",
         },
+        prometheus: None,
+        prometheus_user: None,
+        prometheus_pass: None,
+        prometheus_labels: {},
     },
     repository: AllRepositoryOptions {
         be: BackendOptions {
@@ -84,9 +88,6 @@ RusticConfig {
         },
         no_scan: false,
         json: false,
-        prometheus: None,
-        prometheus_job: None,
-        prometheus_labels: [],
         long: false,
         quiet: false,
         init: false,
@@ -149,6 +150,8 @@ RusticConfig {
         },
         snapshots: [],
         sources: [],
+        prometheus_job: None,
+        prometheus_labels: {},
     },
     copy: CopyCmd {
         ids: [],

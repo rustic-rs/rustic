@@ -15,6 +15,9 @@ no-progress = false
 progress-interval = "100ms"
 dry-run = false
 check-index = false
+prometheus = "http://push-gateway/"
+prometheus-user = "user"
+prometheus-pass = "secret"
 
 # Global hooks: The given commands are called for every command
 [global.hooks]
@@ -31,6 +34,9 @@ run-finally = ["echo finally"] # Always run after, default: []
 [global.env]
 # This is only an example how to set an rclone env variable. Default: No variables are defined.
 RCLONE_XXX = "true"
+
+[global.prometheus-labels]
+label-a = "xxx"
 
 # Repository options: These options define which backend to use and which password to use.
 [repository]
@@ -131,6 +137,7 @@ init = false
 no-scan = false
 quiet = false
 skip-identical-parent = false
+prometheus-job = "my-backup-jobs" # Only used if global prometheus option is set; default: not set
 
 # Backup hooks: The given commands are called for the `backup` command
 [backup.hooks]
@@ -138,6 +145,9 @@ run-before = ["echo before"] # Default: []
 run-after = ["echo after"] # Run after if successful, default: []
 run-failed = ["echo failed"] # Default: []
 run-finally = ["echo finally"] # Always run after, default: []
+
+[backup.prometheus-labels]
+label-a = "xxx"
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.snapshots]]
@@ -151,6 +161,9 @@ run-before = ["echo before"] # Default: []
 run-after = ["echo after"] # Run after if successful, default: []
 run-failed = ["echo failed"] # Default: []
 run-finally = ["echo finally"] # Always run after, default: []
+
+[backup.snapshots.prometheus-labels]
+label-a = "xxx"
 
 [[backup.snapshots]]
 sources = [

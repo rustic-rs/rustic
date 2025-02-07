@@ -210,37 +210,34 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::option::overwrite_none)]
     prometheus_pass: Option<String>,
 
-    /// Job name for the Pushgateway push
-    #[clap(long, value_name = "JOB_NAME", env = "RUSTIC_PROMETHEUS_JOB")]
-    #[merge(strategy=conflate::option::overwrite_none)]
-    prometheus_job: Option<String>,
-
     /// Additional labels to set to generated Prometheus metrics
-    #[cfg(feature = "prometheus")]
     #[clap(skip)]
-    #[merge(strategy=conflate::vec::append)]
-    prometheus_labels: Vec<(String, String)>,
+    #[merge(strategy=conflate::btreemap::append_or_ignore)]
+    prometheus_labels: BTreeMap<String, String>,
 }
 
-pub fn parse_label(s: &str) -> Result<(String, String)> {
-    let pos = s
-        .find('=')
-        .ok_or_else(|| anyhow!("invalid prometheus label definition: no `=` found in `{s}`"))?;
-    Ok((s[..pos].to_owned(), s[pos + 1..].to_owned()))
+pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
+    s.split(',')
+        .filter_map(|s| {
+            let s = s.trim();
+            (!s.is_empty()).then_some(s)
+        })
+        .map(|s| -> Result<_> {
+            let pos = s.find('=').ok_or_else(|| {
+                anyhow!("invalid prometheus label definition: no `=` found in `{s}`")
+            })?;
+            Ok((s[..pos].to_owned(), s[pos + 1..].to_owned()))
+        })
+        .try_collect()
 }
 
+#[cfg(feature = "prometheus")]
 impl GlobalOptions {
     pub fn is_prometheus_configured(&self) -> bool {
         self.prometheus.is_some()
     }
 
-    #[cfg(not(feature = "prometheus"))]
-    pub fn push_metrics(&self) -> Result<()> {
-        Ok(())
-    }
-
-    #[cfg(feature = "prometheus")]
-    pub fn push_metrics(&self, extra_labels: Vec<(String, String)>) -> Result<()> {
+    pub fn push_metrics(&self, job_name: &str, extra_labels: Vec<(String, String)>) -> Result<()> {
         use prometheus::{Encoder, ProtobufEncoder};
         use reqwest::{blocking::Client, header::CONTENT_TYPE, Method, StatusCode};
 
@@ -253,11 +250,10 @@ impl GlobalOptions {
         let labels = self
             .prometheus_labels
             .iter()
-            .chain(extra_labels.iter())
-            .map(|(a, b)| (a.as_str(), b.as_str()))
+            .map(|x| (x.0.as_str(), x.1.as_str()))
+            .chain(extra_labels.iter().map(|(a, b)| (a.as_str(), b.as_str())))
             .collect();
 
-        let job_name = self.prometheus_job.as_deref().unwrap_or("rustic");
         let (full_url, encoded_metrics) = make_url_and_encoded_metrics(url, job_name, labels)?;
 
         let mut builder = Client::new()

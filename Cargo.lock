@@ -1848,15 +1848,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-auth-basic"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e0c088bddfd73005b09807131224ad12c302655436b1270c8346a3ae8aaa37a"
-dependencies = [
- "base64 0.22.1",
-]
-
-[[package]]
 name = "http-body"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3342,19 +3333,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prometheus_push"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10dabce303b010b9e0d80cf75a3fbfba934f544c1245cb282aaf15e24d99bfb6"
-dependencies = [
- "log",
- "prometheus",
- "reqwest 0.12.12",
- "thiserror 1.0.69",
- "url",
-]
-
-[[package]]
 name = "protobuf"
 version = "2.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3954,7 +3932,6 @@ dependencies = [
  "futures",
  "gethostname",
  "globset",
- "http-auth-basic",
  "human-panic",
  "humantime",
  "indicatif",
@@ -3971,7 +3948,6 @@ dependencies = [
  "predicates",
  "pretty_assertions",
  "prometheus",
- "prometheus_push",
  "quickcheck",
  "quickcheck_macros",
  "ratatui",

@@ -8,13 +8,13 @@ pub(crate) mod hooks;
 pub(crate) mod progress_options;
 
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fmt::{self, Display, Formatter},
     path::PathBuf,
 };
 
 use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
@@ -241,31 +241,15 @@ impl GlobalOptions {
 
     #[cfg(feature = "prometheus")]
     pub fn push_metrics(&self, extra_labels: Vec<(String, String)>) -> Result<()> {
-        use http_auth_basic::Credentials;
-        use prometheus_push::prometheus_crate::PrometheusMetricsPusherBlocking;
-        use reqwest::{
-            blocking::Client,
-            header::{HeaderMap, HeaderValue, AUTHORIZATION},
-        };
+        use prometheus::{Encoder, ProtobufEncoder};
+        use reqwest::{blocking::Client, header::CONTENT_TYPE, Method, StatusCode};
 
+        // only move on if a prometheus push url is given
         let Some(url) = &self.prometheus else {
             return Ok(());
         };
 
-        let mut builder = Client::builder();
-
-        if let Some(username) = &self.prometheus_user {
-            let password = self.prometheus_pass.as_deref().unwrap_or("");
-            let cred = Credentials::new(username, password);
-            let mut auth_value = HeaderValue::from_str(&cred.as_http_header())?;
-            auth_value.set_sensitive(true);
-            let headers: HeaderMap = std::iter::once((AUTHORIZATION, auth_value)).collect();
-            builder = builder.default_headers(headers);
-        };
-
-        let client = builder.build()?;
-        let metrics_pusher = PrometheusMetricsPusherBlocking::from(client, url)?;
-
+        // Merge labels and extra labels
         let labels = self
             .prometheus_labels
             .iter()
@@ -274,9 +258,88 @@ impl GlobalOptions {
             .collect();
 
         let job_name = self.prometheus_job.as_deref().unwrap_or("rustic");
-        metrics_pusher.push_all(job_name, &labels, prometheus::gather())?;
-        Ok(())
+        let (full_url, encoded_metrics) = make_url_and_encoded_metrics(url, job_name, labels)?;
+
+        let mut builder = Client::new()
+            .request(Method::PUT, full_url)
+            .header(CONTENT_TYPE, ProtobufEncoder::new().format_type())
+            .body(encoded_metrics);
+
+        if let Some(username) = &self.prometheus_user {
+            builder = builder.basic_auth(username, self.prometheus_pass.as_ref());
+        }
+
+        let response = builder.send()?;
+
+        match response.status() {
+            StatusCode::ACCEPTED | StatusCode::OK => Ok(()),
+            _ => bail!(
+                "unexpected status code {} while pushing to {}",
+                response.status(),
+                url
+            ),
+        }
     }
+}
+
+#[cfg(feature = "prometheus")]
+// TODO: This should be actually part of the prometheus crate, see https://github.com/tikv/rust-prometheus/issues/536
+fn make_url_and_encoded_metrics(
+    url: &Url,
+    job: &str,
+    grouping: HashMap<&str, &str>,
+) -> Result<(Url, Vec<u8>)> {
+    use prometheus::{Encoder, ProtobufEncoder};
+    const LABEL_NAME_JOB: &str = "job";
+
+    if job.contains('/') {
+        bail!("job contains '/': {}", job);
+    }
+
+    let url = url.join("metrics/job/")?;
+    // TODO: escape job
+    let mut url_components = vec![job];
+
+    for (ln, lv) in &grouping {
+        // TODO: check label name
+        if lv.contains('/') {
+            bail!("value of grouping label {} contains '/': {}", ln, lv);
+        }
+        url_components.push(ln);
+        url_components.push(lv);
+    }
+
+    let url = url.join(&url_components.join("/"))?;
+
+    let encoder = ProtobufEncoder::new();
+    let mut buf = Vec::new();
+
+    for mf in prometheus::gather() {
+        // Check for pre-existing grouping labels:
+        for m in mf.get_metric() {
+            for lp in m.get_label() {
+                if lp.get_name() == LABEL_NAME_JOB {
+                    bail!(
+                        "pushed metric {} already contains a \
+                         job label",
+                        mf.get_name()
+                    );
+                }
+                if grouping.contains_key(lp.get_name()) {
+                    bail!(
+                        "pushed metric {} already contains \
+                         grouping label {}",
+                        mf.get_name(),
+                        lp.get_name()
+                    );
+                }
+            }
+        }
+        // Ignore error, `no metrics` and `no name`.
+        let _ = encoder.encode(&[mf], &mut buf);
+    }
+
+    Ok((url, buf))
 }
 
 /// Get the paths to the config file

@@ -8,7 +8,7 @@ pub(crate) mod hooks;
 pub(crate) mod progress_options;
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     fmt::{self, Display, Formatter},
     path::PathBuf,
 };
@@ -283,30 +283,26 @@ impl GlobalOptions {
 fn make_url_and_encoded_metrics(
     url: &Url,
     job: &str,
-    grouping: HashMap<&str, &str>,
+    grouping: BTreeMap<&str, &str>,
 ) -> Result<(Url, Vec<u8>)> {
+    use base64::prelude::*;
     use prometheus::{Encoder, ProtobufEncoder};
     const LABEL_NAME_JOB: &str = "job";
 
-    if job.contains('/') {
-        bail!("job contains '/': {}", job);
-    }
-
-    let url = url.join("metrics/job/")?;
-    // TODO: escape job
-    let mut url_components = vec![job];
+    let mut url_components = vec![
+        "metrics".to_string(),
+        "job@base64".to_string(),
+        BASE64_URL_SAFE_NO_PAD.encode(job),
+    ];
 
     for (ln, lv) in &grouping {
         // TODO: check label name
-        if lv.contains('/') {
-            bail!("value of grouping label {} contains '/': {}", ln, lv);
-        }
-        url_components.push(ln);
-        url_components.push(lv);
+        let name = ln.to_string() + "@base64";
+        url_components.push(name);
+        url_components.push(BASE64_URL_SAFE_NO_PAD.encode(lv));
     }
 
     let url = url.join(&url_components.join("/"))?;
-
     let encoder = ProtobufEncoder::new();
     let mut buf = Vec::new();
 

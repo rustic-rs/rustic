@@ -3908,6 +3908,7 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "assert_cmd",
+ "base64 0.22.1",
  "bytes",
  "bytesize",
  "cached",

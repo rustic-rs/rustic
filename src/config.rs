@@ -287,7 +287,6 @@ fn make_url_and_encoded_metrics(
 ) -> Result<(Url, Vec<u8>)> {
     use base64::prelude::*;
     use prometheus::{Encoder, ProtobufEncoder};
-    const LABEL_NAME_JOB: &str = "job";
 
     let mut url_components = vec![
         "metrics".to_string(),
@@ -296,37 +295,21 @@ fn make_url_and_encoded_metrics(
     ];
 
     for (ln, lv) in &grouping {
-        // TODO: check label name
-        let name = ln.to_string() + "@base64";
-        url_components.push(name);
-        url_components.push(BASE64_URL_SAFE_NO_PAD.encode(lv));
+        // See https://github.com/tikv/rust-prometheus/issues/535
+        if !ln.is_empty() {
+            // TODO: check label name
+            let name = ln.to_string() + "@base64";
+            url_components.push(name);
+            url_components.push(BASE64_URL_SAFE_NO_PAD.encode(lv));
+        }
     }
-
     let url = url.join(&url_components.join("/"))?;
+
     let encoder = ProtobufEncoder::new();
     let mut buf = Vec::new();
-
     for mf in prometheus::gather() {
-        // Check for pre-existing grouping labels:
-        for m in mf.get_metric() {
-            for lp in m.get_label() {
-                if lp.get_name() == LABEL_NAME_JOB {
-                    bail!(
-                        "pushed metric {} already contains a \
-                         job label",
-                        mf.get_name()
-                    );
-                }
-                if grouping.contains_key(lp.get_name()) {
-                    bail!(
-                        "pushed metric {} already contains \
-                         grouping label {}",
-                        mf.get_name(),
-                        lp.get_name()
-                    );
-                }
-            }
-        }
+        // Note: We don't check here for pre-existing grouping labels, as we don't set them
+
         // Ignore error, `no metrics` and `no name`.
         let _ = encoder.encode(&[mf], &mut buf);
     }
@@ -399,6 +382,7 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]
@@ -437,5 +421,19 @@ mod tests {
 
         // Check Debug
         assert_debug_snapshot!(deserialized);
+    }
+
+    #[cfg(feature = "prometheus")]
+    #[test]
+    fn test_make_url_and_encoded_metrics() -> Result<()> {
+        use std::str::FromStr;
+
+        let grouping = [("abc", "xyz"), ("path", "/my/path"), ("tags", "a,b,cde")]
+            .into_iter()
+            .collect();
+        let (url, _) =
+            make_url_and_encoded_metrics(&Url::from_str("http://host")?, "test_job", grouping)?;
+        assert_eq!(url.to_string(), "http://host/metrics/job@base64/dGVzdF9qb2I/abc@base64/eHl6/path@base64/L215L3BhdGg/tags@base64/YSxiLGNkZQ");
+        Ok(())
     }
 }

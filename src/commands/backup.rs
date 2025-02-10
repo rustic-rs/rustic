@@ -498,23 +498,11 @@ fn publish_metrics(
     .context("registering prometheus gauge")?;
     metric_total_duration.set(summary.total_duration);
 
-    let mut labels = vec![
-        ("paths".to_owned(), format!("{}", snap.paths)),
-        ("hostname".to_owned(), snap.hostname.clone()),
-        ("uid".to_owned(), format!("{}", snap.uid)),
-        ("gid".to_owned(), format!("{}", snap.gid)),
-    ];
-    // See https://github.com/tikv/rust-prometheus/issues/535
-    if !snap.label.is_empty() {
-        labels.push(("snapshot_label".to_string(), snap.label.clone()));
-    }
-    if !snap.username.is_empty() {
-        labels.push(("username".to_string(), snap.username.clone()));
-    }
-    let tags = format!("{}", snap.tags);
-    if !tags.is_empty() {
-        labels.push(("tags".to_string(), tags));
-    }
+    let mut labels = Vec::new();
+    labels.push(("paths".to_owned(), format!("{}", snap.paths)));
+    labels.push(("hostname".to_owned(), snap.hostname.clone()));
+    labels.push(("snapshot_label".to_string(), snap.label.clone()));
+    labels.push(("tags".to_string(), format!("{}", snap.tags)));
     labels.extend(extra_labels);
 
     let job_name = job_name.as_deref().unwrap_or("rustic_backup");

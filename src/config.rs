@@ -19,7 +19,7 @@ use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
-use log::Level;
+use log::{debug, Level};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -196,7 +196,7 @@ pub struct GlobalOptions {
 
     /// Push metrics to a Prometheus Pushgateway
     #[serde_as(as = "Option<DisplayFromStr>")]
-    #[clap(long, value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url, env = "RUSTIC_PROMETHEUS")]
+    #[clap(long, global = true, env = "RUSTIC_PROMETHEUS", value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url)]
     #[merge(strategy=conflate::option::overwrite_none)]
     prometheus: Option<Url>,
 
@@ -239,7 +239,7 @@ impl GlobalOptions {
 
     pub fn push_metrics(&self, job_name: &str, extra_labels: Vec<(String, String)>) -> Result<()> {
         use prometheus::{Encoder, ProtobufEncoder};
-        use reqwest::{blocking::Client, header::CONTENT_TYPE, Method, StatusCode};
+        use reqwest::{blocking::Client, header::CONTENT_TYPE, StatusCode};
 
         // only move on if a prometheus push url is given
         let Some(url) = &self.prometheus else {
@@ -255,13 +255,19 @@ impl GlobalOptions {
             .collect();
 
         let (full_url, encoded_metrics) = make_url_and_encoded_metrics(url, job_name, labels)?;
+        debug!("using url: {full_url}");
 
         let mut builder = Client::new()
-            .request(Method::PUT, full_url)
+            .post(full_url)
             .header(CONTENT_TYPE, ProtobufEncoder::new().format_type())
             .body(encoded_metrics);
 
         if let Some(username) = &self.prometheus_user {
+            debug!(
+                "using auth {} {}",
+                username,
+                self.prometheus_pass.as_deref().unwrap_or("[NOT SET]")
+            );
             builder = builder.basic_auth(username, self.prometheus_pass.as_ref());
         }
 
@@ -296,7 +302,7 @@ fn make_url_and_encoded_metrics(
 
     for (ln, lv) in &grouping {
         // See https://github.com/tikv/rust-prometheus/issues/535
-        if !ln.is_empty() {
+        if !lv.is_empty() {
             // TODO: check label name
             let name = ln.to_string() + "@base64";
             url_components.push(name);
@@ -428,9 +434,14 @@ mod tests {
     fn test_make_url_and_encoded_metrics() -> Result<()> {
         use std::str::FromStr;
 
-        let grouping = [("abc", "xyz"), ("path", "/my/path"), ("tags", "a,b,cde")]
-            .into_iter()
-            .collect();
+        let grouping = [
+            ("abc", "xyz"),
+            ("path", "/my/path"),
+            ("tags", "a,b,cde"),
+            ("nogroup", ""),
+        ]
+        .into_iter()
+        .collect();
         let (url, _) =
             make_url_and_encoded_metrics(&Url::from_str("http://host")?, "test_job", grouping)?;
         assert_eq!(url.to_string(), "http://host/metrics/job@base64/dGVzdF9qb2I/abc@base64/eHl6/path@base64/L215L3BhdGg/tags@base64/YSxiLGNkZQ");

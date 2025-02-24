@@ -92,6 +92,14 @@ cargo binstall rustic-rs
 scoop install rustic
 ```
 
+#### macOS
+
+##### [Homebrew](https://brew.sh/)
+
+```bash
+brew install rustic
+```
+
 Or you can check out the
 [releases](https://github.com/rustic-rs/rustic/releases).
 

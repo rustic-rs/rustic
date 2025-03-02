@@ -343,8 +343,22 @@ impl BackupCmd {
 
         #[cfg(feature = "prometheus")]
         if config.global.is_prometheus_configured() {
-            if let Err(err) = publish_metrics(&snap, self.prometheus_job, self.prometheus_labels) {
-                warn!("error pushing prometheus metrics: {err}");
+            #[cfg(feature = "prometheus")]
+            {
+                // Merge global prometheus labels
+                conflate::btreemap::append_or_ignore(
+                    &mut self.prometheus_labels,
+                    config.global.prometheus_labels.clone(),
+                );
+                if let Err(err) =
+                    publish_metrics(&snap, self.prometheus_job, self.prometheus_labels)
+                {
+                    warn!("error pushing prometheus metrics: {err}");
+                }
+            }
+            #[cfg(not(feature = "prometheus"))]
+            {
+                warn!("not pushing prometheus metrics - this rustic version is compiled without prometheus support");
             }
         }
 
@@ -357,7 +371,7 @@ impl BackupCmd {
 fn publish_metrics(
     snap: &SnapshotFile,
     job_name: Option<String>,
-    extra_labels: BTreeMap<String, String>,
+    mut labels: BTreeMap<String, String>,
 ) -> Result<()> {
     use prometheus::register_gauge;
 
@@ -498,12 +512,18 @@ fn publish_metrics(
     .context("registering prometheus gauge")?;
     metric_total_duration.set(summary.total_duration);
 
-    let mut labels = Vec::new();
-    labels.push(("paths".to_owned(), format!("{}", snap.paths)));
-    labels.push(("hostname".to_owned(), snap.hostname.clone()));
-    labels.push(("snapshot_label".to_string(), snap.label.clone()));
-    labels.push(("tags".to_string(), format!("{}", snap.tags)));
-    labels.extend(extra_labels);
+    _ = labels
+        .entry("paths".to_string())
+        .or_insert_with(|| format!("{}", snap.paths));
+    _ = labels
+        .entry("hostname".to_owned())
+        .or_insert_with(|| snap.hostname.clone());
+    _ = labels
+        .entry("snapshot_label".to_string())
+        .or_insert_with(|| snap.label.clone());
+    _ = labels
+        .entry("tags".to_string())
+        .or_insert_with(|| format!("{}", snap.tags));
 
     let job_name = job_name.as_deref().unwrap_or("rustic_backup");
     RUSTIC_APP.config().global.push_metrics(job_name, labels)

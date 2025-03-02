@@ -213,7 +213,7 @@ pub struct GlobalOptions {
     /// Additional labels to set to generated Prometheus metrics
     #[clap(skip)]
     #[merge(strategy=conflate::btreemap::append_or_ignore)]
-    prometheus_labels: BTreeMap<String, String>,
+    pub prometheus_labels: BTreeMap<String, String>,
 }
 
 pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
@@ -237,7 +237,7 @@ impl GlobalOptions {
         self.prometheus.is_some()
     }
 
-    pub fn push_metrics(&self, job_name: &str, extra_labels: Vec<(String, String)>) -> Result<()> {
+    pub fn push_metrics(&self, job_name: &str, labels: BTreeMap<String, String>) -> Result<()> {
         use prometheus::{Encoder, ProtobufEncoder};
         use reqwest::{blocking::Client, header::CONTENT_TYPE, StatusCode};
 
@@ -245,14 +245,6 @@ impl GlobalOptions {
         let Some(url) = &self.prometheus else {
             return Ok(());
         };
-
-        // Merge labels and extra labels
-        let labels = self
-            .prometheus_labels
-            .iter()
-            .map(|x| (x.0.as_str(), x.1.as_str()))
-            .chain(extra_labels.iter().map(|(a, b)| (a.as_str(), b.as_str())))
-            .collect();
 
         let (full_url, encoded_metrics) = make_url_and_encoded_metrics(url, job_name, labels)?;
         debug!("using url: {full_url}");
@@ -289,7 +281,7 @@ impl GlobalOptions {
 fn make_url_and_encoded_metrics(
     url: &Url,
     job: &str,
-    grouping: BTreeMap<&str, &str>,
+    grouping: BTreeMap<String, String>,
 ) -> Result<(Url, Vec<u8>)> {
     use base64::prelude::*;
     use prometheus::{Encoder, ProtobufEncoder};
@@ -441,6 +433,7 @@ mod tests {
             ("nogroup", ""),
         ]
         .into_iter()
+        .map(|(a, b)| (a.to_string(), b.to_string()))
         .collect();
         let (url, _) =
             make_url_and_encoded_metrics(&Url::from_str("http://host")?, "test_job", grouping)?;

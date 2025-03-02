@@ -54,6 +54,7 @@ impl ProgressOptions {
     }
 }
 
+#[allow(clippy::literal_string_with_formatting_args)]
 impl ProgressBars for ProgressOptions {
     type P = RusticProgress;
 
@@ -116,6 +117,7 @@ enum ProgressType {
 #[derive(Debug, Clone)]
 pub struct RusticProgress(ProgressBar, ProgressType);
 
+#[allow(clippy::literal_string_with_formatting_args)]
 impl Progress for RusticProgress {
     fn is_hidden(&self) -> bool {
         self.0.is_hidden()

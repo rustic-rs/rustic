@@ -16,6 +16,8 @@ run-finally = []
 
 [global.env]
 
+[global.prometheus-labels]
+
 [repository]
 no-cache = false
 warm-up = false
@@ -72,6 +74,8 @@ run-before = []
 run-after = []
 run-failed = []
 run-finally = []
+
+[backup.prometheus-labels]
 
 [copy]
 targets = []

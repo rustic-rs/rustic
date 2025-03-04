@@ -1,7 +1,6 @@
 ---
 source: src/config.rs
 expression: config
-snapshot_kind: text
 ---
 RusticConfig {
     global: GlobalOptions {
@@ -22,6 +21,10 @@ RusticConfig {
             context: "",
         },
         env: {},
+        prometheus: None,
+        prometheus_user: None,
+        prometheus_pass: None,
+        prometheus_labels: {},
     },
     repository: AllRepositoryOptions {
         be: BackendOptions {
@@ -136,6 +139,8 @@ RusticConfig {
         },
         snapshots: [],
         sources: [],
+        prometheus_job: None,
+        prometheus_labels: {},
     },
     copy: CopyCmd {
         ids: [],

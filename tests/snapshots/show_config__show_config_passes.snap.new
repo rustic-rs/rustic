@@ -1,6 +1,8 @@
 ---
-source: src/config.rs
-expression: config
+source: tests/show-config.rs
+assertion_line: 35
+expression: output
+snapshot_kind: text
 ---
 [global]
 use-profiles = []
@@ -19,6 +21,8 @@ run-finally = []
 [global.prometheus-labels]
 
 [repository]
+repository = "local:/tmp/repo"
+password = "testx"
 no-cache = false
 warm-up = false
 
@@ -29,7 +33,10 @@ warm-up = false
 [repository.options-cold]
 
 [repository.hooks]
-run-before = []
+run-before = [
+    "echo before",
+    "echo before1",
+]
 run-after = []
 run-failed = []
 run-finally = []

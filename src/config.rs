@@ -14,13 +14,15 @@ use std::{
 };
 
 use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
-use log::Level;
+use log::{debug, Level};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 #[cfg(not(all(feature = "mount", feature = "webdav")))]
 use toml::Value;
 
@@ -138,6 +140,7 @@ impl RusticConfig {
 /// Global options
 ///
 /// These options are available for all commands.
+#[serde_as]
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
@@ -190,6 +193,126 @@ pub struct GlobalOptions {
     #[clap(skip)]
     #[merge(strategy = conflate::btreemap::append_or_ignore)]
     pub env: BTreeMap<String, String>,
+
+    /// Push metrics to a Prometheus Pushgateway
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, env = "RUSTIC_PROMETHEUS", value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus: Option<Url>,
+
+    /// Authenticate to Prometheus Pushgateway using this user
+    #[clap(long, value_name = "USER", env = "RUSTIC_PROMETHEUS_USER")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_user: Option<String>,
+
+    /// Authenticate to Prometheus Pushgateway using this password
+    #[clap(long, value_name = "PASSWORD", env = "RUSTIC_PROMETHEUS_PASS")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    prometheus_pass: Option<String>,
+
+    /// Additional labels to set to generated Prometheus metrics
+    #[clap(skip)]
+    #[merge(strategy=conflate::btreemap::append_or_ignore)]
+    pub prometheus_labels: BTreeMap<String, String>,
+}
+
+pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
+    s.split(',')
+        .filter_map(|s| {
+            let s = s.trim();
+            (!s.is_empty()).then_some(s)
+        })
+        .map(|s| -> Result<_> {
+            let pos = s.find('=').ok_or_else(|| {
+                anyhow!("invalid prometheus label definition: no `=` found in `{s}`")
+            })?;
+            Ok((s[..pos].to_owned(), s[pos + 1..].to_owned()))
+        })
+        .try_collect()
+}
+
+#[cfg(feature = "prometheus")]
+impl GlobalOptions {
+    pub fn is_prometheus_configured(&self) -> bool {
+        self.prometheus.is_some()
+    }
+
+    pub fn push_metrics(&self, job_name: &str, labels: BTreeMap<String, String>) -> Result<()> {
+        use prometheus::{Encoder, ProtobufEncoder};
+        use reqwest::{blocking::Client, header::CONTENT_TYPE, StatusCode};
+
+        // only move on if a prometheus push url is given
+        let Some(url) = &self.prometheus else {
+            return Ok(());
+        };
+
+        let (full_url, encoded_metrics) = make_url_and_encoded_metrics(url, job_name, labels)?;
+        debug!("using url: {full_url}");
+
+        let mut builder = Client::new()
+            .post(full_url)
+            .header(CONTENT_TYPE, ProtobufEncoder::new().format_type())
+            .body(encoded_metrics);
+
+        if let Some(username) = &self.prometheus_user {
+            debug!(
+                "using auth {} {}",
+                username,
+                self.prometheus_pass.as_deref().unwrap_or("[NOT SET]")
+            );
+            builder = builder.basic_auth(username, self.prometheus_pass.as_ref());
+        }
+
+        let response = builder.send()?;
+
+        match response.status() {
+            StatusCode::ACCEPTED | StatusCode::OK => Ok(()),
+            _ => bail!(
+                "unexpected status code {} while pushing to {}",
+                response.status(),
+                url
+            ),
+        }
+    }
+}
+
+#[cfg(feature = "prometheus")]
+// TODO: This should be actually part of the prometheus crate, see https://github.com/tikv/rust-prometheus/issues/536
+fn make_url_and_encoded_metrics(
+    url: &Url,
+    job: &str,
+    grouping: BTreeMap<String, String>,
+) -> Result<(Url, Vec<u8>)> {
+    use base64::prelude::*;
+    use prometheus::{Encoder, ProtobufEncoder};
+
+    let mut url_components = vec![
+        "metrics".to_string(),
+        "job@base64".to_string(),
+        BASE64_URL_SAFE_NO_PAD.encode(job),
+    ];
+
+    for (ln, lv) in &grouping {
+        // See https://github.com/tikv/rust-prometheus/issues/535
+        if !lv.is_empty() {
+            // TODO: check label name
+            let name = ln.to_string() + "@base64";
+            url_components.push(name);
+            url_components.push(BASE64_URL_SAFE_NO_PAD.encode(lv));
+        }
+    }
+    let url = url.join(&url_components.join("/"))?;
+
+    let encoder = ProtobufEncoder::new();
+    let mut buf = Vec::new();
+    for mf in prometheus::gather() {
+        // Note: We don't check here for pre-existing grouping labels, as we don't set them
+
+        // Ignore error, `no metrics` and `no name`.
+        let _ = encoder.encode(&[mf], &mut buf);
+    }
+
+    Ok((url, buf))
 }
 
 /// Get the paths to the config file
@@ -257,6 +380,7 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]
@@ -295,5 +419,25 @@ mod tests {
 
         // Check Debug
         assert_debug_snapshot!(deserialized);
+    }
+
+    #[cfg(feature = "prometheus")]
+    #[test]
+    fn test_make_url_and_encoded_metrics() -> Result<()> {
+        use std::str::FromStr;
+
+        let grouping = [
+            ("abc", "xyz"),
+            ("path", "/my/path"),
+            ("tags", "a,b,cde"),
+            ("nogroup", ""),
+        ]
+        .into_iter()
+        .map(|(a, b)| (a.to_string(), b.to_string()))
+        .collect();
+        let (url, _) =
+            make_url_and_encoded_metrics(&Url::from_str("http://host")?, "test_job", grouping)?;
+        assert_eq!(url.to_string(), "http://host/metrics/job@base64/dGVzdF9qb2I/abc@base64/eHl6/path@base64/L215L3BhdGg/tags@base64/YSxiLGNkZQ");
+        Ok(())
     }
 }

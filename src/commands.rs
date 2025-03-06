@@ -216,7 +216,7 @@ impl Configurable<RusticConfig> for EntryPoint {
         // That's why it says `_config`, because it's not read at all and therefore not needed.
         let mut config = self.config.clone();
 
-        // collect "RUSTIC_REPO_OPT*" and "OPENDAL_*" env variables
+        // collect "RUSTIC_REPO_OPT*" and "OPENDAL*" env variables
         for (var, value) in std::env::vars() {
             if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPT_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
@@ -230,10 +230,10 @@ impl Configurable<RusticConfig> for EntryPoint {
             } else if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPTCOLD_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
                 _ = config.repository.be.options_cold.insert(var, value);
-            } else if let Some(var) = var.strip_prefix("OPENDAL_HOT_") {
+            } else if let Some(var) = var.strip_prefix("OPENDALHOT_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
                 _ = config.repository.be.options_hot.insert(var, value);
-            } else if let Some(var) = var.strip_prefix("OPENDAL_COLD_") {
+            } else if let Some(var) = var.strip_prefix("OPENDALCOLD_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
                 _ = config.repository.be.options_cold.insert(var, value);
             }

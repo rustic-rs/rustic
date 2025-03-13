@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.6](https://github.com/rustic-rs/rustic/compare/v0.9.5...v0.9.6) - 2025-03-13
+
+### Added
+
+- push prometheus metrics to pushgateway on-demand ([#1404](https://github.com/rustic-rs/rustic/pull/1404))
+- Allow to use OPENDAL_HOT_* and OPENDAL_COLD_* env variables ([#1392](https://github.com/rustic-rs/rustic/pull/1392))
+
+### Fixed
+
+- fix clippy lints
+- *(config)* set a non-zero default progress interval for progress options ([#1378](https://github.com/rustic-rs/rustic/pull/1378))
+
+### Other
+
+- *(deps)* bump ring from 0.17.8 to 0.17.13 ([#1424](https://github.com/rustic-rs/rustic/pull/1424))
+- Add Homebrew instructions ([#1416](https://github.com/rustic-rs/rustic/pull/1416))
+
 ## [0.9.5](https://github.com/rustic-rs/rustic/compare/v0.9.4...v0.9.5) - 2024-12-02
 
 ### Added

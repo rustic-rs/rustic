@@ -125,7 +125,7 @@ reqwest = { version = "0.12.9", default-features = false, features = ["rustls-tl
 self_update = { version = "=0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.43"
 toml = "0.8"
-zip = { version = "2.2.0", default-features = false, features = ["deflate", "chrono"] }
+zip = { version = "2.3.0", default-features = false, features = ["deflate", "chrono"] }
 
 # filtering
 jaq-core = { version = "2", optional = true }

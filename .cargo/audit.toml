@@ -4,5 +4,5 @@ ignore = [
   # There is no workaround available yet.
   "RUSTSEC-2023-0071",
   # FIXME!: Will be fixed when using ratatui>=0.30 which no longer depends on paste
-  "RUSTSEC-2024-0436"
+  "RUSTSEC-2024-0436",
 ]

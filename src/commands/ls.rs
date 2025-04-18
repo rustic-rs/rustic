@@ -110,7 +110,7 @@ impl NodeLs for Node {
                 NodeType::Symlink { .. } => 'l',
                 NodeType::Chardev { .. } => 'c',
                 NodeType::Dev { .. } => 'b',
-                NodeType::Fifo { .. } => 'p',
+                NodeType::Fifo => 'p',
                 NodeType::Socket => 's',
                 _ => '-',
             },

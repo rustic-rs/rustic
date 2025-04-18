@@ -2,7 +2,7 @@
 ignore = [
   # FIXME!: See https://github.com/RustCrypto/RSA/issues/19#issuecomment-1822995643.
   # There is no workaround available yet.
-  "RUSTSEC-2023-0071"
+  "RUSTSEC-2023-0071",
   # FIXME!: Will be fixed when using ratatui>=0.30 which no longer depends on paste
   "RUSTSEC-2024-0436"
 ]

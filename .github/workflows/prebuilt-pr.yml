@@ -32,6 +32,12 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-pc-windows-gnu
+            architecture: x86_64
+            binary-postfix: ".exe"
+            use-cross: false
           - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin
@@ -65,22 +71,20 @@ jobs:
           - os: ubuntu-latest
             os-name: linux
             target: i686-unknown-linux-gnu
-            architecture: i686
+            architecture: i386
             binary-postfix: ""
             use-cross: true
-          # FIXME: `aws-lc-sys` doesn't cross compile
-          # - os: ubuntu-latest
-          #   os-name: netbsd
-          #   target: x86_64-unknown-netbsd
-          #   architecture: x86_64
-          #   binary-postfix: ""
-          #   use-cross: true
-          # FIXME: `aws-lc-sys` doesn't cross compile
-          # - os: ubuntu-latest
-          #   os-name: linux
-          #   target: armv7-unknown-linux-gnueabihf
-          #   architecture: armv7
-          #   binary-postfix: ""
+          - os: ubuntu-latest
+            os-name: netbsd
+            target: x86_64-unknown-netbsd
+            architecture: x86_64
+            binary-postfix: ""
+            use-cross: true
+          - os: ubuntu-latest
+            os-name: linux
+            target: armv7-unknown-linux-gnueabihf
+            architecture: armv7
+            binary-postfix: ""
             use-cross: true
 
     steps:

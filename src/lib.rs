@@ -6,7 +6,6 @@ Application based on the [Abscissa] framework.
 [Abscissa]: https://github.com/iqlusioninc/abscissa
 */
 
-#![forbid(unsafe_code)]
 #![warn(
     // unreachable_pub, // frequently check
     // TODO: Activate and create better docs

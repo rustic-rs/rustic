@@ -16,7 +16,7 @@ use abscissa_core::fs::remove_file;
 use assert_cmd::Command;
 use predicates::prelude::predicate;
 use rstest::{fixture, rstest};
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 use rustic_testing::TestResult;
 #[fixture]

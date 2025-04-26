@@ -1,4 +1,4 @@
-use super::{layout, Block, Draw, Event, Frame, ProcessEvent, Rect, SizedWidget};
+use super::{Block, Draw, Event, Frame, ProcessEvent, Rect, SizedWidget, layout};
 use layout::Size;
 
 pub struct WithBlock<T> {

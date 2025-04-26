@@ -42,6 +42,7 @@ use crate::commands::mount::MountCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
+    Application, RUSTIC_APP,
     commands::{
         backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
@@ -51,21 +52,20 @@ use crate::{
         tag::TagCmd,
     },
     config::RusticConfig,
-    Application, RUSTIC_APP,
 };
 
 use abscissa_core::{
-    config::Override, terminal::ColorChoice, Command, Configurable, FrameworkError,
-    FrameworkErrorKind, Runnable, Shutdown,
+    Command, Configurable, FrameworkError, FrameworkErrorKind, Runnable, Shutdown,
+    config::Override, terminal::ColorChoice,
 };
 use anyhow::Result;
 use clap::builder::{
-    styling::{AnsiColor, Effects},
     Styles,
+    styling::{AnsiColor, Effects},
 };
 use convert_case::{Case, Casing};
 use human_panic::setup_panic;
-use log::{info, log, Level};
+use log::{Level, info, log};
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 use self::find::FindCmd;

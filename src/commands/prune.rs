@@ -1,7 +1,7 @@
 //! `prune` subcommand
 
 use crate::{
-    helpers::bytes_size_to_string, repository::CliOpenRepo, status_err, Application, RUSTIC_APP,
+    Application, RUSTIC_APP, helpers::bytes_size_to_string, repository::CliOpenRepo, status_err,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
 use log::debug;

@@ -13,7 +13,7 @@ use anyhow::{anyhow, bail};
 use bytesize::ByteSize;
 use derive_more::derive::Display;
 use log::warn;
-use rustic_core::{repofile::SnapshotFile, StringList};
+use rustic_core::{StringList, repofile::SnapshotFile};
 
 use cached::proc_macro::cached;
 use chrono::{DateTime, Local, NaiveTime};
@@ -21,17 +21,17 @@ use conflate::Merge;
 
 #[cfg(feature = "jq")]
 use jaq_core::{
-    load::{Arena, File, Loader},
     Compiler, Ctx, Filter, Native, RcIter,
+    load::{Arena, File, Loader},
 };
 #[cfg(feature = "jq")]
 use jaq_json::Val;
 #[cfg(feature = "rhai")]
-use rhai::{serde::to_dynamic, Dynamic, Engine, FnPtr, AST};
+use rhai::{AST, Dynamic, Engine, FnPtr, serde::to_dynamic};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "jq")]
 use serde_json::Value;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 /// A function to filter snapshots
 ///

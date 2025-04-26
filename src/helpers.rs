@@ -1,6 +1,6 @@
 use bytesize::ByteSize;
 use comfy_table::{
-    presets::ASCII_MARKDOWN, Attribute, Cell, CellAlignment, ContentArrangement, Table,
+    Attribute, Cell, CellAlignment, ContentArrangement, Table, presets::ASCII_MARKDOWN,
 };
 
 /// Helpers for table output

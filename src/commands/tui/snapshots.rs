@@ -9,8 +9,8 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    repofile::{DeleteOption, SnapshotFile},
     IndexedFull, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion, StringList,
+    repofile::{DeleteOption, SnapshotFile},
 };
 use style::palette::tailwind;
 
@@ -21,9 +21,9 @@ use crate::{
             ls::{Snapshot, SnapshotResult},
             tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
-                popup_input, popup_prompt, popup_table, popup_text, Draw, PopUpInput, PopUpPrompt,
-                PopUpTable, PopUpText, ProcessEvent, PromptResult, SelectTable, TextInputResult,
-                WithBlock,
+                Draw, PopUpInput, PopUpPrompt, PopUpTable, PopUpText, ProcessEvent, PromptResult,
+                SelectTable, TextInputResult, WithBlock, popup_input, popup_prompt, popup_table,
+                popup_text,
             },
         },
     },
@@ -74,8 +74,7 @@ enum SnapshotNode {
     Snap(usize),
 }
 
-const INFO_TEXT: &str =
-    "(Esc) quit | (F5) reload snapshots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
+const INFO_TEXT: &str = "(Esc) quit | (F5) reload snapshots | (Enter) show contents | (v) toggle view | (i) show snapshot | (?) show all commands";
 
 const HELP_TEXT: &str = r"General Commands:
   q, Esc : exit
@@ -721,7 +720,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn input(&mut self, event: Event) -> Result<bool> {
-        use KeyCode::{Char, Enter, Esc, Left, Right, F};
+        use KeyCode::{Char, Enter, Esc, F, Left, Right};
         match &mut self.current_screen {
             CurrentScreen::Snapshots => {
                 match event {

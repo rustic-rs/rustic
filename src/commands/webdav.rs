@@ -5,11 +5,11 @@
 
 use std::net::ToSocketAddrs;
 
-use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
-use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
-use anyhow::{anyhow, Result};
+use crate::{Application, RUSTIC_APP, RusticConfig, repository::CliIndexedRepo, status_err};
+use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
+use anyhow::{Result, anyhow};
 use conflate::Merge;
-use dav_server::{warp::dav_handler, DavHandler};
+use dav_server::{DavHandler, warp::dav_handler};
 use serde::{Deserialize, Serialize};
 
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};

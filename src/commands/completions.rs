@@ -6,7 +6,7 @@ use std::io::Write;
 
 use clap::CommandFactory;
 
-use clap_complete::{generate, shells, Generator};
+use clap_complete::{Generator, generate, shells};
 
 /// `completions` subcommand
 #[derive(clap::Parser, Command, Debug)]

@@ -2,24 +2,24 @@
 
 use std::{
     fs::File,
-    io::{copy, Cursor, Read, Seek, SeekFrom, Write},
+    io::{Cursor, Read, Seek, SeekFrom, Write, copy},
     path::PathBuf,
 };
 
-use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use derive_more::FromStr;
-use flate2::{write::GzEncoder, Compression};
+use flate2::{Compression, write::GzEncoder};
 use log::warn;
 use rustic_core::{
+    LsOptions,
     repofile::{Node, NodeType},
     vfs::OpenFile,
-    LsOptions,
 };
 use tar::{Builder, EntryType, Header};
-use zip::{write::SimpleFileOptions, ZipWriter};
+use zip::{ZipWriter, write::SimpleFileOptions};
 
 /// `dump` subcommand
 #[derive(clap::Parser, Command, Debug)]

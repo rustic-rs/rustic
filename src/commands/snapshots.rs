@@ -1,9 +1,10 @@
 //! `smapshot` subcommand
 
 use crate::{
+    Application, RUSTIC_APP,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
     repository::CliOpenRepo,
-    status_err, Application, RUSTIC_APP,
+    status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -13,8 +14,8 @@ use humantime::format_duration;
 use itertools::Itertools;
 
 use rustic_core::{
-    repofile::{DeleteOption, SnapshotFile},
     SnapshotGroupCriterion,
+    repofile::{DeleteOption, SnapshotFile},
 };
 
 #[cfg(feature = "tui")]

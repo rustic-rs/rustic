@@ -1,13 +1,13 @@
 //! `tag` subcommand
 
-use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliOpenRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
 use anyhow::Result;
 use chrono::{Duration, Local};
 
-use rustic_core::{repofile::DeleteOption, StringList};
+use rustic_core::{StringList, repofile::DeleteOption};
 
 /// `tag` subcommand
 #[derive(clap::Parser, Command, Debug)]

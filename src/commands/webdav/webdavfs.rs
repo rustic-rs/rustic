@@ -17,9 +17,9 @@ use dav_server::{
 };
 use futures::FutureExt;
 use rustic_core::{
+    IndexedFull, Repository,
     repofile::Node,
     vfs::{FilePolicy, OpenFile, Vfs},
-    IndexedFull, Repository,
 };
 use tokio::task::spawn_blocking;
 

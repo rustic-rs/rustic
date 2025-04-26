@@ -1,6 +1,6 @@
 //! `key` subcommand
 
-use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliOpenRepo, status_err};
 
 use std::path::PathBuf;
 

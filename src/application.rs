@@ -2,10 +2,10 @@
 use std::{env, process};
 
 use abscissa_core::{
-    application::{self, fatal_error, AppCell},
+    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
+    application::{self, AppCell, fatal_error},
     config::{self, CfgCell},
     terminal::component::Terminal,
-    Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
 };
 
 use anyhow::Result;
@@ -100,7 +100,9 @@ impl Application for RusticApp {
 
         // set all given environment variables
         for (env, value) in &config.global.env {
-            env::set_var(env, value);
+            unsafe {
+                env::set_var(env, value);
+            }
         }
 
         let global_hooks = config.global.hooks.clone();

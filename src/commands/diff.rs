@@ -1,6 +1,6 @@
 //! `diff` subcommand
 
-use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
@@ -11,12 +11,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use rustic_core::{
-    repofile::{Node, NodeType},
     IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
     LsOptions, ReadSource, ReadSourceEntry, Repository, RusticResult,
+    repofile::{Node, NodeType},
 };
 
 /// `diff` subcommand

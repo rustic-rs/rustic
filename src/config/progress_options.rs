@@ -8,7 +8,7 @@ use clap::Parser;
 use conflate::Merge;
 
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 use rustic_core::{Progress, ProgressBars};
 

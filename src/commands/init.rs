@@ -1,10 +1,10 @@
 //! `init` subcommand
 
-use abscissa_core::{status_err, Command, Runnable, Shutdown};
-use anyhow::{bail, Result};
+use abscissa_core::{Command, Runnable, Shutdown, status_err};
+use anyhow::{Result, bail};
 use dialoguer::Password;
 
-use crate::{repository::CliRepo, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliRepo};
 
 use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
 

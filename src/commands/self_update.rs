@@ -2,7 +2,7 @@
 
 use crate::{Application, RUSTIC_APP};
 
-use abscissa_core::{status_err, Command, Runnable, Shutdown};
+use abscissa_core::{Command, Runnable, Shutdown, status_err};
 
 use anyhow::Result;
 

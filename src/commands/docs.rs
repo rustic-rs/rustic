@@ -1,12 +1,12 @@
 //! `docs` subcommand
 
-use abscissa_core::{status_err, Application, Command, Runnable, Shutdown};
+use abscissa_core::{Application, Command, Runnable, Shutdown, status_err};
 use anyhow::Result;
 use clap::Subcommand;
 
 use crate::{
-    application::constants::{RUSTIC_CONFIG_DOCS_URL, RUSTIC_DEV_DOCS_URL, RUSTIC_DOCS_URL},
     RUSTIC_APP,
+    application::constants::{RUSTIC_CONFIG_DOCS_URL, RUSTIC_DEV_DOCS_URL, RUSTIC_DOCS_URL},
 };
 
 #[derive(Command, Debug, Clone, Copy, Default, Subcommand, Runnable)]

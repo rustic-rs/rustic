@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::ops::Deref;
 
 use abscissa_core::Application;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use clap::Parser;
 use conflate::Merge;
 use dialoguer::Password;
@@ -19,8 +19,8 @@ use rustic_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{hooks::Hooks, progress_options::ProgressOptions},
     RUSTIC_APP,
+    config::{hooks::Hooks, progress_options::ProgressOptions},
 };
 
 pub(super) mod constants {

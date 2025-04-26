@@ -1,6 +1,6 @@
 //! `check` subcommand
 
-use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliOpenRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;

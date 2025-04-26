@@ -2,14 +2,14 @@ use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::prelude::*;
 use rustic_core::{
-    repofile::Node, IndexedFull, LocalDestination, LsOptions, ProgressBars, Repository,
-    RestoreOptions, RestorePlan,
+    IndexedFull, LocalDestination, LsOptions, ProgressBars, Repository, RestoreOptions,
+    RestorePlan, repofile::Node,
 };
 
 use crate::{
     commands::tui::widgets::{
-        popup_input, popup_prompt, Draw, PopUpInput, PopUpPrompt, PopUpText, ProcessEvent,
-        PromptResult, TextInputResult,
+        Draw, PopUpInput, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, TextInputResult,
+        popup_input, popup_prompt,
     },
     helpers::bytes_size_to_string,
 };

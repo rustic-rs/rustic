@@ -7,16 +7,16 @@ mod fusefs;
 use fusefs::FuseFS;
 
 use abscissa_core::{
-    config::Override, Command, FrameworkError, FrameworkErrorKind::ParseError, Runnable, Shutdown,
+    Command, FrameworkError, FrameworkErrorKind::ParseError, Runnable, Shutdown, config::Override,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 use conflate::{Merge, MergeFrom};
-use fuse_mt::{mount, FuseMT};
+use fuse_mt::{FuseMT, mount};
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};
 
-use crate::{repository::CliIndexedRepo, status_err, Application, RusticConfig, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, RusticConfig, repository::CliIndexedRepo, status_err};
 
 #[derive(Clone, Debug, Default, Command, Parser, Merge, serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]

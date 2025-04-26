@@ -9,9 +9,9 @@ use std::{
 };
 
 use rustic_core::{
+    IndexedFull, Repository,
     repofile::{Node, NodeType},
     vfs::{FilePolicy, OpenFile, Vfs},
-    IndexedFull, Repository,
 };
 
 use fuse_mt::{

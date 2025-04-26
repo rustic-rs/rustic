@@ -4,15 +4,15 @@ version = "0.9.6"
 authors = ["the rustic-rs team"]
 categories = ["command-line-utilities"]
 documentation = "https://docs.rs/rustic-rs"
-edition = "2021"
+edition = "2024"
 homepage = "https://rustic.cli.rs/"
 include = ["src/**/*", "LICENSE-*", "README.md", "config/**/*"]
 keywords = ["backup", "restic", "deduplication", "encryption", "cli"]
 license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/rustic-rs/rustic"
-resolver = "2"
-rust-version = "1.80.0"
+resolver = "3"
+rust-version = "1.85.0"
 description = """
 rustic - fast, encrypted, deduplicated backups powered by Rust
 """

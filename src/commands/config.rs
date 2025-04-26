@@ -1,6 +1,6 @@
 //! `config` subcommand
 
-use crate::{status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 

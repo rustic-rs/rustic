@@ -1,18 +1,19 @@
 //! `copy` subcommand
 
 use crate::{
+    Application, RUSTIC_APP, RusticConfig,
     commands::init::init_password,
     helpers::table_with_titles,
     repository::{CliIndexedRepo, CliRepo},
-    status_err, Application, RusticConfig, RUSTIC_APP,
+    status_err,
 };
-use abscissa_core::{config::Override, Command, FrameworkError, Runnable, Shutdown};
-use anyhow::{bail, Result};
+use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
+use anyhow::{Result, bail};
 use conflate::Merge;
-use log::{error, info, log, Level};
+use log::{Level, error, info, log};
 use serde::{Deserialize, Serialize};
 
-use rustic_core::{repofile::SnapshotFile, CopySnapshot, Id, KeyOptions};
+use rustic_core::{CopySnapshot, Id, KeyOptions, repofile::SnapshotFile};
 
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
@@ -58,7 +59,9 @@ impl Runnable for CopyCmd {
     fn run(&self) {
         let config = RUSTIC_APP.config();
         if config.copy.targets.is_empty() {
-            status_err!("No target given. Please specify at least 1 target either in the profile or using --target!");
+            status_err!(
+                "No target given. Please specify at least 1 target either in the profile or using --target!"
+            );
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
         if let Err(err) = config.repository.run_indexed(|repo| self.inner_run(repo)) {
@@ -118,7 +121,9 @@ impl CopyCmd {
         };
 
         if repo.config().poly()? != target_repo.config().poly()? {
-            bail!("cannot copy to repository with different chunker parameter (re-chunking not implemented)!");
+            bail!(
+                "cannot copy to repository with different chunker parameter (re-chunking not implemented)!"
+            );
         }
 
         let snaps = target_repo.relevant_copy_snapshots(

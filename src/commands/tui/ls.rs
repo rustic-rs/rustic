@@ -7,9 +7,9 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
+    IndexedFull, ProgressBars, Repository,
     repofile::{Node, SnapshotFile, Tree},
     vfs::OpenFile,
-    IndexedFull, ProgressBars, Repository,
 };
 use style::palette::tailwind;
 
@@ -18,8 +18,8 @@ use crate::commands::{
     tui::{
         restore::Restore,
         widgets::{
-            popup_prompt, popup_scrollable_text, popup_text, Draw, PopUpPrompt, PopUpText,
-            ProcessEvent, PromptResult, SelectTable, TextInputResult, WithBlock,
+            Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, TextInputResult,
+            WithBlock, popup_prompt, popup_scrollable_text, popup_text,
         },
     },
 };
@@ -35,8 +35,7 @@ enum CurrentScreen<'a, P, S> {
     ShowFile(PopUpInput),
 }
 
-const INFO_TEXT: &str =
-    "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
+const INFO_TEXT: &str = "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
 
 const HELP_TEXT: &str = r"
 General Commands:

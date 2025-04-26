@@ -13,16 +13,16 @@ use std::{
     path::PathBuf,
 };
 
-use abscissa_core::{config::Config, path::AbsPathBuf, FrameworkError};
-use anyhow::{anyhow, bail, Result};
+use abscissa_core::{FrameworkError, config::Config, path::AbsPathBuf};
+use anyhow::{Result, anyhow, bail};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
-use log::{debug, Level};
+use log::{Level, debug};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 #[cfg(not(all(feature = "mount", feature = "webdav")))]
 use toml::Value;
 
@@ -239,7 +239,7 @@ impl GlobalOptions {
 
     pub fn push_metrics(&self, job_name: &str, labels: BTreeMap<String, String>) -> Result<()> {
         use prometheus::{Encoder, ProtobufEncoder};
-        use reqwest::{blocking::Client, header::CONTENT_TYPE, StatusCode};
+        use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
 
         // only move on if a prometheus push url is given
         let Some(url) = &self.prometheus else {
@@ -437,7 +437,10 @@ mod tests {
         .collect();
         let (url, _) =
             make_url_and_encoded_metrics(&Url::from_str("http://host")?, "test_job", grouping)?;
-        assert_eq!(url.to_string(), "http://host/metrics/job@base64/dGVzdF9qb2I/abc@base64/eHl6/path@base64/L215L3BhdGg/tags@base64/YSxiLGNkZQ");
+        assert_eq!(
+            url.to_string(),
+            "http://host/metrics/job@base64/dGVzdF9qb2I/abc@base64/eHl6/path@base64/L215L3BhdGg/tags@base64/YSxiLGNkZQ"
+        );
         Ok(())
     }
 }

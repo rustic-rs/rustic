@@ -5,7 +5,7 @@ use rstest::{fixture, rstest};
 use rustic_testing::TestResult;
 use std::{fs::File, path::Path};
 use tar::Archive;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 #[derive(Debug)]
 pub struct TestSource(TempDir);

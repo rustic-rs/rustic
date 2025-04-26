@@ -1,13 +1,13 @@
 //! `merge` subcommand
 
-use crate::{repository::CliOpenRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliOpenRepo, status_err};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use log::info;
 
 use chrono::Local;
 
-use rustic_core::{last_modified_node, repofile::SnapshotFile, SnapshotOptions};
+use rustic_core::{SnapshotOptions, last_modified_node, repofile::SnapshotFile};
 
 /// `merge` subcommand
 #[derive(clap::Parser, Default, Command, Debug)]

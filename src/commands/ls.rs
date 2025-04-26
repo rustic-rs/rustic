@@ -2,14 +2,14 @@
 
 use std::path::Path;
 
-use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 
 use rustic_core::{
-    repofile::{Node, NodeType},
     LsOptions,
+    repofile::{Node, NodeType},
 };
 
 mod constants {

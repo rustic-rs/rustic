@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{repository::CliIndexedRepo, status_err, Application, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -11,8 +11,8 @@ use globset::{Glob, GlobBuilder, GlobSetBuilder};
 use itertools::Itertools;
 
 use rustic_core::{
-    repofile::{Node, SnapshotFile},
     FindMatches, FindNode, SnapshotGroupCriterion,
+    repofile::{Node, SnapshotFile},
 };
 
 use super::ls::print_node;

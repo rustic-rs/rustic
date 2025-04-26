@@ -1,9 +1,10 @@
 //! `repoinfo` subcommand
 
 use crate::{
+    Application, RUSTIC_APP,
     helpers::{bytes_size_to_string, table_right_from},
     repository::CliRepo,
-    status_err, Application, RUSTIC_APP,
+    status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};

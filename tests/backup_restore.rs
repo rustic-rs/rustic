@@ -8,10 +8,10 @@
 //! `cargo nextest run -E 'test(backup)'`.
 
 use dircmp::Comparison;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 use assert_cmd::Command;
-use predicates::prelude::{predicate, PredicateBooleanExt};
+use predicates::prelude::{PredicateBooleanExt, predicate};
 
 mod repositories;
 use repositories::src_snapshot;

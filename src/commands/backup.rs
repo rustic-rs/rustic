@@ -4,15 +4,16 @@ use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
 
 use crate::{
+    Application, RUSTIC_APP,
     commands::{init::init, snapshots::fill_table},
     config::{hooks::Hooks, parse_labels},
     helpers::{bold_cell, bytes_size_to_string, table},
     repository::CliRepo,
-    status_err, Application, RUSTIC_APP,
+    status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::ValueHint;
 use comfy_table::Cell;
 use conflate::Merge;
@@ -21,9 +22,9 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use rustic_core::{
-    repofile::SnapshotFile, BackupOptions, CommandInput, ConfigOptions, IndexedIds, KeyOptions,
-    LocalSourceFilterOptions, LocalSourceSaveOptions, ParentOptions, PathList, ProgressBars,
-    Repository, SnapshotOptions,
+    BackupOptions, CommandInput, ConfigOptions, IndexedIds, KeyOptions, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, ParentOptions, PathList, ProgressBars, Repository, SnapshotOptions,
+    repofile::SnapshotFile,
 };
 
 /// `backup` subcommand
@@ -358,7 +359,9 @@ impl BackupCmd {
             }
             #[cfg(not(feature = "prometheus"))]
             {
-                warn!("not pushing prometheus metrics - this rustic version is compiled without prometheus support");
+                warn!(
+                    "not pushing prometheus metrics - this rustic version is compiled without prometheus support"
+                );
             }
         }
 

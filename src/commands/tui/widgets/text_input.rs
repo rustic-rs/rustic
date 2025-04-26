@@ -69,7 +69,7 @@ impl ProcessEvent for TextInput {
             } else {
                 match (code, modifiers) {
                     (KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q' | 'x'), _) => {
-                        return TextInputResult::Cancel
+                        return TextInputResult::Cancel;
                     }
                     (KeyCode::Home, _) => {
                         self.textarea.move_cursor(CursorMove::Top);

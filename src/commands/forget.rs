@@ -1,16 +1,16 @@
 //! `forget` subcommand
 
 use crate::repository::CliOpenRepo;
-use crate::{helpers::table_with_titles, status_err, Application, RusticConfig, RUSTIC_APP};
+use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, status_err};
 
-use abscissa_core::{config::Override, Shutdown};
 use abscissa_core::{Command, FrameworkError, Runnable};
+use abscissa_core::{Shutdown, config::Override};
 use anyhow::Result;
 
 use chrono::Local;
 use conflate::Merge;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
 

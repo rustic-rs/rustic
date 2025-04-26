@@ -1,7 +1,7 @@
 use super::{
-    layout, style, Color, Constraint, Draw, Event, Frame, KeyCode, KeyEventKind, Layout, Modifier,
-    ProcessEvent, Rect, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, SizedWidget, Style,
-    Stylize, Table, TableState, Text,
+    Color, Constraint, Draw, Event, Frame, KeyCode, KeyEventKind, Layout, Modifier, ProcessEvent,
+    Rect, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, SizedWidget, Style, Stylize, Table,
+    TableState, Text, layout, style,
 };
 use std::iter::once;
 use style::palette::tailwind;

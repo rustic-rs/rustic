@@ -3,10 +3,10 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
 use bytesize::ByteSize;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use rustic_core::{Progress, ProgressBars};
 
-use super::widgets::{popup_gauge, popup_text, Draw};
+use super::widgets::{Draw, popup_gauge, popup_text};
 
 #[derive(Clone)]
 pub struct TuiProgressBars {

@@ -9,7 +9,6 @@ use ratatui::{
 use rustic_core::{
     IndexedFull, ProgressBars, Repository,
     repofile::{Node, SnapshotFile, Tree},
-    vfs::OpenFile,
 };
 use style::palette::tailwind;
 
@@ -215,7 +214,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                         if self.repo.config().is_hot != Some(true) {
                             if let Some(node) = self.selected_node() {
                                 if node.is_file() {
-                                    if let Ok(data) = OpenFile::from_node(self.repo, node).read_at(
+                                    if let Ok(data) = self.repo.open_file(node)?.read_at(
                                         self.repo,
                                         0,
                                         node.meta.size.min(1_000_000).try_into().unwrap(),

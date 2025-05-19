@@ -4,7 +4,7 @@ use crate::{
     Application, RUSTIC_APP, helpers::bytes_size_to_string, repository::CliOpenRepo, status_err,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
-use log::debug;
+use log::{debug, info};
 
 use anyhow::Result;
 
@@ -81,65 +81,63 @@ fn print_stats(stats: &PruneStats) {
         bytes_size_to_string(size_stat.total())
     );
 
-    println!(
+    info!(
         "to repack: {:>10} packs, {:>10} blobs, {:>10}",
         pack_stat.repack,
         blob_stat.repack,
         bytes_size_to_string(size_stat.repack)
     );
-    println!(
+    info!(
         "this removes:                {:>10} blobs, {:>10}",
         blob_stat.repackrm,
         bytes_size_to_string(size_stat.repackrm)
     );
-    println!(
+    info!(
         "to delete: {:>10} packs, {:>10} blobs, {:>10}",
         pack_stat.unused,
         blob_stat.remove,
         bytes_size_to_string(size_stat.remove)
     );
-    if !stats.packs_unref > 0 {
-        println!(
+    if stats.packs_unref > 0 {
+        info!(
             "unindexed: {:>10} packs,         ?? blobs, {:>10}",
             stats.packs_unref,
             bytes_size_to_string(stats.size_unref)
         );
     }
 
-    println!(
+    info!(
         "total prune:                 {:>10} blobs, {:>10}",
         blob_stat.repackrm + blob_stat.remove,
         bytes_size_to_string(size_stat.repackrm + size_stat.remove + stats.size_unref)
     );
-    println!(
+    info!(
         "remaining:                   {:>10} blobs, {:>10}",
         blob_stat.total_after_prune(),
         bytes_size_to_string(size_stat.total_after_prune())
     );
-    println!(
+    info!(
         "unused size after prune: {:>10} ({:.2}% of remaining size)",
         bytes_size_to_string(size_stat.unused_after_prune()),
         size_stat.unused_after_prune() as f64 / size_stat.total_after_prune() as f64 * 100.0
     );
 
-    println!();
-
-    println!(
+    info!(
         "packs marked for deletion: {:>10}, {:>10}",
         stats.packs_to_delete.total(),
         bytes_size_to_string(stats.size_to_delete.total()),
     );
-    println!(
+    info!(
         " - complete deletion:      {:>10}, {:>10}",
         stats.packs_to_delete.remove,
         bytes_size_to_string(stats.size_to_delete.remove),
     );
-    println!(
+    info!(
         " - keep marked:            {:>10}, {:>10}",
         stats.packs_to_delete.keep,
         bytes_size_to_string(stats.size_to_delete.keep),
     );
-    println!(
+    info!(
         " - recover:                {:>10}, {:>10}",
         stats.packs_to_delete.recover,
         bytes_size_to_string(stats.size_to_delete.recover),

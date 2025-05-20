@@ -43,7 +43,7 @@ enum CurrentScreen<'a, P, S> {
     EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
-    Dir(Snapshot<'a, P, S>),
+    Dir(Box<Snapshot<'a, P, S>>),
 }
 
 // status of each snapshot
@@ -748,14 +748,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                 F(5) => self.reread()?,
                                 Enter => {
                                     if let Some(dir) = self.dir()? {
-                                        self.current_screen = CurrentScreen::Dir(dir);
+                                        self.current_screen = CurrentScreen::Dir(Box::new(dir));
                                     }
                                 }
                                 Right => {
                                     if self.extendable() {
                                         self.extend();
                                     } else if let Some(dir) = self.dir()? {
-                                        self.current_screen = CurrentScreen::Dir(dir);
+                                        self.current_screen = CurrentScreen::Dir(Box::new(dir));
                                     }
                                 }
                                 Char('+') => {

@@ -58,7 +58,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
             .arg(&backup)
             .assert()
             .success()
-            .stdout(predicate::str::contains("successfully saved."));
+            .stderr(predicate::str::contains("successfully saved."));
     }
 
     {
@@ -77,8 +77,8 @@ fn test_backup_and_check_passes() -> TestResult<()> {
             .arg(backup)
             .assert()
             .success()
-            .stdout(predicate::str::contains("Added to the repo: 0 B"))
-            .stdout(predicate::str::contains("successfully saved."));
+            .stderr(predicate::str::contains("Added to the repo: 0 B"))
+            .stderr(predicate::str::contains("successfully saved."));
     }
 
     {
@@ -118,7 +118,7 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
             .arg("/")
             .assert()
             .success()
-            .stdout(predicate::str::contains("successfully saved."));
+            .stderr(predicate::str::contains("successfully saved."));
     }
     {
         // Run `restore`

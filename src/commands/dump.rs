@@ -341,7 +341,7 @@ impl Read for OpenFileReader<'_> {
         let data = self
             .repo
             .read_file_at(&self.open_file, self.offset, buf.len())
-            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))?;
+            .map_err(std::io::Error::other)?;
         let n = data.len();
         buf[..n].copy_from_slice(&data);
         self.offset += n;

@@ -29,9 +29,9 @@ use super::widgets::PopUpInput;
 enum CurrentScreen<'a, P, S> {
     Snapshot,
     ShowHelp(PopUpText),
-    Restore(Restore<'a, P, S>),
+    Restore(Box<Restore<'a, P, S>>),
     PromptExit(PopUpPrompt),
-    ShowFile(PopUpInput),
+    ShowFile(Box<PopUpInput>),
 }
 
 const INFO_TEXT: &str = "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
@@ -224,12 +224,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                                             let lines = content.lines().count();
                                             let path = self.path.join(node.name());
                                             let path = path.display();
-                                            self.current_screen =
-                                                CurrentScreen::ShowFile(popup_scrollable_text(
+                                            self.current_screen = CurrentScreen::ShowFile(
+                                                Box::new(popup_scrollable_text(
                                                     format!("{}:/{path}", self.snapshot.id),
                                                     &content,
                                                     (lines + 1).min(40).try_into().unwrap(),
-                                                ));
+                                                )),
+                                            );
                                         }
                                     }
                                 }
@@ -256,7 +257,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                                 format!("{}:/{path}", self.snapshot.id),
                                 &default_target,
                             );
-                            self.current_screen = CurrentScreen::Restore(restore);
+                            self.current_screen = CurrentScreen::Restore(Box::new(restore));
                         }
                     }
                     _ => self.table.input(event),

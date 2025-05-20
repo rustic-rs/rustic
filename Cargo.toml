@@ -49,7 +49,6 @@ test = true
 bench = true
 doc = true
 harness = true
-edition = "2021"
 # required-features = []
 
 [package.metadata.docs.rs]

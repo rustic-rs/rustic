@@ -72,18 +72,20 @@ pub struct RusticConfig {
     pub forget: ForgetOptions,
 
     /// mount options
-    #[clap(skip)]
     #[cfg(feature = "mount")]
+    #[clap(skip)]
     pub mount: MountCmd,
     #[cfg(not(feature = "mount"))]
+    #[clap(skip)]
     #[merge(skip)]
     pub mount: Option<Value>,
 
     /// webdav options
-    #[clap(skip)]
     #[cfg(feature = "webdav")]
+    #[clap(skip)]
     pub webdav: WebDavCmd,
     #[cfg(not(feature = "webdav"))]
+    #[clap(skip)]
     #[merge(skip)]
     pub webdav: Option<Value>,
 }

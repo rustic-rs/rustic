@@ -2,21 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.6](https://github.com/rustic-rs/rustic/compare/v0.9.5...v0.9.6) - 2025-04-18
+
+### Added
+
+- push prometheus metrics to pushgateway on-demand
+  ([#1404](https://github.com/rustic-rs/rustic/pull/1404))
+- Allow to use OPENDALHOT_* and OPENDALCOLD_* env variables
+  ([#1392](https://github.com/rustic-rs/rustic/pull/1392))
+
+### Fixed
+
+- fix clippy lint
+- *(commands)* remove SIGPIPE default handler
+  ([#1431](https://github.com/rustic-rs/rustic/pull/1431))
+- fix clippy lints
+- *(config)* set a non-zero default progress interval for progress options
+  ([#1378](https://github.com/rustic-rs/rustic/pull/1378))
+
+### Other
+
+- *(deps)* bump zip from 2.2.1 to 2.3.0
+  ([#1432](https://github.com/rustic-rs/rustic/pull/1432))
+- *(deps)* bump ring from 0.17.8 to 0.17.13
+  ([#1424](https://github.com/rustic-rs/rustic/pull/1424))
+- Add Homebrew instructions
+  ([#1416](https://github.com/rustic-rs/rustic/pull/1416))
+
 ## [0.9.5](https://github.com/rustic-rs/rustic/compare/v0.9.4...v0.9.5) - 2024-12-02
 
 ### Added
 
-- *(commands)* More dump options ([#1339](https://github.com/rustic-rs/rustic/pull/1339))
-- shut down gracefully with ctrl+c ([#1364](https://github.com/rustic-rs/rustic/pull/1364))
-- Add --filter-jq option ([#1372](https://github.com/rustic-rs/rustic/pull/1372))
-- *(commands)* Add `mount` command ([#973](https://github.com/rustic-rs/rustic/pull/973))
-- Error messages are now much improve 
+- *(commands)* More dump options
+  ([#1339](https://github.com/rustic-rs/rustic/pull/1339))
+- shut down gracefully with ctrl+c
+  ([#1364](https://github.com/rustic-rs/rustic/pull/1364))
+- Add --filter-jq option
+  ([#1372](https://github.com/rustic-rs/rustic/pull/1372))
+- *(commands)* Add `mount` command
+  ([#973](https://github.com/rustic-rs/rustic/pull/973))
+- Error messages are now much improve
   ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.6.0))
 
 ### Fixed
 
-- *(commands)* run backup hooks before checking source dir ([#1374](https://github.com/rustic-rs/rustic/pull/1374))
-- *(commands)* Use spawn_blocking in webdav when calling rustic_core ([#1365](https://github.com/rustic-rs/rustic/pull/1365))
+- *(commands)* run backup hooks before checking source dir
+  ([#1374](https://github.com/rustic-rs/rustic/pull/1374))
+- *(commands)* Use spawn_blocking in webdav when calling rustic_core
+  ([#1365](https://github.com/rustic-rs/rustic/pull/1365))
 - *(forget)* Add minutely timeline
   ([rustic_core](https://github.com/rustic-rs/rustic_core/releases/tag/rustic_core-v0.7.2))
 - *(init)* Prevent overwriting hot repository
@@ -26,53 +59,75 @@ All notable changes to this project will be documented in this file.
 
 - update snapshots to include minutely configuration options
 - *(deps)* update rustic_core, bytes, and libc dependencies to latest versions
-- simplify lifetime annotations in OpenFileReader and TreeIterItem implementations
+- simplify lifetime annotations in OpenFileReader and TreeIterItem
+  implementations
 - clean up whitespace and update clippy linting allowances
 - *(deps)* update dependencies to latest versions
 - *(deps)* update lockfile to get rid of vulnerable `url` version
-- *(mount)* rename fields for clarity, add user options for mount ([#1353](https://github.com/rustic-rs/rustic/pull/1353))
+- *(mount)* rename fields for clarity, add user options for mount
+  ([#1353](https://github.com/rustic-rs/rustic/pull/1353))
 - *(deps)* update dependencies
-- *(deps)* don't use rustic_core webdav feature ([#1367](https://github.com/rustic-rs/rustic/pull/1367))
-- move `webdavfs` from `rustic_core` to `rustic-rs` ([#1363](https://github.com/rustic-rs/rustic/pull/1363))
+- *(deps)* don't use rustic_core webdav feature
+  ([#1367](https://github.com/rustic-rs/rustic/pull/1367))
+- move `webdavfs` from `rustic_core` to `rustic-rs`
+  ([#1363](https://github.com/rustic-rs/rustic/pull/1363))
 - *(clippy)* comment out unused lints in lib.rs
 - *(clippy)* apply fixes automatically
-- use BTreeMap for env in global options ([#1360](https://github.com/rustic-rs/rustic/pull/1360))
-- add tiny framework for testing rustic's compat with latest restic ([#1303](https://github.com/rustic-rs/rustic/pull/1303))
-- use snapshot tests for default config, show-config and completions ([#1359](https://github.com/rustic-rs/rustic/pull/1359))
-- *(deps)* update dependencies rustic_core, rustic_backend, rustic_testing, and migrate to conflate 0.3 ([#1357](https://github.com/rustic-rs/rustic/pull/1357))
+- use BTreeMap for env in global options
+  ([#1360](https://github.com/rustic-rs/rustic/pull/1360))
+- add tiny framework for testing rustic's compat with latest restic
+  ([#1303](https://github.com/rustic-rs/rustic/pull/1303))
+- use snapshot tests for default config, show-config and completions
+  ([#1359](https://github.com/rustic-rs/rustic/pull/1359))
+- *(deps)* update dependencies rustic_core, rustic_backend, rustic_testing, and
+  migrate to conflate 0.3
+  ([#1357](https://github.com/rustic-rs/rustic/pull/1357))
 - fix typos
-- *(build)* add platform-dependent settings and remove ci flag for extra features
-- clarify `--use-profile` command in config by using long form ([#1344](https://github.com/rustic-rs/rustic/pull/1344))
-- *(deps)* update core and testing crates ([#1340](https://github.com/rustic-rs/rustic/pull/1340))
+- *(build)* add platform-dependent settings and remove ci flag for extra
+  features
+- clarify `--use-profile` command in config by using long form
+  ([#1344](https://github.com/rustic-rs/rustic/pull/1344))
+- *(deps)* update core and testing crates
+  ([#1340](https://github.com/rustic-rs/rustic/pull/1340))
 
 ## [0.9.4](https://github.com/rustic-rs/rustic/compare/v0.9.3...v0.9.4) - 2024-10-24
 
 ### Added
 
-- *(commands)* Add tar output to dump command ([#1328](https://github.com/rustic-rs/rustic/pull/1328))
+- *(commands)* Add tar output to dump command
+  ([#1328](https://github.com/rustic-rs/rustic/pull/1328))
 
 ### Fixed
 
-- clippy lints for new Rust version ([#1329](https://github.com/rustic-rs/rustic/pull/1329))
-- *(deps)* downgrade self-update to fix problems finding right target ([#1323](https://github.com/rustic-rs/rustic/pull/1323))
+- clippy lints for new Rust version
+  ([#1329](https://github.com/rustic-rs/rustic/pull/1329))
+- *(deps)* downgrade self-update to fix problems finding right target
+  ([#1323](https://github.com/rustic-rs/rustic/pull/1323))
 
 ### Other
 
-- *(deps)* remove once_cell and replace with std::sync::LazyLock, increase MSRV to 1.80.0 ([#1337](https://github.com/rustic-rs/rustic/pull/1337))
-- *(deps)* update tokio, ratatui, and tui-textarea ([#1336](https://github.com/rustic-rs/rustic/pull/1336))
-- *(deps)* update rustic_core and rustic_backend ([#1334](https://github.com/rustic-rs/rustic/pull/1334))
-- *(deps)* update abscissa framework ([#1330](https://github.com/rustic-rs/rustic/pull/1330))
-- introduce a new feature 'release' that includes the 'self-update' feature ([#1307](https://github.com/rustic-rs/rustic/pull/1307))
+- *(deps)* remove once_cell and replace with std::sync::LazyLock, increase MSRV
+  to 1.80.0 ([#1337](https://github.com/rustic-rs/rustic/pull/1337))
+- *(deps)* update tokio, ratatui, and tui-textarea
+  ([#1336](https://github.com/rustic-rs/rustic/pull/1336))
+- *(deps)* update rustic_core and rustic_backend
+  ([#1334](https://github.com/rustic-rs/rustic/pull/1334))
+- *(deps)* update abscissa framework
+  ([#1330](https://github.com/rustic-rs/rustic/pull/1330))
+- introduce a new feature 'release' that includes the 'self-update' feature
+  ([#1307](https://github.com/rustic-rs/rustic/pull/1307))
 
 ## [0.9.3](https://github.com/rustic-rs/rustic/compare/v0.9.2...v0.9.3) - 2024-10-10
 
 ### Fixed
 
-- *(deps)* update rustic_core to version 0.5.3 ([#1314](https://github.com/rustic-rs/rustic/pull/1314))
+- *(deps)* update rustic_core to version 0.5.3
+  ([#1314](https://github.com/rustic-rs/rustic/pull/1314))
 
 ### Other
 
-- add status badge for docker image build and shorten workflow name ([#1311](https://github.com/rustic-rs/rustic/pull/1311))
+- add status badge for docker image build and shorten workflow name
+  ([#1311](https://github.com/rustic-rs/rustic/pull/1311))
 
 ## [0.9.2](https://github.com/rustic-rs/rustic/compare/v0.9.1...v0.9.2) - 2024-10-09
 
@@ -82,28 +137,39 @@ All notable changes to this project will be documented in this file.
 
 ### Other
 
-- *(deps)* update rustic_core ([#1309](https://github.com/rustic-rs/rustic/pull/1309))
-- build and publish docker image on release ([#1297](https://github.com/rustic-rs/rustic/pull/1297))
+- *(deps)* update rustic_core
+  ([#1309](https://github.com/rustic-rs/rustic/pull/1309))
+- build and publish docker image on release
+  ([#1297](https://github.com/rustic-rs/rustic/pull/1297))
 
 ## [0.9.1](https://github.com/rustic-rs/rustic/compare/v0.9.0...v0.9.1) - 2024-10-03
 
 ### Added
 
-- *(config)* add more filters ([#1263](https://github.com/rustic-rs/rustic/pull/1263))
-- *(check)* Allow to only check trees+packs for given snapshots ([#1230](https://github.com/rustic-rs/rustic/pull/1230))
-- *(commands)* add a `docs` command to easily access the user, dev and config documentation ([#1276](https://github.com/rustic-rs/rustic/pull/1276))
+- *(config)* add more filters
+  ([#1263](https://github.com/rustic-rs/rustic/pull/1263))
+- *(check)* Allow to only check trees+packs for given snapshots
+  ([#1230](https://github.com/rustic-rs/rustic/pull/1230))
+- *(commands)* add a `docs` command to easily access the user, dev and config
+  documentation ([#1276](https://github.com/rustic-rs/rustic/pull/1276))
 
 ### Fixed
 
-- *(docs/cli)* improve the descriptions of the CLI commands ([#1277](https://github.com/rustic-rs/rustic/pull/1277))
-- *(deps)* update rustic_core and other dependencies and fix merge precedence ([#1282](https://github.com/rustic-rs/rustic/pull/1282))
-- *(docs)* update configuration documentation to align with recent changes ([#1280](https://github.com/rustic-rs/rustic/pull/1280))
+- *(docs/cli)* improve the descriptions of the CLI commands
+  ([#1277](https://github.com/rustic-rs/rustic/pull/1277))
+- *(deps)* update rustic_core and other dependencies and fix merge precedence
+  ([#1282](https://github.com/rustic-rs/rustic/pull/1282))
+- *(docs)* update configuration documentation to align with recent changes
+  ([#1280](https://github.com/rustic-rs/rustic/pull/1280))
 
 ### Other
 
-- *(deps)* upgrade dependencies ([#1289](https://github.com/rustic-rs/rustic/pull/1289))
-- add triage label to new issues only if no label has been set when creating it ([#1287](https://github.com/rustic-rs/rustic/pull/1287))
-- *(interactive)* use update methods for refreshing snapshots ([#1285](https://github.com/rustic-rs/rustic/pull/1285))
+- *(deps)* upgrade dependencies
+  ([#1289](https://github.com/rustic-rs/rustic/pull/1289))
+- add triage label to new issues only if no label has been set when creating it
+  ([#1287](https://github.com/rustic-rs/rustic/pull/1287))
+- *(interactive)* use update methods for refreshing snapshots
+  ([#1285](https://github.com/rustic-rs/rustic/pull/1285))
 
 ## [0.9.0](https://github.com/rustic-rs/rustic/compare/v0.8.1...v0.9.0) - 2024-09-29
 

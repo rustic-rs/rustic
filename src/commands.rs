@@ -164,9 +164,13 @@ fn styles() -> Styles {
         .placeholder(AnsiColor::Green.on_default())
 }
 
+fn version() -> &'static str {
+    option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))
+}
+
 /// Entry point for the application. It needs to be a struct to allow using subcommands!
 #[derive(clap::Parser, Command, Debug)]
-#[command(author, about, name="rustic", styles=styles(), version = option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")))]
+#[command(author, about, name="rustic", styles=styles(), version=version())]
 pub struct EntryPoint {
     #[command(flatten)]
     pub config: RusticConfig,
@@ -294,6 +298,8 @@ impl Configurable<RusticConfig> for EntryPoint {
                     WriteLogger::new(level_filter, file_config, file),
                 ])
                 .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
+                info!("rustic {}", version());
+                info!("command: {:?}", std::env::args_os().collect::<Vec<_>>());
             }
         }
 

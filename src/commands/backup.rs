@@ -318,28 +318,28 @@ impl BackupCmd {
             println!("{table}");
         } else if !self.quiet {
             let summary = snap.summary.as_ref().unwrap();
-            println!(
+            info!(
                 "Files:       {} new, {} changed, {} unchanged",
                 summary.files_new, summary.files_changed, summary.files_unmodified
             );
-            println!(
+            info!(
                 "Dirs:        {} new, {} changed, {} unchanged",
                 summary.dirs_new, summary.dirs_changed, summary.dirs_unmodified
             );
             debug!("Data Blobs:  {} new", summary.data_blobs);
             debug!("Tree Blobs:  {} new", summary.tree_blobs);
-            println!(
+            info!(
                 "Added to the repo: {} (raw: {})",
                 bytes_size_to_string(summary.data_added_packed),
                 bytes_size_to_string(summary.data_added)
             );
 
-            println!(
+            info!(
                 "processed {} files, {}",
                 summary.total_files_processed,
                 bytes_size_to_string(summary.total_bytes_processed)
             );
-            println!("snapshot {} successfully saved.", snap.id);
+            info!("snapshot {} successfully saved.", snap.id);
         }
 
         #[cfg(feature = "prometheus")]

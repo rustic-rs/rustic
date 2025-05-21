@@ -6,9 +6,9 @@ use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, s
 use abscissa_core::{Command, FrameworkError, Runnable};
 use abscissa_core::{Shutdown, config::Override};
 use anyhow::Result;
-
 use chrono::Local;
 use conflate::Merge;
+use log::info;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
@@ -150,9 +150,9 @@ impl ForgetCmd {
         let forget_snaps = groups.into_forget_ids();
 
         match (forget_snaps.is_empty(), config.global.dry_run, self.json) {
-            (true, _, false) => println!("nothing to remove"),
+            (true, _, false) => info!("nothing to remove"),
             (false, true, false) => {
-                println!("would have removed the following snapshots:\n {forget_snaps:?}");
+                info!("would have removed the following snapshots:\n {forget_snaps:?}");
             }
             (false, false, _) => {
                 repo.delete_snapshots(&forget_snaps)?;
@@ -177,9 +177,6 @@ impl ForgetCmd {
 /// * `groups` - forget groups to print
 fn print_groups(groups: &ForgetGroups) {
     for ForgetGroup { group, snapshots } in &groups.0 {
-        if !group.is_empty() {
-            println!("snapshots for {group}");
-        }
         let mut table = table_with_titles([
             "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
         ]);
@@ -207,8 +204,10 @@ fn print_groups(groups: &ForgetGroups) {
             ]);
         }
 
-        println!();
-        println!("{table}");
-        println!();
+        if !group.is_empty() {
+            info!("snapshots for {group}:\n{table}");
+        } else {
+            info!("snapshots:\n{table}");
+        }
     }
 }

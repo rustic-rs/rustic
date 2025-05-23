@@ -16,6 +16,7 @@ use log::warn;
 use rustic_core::{
     LsOptions,
     repofile::{Node, NodeType},
+    util::{typed_path_to_path, unix_path_to_path},
     vfs::OpenFile,
 };
 use tar::{Builder, EntryType, Header};
@@ -203,7 +204,7 @@ fn dump_tar(
 
         // handle special files
         if node.is_symlink() {
-            header.set_link_name(node.node_type.to_link())?;
+            header.set_link_name(typed_path_to_path(&node.node_type.to_link())?)?;
         }
         match node.node_type {
             NodeType::Dev { device } | NodeType::Chardev { device } => {
@@ -213,6 +214,7 @@ fn dump_tar(
             _ => {}
         }
 
+        let path = unix_path_to_path(&path)?;
         if node.is_file() {
             // write file content if this is a regular file
             let open_file = OpenFileReader {
@@ -280,6 +282,7 @@ fn write_zip_contents(
             options =
                 options.last_modified_time(mtime.naive_local().try_into().unwrap_or_default());
         }
+        let path = unix_path_to_path(&path)?;
         if node.is_file() {
             zip.start_file_from_path(path, options)?;
             repo.dump(&node, zip)?;

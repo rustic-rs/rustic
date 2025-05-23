@@ -1,7 +1,5 @@
 //! `find` subcommand
 
-use std::path::{Path, PathBuf};
-
 use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -13,6 +11,8 @@ use itertools::Itertools;
 use rustic_core::{
     FindMatches, FindNode, SnapshotGroupCriterion,
     repofile::{Node, SnapshotFile},
+    typed_path::{UnixPath, UnixPathBuf},
+    util::u8_to_path,
 };
 
 use super::ls::print_node;
@@ -30,7 +30,7 @@ pub(crate) struct FindCmd {
 
     /// exact path to find
     #[clap(long, value_name = "PATH", value_hint = ValueHint::AnyPath)]
-    path: Option<PathBuf>,
+    path: Option<UnixPathBuf>,
 
     /// Snapshots to search in. If none is given, use filter options to filter from all snapshots
     #[clap(value_name = "ID")]
@@ -105,8 +105,11 @@ impl FindCmd {
                     _ = builder.add(GlobBuilder::new(glob).case_insensitive(true).build()?);
                 }
                 let globset = builder.build()?;
-                let matches = |path: &Path, _: &Node| {
-                    globset.is_match(path) || path.file_name().is_some_and(|f| globset.is_match(f))
+                let matches = |path: &UnixPath, _: &Node| {
+                    globset.is_match(u8_to_path(path))
+                        || path
+                            .file_name()
+                            .is_some_and(|f| globset.is_match(u8_to_path(f)))
                 };
                 let FindMatches {
                     paths,

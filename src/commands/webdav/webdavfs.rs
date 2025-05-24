@@ -1,5 +1,3 @@
-#[cfg(not(windows))]
-use std::os::unix::ffi::OsStrExt;
 use std::{
     fmt::{Debug, Formatter},
     io::SeekFrom,
@@ -19,6 +17,7 @@ use futures::FutureExt;
 use rustic_core::{
     IndexedFull, Repository,
     repofile::Node,
+    typed_path::UnixPath,
     vfs::{FilePolicy, OpenFile, Vfs},
 };
 use tokio::task::spawn_blocking;
@@ -96,7 +95,7 @@ impl<P: Send + Sync + 'static, S: IndexedFull + Send + Sync + 'static> WebDavFS<
     /// [`Tree`]: crate::repofile::Tree
     async fn node_from_path(&self, path: &DavPath) -> Result<Node, FsError> {
         let inner = self.inner.clone();
-        let path = path.as_pathbuf();
+        let path = UnixPath::new(path.as_bytes()).to_path_buf();
         spawn_blocking(move || {
             inner
                 .vfs
@@ -124,7 +123,7 @@ impl<P: Send + Sync + 'static, S: IndexedFull + Send + Sync + 'static> WebDavFS<
     /// [`Tree`]: crate::repofile::Tree
     async fn dir_entries_from_path(&self, path: &DavPath) -> Result<Vec<Node>, FsError> {
         let inner = self.inner.clone();
-        let path = path.as_pathbuf();
+        let path = UnixPath::new(path.as_bytes()).to_path_buf();
         spawn_blocking(move || {
             inner
                 .vfs
@@ -233,19 +232,8 @@ impl DavDirEntry for DavFsDirEntry {
         .boxed()
     }
 
-    #[cfg(not(windows))]
     fn name(&self) -> Vec<u8> {
-        self.0.name().as_bytes().to_vec()
-    }
-
-    #[cfg(windows)]
-    fn name(&self) -> Vec<u8> {
-        self.0
-            .name()
-            .as_os_str()
-            .to_string_lossy()
-            .to_string()
-            .into_bytes()
+        self.0.name().to_vec()
     }
 }
 

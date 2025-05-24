@@ -1,8 +1,7 @@
-#[cfg(not(windows))]
-use std::os::unix::prelude::OsStrExt;
 use std::{
     collections::BTreeMap,
     ffi::{CString, OsStr},
+    os::unix::ffi::OsStrExt,
     path::Path,
     sync::RwLock,
     time::{Duration, SystemTime},
@@ -11,6 +10,8 @@ use std::{
 use rustic_core::{
     IndexedFull, Repository,
     repofile::{Node, NodeType},
+    typed_path::UnixPathBuf,
+    util::{path_to_unix_path, typed_path_to_unix_path},
     vfs::{FilePolicy, OpenFile, Vfs},
 };
 
@@ -43,13 +44,19 @@ impl<P, S: IndexedFull> FuseFS<P, S> {
 
     fn node_from_path(&self, path: &Path) -> Result<Node, i32> {
         self.vfs
-            .node_from_path(&self.repo, path)
+            .node_from_path(
+                &self.repo,
+                &path_to_unix_path(path).map_err(|_| libc::ENOENT)?,
+            )
             .map_err(|_| libc::ENOENT)
     }
 
     fn dir_entries_from_path(&self, path: &Path) -> Result<Vec<Node>, i32> {
         self.vfs
-            .dir_entries_from_path(&self.repo, path)
+            .dir_entries_from_path(
+                &self.repo,
+                &path_to_unix_path(path).map_err(|_| libc::ENOENT)?,
+            )
             .map_err(|_| libc::ENOENT)
     }
 }
@@ -74,9 +81,9 @@ fn node_type_to_rdev(tpe: &NodeType) -> u32 {
     .unwrap()
 }
 
-fn node_to_linktarget(node: &Node) -> Option<&OsStr> {
+fn node_to_linktarget(node: &Node) -> Option<UnixPathBuf> {
     if node.is_symlink() {
-        Some(node.node_type.to_link().as_os_str())
+        Some(typed_path_to_unix_path(&node.node_type.to_link()).to_path_buf())
     } else {
         None
     }
@@ -187,7 +194,7 @@ impl<P, S: IndexedFull> FilesystemMT for FuseFS<P, S> {
         let result = nodes
             .into_iter()
             .map(|node| DirectoryEntry {
-                name: node.name(),
+                name: OsStr::from_bytes(&node.name()).to_os_string(),
                 kind: node_to_filetype(&node),
             })
             .collect();

@@ -232,19 +232,8 @@ impl DavDirEntry for DavFsDirEntry {
         .boxed()
     }
 
-    #[cfg(not(windows))]
     fn name(&self) -> Vec<u8> {
         self.0.name().to_vec()
-    }
-
-    #[cfg(windows)]
-    fn name(&self) -> Vec<u8> {
-        self.0
-            .name()
-            .as_os_str()
-            .to_string_lossy()
-            .to_string()
-            .into_bytes()
     }
 }
 

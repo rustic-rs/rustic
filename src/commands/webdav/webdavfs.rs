@@ -1,4 +1,3 @@
-#[cfg(not(windows))]
 use std::{
     fmt::{Debug, Formatter},
     io::SeekFrom,

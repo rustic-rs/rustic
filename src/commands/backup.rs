@@ -131,15 +131,15 @@ pub struct BackupCmd {
     #[merge(skip)]
     sources: Vec<String>,
 
-    /// Job name for the Prometheus Pushgateway push. Default: rustic-backup
-    #[clap(long, value_name = "JOB_NAME", env = "RUSTIC_PROMETHEUS_JOB")]
+    /// Job name for the metrics. Default: rustic-backup
+    #[clap(long, value_name = "JOB_NAME", env = "RUSTIC_METRICS_JOB")]
     #[merge(strategy=conflate::option::overwrite_none)]
-    prometheus_job: Option<String>,
+    pub metrics_job: Option<String>,
 
-    /// Additional labels to set to generated Prometheus metrics
+    /// Additional labels to set to generated metrics
     #[clap(long, value_name = "NAME=VALUE", value_parser = parse_labels, default_value = "")]
     #[merge(strategy=conflate::btreemap::append_or_ignore)]
-    prometheus_labels: BTreeMap<String, String>,
+    metrics_labels: BTreeMap<String, String>,
 }
 
 /// Merge backup snapshots to generate
@@ -342,26 +342,15 @@ impl BackupCmd {
             info!("snapshot {} successfully saved.", snap.id);
         }
 
-        #[cfg(feature = "prometheus")]
-        if config.global.is_prometheus_configured() {
-            #[cfg(feature = "prometheus")]
-            {
-                // Merge global prometheus labels
-                conflate::btreemap::append_or_ignore(
-                    &mut self.prometheus_labels,
-                    config.global.prometheus_labels.clone(),
-                );
-                if let Err(err) =
-                    publish_metrics(&snap, self.prometheus_job, self.prometheus_labels)
-                {
-                    warn!("error pushing prometheus metrics: {err}");
-                }
-            }
-            #[cfg(not(feature = "prometheus"))]
-            {
-                warn!(
-                    "not pushing prometheus metrics - this rustic version is compiled without prometheus support"
-                );
+        #[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
+        if config.global.is_metrics_configured() {
+            // Merge global metrics labels
+            conflate::btreemap::append_or_ignore(
+                &mut self.metrics_labels,
+                config.global.metrics_labels.clone(),
+            );
+            if let Err(err) = publish_metrics(&snap, self.metrics_job, self.metrics_labels) {
+                warn!("error pushing metrics: {err}");
             }
         }
 
@@ -370,150 +359,133 @@ impl BackupCmd {
     }
 }
 
-#[cfg(feature = "prometheus")]
+#[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
 fn publish_metrics(
     snap: &SnapshotFile,
     job_name: Option<String>,
     mut labels: BTreeMap<String, String>,
 ) -> Result<()> {
-    use prometheus::register_gauge;
+    use crate::metrics::MetricValue::*;
+    use crate::metrics::{Metric, MetricsExporter};
 
     let summary = snap.summary.as_ref().expect("Reaching the 'push to prometheus' point should only happen for successful backups, which must have a summary set.");
-
-    let metric_time = register_gauge!("rustic_backup_time", "Timestamp of this snapshot",)
-        .context("registering prometheus gauge")?;
-    metric_time.set(snap.time.timestamp_millis() as f64 / 1000.);
-    let metric_files_new = register_gauge!(
-        "rustic_backup_files_new",
-        "New files compared to the last (i.e. parent) snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_files_new.set(summary.files_new as f64);
-    let metric_files_changed = register_gauge!(
-        "rustic_backup_files_changed",
-        "Changed files compared to the last (i.e. parent) snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_files_changed.set(summary.files_changed as f64);
-    let metric_files_unmodified = register_gauge!(
-        "rustic_backup_files_unmodified",
-        "Unchanged files compared to the last (i.e. parent) snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_files_unmodified.set(summary.files_unmodified as f64);
-    let metric_total_files_processed = register_gauge!(
-        "rustic_backup_total_files_processed",
-        "Total processed files",
-    )
-    .context("registering prometheus gauge")?;
-    metric_total_files_processed.set(summary.total_files_processed as f64);
-    let metric_total_bytes_processed = register_gauge!(
-        "rustic_backup_total_bytes_processed",
-        "Total size of all processed files",
-    )
-    .context("registering prometheus gauge")?;
-    metric_total_bytes_processed.set(summary.total_bytes_processed as f64);
-    let metric_dirs_new = register_gauge!(
-        "rustic_backup_dirs_new",
-        "New directories compared to the last (i.e. parent) snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_dirs_new.set(summary.dirs_new as f64);
-    let metric_dirs_changed = register_gauge!(
-        "rustic_backup_dirs_changed",
-        "Changed directories compared to the last (i.e. parent) snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_dirs_changed.set(summary.dirs_changed as f64);
-    let metric_dirs_unmodified = register_gauge!(
-        "rustic_backup_dirs_unmodified",
-        "Unchanged directories compared to the last (i.e. parent) snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_dirs_unmodified.set(summary.dirs_unmodified as f64);
-    let metric_total_dirs_processed = register_gauge!(
-        "rustic_backup_total_dirs_processed",
-        "Total processed directories",
-    )
-    .context("registering prometheus gauge")?;
-    metric_total_dirs_processed.set(summary.total_dirs_processed as f64);
-    let metric_total_dirsize_processed = register_gauge!(
-        "rustic_backup_total_dirsize_processed",
-        "Total number of data blobs added by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_total_dirsize_processed.set(summary.total_dirsize_processed as f64);
-    let metric_data_blobs = register_gauge!(
-        "rustic_backup_data_blobs",
-        "Total size of all processed dirs",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_blobs.set(summary.data_blobs as f64);
-    let metric_tree_blobs = register_gauge!(
-        "rustic_backup_tree_blobs",
-        "Total number of tree blobs added by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_tree_blobs.set(summary.tree_blobs as f64);
-    let metric_data_added = register_gauge!(
-        "rustic_backup_data_added",
-        "Total uncompressed bytes added by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_added.set(summary.data_added as f64);
-    let metric_data_added_packed = register_gauge!(
-        "rustic_backup_data_added_packed",
-        "Total bytes added to the repository by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_added_packed.set(summary.data_added_packed as f64);
-    let metric_data_added_files = register_gauge!(
-        "rustic_backup_data_added_files",
-        "Total uncompressed bytes (new/changed files) added by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_added_files.set(summary.data_added_files as f64);
-    let metric_data_added_files_packed = register_gauge!(
-        "rustic_backup_data_added_files_packed",
-        "Total bytes for new/changed files added to the repository by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_added_files_packed.set(summary.data_added_files_packed as f64);
-    let metric_data_added_trees = register_gauge!(
-        "rustic_backup_data_added_trees",
-        "Total uncompressed bytes (new/changed directories) added by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_added_trees.set(summary.data_added_trees as f64);
-    let metric_data_added_trees_packed = register_gauge!(
-        "rustic_backup_data_added_trees_packed",
-        "Total bytes (new/changed directories) added to the repository by this snapshot",
-    )
-    .context("registering prometheus gauge")?;
-    metric_data_added_trees_packed.set(summary.data_added_trees_packed as f64);
-    let metric_backup_start = register_gauge!(
-        "rustic_backup_backup_start",
-        "Start time of the backup. This may differ from the snapshot `time`.",
-    )
-    .context("registering prometheus gauge")?;
-    metric_backup_start.set(summary.backup_start.timestamp_millis() as f64 / 1000.);
-    let metric_backup_end = register_gauge!(
-        "rustic_backup_backup_end",
-        "The time that the backup has been finished.",
-    )
-    .context("registering prometheus gauge")?;
-    metric_backup_end.set(summary.backup_end.timestamp_millis() as f64 / 1000.);
-    let metric_backup_duration = register_gauge!(
-        "rustic_backup_backup_duration",
-        "Total duration of the backup in seconds, i.e. the time between `backup_start` and `backup_end`",
-    ).context("registering prometheus gauge")?;
-    metric_backup_duration.set(summary.backup_duration);
-    let metric_total_duration = register_gauge!(
-        "rustic_backup_total_duration",
-        "Total duration that the rustic command ran in seconds",
-    )
-    .context("registering prometheus gauge")?;
-    metric_total_duration.set(summary.total_duration);
+    let metrics = [
+        Metric {
+            name: "rustic_backup_time",
+            description: "Timestamp of this snapshot",
+            value: Float(snap.time.timestamp_millis() as f64 / 1000.),
+        },
+        Metric {
+            name: "rustic_backup_files_new",
+            description: "New files compared to the last (i.e. parent) snapshot",
+            value: Int(summary.files_new),
+        },
+        Metric {
+            name: "rustic_backup_files_changed",
+            description: "Changed files compared to the last (i.e. parent) snapshot",
+            value: Int(summary.files_changed),
+        },
+        Metric {
+            name: "rustic_backup_files_unmodified",
+            description: "Unchanged files compared to the last (i.e. parent) snapshot",
+            value: Int(summary.files_unmodified),
+        },
+        Metric {
+            name: "rustic_backup_total_files_processed",
+            description: "Total processed files",
+            value: Int(summary.total_files_processed),
+        },
+        Metric {
+            name: "rustic_backup_total_bytes_processed",
+            description: "Total size of all processed files",
+            value: Int(summary.total_bytes_processed),
+        },
+        Metric {
+            name: "rustic_backup_dirs_new",
+            description: "New directories compared to the last (i.e. parent) snapshot",
+            value: Int(summary.dirs_new),
+        },
+        Metric {
+            name: "rustic_backup_dirs_changed",
+            description: "Changed directories compared to the last (i.e. parent) snapshot",
+            value: Int(summary.dirs_changed),
+        },
+        Metric {
+            name: "rustic_backup_dirs_unmodified",
+            description: "Unchanged directories compared to the last (i.e. parent) snapshot",
+            value: Int(summary.dirs_unmodified),
+        },
+        Metric {
+            name: "rustic_backup_total_dirs_processed",
+            description: "Total processed directories",
+            value: Int(summary.total_dirs_processed),
+        },
+        Metric {
+            name: "rustic_backup_total_dirsize_processed",
+            description: "Total size of all processed dirs",
+            value: Int(summary.total_dirsize_processed),
+        },
+        Metric {
+            name: "rustic_backup_data_blobs",
+            description: "Total number of data blobs added by this snapshot",
+            value: Int(summary.data_blobs),
+        },
+        Metric {
+            name: "rustic_backup_tree_blobs",
+            description: "Total number of tree blobs added by this snapshot",
+            value: Int(summary.tree_blobs),
+        },
+        Metric {
+            name: "rustic_backup_data_added",
+            description: "Total uncompressed bytes added by this snapshot",
+            value: Int(summary.data_added),
+        },
+        Metric {
+            name: "rustic_backup_data_added_packed",
+            description: "Total bytes added to the repository by this snapshot",
+            value: Int(summary.data_added_packed),
+        },
+        Metric {
+            name: "rustic_backup_data_added_files",
+            description: "Total uncompressed bytes (new/changed files) added by this snapshot",
+            value: Int(summary.data_added_files),
+        },
+        Metric {
+            name: "rustic_backup_data_added_files_packed",
+            description: "Total bytes for new/changed files added to the repository by this snapshot",
+            value: Int(summary.data_added_files_packed),
+        },
+        Metric {
+            name: "rustic_backup_data_added_trees",
+            description: "Total uncompressed bytes (new/changed directories) added by this snapshot",
+            value: Int(summary.data_added_trees),
+        },
+        Metric {
+            name: "rustic_backup_data_added_trees_packed",
+            description: "Total bytes (new/changed directories) added to the repository by this snapshot",
+            value: Int(summary.data_added_trees_packed),
+        },
+        Metric {
+            name: "rustic_backup_backup_start",
+            description: "Start time of the backup. This may differ from the snapshot `time`.",
+            value: Float(summary.backup_start.timestamp_millis() as f64 / 1000.),
+        },
+        Metric {
+            name: "rustic_backup_backup_end",
+            description: "The time that the backup has been finished.",
+            value: Float(summary.backup_end.timestamp_millis() as f64 / 1000.),
+        },
+        Metric {
+            name: "rustic_backup_backup_duration",
+            description: "Total duration of the backup in seconds, i.e. the time between `backup_start` and `backup_end`",
+            value: Float(summary.backup_duration),
+        },
+        Metric {
+            name: "rustic_backup_total_duration",
+            description: "Total duration that the rustic command ran in seconds",
+            value: Float(summary.total_duration),
+        },
+    ];
 
     _ = labels
         .entry("paths".to_string())
@@ -529,5 +501,39 @@ fn publish_metrics(
         .or_insert_with(|| format!("{}", snap.tags));
 
     let job_name = job_name.as_deref().unwrap_or("rustic_backup");
-    RUSTIC_APP.config().global.push_metrics(job_name, labels)
+    let global_config = &RUSTIC_APP.config().global;
+
+    #[cfg(feature = "prometheus")]
+    if let Some(prometheus_endpoint) = &global_config.prometheus {
+        use crate::metrics::prometheus::PrometheusExporter;
+
+        let metrics_exporter = PrometheusExporter {
+            endpoint: prometheus_endpoint.clone(),
+            job_name: job_name.to_string(),
+            grouping: labels.clone(),
+            prometheus_user: global_config.prometheus_user.clone(),
+            prometheus_pass: global_config.prometheus_pass.clone(),
+        };
+
+        metrics_exporter
+            .push_metrics(metrics.as_slice())
+            .context("pushing prometheus metrics")?;
+    }
+
+    #[cfg(feature = "opentelemetry")]
+    if let Some(otlp_endpoint) = &global_config.opentelemetry {
+        use crate::metrics::opentelemetry::OpentelemetryExporter;
+
+        let metrics_exporter = OpentelemetryExporter {
+            endpoint: otlp_endpoint.clone(),
+            service_name: job_name.to_string(),
+            labels: global_config.metrics_labels.clone(),
+        };
+
+        metrics_exporter
+            .push_metrics(metrics.as_slice())
+            .context("pushing opentelemetry metrics")?;
+    }
+
+    Ok(())
 }

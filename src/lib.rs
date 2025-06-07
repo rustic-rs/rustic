@@ -65,6 +65,8 @@ pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod filtering;
 pub(crate) mod helpers;
+#[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
+pub(crate) mod metrics;
 pub(crate) mod repository;
 
 // rustic_cli Public API

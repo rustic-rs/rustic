@@ -18,7 +18,7 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 """
 
 [features]
-default = ["jq", "prometheus", "rhai", "tui", "webdav"]
+default = ["jq", "prometheus", "opentelemetry", "rhai", "tui", "webdav"]
 release = ["default", "self-update"]
 
 # Allocators
@@ -28,6 +28,7 @@ jemallocator = ["dep:jemallocator-global"]
 # Commands
 mount = ["dep:fuse_mt"]
 prometheus = ["dep:prometheus", "dep:base64"]
+opentelemetry = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:opentelemetry_sdk"]
 self-update = ["dep:self_update", "dep:semver"]
 tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = [
@@ -131,6 +132,9 @@ jaq-core = { version = "2", optional = true }
 jaq-json = { version = "1", features = ["serde_json"], optional = true }
 jaq-std = { version = "2", optional = true }
 rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"], optional = true }
+opentelemetry = {version = "0.30.0", default-features = false, features = ["metrics"], optional = true}
+opentelemetry-otlp = {version = "0.30.0", features = ["metrics"], optional = true}
+opentelemetry_sdk = {version = "0.30.0", default-features = false, features = ["metrics"], optional = true}
 
 [dev-dependencies]
 abscissa_core = { version = "0.8.1", default-features = false, features = ["testing"] }

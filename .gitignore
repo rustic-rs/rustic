@@ -5,6 +5,7 @@ mutants.out
 cargo-test*
 coverage/*lcov
 .testscompletions-*
+.DS_Store
 
 # Ignore generated test files
 /tests/generated/*.toml

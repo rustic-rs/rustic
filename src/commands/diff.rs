@@ -26,9 +26,9 @@ pub(crate) struct DiffCmd {
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
     snap1: String,
 
-    /// New snapshot/path or local path [default for PATH2: PATH1]
+    /// New snapshot/path (uses PATH2 = PATH1, if not given; uses local path if no snapshot is given)
     #[clap(value_name = "SNAPSHOT2[:PATH2]|PATH2", value_hint = ValueHint::AnyPath)]
-    snap2: String,
+    snap2: Option<String>,
 
     /// show differences in metadata
     #[clap(long)]
@@ -65,7 +65,10 @@ impl DiffCmd {
         let config = RUSTIC_APP.config();
 
         let (id1, path1) = arg_to_snap_path(&self.snap1, "");
-        let (id2, path2) = arg_to_snap_path(&self.snap2, path1);
+        let (id2, path2) = self
+            .snap2
+            .as_ref()
+            .map_or((None, path1), |snap2| arg_to_snap_path(snap2, path1));
 
         match (id1, id2) {
             (Some(id1), Some(id2)) => {

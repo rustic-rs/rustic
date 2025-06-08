@@ -235,8 +235,7 @@ See [Global Hooks](#global-hooks-globalhooks).
 
 ### Backup Metrics lables `[backup.metrics-labels]`
 
-See
-[Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
+See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 
 ### Backup Snapshots `[[backup.snapshots]]`
 

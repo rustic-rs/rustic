@@ -70,6 +70,6 @@ impl MetricsExporter for OpentelemetryExporter {
         }
 
         meter_provider.shutdown()?;
-        return Ok(());
+        Ok(())
     }
 }

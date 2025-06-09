@@ -1,6 +1,6 @@
 [package]
 name = "rustic-rs"
-version = "0.9.5"
+version = "0.9.6"
 authors = ["the rustic-rs team"]
 categories = ["command-line-utilities"]
 documentation = "https://docs.rs/rustic-rs"

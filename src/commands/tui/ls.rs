@@ -1,5 +1,3 @@
-use std::path::{Path, PathBuf};
-
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{
@@ -9,6 +7,7 @@ use ratatui::{
 use rustic_core::{
     IndexedFull, ProgressBars, Repository,
     repofile::{Node, SnapshotFile, Tree},
+    typed_path::{UnixPath, UnixPathBuf},
 };
 use style::palette::tailwind;
 
@@ -55,7 +54,7 @@ pub(crate) struct Snapshot<'a, P, S> {
     table: WithBlock<SelectTable>,
     repo: &'a Repository<P, S>,
     snapshot: SnapshotFile,
-    path: PathBuf,
+    path: UnixPathBuf,
     trees: Vec<(Tree, usize)>, // Stack of parent trees with position
     tree: Tree,
 }
@@ -80,7 +79,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             table: WithBlock::new(SelectTable::new(header), Block::new()),
             repo,
             snapshot,
-            path: PathBuf::new(),
+            path: UnixPathBuf::new(),
             trees: Vec::new(),
             tree,
         };
@@ -104,7 +103,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                 node.meta.group.clone().unwrap_or_else(|| "?".to_string()),
             )
         };
-        let name = node.name().to_string_lossy().to_string();
+        let name = String::from_utf8_lossy(&node.name()).to_string();
         let size = node.meta.size.to_string();
         let mtime = node.meta.mtime.map_or_else(
             || "?".to_string(),
@@ -243,7 +242,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                                 .snapshot
                                 .paths
                                 .iter()
-                                .any(|p| Path::new(p).is_absolute());
+                                .any(|p| UnixPath::new(p).is_absolute());
                             let path = self.path.join(node.name());
                             let path = path.display();
                             let default_target = if is_absolute {

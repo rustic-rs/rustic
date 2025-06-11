@@ -3318,13 +3318,13 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plist"
-version = "1.7.1"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eac26e981c03a6e53e0aee43c113e3202f5581d5360dae7bd2c70e800dd0451d"
+checksum = "3d77244ce2d584cd84f6a15f86195b8c9b2a0dfbfd817c09e0464244091a58ed"
 dependencies = [
  "base64 0.22.1",
  "indexmap 2.9.0",
- "quick-xml 0.32.0",
+ "quick-xml 0.37.5",
  "serde",
  "time",
 ]
@@ -3482,7 +3482,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.102",
@@ -3528,15 +3528,6 @@ name = "quick-xml"
 version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11bafc859c6815fbaffbbbf4229ecb767ac913fecb27f9ad4343662e9ef099ea"
-dependencies = [
- "memchr",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.32.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d3a6e5838b60e0e8fa7a43f22ade549a37d61f8bdbe636d0d7816191de969c2"
 dependencies = [
  "memchr",
 ]
@@ -4191,7 +4182,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.2"
-source = "git+https://github.com/rustic-rs/rustic_core.git#40261b4af6a93cd41dc9200916eadc892c42dbaa"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=typed_path#e4242902c4f5c8e53ecd1528762fda67c81397e9"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4230,7 +4221,7 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.7.3"
-source = "git+https://github.com/rustic-rs/rustic_core.git#40261b4af6a93cd41dc9200916eadc892c42dbaa"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=typed_path#e4242902c4f5c8e53ecd1528762fda67c81397e9"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4253,6 +4244,7 @@ dependencies = [
  "enumset",
  "filetime",
  "gethostname 1.0.2",
+ "globset",
  "hex",
  "humantime",
  "ignore",
@@ -4277,6 +4269,7 @@ dependencies = [
  "shell-words",
  "strum 0.27.1",
  "thiserror 2.0.12",
+ "typed-path",
  "walkdir",
  "xattr",
  "zstd",
@@ -4285,7 +4278,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.3.2"
-source = "git+https://github.com/rustic-rs/rustic_core.git#40261b4af6a93cd41dc9200916eadc892c42dbaa"
+source = "git+https://github.com/rustic-rs/rustic_core.git?branch=typed_path#e4242902c4f5c8e53ecd1528762fda67c81397e9"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5865,7 +5858,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

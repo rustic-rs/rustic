@@ -1,7 +1,5 @@
 //! `ls` subcommand
 
-use std::path::Path;
-
 use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -10,6 +8,7 @@ use anyhow::Result;
 use rustic_core::{
     LsOptions,
     repofile::{Node, NodeType},
+    typed_path::UnixPath,
 };
 
 mod constants {
@@ -153,7 +152,7 @@ impl LsCmd {
                 if !first_item {
                     print!(",");
                 }
-                print!("{}", serde_json::to_string(&path)?);
+                print!("{}", path.display());
             } else if self.long {
                 print_node(&node, &path, self.numeric_id);
             } else {
@@ -183,7 +182,7 @@ impl LsCmd {
 ///
 /// * `node` - the node to print
 /// * `path` - the path of the node
-pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
+pub fn print_node(node: &Node, path: &UnixPath, numeric_uid_gid: bool) {
     println!(
         "{:>10} {:>8} {:>8} {:>9} {:>17} {path:?} {}",
         node.mode_str(),

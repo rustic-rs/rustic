@@ -6,10 +6,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
 use log::debug;
 
-use std::{
-    fmt::Display,
-    path::{Path, PathBuf},
-};
+use std::{fmt::Display, path::PathBuf};
 
 use anyhow::{Context, Result, bail};
 
@@ -17,6 +14,8 @@ use rustic_core::{
     IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
     LsOptions, ReadSource, ReadSourceEntry, Repository, RusticResult,
     repofile::{Node, NodeType},
+    typed_path::{UnixPath, UnixPathBuf},
+    util::path_to_unix_path,
 };
 
 /// `diff` subcommand
@@ -97,6 +96,7 @@ impl DiffCmd {
                 let node1 = repo.node_from_snapshot_and_path(&snap1, path1)?;
                 let local = LocalDestination::new(path2, false, !node1.is_dir())?;
                 let path2 = PathBuf::from(path2);
+                let path2_unix = path_to_unix_path(&path2)?;
                 let is_dir = path2
                     .metadata()
                     .with_context(|| format!("Error accessing {path2:?}"))?
@@ -111,10 +111,10 @@ impl DiffCmd {
                     let ReadSourceEntry { path, node, .. } = item?;
                     let path = if is_dir {
                         // remove given path prefix for dirs as local path
-                        path.strip_prefix(&path2).unwrap().to_path_buf()
+                        path.strip_prefix(&path2_unix).unwrap().to_path_buf()
                     } else {
                         // ensure that we really get the filename if local path is a file
-                        path2.file_name().unwrap().into()
+                        path2_unix.file_name().unwrap().into()
                     };
                     Ok((path, node))
                 });
@@ -190,7 +190,7 @@ fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>
 fn identical_content_local<P, S: IndexedFull>(
     local: &LocalDestination,
     repo: &Repository<P, S>,
-    path: &Path,
+    path: &UnixPath,
     node: &Node,
 ) -> Result<bool> {
     let Some(mut open_file) = local.get_matching_file(path, node.meta.size) else {
@@ -317,10 +317,10 @@ impl Display for DiffStatistics {
 ///
 // TODO!: add errors!
 fn diff(
-    mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
-    mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    mut tree_streamer1: impl Iterator<Item = RusticResult<(UnixPathBuf, Node)>>,
+    mut tree_streamer2: impl Iterator<Item = RusticResult<(UnixPathBuf, Node)>>,
     no_content: bool,
-    file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
+    file_identical: impl Fn(&UnixPath, &Node, &Node) -> Result<bool>,
     metadata: bool,
 ) -> Result<()> {
     let mut item1 = tree_streamer1.next().transpose()?;
@@ -393,9 +393,9 @@ fn diff(
 }
 
 fn diff_identical(
-    mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
-    mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
-    file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
+    mut tree_streamer1: impl Iterator<Item = RusticResult<(UnixPathBuf, Node)>>,
+    mut tree_streamer2: impl Iterator<Item = RusticResult<(UnixPathBuf, Node)>>,
+    file_identical: impl Fn(&UnixPath, &Node, &Node) -> Result<bool>,
 ) -> Result<()> {
     let mut item1 = tree_streamer1.next().transpose()?;
     let mut item2 = tree_streamer2.next().transpose()?;

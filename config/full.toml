@@ -52,6 +52,7 @@ cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g
 warm-up = false
 warm-up-command = "warmup.sh %id" # Default: not set
 warm-up-wait = "10min" # Default: not set
+warm-up-wait-command = "warmup_wait.sh" # Default: not set
 
 # Additional repository options - depending on backend. These can be only set in the config file or using env variables.
 # For env variables use upper snake case and prefix with "RUSTIC_REPO_OPT_", e.g. `use-passwort = "true"` becomes
@@ -136,7 +137,7 @@ json = false
 init = false
 no-scan = false
 quiet = false
-skip-identical-parent = false
+skip-if-unchanged = false
 prometheus-job = "my-backup-jobs" # Only used if global prometheus option is set; default: not set
 
 # Backup hooks: The given commands are called for the `backup` command
@@ -211,6 +212,7 @@ keep-within-monthly = "1 year"
 keep-within-quarter-yearly = "0 year"
 keep-within-half-yearly = "1 year"
 keep-within-yearly = "10 years"
+delete-unchanged = false
 
 [copy]
 targets = ["profile1", "profile2"] # Default: []

@@ -49,13 +49,13 @@ fn setup() -> TestResult<TempDir> {
 #[test]
 fn test_backup_and_check_passes() -> TestResult<()> {
     let temp_dir = setup()?;
-    let backup = src_snapshot()?.into_path().into_path();
+    let backup = src_snapshot()?.into_path();
 
     {
         // Run `backup` for the first time
         rustic_runner(&temp_dir)?
             .arg("backup")
-            .arg(&backup)
+            .arg(backup.path())
             .assert()
             .success()
             .stderr(predicate::str::contains("successfully saved."));
@@ -74,7 +74,7 @@ fn test_backup_and_check_passes() -> TestResult<()> {
         // Run `backup` a second time
         rustic_runner(&temp_dir)?
             .arg("backup")
-            .arg(backup)
+            .arg(backup.path())
             .assert()
             .success()
             .stderr(predicate::str::contains("Added to the repo: 0 B"))
@@ -107,13 +107,13 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;
     let restore_dir = temp_dir.path().join("restore");
-    let backup_files = src_snapshot()?.into_path().into_path();
+    let backup_files = src_snapshot()?.into_path();
 
     {
         // Run `backup` for the first time
         rustic_runner(&temp_dir)?
             .arg("backup")
-            .arg(&backup_files)
+            .arg(backup_files.path())
             .arg("--as-path")
             .arg("/")
             .assert()
@@ -132,7 +132,7 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
     }
 
     // Compare the backup and the restored directory
-    let compare_result = Comparison::default().compare(&backup_files, &restore_dir)?;
+    let compare_result = Comparison::default().compare(backup_files.path(), &restore_dir)?;
 
     // no differences
     assert!(compare_result.is_empty());

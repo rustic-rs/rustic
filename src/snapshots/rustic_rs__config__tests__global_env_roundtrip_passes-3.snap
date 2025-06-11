@@ -53,6 +53,7 @@ RusticConfig {
             cache_dir: None,
             warm_up: false,
             warm_up_command: None,
+            warm_up_wait_command: None,
             warm_up_wait: None,
         },
         hooks: Hooks {
@@ -94,7 +95,7 @@ RusticConfig {
         parent_opts: ParentOptions {
             group_by: None,
             parent: None,
-            skip_identical_parent: false,
+            skip_if_unchanged: false,
             force: false,
             ignore_ctime: false,
             ignore_inode: false,
@@ -202,6 +203,7 @@ RusticConfig {
             keep_within_half_yearly: None,
             keep_within_yearly: None,
             keep_none: false,
+            delete_unchanged: false,
         },
     },
     mount: None,

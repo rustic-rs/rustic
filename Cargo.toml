@@ -144,7 +144,7 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.23"
-rustic_testing = "0.3.2"
+rustic_testing = { git = "https://github.com/rustic-rs/rustic_core.git" }
 tar = "0.4.43"
 tempfile = "3.14"
 toml = "0.8"

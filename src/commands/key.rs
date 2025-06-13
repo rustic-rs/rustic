@@ -157,8 +157,8 @@ impl ListCmd {
 
 #[derive(clap::Parser, Debug)]
 pub(crate) struct RemoveCmd {
-    /// The key is to remove
-    id: String,
+    /// The keys to remove
+    ids: Vec<String>,
 }
 
 impl Runnable for RemoveCmd {
@@ -176,8 +176,11 @@ impl Runnable for RemoveCmd {
 
 impl RemoveCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
-        repo.delete_key(&self.id)?;
-        info!("key {} successfully removed.", self.id);
+        let ids = repo.find_ids(&self.ids)?;
+        for id in ids {
+            repo.delete_key(&id)?;
+            info!("key {} successfully removed.", id);
+        }
         Ok(())
     }
 }
@@ -215,7 +218,7 @@ impl PasswordCmd {
         let old_key = *repo.key_id();
         // re-open repository using new password
         let repo = repo.open_with_password(&pass)?;
-        repo.delete_key(&old_key.to_string())?;
+        repo.delete_key(&old_key)?;
         info!("key {old_key} successfully removed.");
 
         Ok(())

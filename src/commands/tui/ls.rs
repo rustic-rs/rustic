@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
@@ -7,7 +10,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, ProgressBars, Repository,
+    IndexedFull, ProgressBars, Repository, RusticResult, TreeId,
     repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
@@ -45,6 +48,7 @@ General Commands:
           v : view file contents (text files only, up to 1MiB)
           r : restore selected item
           n : toggle numeric IDs
+          s : compute cumulative summary
           ? : show this help page
 
  ";
@@ -56,8 +60,10 @@ pub(crate) struct Snapshot<'a, P, S> {
     repo: &'a Repository<P, S>,
     snapshot: SnapshotFile,
     path: PathBuf,
-    trees: Vec<(Tree, usize)>, // Stack of parent trees with position
+    trees: Vec<(Tree, TreeId, usize)>, // Stack of parent trees with position
     tree: Tree,
+    tree_id: TreeId,
+    summary: BTreeMap<TreeId, Summary>,
 }
 
 pub enum SnapshotResult {
@@ -73,7 +79,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             .map(Text::from)
             .collect();
 
-        let tree = repo.get_tree(&snapshot.tree)?;
+        let tree_id = snapshot.tree;
+        let tree = repo.get_tree(&tree_id)?;
         let mut app = Self {
             current_screen: CurrentScreen::Snapshot,
             numeric: false,
@@ -83,6 +90,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             path: PathBuf::new(),
             trees: Vec::new(),
             tree,
+            tree_id,
+            summary: BTreeMap::new(),
         };
         app.update_table();
         Ok(app)
@@ -129,8 +138,19 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         let mut rows = Vec::new();
         let mut summary = Summary::default();
         for node in &self.tree.nodes {
-            summary.update(node);
-            let row = self.ls_row(node);
+            let mut node = node.clone();
+            if node.is_dir() {
+                let id = node.subtree.unwrap();
+                if let Some(sum) = self.summary.get(&id) {
+                    summary += *sum;
+                    node.meta.size = sum.size;
+                } else {
+                    summary.update(&node);
+                }
+            } else {
+                summary.update(&node);
+            }
+            let row = self.ls_row(&node);
             rows.push(row);
         }
 
@@ -161,8 +181,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             if node.is_dir() {
                 self.path.push(node.name());
                 let tree = self.tree.clone();
-                self.tree = self.repo.get_tree(&node.subtree.unwrap())?;
-                self.trees.push((tree, idx));
+                let tree_id = self.tree_id;
+                self.tree_id = node.subtree.unwrap();
+                self.tree = self.repo.get_tree(&self.tree_id)?;
+                self.trees.push((tree, tree_id, idx));
             }
         }
         self.table.widget.set_to(0);
@@ -172,8 +194,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
 
     pub fn goback(&mut self) -> bool {
         _ = self.path.pop();
-        if let Some((tree, idx)) = self.trees.pop() {
+        if let Some((tree, tree_id, idx)) = self.trees.pop() {
             self.tree = tree;
+            self.tree_id = tree_id;
             self.table.widget.set_to(idx);
             self.update_table();
             false
@@ -184,6 +207,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
 
     pub fn toggle_numeric(&mut self) {
         self.numeric = !self.numeric;
+        self.update_table();
+    }
+
+    pub fn compute_sizes(&mut self) {
+        let _ = compute_tree_sizes(self.repo, &self.tree, self.tree_id, &mut self.summary).unwrap();
         self.update_table();
     }
 
@@ -209,6 +237,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
+                    Char('s') => self.compute_sizes(),
                     Char('v') => {
                         // viewing is not supported on cold repositories
                         if self.repo.config().is_hot != Some(true) {
@@ -318,4 +347,29 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             CurrentScreen::ShowFile(popup) => popup.draw(area, f),
         }
     }
+}
+
+fn compute_tree_sizes<P, S>(
+    repo: &'_ Repository<P, S>,
+    tree: &Tree,
+    id: TreeId,
+    sizes: &mut BTreeMap<TreeId, Summary>,
+) -> RusticResult<Summary>
+where
+    S: IndexedFull,
+{
+    if let Some(summary) = sizes.get(&id) {
+        return Ok(*summary);
+    }
+    let mut summary = Summary::default();
+    for node in &tree.nodes {
+        summary.update(node);
+        if node.is_dir() {
+            let id = node.subtree.unwrap();
+            let tree = repo.get_tree(&id)?;
+            summary += compute_tree_sizes(repo, &tree, id, sizes)?;
+        }
+    }
+    _ = sizes.insert(id, summary);
+    Ok(summary)
 }

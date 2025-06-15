@@ -1,6 +1,9 @@
 //! `ls` subcommand
 
-use std::path::Path;
+use std::{
+    ops::{Add, AddAssign},
+    path::Path,
+};
 
 use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
@@ -72,11 +75,28 @@ impl Runnable for LsCmd {
 /// Summary of a ls command
 ///
 /// This struct is used to print a summary of the ls command.
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct Summary {
     pub files: usize,
     pub size: u64,
     pub dirs: usize,
+}
+
+impl AddAssign for Summary {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl Add for Summary {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            files: self.files + rhs.files,
+            size: self.size + rhs.size,
+            dirs: self.dirs + rhs.dirs,
+        }
+    }
 }
 
 impl Summary {

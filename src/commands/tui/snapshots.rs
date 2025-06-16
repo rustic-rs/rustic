@@ -18,6 +18,7 @@ use crate::{
     commands::{
         snapshots::{fill_table, snap_to_table},
         tui::{
+            diff::{Diff, DiffResult},
             ls::{Snapshot, SnapshotResult},
             tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
@@ -44,6 +45,7 @@ enum CurrentScreen<'a, P, S> {
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
     Dir(Box<Snapshot<'a, P, S>>),
+    Diff(Box<Diff<'a, P, S>>),
 }
 
 // status of each snapshot
@@ -101,6 +103,7 @@ const HELP_TEXT: &str = r"General Commands:
   Ctrl-l : remove label for snapshot(s)
        d : set description for snapshot(s)
   Ctrl-d : remove description for snapshot(s)
+       D : diff snapshots if 2 snapshots are selected
        t : add tag(s) for snapshot(s)
   Ctrl-t : remove all tags for snapshot(s)
        s : set tag(s) for snapshot(s)
@@ -484,6 +487,22 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         })
     }
 
+    pub fn diff(&self) -> Result<Option<Diff<'a, P, S>>> {
+        if self.count_marked_snaps() != 2 {
+            return Ok(None);
+        }
+
+        let snaps: Vec<_> = self
+            .snapshots
+            .iter()
+            .zip(self.snaps_status.iter())
+            .filter_map(|(snap, status)| status.marked.then_some(snap))
+            .collect();
+        let left = snaps[0].tree;
+        let right = snaps[1].tree;
+        Some(Diff::new(self.repo, left, right)).transpose()
+    }
+
     pub fn count_marked_snaps(&self) -> usize {
         self.snaps_status.iter().filter(|s| s.marked).count()
     }
@@ -805,6 +824,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                                             5,
                                         ));
                                 }
+                                Char('D') => {
+                                    if let Some(diff) = self.diff()? {
+                                        self.current_screen = CurrentScreen::Diff(Box::new(diff));
+                                    }
+                                }
                                 Char('t') => {
                                     self.current_screen = CurrentScreen::EnterAddTags(popup_input(
                                         "add tags",
@@ -885,6 +909,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 SnapshotResult::Return => self.current_screen = CurrentScreen::Snapshots,
                 SnapshotResult::None => {}
             },
+            CurrentScreen::Diff(diff) => match diff.input(event)? {
+                DiffResult::Exit => return Ok(true),
+                DiffResult::Return => self.current_screen = CurrentScreen::Snapshots,
+                DiffResult::None => {}
+            },
         }
         Ok(false)
     }
@@ -892,6 +921,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         if let CurrentScreen::Dir(dir) = &mut self.current_screen {
             dir.draw(area, f);
+            return;
+        }
+
+        if let CurrentScreen::Diff(diff) = &mut self.current_screen {
+            diff.draw(area, f);
             return;
         }
 

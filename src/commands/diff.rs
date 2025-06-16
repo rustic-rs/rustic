@@ -7,7 +7,7 @@ use clap::ValueHint;
 use log::debug;
 
 use std::{
-    fmt::Display,
+    fmt::{Display, Write},
     path::{Path, PathBuf},
 };
 
@@ -205,6 +205,83 @@ fn identical_content_local<P, S: IndexedFull>(
         }
     }
     Ok(true)
+}
+
+pub enum NodeDiff {
+    Identical,
+    Added,
+    Removed,
+    TypeChanged,
+    Modified,
+    MetaDataChanged,
+    SymlinkChanged,
+}
+
+impl NodeDiff {
+    pub fn from(
+        node1: Option<&Node>,
+        node2: Option<&Node>,
+        equal_content: impl Fn(&Node, &Node) -> bool,
+    ) -> Self {
+        Self::try_from(node1, node2, |node1, node2| Ok(equal_content(node1, node2))).unwrap()
+    }
+
+    pub fn try_from(
+        node1: Option<&Node>,
+        node2: Option<&Node>,
+        equal_content: impl Fn(&Node, &Node) -> Result<bool>,
+    ) -> Result<Self> {
+        let result = match (node1, node2) {
+            (None, Some(_)) => Self::Added,
+            (Some(_), None) => Self::Removed,
+            (Some(node1), Some(node2)) => {
+                let are_both_symlink = matches!(&node1.node_type, NodeType::Symlink { .. })
+                    && matches!(&node2.node_type, NodeType::Symlink { .. });
+                match &node1.node_type {
+                    // if node1.node_type != node2.node_type, they could be different symlinks,
+                    // for this reason we check:
+                    // that their type is different AND that they are not both symlinks
+                    tpe if tpe != &node2.node_type && !are_both_symlink => Self::TypeChanged,
+                    NodeType::File if !equal_content(node1, node2)? => Self::Modified,
+                    NodeType::Dir if node1.subtree != node2.subtree => Self::Modified,
+                    NodeType::Symlink { .. }
+                        if node1.node_type.to_link() != node2.node_type.to_link() =>
+                    {
+                        Self::SymlinkChanged
+                    }
+                    _ if node1.meta != node2.meta => Self::MetaDataChanged,
+                    _ => Self::Identical,
+                }
+            }
+            (None, None) => Self::Identical,
+        };
+        Ok(result)
+    }
+
+    pub fn identical(&self) -> bool {
+        matches!(self, Self::Identical)
+    }
+
+    pub fn ignore_metadata(self) -> Self {
+        match self {
+            Self::MetaDataChanged => Self::Identical,
+            d => d,
+        }
+    }
+}
+
+impl Display for NodeDiff {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let c = match self {
+            Self::Identical => '=',
+            Self::Added => '+',
+            Self::Removed => '-',
+            Self::TypeChanged => 'T',
+            Self::Modified => 'M',
+            Self::MetaDataChanged | Self::SymlinkChanged => 'U',
+        };
+        f.write_char(c)
+    }
 }
 
 /// Statistics about the differences listed with the [`DiffCmd`] command

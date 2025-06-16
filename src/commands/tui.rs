@@ -1,4 +1,5 @@
 //! `tui` subcommand
+mod diff;
 mod ls;
 mod progress;
 mod restore;

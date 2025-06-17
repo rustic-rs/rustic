@@ -36,15 +36,17 @@ const INFO_TEXT: &str =
     "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (?) show all commands";
 
 const HELP_TEXT: &str = r"
-          n : toggle ignoring metadata
+Diff Commands:
+
+          m : toggle ignoring metadata
+          d : toggle show only different entries
+          s : compute diff for (sub-)dirs
 
 General Commands:
 
       q,Esc : exit
       Enter : enter dir
   Backspace : return to parent dir
-          m : toggle metadata diff
-          s : compute diff for (sub-)dirs
           ? : show this help page
 
  ";
@@ -106,6 +108,7 @@ pub(crate) struct Diff<'a, P, S> {
     right: Option<TreeId>,
     blobs_map: BTreeMap<TreeId, BTreeSet<DataId>>,
     ignore_metadata: bool,
+    ignore_identical: bool,
 }
 
 pub enum DiffResult {
@@ -116,12 +119,19 @@ pub enum DiffResult {
 
 impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn new(repo: &'a Repository<P, S>, left: TreeId, right: TreeId) -> Result<Self> {
-        let header = ["Name", "Time", "Size", "- Size", "Time", "Size", "+ Size"]
-            .into_iter()
-            .map(Text::from)
-            .collect();
+        let header = [
+            "Name",
+            "Time",
+            "Size",
+            "- RepoSize",
+            "Time",
+            "Size",
+            "+ RepoSize",
+        ]
+        .into_iter()
+        .map(Text::from)
+        .collect();
 
-        let tree = DiffTree::from_trees(repo, Some(left), Some(right))?;
         let mut app = Self {
             current_screen: CurrentScreen::Snapshot,
             table: WithBlock::new(SelectTable::new(header), Block::new()),
@@ -129,14 +139,31 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             snapshot: SnapshotFile::default(),
             path: PathBuf::new(),
             trees: Vec::new(),
-            tree,
+            tree: DiffTree::default(),
             left: Some(left),
             right: Some(right),
             blobs_map: BTreeMap::new(),
             ignore_metadata: true,
+            ignore_identical: true,
         };
+        let mut tree = DiffTree::from_trees(repo, Some(left), Some(right))?;
+        tree.nodes.retain(|node| app.show_node(node));
+        app.tree = tree;
         app.update_table();
         Ok(app)
+    }
+
+    fn node_changed(&self, node: &EitherOrBoth<Node, Node>) -> NodeDiff {
+        let (left, right) = node.as_ref().left_and_right();
+        let mut changed = NodeDiff::from(left, right, |n1, n2| n1.content == n2.content);
+        if self.ignore_metadata {
+            changed = changed.ignore_metadata();
+        }
+        changed
+    }
+
+    fn show_node(&self, node: &EitherOrBoth<Node, Node>) -> bool {
+        !self.ignore_identical || !self.node_changed(node).is_identical()
     }
 
     fn ls_row(&self, node: &EitherOrBoth<Node, Node>) -> Vec<Text<'static>> {
@@ -149,7 +176,6 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
                 ),
             )
         };
-        let (left, right) = node.as_ref().left_and_right();
 
         let compute_diff = |blobs1: &BTreeSet<&DataId>, blobs2: &BTreeSet<&DataId>| {
             if blobs1.is_empty() {
@@ -166,6 +192,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             }
         };
 
+        let (left, right) = node.as_ref().left_and_right();
         let left_blobs = left.map_or_else(BTreeSet::new, |node| {
             if let Some(id) = node.subtree {
                 if let Some(blobs) = self.blobs_map.get(&id) {
@@ -185,10 +212,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         let left_only = compute_diff(&left_blobs, &right_blobs);
         let right_only = compute_diff(&right_blobs, &left_blobs);
 
-        let mut changed = NodeDiff::from(left, right, |n1, n2| n1.content == n2.content);
-        if self.ignore_metadata {
-            changed = changed.ignore_metadata();
-        }
+        let changed = self.node_changed(node);
         let name = node.as_ref().reduce(|l, _| l).name();
         let name = format!("{changed} {}", name.to_string_lossy());
         let (left_size, left_mtime) = match node {
@@ -246,7 +270,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             if (new_left, new_right) != (None, None) {
                 let tree = std::mem::take(&mut self.tree);
                 self.trees.push((tree, self.left, self.right, idx));
-                self.tree = DiffTree::from_trees(self.repo, new_left, new_right)?;
+                let mut tree = DiffTree::from_trees(self.repo, new_left, new_right)?;
+                tree.nodes.retain(|node| self.show_node(node));
+                self.tree = tree;
                 self.left = new_left;
                 self.right = new_right;
                 self.table.widget.set_to(0);
@@ -273,6 +299,17 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn toggle_ignore_metadata(&mut self) {
         self.ignore_metadata = !self.ignore_metadata;
         self.update_table();
+    }
+
+    pub fn toggle_ignore_identical(&mut self) -> Result<()> {
+        self.ignore_identical = !self.ignore_identical;
+
+        let mut tree = DiffTree::from_trees(self.repo, self.left, self.right)?;
+        tree.nodes.retain(|node| self.show_node(node));
+        self.tree = tree;
+
+        self.update_table();
+        Ok(())
     }
 
     pub fn compute_blobs(&mut self) {
@@ -309,6 +346,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('m') => self.toggle_ignore_metadata(),
+                    Char('d') => self.toggle_ignore_identical()?,
                     Char('s') => self.compute_blobs(),
                     _ => self.table.input(event),
                 },

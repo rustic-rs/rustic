@@ -258,7 +258,7 @@ impl NodeDiff {
         Ok(result)
     }
 
-    pub fn identical(&self) -> bool {
+    pub fn is_identical(&self) -> bool {
         matches!(self, Self::Identical)
     }
 

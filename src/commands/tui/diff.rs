@@ -96,6 +96,47 @@ impl DiffTree {
     }
 }
 
+#[derive(Default, Clone)]
+struct TreeSummary {
+    blobs: BTreeSet<DataId>,
+    size: u64,
+}
+
+impl TreeSummary {
+    fn update(&mut self, mut other: Self) {
+        self.blobs.append(&mut other.blobs);
+        self.size += other.size;
+    }
+
+    fn from_repo<P, S>(
+        repo: &'_ Repository<P, S>,
+        tree: &Tree,
+        id: TreeId,
+        blobs_map: &mut BTreeMap<TreeId, Self>,
+    ) -> Result<Self>
+    where
+        S: IndexedFull,
+    {
+        if let Some(summary) = blobs_map.get(&id) {
+            return Ok(summary.clone());
+        }
+
+        let mut summary = Self::default();
+        for node in &tree.nodes {
+            for id in node.content.iter().flatten() {
+                _ = summary.blobs.insert(*id);
+            }
+            summary.size += node.meta.size;
+            if let Some(id) = node.subtree {
+                let tree = repo.get_tree(&id)?;
+                summary.update(Self::from_repo(repo, &tree, id, blobs_map)?);
+            }
+        }
+        _ = blobs_map.insert(id, summary.clone());
+        Ok(summary)
+    }
+}
+
 pub(crate) struct Diff<'a, P, S> {
     current_screen: CurrentScreen,
     table: WithBlock<SelectTable>,
@@ -106,7 +147,7 @@ pub(crate) struct Diff<'a, P, S> {
     tree: DiffTree,
     left: Option<TreeId>,
     right: Option<TreeId>,
-    blobs_map: BTreeMap<TreeId, BTreeSet<DataId>>,
+    blobs_map: BTreeMap<TreeId, TreeSummary>,
     ignore_metadata: bool,
     ignore_identical: bool,
 }
@@ -168,8 +209,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
 
     fn ls_row(&self, node: &EitherOrBoth<Node, Node>) -> Vec<Text<'static>> {
         let node_info = |node: &Node| {
+            let size = node.subtree.map_or(node.meta.size, |id| {
+                self.blobs_map
+                    .get(&id)
+                    .map_or(node.meta.size, |summary| summary.size)
+            });
             (
-                node.meta.size.to_string(),
+                size.to_string(),
                 node.meta.mtime.map_or_else(
                     || "?".to_string(),
                     |t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")),
@@ -195,16 +241,16 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         let (left, right) = node.as_ref().left_and_right();
         let left_blobs = left.map_or_else(BTreeSet::new, |node| {
             if let Some(id) = node.subtree {
-                if let Some(blobs) = self.blobs_map.get(&id) {
-                    return blobs.iter().collect();
+                if let Some(summary) = self.blobs_map.get(&id) {
+                    return summary.blobs.iter().collect();
                 }
             }
             node.content.iter().flatten().collect()
         });
         let right_blobs = right.map_or_else(BTreeSet::new, |node| {
             if let Some(id) = node.subtree {
-                if let Some(blobs) = self.blobs_map.get(&id) {
-                    return blobs.iter().collect();
+                if let Some(summary) = self.blobs_map.get(&id) {
+                    return summary.blobs.iter().collect();
                 }
             }
             node.content.iter().flatten().collect()
@@ -314,12 +360,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
 
     pub fn compute_blobs(&mut self) {
         if let Some(left) = self.left {
-            let _ = compute_tree_blobs(self.repo, &self.tree.left(), left, &mut self.blobs_map)
+            let _ = TreeSummary::from_repo(self.repo, &self.tree.left(), left, &mut self.blobs_map)
                 .unwrap();
         }
         if let Some(right) = self.right {
-            let _ = compute_tree_blobs(self.repo, &self.tree.right(), right, &mut self.blobs_map)
-                .unwrap();
+            let _ =
+                TreeSummary::from_repo(self.repo, &self.tree.right(), right, &mut self.blobs_map)
+                    .unwrap();
         }
         self.update_table();
     }
@@ -390,31 +437,4 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             CurrentScreen::PromptExit(popup) => popup.draw(area, f),
         }
     }
-}
-
-fn compute_tree_blobs<P, S>(
-    repo: &'_ Repository<P, S>,
-    tree: &Tree,
-    id: TreeId,
-    blobs_map: &mut BTreeMap<TreeId, BTreeSet<DataId>>,
-) -> Result<BTreeSet<DataId>>
-where
-    S: IndexedFull,
-{
-    if let Some(blobs) = blobs_map.get(&id) {
-        return Ok(blobs.clone());
-    }
-    let mut blobs = BTreeSet::new();
-    for node in &tree.nodes {
-        for id in node.content.iter().flatten() {
-            _ = blobs.insert(*id);
-        }
-        if node.is_dir() {
-            let id = node.subtree.unwrap();
-            let tree = repo.get_tree(&id)?;
-            blobs.append(&mut compute_tree_blobs(repo, &tree, id, blobs_map)?);
-        }
-    }
-    _ = blobs_map.insert(id, blobs.clone());
-    Ok(blobs)
 }

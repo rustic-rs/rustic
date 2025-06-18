@@ -33,6 +33,7 @@ enum CurrentScreen {
     Snapshot,
     ShowHelp(PopUpText),
     PromptExit(PopUpPrompt),
+    PromptLeave(PopUpPrompt),
 }
 
 const INFO_TEXT: &str =
@@ -356,16 +357,17 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         Ok(())
     }
 
-    pub fn goback(&mut self) -> bool {
+    pub fn in_root(&self) -> bool {
+        self.trees.is_empty()
+    }
+
+    pub fn goback(&mut self) {
         _ = self.path.pop();
         if let Some((tree, tree_ids, idx)) = self.trees.pop() {
             self.tree = tree;
             self.tree_ids = tree_ids;
             self.table.widget.set_to(idx);
             self.update_table();
-            false
-        } else {
-            true
         }
     }
 
@@ -398,8 +400,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
                 Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
                     Enter | Right => self.enter()?,
                     Backspace | Left => {
-                        if self.goback() {
-                            return Ok(DiffResult::Return);
+                        if self.in_root() {
+                            self.current_screen = CurrentScreen::PromptLeave(popup_prompt(
+                                "leave diff",
+                                "do you want to leave the diff view? (y/n)".into(),
+                            ));
+                        } else {
+                            self.goback();
                         }
                     }
                     Esc | Char('q') => {
@@ -432,6 +439,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
                 PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
                 PromptResult::None => {}
             },
+            CurrentScreen::PromptLeave(prompt) => match prompt.input(event) {
+                PromptResult::Ok => return Ok(DiffResult::Return),
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
+                PromptResult::None => {}
+            },
         }
         Ok(DiffResult::None)
     }
@@ -454,7 +466,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         match &mut self.current_screen {
             CurrentScreen::Snapshot => {}
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
-            CurrentScreen::PromptExit(popup) => popup.draw(area, f),
+            CurrentScreen::PromptExit(popup) | CurrentScreen::PromptLeave(popup) => {
+                popup.draw(area, f);
+            }
         }
     }
 }

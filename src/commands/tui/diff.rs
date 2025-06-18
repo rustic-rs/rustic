@@ -12,7 +12,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    DataId, IndexedFull, ProgressBars, Repository, TreeId,
+    DataId, IndexedFull, Progress, ProgressBars, Repository, TreeId,
     repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
@@ -132,6 +132,7 @@ impl TreeSummary {
         repo: &'_ Repository<P, S>,
         ids: &EitherOrBoth<TreeId>,
         summary_map: &mut BTreeMap<TreeId, Self>,
+        p: &impl Progress,
     ) -> Result<()>
     where
         P: ProgressBars,
@@ -139,10 +140,10 @@ impl TreeSummary {
     {
         let (left, right) = ids.as_ref().left_and_right();
         if let Some(id) = left {
-            let _ = Self::from_tree(repo, *id, summary_map)?;
+            let _ = Self::from_tree(repo, *id, summary_map, p)?;
         }
         if let Some(id) = right {
-            let _ = Self::from_tree(repo, *id, summary_map)?;
+            let _ = Self::from_tree(repo, *id, summary_map, p)?;
         }
         Ok(())
     }
@@ -151,9 +152,9 @@ impl TreeSummary {
         repo: &'_ Repository<P, S>,
         id: TreeId,
         summary_map: &mut BTreeMap<TreeId, Self>,
+        p: &impl Progress,
     ) -> Result<Self>
     where
-        P: ProgressBars,
         S: IndexedFull,
     {
         if let Some(summary) = summary_map.get(&id) {
@@ -163,10 +164,11 @@ impl TreeSummary {
         let mut summary = Self::default();
 
         let tree = repo.get_tree(&id)?;
+        p.inc(1);
         for node in &tree.nodes {
             summary.update_from_node(node);
             if let Some(id) = node.subtree {
-                summary.update(Self::from_tree(repo, id, summary_map)?);
+                summary.update(Self::from_tree(repo, id, summary_map, p)?);
             }
         }
         _ = summary_map.insert(id, summary.clone());
@@ -388,7 +390,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     }
 
     pub fn compute_summary(&mut self) -> Result<()> {
-        TreeSummary::from_repo(self.repo, &self.tree_ids, &mut self.summary_map)?;
+        let pb = self.repo.progress_bars();
+        let p = pb.progress_counter("computing (sub)-dir information");
+        TreeSummary::from_repo(self.repo, &self.tree_ids, &mut self.summary_map, &p)?;
+        p.finish();
         self.update_table();
         Ok(())
     }

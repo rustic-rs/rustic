@@ -15,15 +15,18 @@ use rustic_core::{
 };
 use style::palette::tailwind;
 
-use crate::commands::{
-    ls::{NodeLs, Summary},
-    tui::{
-        restore::Restore,
-        widgets::{
-            Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, TextInputResult,
-            WithBlock, popup_prompt, popup_scrollable_text, popup_text,
+use crate::{
+    commands::{
+        ls::{NodeLs, Summary},
+        tui::{
+            restore::Restore,
+            widgets::{
+                Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable,
+                TextInputResult, WithBlock, popup_prompt, popup_scrollable_text, popup_text,
+            },
         },
     },
+    helpers::bytes_size_to_string,
 };
 
 use super::widgets::PopUpInput;
@@ -40,15 +43,18 @@ enum CurrentScreen<'a, P, S> {
 const INFO_TEXT: &str = "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
 
 const HELP_TEXT: &str = r"
+Diff Commands:
+
+          v : view file contents (text files only, up to 1MiB)
+          r : restore selected item
+          n : toggle numeric IDs
+          s : compute information for (sub)-dirs
+
 General Commands:
 
       q,Esc : exit
       Enter : enter dir
   Backspace : return to parent dir
-          v : view file contents (text files only, up to 1MiB)
-          r : restore selected item
-          n : toggle numeric IDs
-          s : compute cumulative summary
           ? : show this help page
 
  ";
@@ -114,7 +120,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             )
         };
         let name = node.name().to_string_lossy().to_string();
-        let size = node.meta.size.to_string();
+        let size = bytes_size_to_string(node.meta.size);
         let mtime = node.meta.mtime.map_or_else(
             || "?".to_string(),
             |t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")),

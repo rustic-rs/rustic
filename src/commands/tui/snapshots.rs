@@ -498,9 +498,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .zip(self.snaps_status.iter())
             .filter_map(|(snap, status)| status.marked.then_some(snap))
             .collect();
-        let left = snaps[0].tree;
-        let right = snaps[1].tree;
-        Some(Diff::new(self.repo, left, right)).transpose()
+        let left = snaps[0];
+        let right = snaps[1];
+        Some(Diff::new(self.repo, left.clone(), right.clone(), "", "")).transpose()
     }
 
     pub fn count_marked_snaps(&self) -> usize {

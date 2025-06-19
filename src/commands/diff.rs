@@ -4,9 +4,11 @@ use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
+use itertools::{EitherOrBoth, Itertools};
 use log::debug;
 
 use std::{
+    cmp::Ordering,
     fmt::{Display, Write},
     path::{Path, PathBuf},
 };
@@ -209,10 +211,17 @@ fn identical_content_local<P, S: IndexedFull>(
 
 pub enum NodeDiff {
     Identical,
-    Added,
-    Removed,
+    FileAdded,
+    DirAdded,
+    SymlinkAdded,
+    OtherAdded,
+    FileRemoved,
+    DirRemoved,
+    SymlinkRemoved,
+    OtherRemoved,
     TypeChanged,
-    Modified,
+    FileChanged,
+    DirChanged,
     MetaDataChanged,
     SymlinkChanged,
 }
@@ -232,8 +241,18 @@ impl NodeDiff {
         equal_content: impl Fn(&Node, &Node) -> Result<bool>,
     ) -> Result<Self> {
         let result = match (node1, node2) {
-            (None, Some(_)) => Self::Added,
-            (Some(_), None) => Self::Removed,
+            (None, Some(node2)) => match node2.node_type {
+                NodeType::File => Self::FileAdded,
+                NodeType::Dir => Self::DirAdded,
+                NodeType::Symlink { .. } => Self::SymlinkAdded,
+                _ => Self::OtherAdded,
+            },
+            (Some(node1), None) => match node1.node_type {
+                NodeType::File => Self::FileRemoved,
+                NodeType::Dir => Self::DirRemoved,
+                NodeType::Symlink { .. } => Self::SymlinkRemoved,
+                _ => Self::OtherRemoved,
+            },
             (Some(node1), Some(node2)) => {
                 let are_both_symlink = matches!(&node1.node_type, NodeType::Symlink { .. })
                     && matches!(&node2.node_type, NodeType::Symlink { .. });
@@ -242,8 +261,8 @@ impl NodeDiff {
                     // for this reason we check:
                     // that their type is different AND that they are not both symlinks
                     tpe if tpe != &node2.node_type && !are_both_symlink => Self::TypeChanged,
-                    NodeType::File if !equal_content(node1, node2)? => Self::Modified,
-                    NodeType::Dir if node1.subtree != node2.subtree => Self::Modified,
+                    NodeType::File if !equal_content(node1, node2)? => Self::FileChanged,
+                    NodeType::Dir if node1.subtree != node2.subtree => Self::DirChanged,
                     NodeType::Symlink { .. }
                         if node1.node_type.to_link() != node2.node_type.to_link() =>
                     {
@@ -274,10 +293,10 @@ impl Display for NodeDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let c = match self {
             Self::Identical => '=',
-            Self::Added => '+',
-            Self::Removed => '-',
+            Self::FileAdded | Self::DirAdded | Self::SymlinkAdded | Self::OtherAdded => '+',
+            Self::FileRemoved | Self::DirRemoved | Self::SymlinkRemoved | Self::OtherRemoved => '-',
             Self::TypeChanged => 'T',
-            Self::Modified => 'M',
+            Self::FileChanged | Self::DirChanged => 'M',
             Self::MetaDataChanged | Self::SymlinkChanged => 'U',
         };
         f.write_char(c)
@@ -287,11 +306,13 @@ impl Display for NodeDiff {
 /// Statistics about the differences listed with the [`DiffCmd`] command
 #[derive(Default)]
 struct DiffStatistics {
+    identical: usize,
     files_added: usize,
     files_removed: usize,
     files_changed: usize,
     directories_added: usize,
     directories_removed: usize,
+    directories_changed: usize,
     others_added: usize,
     others_removed: usize,
     node_type_changed: usize,
@@ -302,38 +323,23 @@ struct DiffStatistics {
 }
 
 impl DiffStatistics {
-    fn removed_node(&mut self, node_type: &NodeType) {
-        match node_type {
-            NodeType::File => self.files_removed += 1,
-            NodeType::Dir => self.directories_removed += 1,
-            NodeType::Symlink { .. } => self.symlink_removed += 1,
-            _ => self.others_removed += 1,
-        }
-    }
-
-    fn added_node(&mut self, node_type: &NodeType) {
-        match node_type {
-            NodeType::File => self.files_added += 1,
-            NodeType::Dir => self.directories_added += 1,
-            NodeType::Symlink { .. } => self.symlink_added += 1,
-            _ => self.others_added += 1,
-        }
-    }
-
-    fn changed_file(&mut self) {
-        self.files_changed += 1;
-    }
-
-    fn changed_node_type(&mut self) {
-        self.node_type_changed += 1;
-    }
-
-    fn changed_metadata(&mut self) {
-        self.metadata_changed += 1;
-    }
-
-    fn changed_symlink(&mut self) {
-        self.symlink_changed += 1;
+    fn apply(&mut self, diff: NodeDiff) {
+        match diff {
+            NodeDiff::Identical => self.identical += 1,
+            NodeDiff::FileAdded => self.files_added += 1,
+            NodeDiff::DirAdded => self.directories_added += 1,
+            NodeDiff::SymlinkAdded => self.symlink_added += 1,
+            NodeDiff::OtherAdded => self.others_added += 1,
+            NodeDiff::FileRemoved => self.files_removed += 1,
+            NodeDiff::DirRemoved => self.directories_removed += 1,
+            NodeDiff::SymlinkRemoved => self.symlink_removed += 1,
+            NodeDiff::OtherRemoved => self.others_removed += 1,
+            NodeDiff::FileChanged => self.files_changed += 1,
+            NodeDiff::DirChanged => self.directories_changed += 1,
+            NodeDiff::TypeChanged => self.node_type_changed += 1,
+            NodeDiff::MetaDataChanged => self.metadata_changed += 1,
+            NodeDiff::SymlinkChanged => self.symlink_changed += 1,
+        };
     }
 }
 
@@ -394,77 +400,53 @@ impl Display for DiffStatistics {
 ///
 // TODO!: add errors!
 fn diff(
-    mut tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
-    mut tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    tree_streamer1: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    tree_streamer2: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
     no_content: bool,
     file_identical: impl Fn(&Path, &Node, &Node) -> Result<bool>,
     metadata: bool,
 ) -> Result<()> {
-    let mut item1 = tree_streamer1.next().transpose()?;
-    let mut item2 = tree_streamer2.next().transpose()?;
+    let compare_streamer = tree_streamer1.merge_join_by(tree_streamer2, |left, right| {
+        let Ok(left) = left else {
+            return Ordering::Less;
+        };
+        let Ok(right) = right else {
+            return Ordering::Greater;
+        };
+        left.0.cmp(&right.0)
+    });
 
     let mut diff_statistics = DiffStatistics::default();
 
-    loop {
-        match (&item1, &item2) {
-            (None, None) => break,
-            (Some(i1), None) => {
-                println!("-    {:?}", i1.0);
-                diff_statistics.removed_node(&i1.1.node_type);
-                item1 = tree_streamer1.next().transpose()?;
+    for item in compare_streamer {
+        let (path, node1, node2) = match item {
+            EitherOrBoth::Left(l) => {
+                let l = l?;
+                (l.0, Some(l.1), None)
             }
-            (None, Some(i2)) => {
-                println!("+    {:?}", i2.0);
-                diff_statistics.added_node(&i2.1.node_type);
-                item2 = tree_streamer2.next().transpose()?;
+            EitherOrBoth::Right(r) => {
+                let r = r?;
+                (r.0, None, Some(r.1))
             }
-            (Some(i1), Some(i2)) if i1.0 < i2.0 => {
-                println!("-    {:?}", i1.0);
-                diff_statistics.removed_node(&i1.1.node_type);
-                item1 = tree_streamer1.next().transpose()?;
+            EitherOrBoth::Both(l, r) => {
+                let (r, l) = (r?, l?);
+                (l.0, Some(l.1), Some(r.1))
             }
-            (Some(i1), Some(i2)) if i1.0 > i2.0 => {
-                println!("+    {:?}", i2.0);
-                diff_statistics.added_node(&i2.1.node_type);
-                item2 = tree_streamer2.next().transpose()?;
-            }
-            (Some(i1), Some(i2)) => {
-                let path = &i1.0;
-                let node1 = &i1.1;
-                let node2 = &i2.1;
+        };
 
-                let are_both_symlink = matches!(&node1.node_type, NodeType::Symlink { .. })
-                    && matches!(&node2.node_type, NodeType::Symlink { .. });
-                match &node1.node_type {
-                    // if node1.node_type != node2.node_type, they could be different symlinks,
-                    // for this reason we check:
-                    // that their type is different AND that they are not both symlinks
-                    tpe if tpe != &node2.node_type && !are_both_symlink => {
-                        // type was changed
-                        println!("T    {path:?}");
-                        diff_statistics.changed_node_type();
-                    }
-                    NodeType::File if !no_content && !file_identical(path, node1, node2)? => {
-                        println!("M    {path:?}");
-                        diff_statistics.changed_file();
-                    }
-                    NodeType::File if metadata && node1.meta != node2.meta => {
-                        println!("U    {path:?}");
-                        diff_statistics.changed_metadata();
-                    }
-                    NodeType::Symlink { .. } => {
-                        if node1.node_type.to_link() != node2.node_type.to_link() {
-                            println!("U    {path:?}");
-                            diff_statistics.changed_symlink();
-                        }
-                    }
-                    _ => {} // no difference to show
-                }
-                item1 = tree_streamer1.next().transpose()?;
-                item2 = tree_streamer2.next().transpose()?;
-            }
+        let mut diff = NodeDiff::try_from(node1.as_ref(), node2.as_ref(), |n1, n2| {
+            Ok(no_content || file_identical(&path, n1, n2)?)
+        })?;
+        if !metadata {
+            diff = diff.ignore_metadata();
+        }
+
+        if !matches!(diff, NodeDiff::Identical | NodeDiff::DirChanged) {
+            println!("{diff}    {:?}", path);
+            diff_statistics.apply(diff);
         }
     }
+
     println!("{diff_statistics}");
     Ok(())
 }

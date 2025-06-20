@@ -255,7 +255,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
 
     fn node_changed(&self, node: &DiffNode) -> NodeDiff {
         let (left, right) = node.0.as_ref().left_and_right();
-        let mut changed = NodeDiff::from(left, right, |n1, n2| n1.content == n2.content);
+        let mut changed = NodeDiff::diff(left, right);
         if self.ignore_metadata {
             changed = changed.ignore_metadata();
         }

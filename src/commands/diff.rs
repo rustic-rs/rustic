@@ -227,6 +227,12 @@ pub enum NodeDiff {
 }
 
 impl NodeDiff {
+    pub fn diff(node1: Option<&Node>, node2: Option<&Node>) -> Self {
+        Self::from(node1, node2, |node1, node2| {
+            node1.content == node2.content && node1.subtree == node2.subtree
+        })
+    }
+
     pub fn from(
         node1: Option<&Node>,
         node2: Option<&Node>,
@@ -261,13 +267,13 @@ impl NodeDiff {
                     // for this reason we check:
                     // that their type is different AND that they are not both symlinks
                     tpe if tpe != &node2.node_type && !are_both_symlink => Self::TypeChanged,
-                    NodeType::File if !equal_content(node1, node2)? => Self::FileChanged,
-                    NodeType::Dir if node1.subtree != node2.subtree => Self::DirChanged,
                     NodeType::Symlink { .. }
                         if node1.node_type.to_link() != node2.node_type.to_link() =>
                     {
                         Self::SymlinkChanged
                     }
+                    NodeType::File if !equal_content(node1, node2)? => Self::FileChanged,
+                    NodeType::Dir if !equal_content(node1, node2)? => Self::DirChanged,
                     _ if node1.meta != node2.meta => Self::MetaDataChanged,
                     _ => Self::Identical,
                 }
@@ -435,13 +441,17 @@ fn diff(
         };
 
         let mut diff = NodeDiff::try_from(node1.as_ref(), node2.as_ref(), |n1, n2| {
-            Ok(no_content || file_identical(&path, n1, n2)?)
+            Ok(match n1.node_type {
+                NodeType::File => no_content || file_identical(&path, n1, n2)?,
+                NodeType::Dir => true,
+                _ => false,
+            })
         })?;
         if !metadata {
             diff = diff.ignore_metadata();
         }
 
-        if !matches!(diff, NodeDiff::Identical | NodeDiff::DirChanged) {
+        if !diff.is_identical() {
             println!("{diff}    {:?}", path);
             diff_statistics.apply(diff);
         }

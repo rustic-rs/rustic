@@ -28,6 +28,8 @@ use crate::{
     helpers::bytes_size_to_string,
 };
 
+use super::TuiResult;
+
 // the states this screen can be in
 enum CurrentScreen {
     Snapshot,
@@ -176,7 +178,7 @@ impl TreeSummary {
     }
 }
 
-pub(crate) struct Diff<'a, P, S> {
+pub struct Diff<'a, P, S> {
     current_screen: CurrentScreen,
     table: WithBlock<SelectTable>,
     repo: &'a Repository<P, S>,
@@ -196,6 +198,12 @@ pub enum DiffResult {
     Exit,
     Return,
     None,
+}
+
+impl TuiResult for DiffResult {
+    fn exit(&self) -> bool {
+        !matches!(self, Self::None)
+    }
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
@@ -433,8 +441,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         self.update_table();
         Ok(())
     }
+}
 
-    pub fn input(&mut self, event: Event) -> Result<DiffResult> {
+impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
+    type Result = Result<DiffResult>;
+    fn input(&mut self, event: Event) -> Result<DiffResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
         match &mut self.current_screen {
             CurrentScreen::Snapshot => match event {
@@ -488,8 +499,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         }
         Ok(DiffResult::None)
     }
+}
 
-    pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
+impl<'a, P: ProgressBars, S: IndexedFull> Draw for Diff<'a, P, S> {
+    fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
         // draw the table

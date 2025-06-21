@@ -17,9 +17,12 @@ use anyhow::{Context, Result, bail};
 
 use rustic_core::{
     IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    LsOptions, ReadSource, ReadSourceEntry, Repository, RusticResult,
+    LsOptions, Progress, ProgressBars, ReadSource, ReadSourceEntry, Repository, RusticResult,
     repofile::{Node, NodeType},
 };
+
+#[cfg(feature = "tui")]
+use crate::commands::tui;
 
 /// `diff` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -47,6 +50,11 @@ pub(crate) struct DiffCmd {
     /// Ignore options
     #[clap(flatten)]
     ignore_opts: LocalSourceFilterOptions,
+
+    #[cfg(feature = "tui")]
+    /// Run in interactive UI mode
+    #[clap(long, short)]
+    pub interactive: bool,
 }
 
 impl Runnable for DiffCmd {
@@ -79,6 +87,29 @@ impl DiffCmd {
 
                 let snap1 = &snaps[0];
                 let snap2 = &snaps[1];
+
+                #[cfg(feature = "tui")]
+                if self.interactive {
+                    return tui::run(|progress| {
+                        let config = RUSTIC_APP.config();
+                        config
+                            .repository
+                            .run_indexed_with_progress(progress.clone(), |repo| {
+                                let p = progress
+                                    .progress_spinner("starting rustic in interactive mode...");
+                                p.finish();
+                                // create app and run it
+                                let diff = tui::Diff::new(
+                                    &repo,
+                                    snap1.clone(),
+                                    snap2.clone(),
+                                    path1,
+                                    path2,
+                                )?;
+                                tui::run_app(progress.terminal, diff)
+                            })
+                    });
+                }
 
                 let node1 = repo.node_from_snapshot_and_path(snap1, path1)?;
                 let node2 = repo.node_from_snapshot_and_path(snap2, path2)?;

@@ -112,7 +112,7 @@ const HELP_TEXT: &str = r"General Commands:
   Ctrl-p : remove delete protection for snapshot(s)
 ";
 
-pub(crate) struct Snapshots<'a, P, S> {
+pub struct Snapshots<'a, P, S> {
     current_screen: CurrentScreen<'a, P, S>,
     current_view: View,
     table: WithBlock<SelectTable>,
@@ -737,8 +737,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.apply_view();
         Ok(())
     }
+}
 
-    pub fn input(&mut self, event: Event) -> Result<bool> {
+impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
+    type Result = Result<bool>;
+    fn input(&mut self, event: Event) -> Result<bool> {
         use KeyCode::{Char, Enter, Esc, F, Left, Right};
         match &mut self.current_screen {
             CurrentScreen::Snapshots => {
@@ -917,8 +920,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         }
         Ok(false)
     }
+}
 
-    pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
+impl<'a, P: ProgressBars, S: IndexedFull> Draw for Snapshots<'a, P, S> {
+    fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         if let CurrentScreen::Dir(dir) = &mut self.current_screen {
             dir.draw(area, f);
             return;

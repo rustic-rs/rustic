@@ -6,33 +6,35 @@ mod restore;
 mod snapshots;
 mod tree;
 mod widgets;
-
-use crossterm::event::{KeyEvent, KeyModifiers};
-use progress::TuiProgressBars;
-use scopeguard::defer;
-use snapshots::Snapshots;
+pub use diff::Diff;
+pub use snapshots::Snapshots;
 
 use std::io;
 use std::sync::{Arc, RwLock};
 
-use crate::{Application, RUSTIC_APP};
-
 use anyhow::Result;
+use crossterm::event::{KeyEvent, KeyModifiers};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
+use progress::TuiProgressBars;
 use ratatui::prelude::*;
-use rustic_core::{IndexedFull, Progress, ProgressBars, SnapshotGroupCriterion};
+use scopeguard::defer;
+use widgets::{Draw, ProcessEvent};
 
-struct App<'a, P, S> {
-    snapshots: Snapshots<'a, P, S>,
+pub trait TuiResult {
+    fn exit(&self) -> bool;
 }
 
-pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
-    let config = RUSTIC_APP.config();
+impl TuiResult for bool {
+    fn exit(&self) -> bool {
+        *self
+    }
+}
 
+pub fn run(f: impl FnOnce(TuiProgressBars) -> Result<()>) -> Result<()> {
     // setup terminal
     let terminal = init_terminal()?;
     let terminal = Arc::new(RwLock::new(terminal));
@@ -42,21 +44,9 @@ pub fn run(group_by: SnapshotGroupCriterion) -> Result<()> {
         reset_terminal().unwrap();
     }
 
-    let progress = TuiProgressBars {
-        terminal: terminal.clone(),
-    };
-    let res = config
-        .repository
-        .run_indexed_with_progress(progress.clone(), |repo| {
-            let p = progress.progress_spinner("starting rustic in interactive mode...");
-            p.finish();
-            // create app and run it
-            let snapshots = Snapshots::new(&repo, config.snapshot_filter.clone(), group_by)?;
-            let app = App { snapshots };
-            run_app(terminal, app)
-        });
+    let progress = TuiProgressBars { terminal };
 
-    if let Err(err) = res {
+    if let Err(err) = f(progress) {
         println!("{err:?}");
     }
 
@@ -83,9 +73,9 @@ fn reset_terminal() -> Result<()> {
     Ok(())
 }
 
-fn run_app<B: Backend, P: ProgressBars, S: IndexedFull>(
+pub fn run_app<T: TuiResult, A: Draw + ProcessEvent<Result = Result<T>>, B: Backend>(
     terminal: Arc<RwLock<Terminal<B>>>,
-    mut app: App<'_, P, S>,
+    mut app: A,
 ) -> Result<()> {
     loop {
         _ = terminal.write().unwrap().draw(|f| ui(f, &mut app))?;
@@ -100,13 +90,13 @@ fn run_app<B: Backend, P: ProgressBars, S: IndexedFull>(
         {
             return Ok(());
         }
-        if app.snapshots.input(event)? {
+        if app.input(event)?.exit() {
             return Ok(());
         }
     }
 }
 
-fn ui<P: ProgressBars, S: IndexedFull>(f: &mut Frame<'_>, app: &mut App<'_, P, S>) {
+fn ui<A: Draw>(f: &mut Frame<'_>, app: &mut A) {
     let area = f.area();
-    app.snapshots.draw(area, f);
+    app.draw(area, f);
 }

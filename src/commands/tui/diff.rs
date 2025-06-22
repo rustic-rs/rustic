@@ -13,7 +13,7 @@ use ratatui::{
 };
 use rustic_core::{
     DataId, IndexedFull, Progress, ProgressBars, Repository, TreeId,
-    repofile::{Node, SnapshotFile, Tree},
+    repofile::{Metadata, Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
 
@@ -128,6 +128,7 @@ impl DiffTree {
 
 #[derive(Default, Clone)]
 struct TreeSummary {
+    id_without_meta: TreeId,
     blobs: BTreeSet<DataId>,
     size: u64,
 }
@@ -185,13 +186,25 @@ impl TreeSummary {
         let mut summary = Self::default();
 
         let tree = repo.get_tree(&id)?;
+        let mut tree_without_meta = Tree::default();
         p.inc(1);
         for node in &tree.nodes {
+            let mut node_without_meta = Node::new_node(
+                node.name().as_os_str(),
+                node.node_type.clone(),
+                Metadata::default(),
+            );
+            node_without_meta.content = node.content.clone();
             summary.update_from_node(node);
             if let Some(id) = node.subtree {
-                summary.update(Self::from_tree(repo, id, summary_map, p)?);
+                let subtree_summary = Self::from_tree(repo, id, summary_map, p)?;
+                node_without_meta.subtree = Some(subtree_summary.id_without_meta);
+                summary.update(subtree_summary);
             }
+            tree_without_meta.nodes.push(node_without_meta);
         }
+        let (_, id_without_meta) = tree_without_meta.serialize()?;
+        summary.id_without_meta = id_without_meta;
 
         _ = summary_map.insert(id, summary.clone());
         Ok(summary)
@@ -275,7 +288,22 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
 
     fn node_changed(&self, node: &DiffNode) -> NodeDiff {
         let (left, right) = node.0.as_ref().left_and_right();
-        let mut changed = NodeDiff::diff(left, right);
+        let mut changed = NodeDiff::from(left, right, |left, right| {
+            if left.content != right.content {
+                return false;
+            }
+            if self.ignore_metadata {
+                if let (Some(id_left), Some(id_right)) = (left.subtree, right.subtree) {
+                    if let (Some(summary_left), Some(summary_right)) = (
+                        self.summary_map.get(&id_left),
+                        self.summary_map.get(&id_right),
+                    ) {
+                        return summary_left.id_without_meta == summary_right.id_without_meta;
+                    }
+                }
+            }
+            left.subtree == right.subtree
+        });
         if self.ignore_metadata {
             changed = changed.ignore_metadata();
         }

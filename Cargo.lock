@@ -3482,7 +3482,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.103",
@@ -4182,7 +4182,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.2"
-source = "git+https://github.com/rustic-rs/rustic_core.git#c19c05b4920db0dfa6262fb7052d3bc8a6d1149e"
+source = "git+https://github.com/rustic-rs/rustic_core.git#5cccb63a0a6082a8ed344fcf0869968211fbccb2"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4221,7 +4221,7 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.7.3"
-source = "git+https://github.com/rustic-rs/rustic_core.git#c19c05b4920db0dfa6262fb7052d3bc8a6d1149e"
+source = "git+https://github.com/rustic-rs/rustic_core.git#5cccb63a0a6082a8ed344fcf0869968211fbccb2"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4276,7 +4276,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.3.2"
-source = "git+https://github.com/rustic-rs/rustic_core.git#c19c05b4920db0dfa6262fb7052d3bc8a6d1149e"
+source = "git+https://github.com/rustic-rs/rustic_core.git#5cccb63a0a6082a8ed344fcf0869968211fbccb2"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5855,7 +5855,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use itertools::{EitherOrBoth, Itertools};
 use ratatui::{
@@ -57,19 +57,23 @@ General Commands:
 
  ";
 
+#[derive(Clone)]
 struct DiffNode(EitherOrBoth<Node>);
 
 impl DiffNode {
-    fn subtrees(&self) -> Option<EitherOrBoth<TreeId>> {
+    fn only_subtrees(&self) -> Option<DiffNode> {
         let (left, right) = self
             .0
-            .as_ref()
-            .map_any(|n| n.subtree, |n| n.subtree)
+            .clone()
+            .map_any(
+                |n| n.subtree.is_some().then_some(n),
+                |n| n.subtree.is_some().then_some(n),
+            )
             .left_and_right();
         match (left.flatten(), right.flatten()) {
-            (Some(l), Some(r)) => Some(EitherOrBoth::Both(l, r)),
-            (Some(l), None) => Some(EitherOrBoth::Left(l)),
-            (None, Some(r)) => Some(EitherOrBoth::Right(r)),
+            (Some(l), Some(r)) => Some(DiffNode(EitherOrBoth::Both(l, r))),
+            (Some(l), None) => Some(DiffNode(EitherOrBoth::Left(l))),
+            (None, Some(r)) => Some(DiffNode(EitherOrBoth::Right(r))),
             (None, None) => None,
         }
     }
@@ -85,20 +89,26 @@ struct DiffTree {
 }
 
 impl DiffTree {
-    fn from_trees<P: ProgressBars, S: IndexedFull>(
+    fn from_node<P: ProgressBars, S: IndexedFull>(
         repo: &'_ Repository<P, S>,
-        tree_ids: &EitherOrBoth<TreeId>,
+        node: &DiffNode,
     ) -> Result<Self> {
-        let left_tree = if let Some(left) = tree_ids.as_ref().left() {
-            repo.get_tree(left)?
-        } else {
-            Tree::default()
+        let tree_from_node = |node: Option<&Node>| {
+            if let Some(left) = node {
+                if let Some(id) = left.subtree {
+                    repo.get_tree(&id)
+                } else {
+                    Ok(Tree {
+                        nodes: vec![left.clone()],
+                    })
+                }
+            } else {
+                Ok(Tree::default())
+            }
         };
-        let right_tree = if let Some(right) = tree_ids.as_ref().right() {
-            repo.get_tree(right)?
-        } else {
-            Tree::default()
-        };
+
+        let left_tree = tree_from_node(node.0.as_ref().left())?;
+        let right_tree = tree_from_node(node.0.as_ref().right())?;
         let nodes = left_tree
             .nodes
             .into_iter()
@@ -132,7 +142,7 @@ impl TreeSummary {
 
     fn from_repo<P, S>(
         repo: &'_ Repository<P, S>,
-        ids: &EitherOrBoth<TreeId>,
+        ids: &DiffNode,
         summary_map: &mut BTreeMap<TreeId, Self>,
         p: &impl Progress,
     ) -> Result<()>
@@ -140,12 +150,16 @@ impl TreeSummary {
         P: ProgressBars,
         S: IndexedFull,
     {
-        let (left, right) = ids.as_ref().left_and_right();
-        if let Some(id) = left {
-            let _ = Self::from_tree(repo, *id, summary_map, p)?;
+        let (left, right) = ids.0.as_ref().left_and_right();
+        if let Some(node) = left {
+            if let Some(id) = node.subtree {
+                let _ = Self::from_tree(repo, id, summary_map, p)?;
+            }
         }
-        if let Some(id) = right {
-            let _ = Self::from_tree(repo, *id, summary_map, p)?;
+        if let Some(node) = right {
+            if let Some(id) = node.subtree {
+                let _ = Self::from_tree(repo, id, summary_map, p)?;
+            }
         }
         Ok(())
     }
@@ -173,6 +187,7 @@ impl TreeSummary {
                 summary.update(Self::from_tree(repo, id, summary_map, p)?);
             }
         }
+
         _ = summary_map.insert(id, summary.clone());
         Ok(summary)
     }
@@ -186,9 +201,9 @@ pub struct Diff<'a, P, S> {
     snapshot_right: SnapshotFile,
     path_left: PathBuf,
     path_right: PathBuf,
-    trees: Vec<(DiffTree, EitherOrBoth<TreeId>, usize)>, // Stack of parent trees with position
+    trees: Vec<(DiffTree, DiffNode, usize)>, // Stack of parent trees with position
     tree: DiffTree,
-    tree_ids: EitherOrBoth<TreeId>,
+    node: DiffNode,
     summary_map: BTreeMap<TreeId, TreeSummary>,
     ignore_metadata: bool,
     ignore_identical: bool,
@@ -227,19 +242,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         .map(Text::from)
         .collect();
 
-        let left = repo
-            .node_from_snapshot_and_path(&snap_left, path_left)?
-            .subtree;
-        let right = repo
-            .node_from_snapshot_and_path(&snap_right, path_right)?
-            .subtree;
-        let tree_ids = match (left, right) {
-            (Some(l), Some(r)) => EitherOrBoth::Both(l, r),
-            (Some(l), None) => EitherOrBoth::Left(l),
-            (None, Some(r)) => EitherOrBoth::Right(r),
-            (None, None) => bail!("no trees given"),
-        };
-        let mut tree = DiffTree::from_trees(repo, &tree_ids)?;
+        let left = repo.node_from_snapshot_and_path(&snap_left, path_left)?;
+        let right = repo.node_from_snapshot_and_path(&snap_right, path_right)?;
+        let node = DiffNode(EitherOrBoth::Both(left, right));
+
+        let mut tree = DiffTree::from_node(repo, &node)?;
         let mut app = Self {
             current_screen: CurrentScreen::Snapshot,
             table: WithBlock::new(SelectTable::new(header), Block::new()),
@@ -250,7 +257,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             path_right: path_right.parse()?,
             trees: Vec::new(),
             tree: DiffTree::default(),
-            tree_ids,
+            node,
             summary_map: BTreeMap::new(),
             ignore_metadata: true,
             ignore_identical: true,
@@ -368,12 +375,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             .borders(Borders::BOTTOM | Borders::TOP)
             .title(format!(
                 "{} | {}",
-                if self.tree_ids.has_left() {
+                if self.node.0.has_left() {
                     format!("{}:{}", self.snapshot_left.id, self.path_left.display())
                 } else {
                     format!("({})", self.snapshot_left.id)
                 },
-                if self.tree_ids.has_right() {
+                if self.node.0.has_right() {
                     format!("{}:{}", self.snapshot_right.id, self.path_right.display())
                 } else {
                     format!("({})", self.snapshot_right.id)
@@ -386,15 +393,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn enter(&mut self) -> Result<()> {
         if let Some(idx) = self.table.widget.selected() {
             let node = &self.tree.nodes[idx];
-            if let Some(tree_ids) = node.subtrees() {
+            if let Some(node) = node.only_subtrees() {
                 self.path_left.push(node.name());
                 self.path_right.push(node.name());
                 let tree = std::mem::take(&mut self.tree);
-                self.trees.push((tree, self.tree_ids.clone(), idx));
-                let mut tree = DiffTree::from_trees(self.repo, &tree_ids)?;
+                self.trees.push((tree, self.node.clone(), idx));
+                let mut tree = DiffTree::from_node(self.repo, &node)?;
                 tree.nodes.retain(|node| self.show_node(node));
                 self.tree = tree;
-                self.tree_ids = tree_ids;
+                self.node = node;
                 self.table.widget.set_to(0);
                 self.update_table();
             }
@@ -409,9 +416,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn goback(&mut self) {
         _ = self.path_left.pop();
         _ = self.path_right.pop();
-        if let Some((tree, tree_ids, idx)) = self.trees.pop() {
+        if let Some((tree, node, idx)) = self.trees.pop() {
             self.tree = tree;
-            self.tree_ids = tree_ids;
+            self.node = node;
             self.table.widget.set_to(idx);
             self.update_table();
         }
@@ -425,7 +432,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn toggle_ignore_identical(&mut self) -> Result<()> {
         self.ignore_identical = !self.ignore_identical;
 
-        let mut tree = DiffTree::from_trees(self.repo, &self.tree_ids)?;
+        let mut tree = DiffTree::from_node(self.repo, &self.node)?;
         tree.nodes.retain(|node| self.show_node(node));
         self.tree = tree;
 
@@ -436,7 +443,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn compute_summary(&mut self) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        TreeSummary::from_repo(self.repo, &self.tree_ids, &mut self.summary_map, &p)?;
+        TreeSummary::from_repo(self.repo, &self.node, &mut self.summary_map, &p)?;
         p.finish();
         self.update_table();
         Ok(())

@@ -20,6 +20,7 @@ use style::palette::tailwind;
 use crate::{
     commands::{
         diff::NodeDiff,
+        snapshots::fill_table,
         tui::widgets::{
             Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
             popup_prompt, popup_text,
@@ -28,12 +29,16 @@ use crate::{
     helpers::bytes_size_to_string,
 };
 
-use super::TuiResult;
+use super::{
+    TuiResult,
+    widgets::{PopUpTable, popup_table},
+};
 
 // the states this screen can be in
 enum CurrentScreen {
-    Snapshot,
+    Diff,
     ShowHelp(PopUpText),
+    SnapshotDetails(PopUpTable),
     PromptExit(PopUpPrompt),
     PromptLeave(PopUpPrompt),
 }
@@ -248,7 +253,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
 
         let mut tree = DiffTree::from_node(repo, &node)?;
         let mut app = Self {
-            current_screen: CurrentScreen::Snapshot,
+            current_screen: CurrentScreen::Diff,
             table: WithBlock::new(SelectTable::new(header), Block::new()),
             repo,
             snapshot_left: snap_left,
@@ -448,6 +453,21 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         self.update_table();
         Ok(())
     }
+
+    pub fn snapshot_details(&self) -> PopUpTable {
+        let mut rows = Vec::new();
+        let mut rows_right = Vec::new();
+        fill_table(&self.snapshot_left, |title, value| {
+            rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
+        });
+        fill_table(&self.snapshot_right, |_, value| {
+            rows_right.push(Text::from(value));
+        });
+        for (row, right) in rows.iter_mut().zip(rows_right) {
+            row.push(right);
+        }
+        popup_table("snapshot details", rows)
+    }
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
@@ -455,7 +475,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
     fn input(&mut self, event: Event) -> Result<DiffResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
         match &mut self.current_screen {
-            CurrentScreen::Snapshot => match event {
+            CurrentScreen::Diff => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
                     Enter | Right => self.enter()?,
                     Backspace | Left => {
@@ -481,26 +501,30 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
                     Char('m') => self.toggle_ignore_metadata(),
                     Char('d') => self.toggle_ignore_identical()?,
                     Char('s') => self.compute_summary()?,
+                    Char('I') => {
+                        self.current_screen =
+                            CurrentScreen::SnapshotDetails(self.snapshot_details());
+                    }
                     _ => self.table.input(event),
                 },
                 _ => {}
             },
-            CurrentScreen::ShowHelp(_) => match event {
+            CurrentScreen::SnapshotDetails(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    if matches!(key.code, Char('q' | ' ' | '?') | Esc | Enter) {
-                        self.current_screen = CurrentScreen::Snapshot;
+                    if matches!(key.code, Char('q' | ' ' | 'I' | '?') | Esc | Enter) {
+                        self.current_screen = CurrentScreen::Diff;
                     }
                 }
                 _ => {}
             },
             CurrentScreen::PromptExit(prompt) => match prompt.input(event) {
                 PromptResult::Ok => return Ok(DiffResult::Exit),
-                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Diff,
                 PromptResult::None => {}
             },
             CurrentScreen::PromptLeave(prompt) => match prompt.input(event) {
                 PromptResult::Ok => return Ok(DiffResult::Return),
-                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Diff,
                 PromptResult::None => {}
             },
         }
@@ -525,7 +549,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Draw for Diff<'a, P, S> {
 
         // draw popups
         match &mut self.current_screen {
-            CurrentScreen::Snapshot => {}
+            CurrentScreen::Diff => {}
+            CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::PromptExit(popup) | CurrentScreen::PromptLeave(popup) => {
                 popup.draw(area, f);

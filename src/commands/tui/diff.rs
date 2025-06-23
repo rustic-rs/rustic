@@ -19,7 +19,7 @@ use style::palette::tailwind;
 
 use crate::{
     commands::{
-        diff::NodeDiff,
+        diff::{DiffStatistics, NodeDiff},
         snapshots::fill_table,
         tui::widgets::{
             Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
@@ -317,7 +317,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         !self.ignore_identical || !self.node_changed(node).is_identical()
     }
 
-    fn ls_row(&self, node: &DiffNode) -> Vec<Text<'static>> {
+    fn ls_row(&self, node: &DiffNode, stat: &mut DiffStatistics) -> Vec<Text<'static>> {
         let node_info = |node: &Node| {
             let size = node.subtree.map_or(node.meta.size, |id| {
                 self.summary_map
@@ -369,6 +369,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         let right_only = compute_diff(&right_blobs, &left_blobs);
 
         let changed = self.node_changed(node);
+        stat.apply(changed);
         let name = node.name();
         let name = format!("{changed} {}", name.to_string_lossy());
         let (left_size, left_mtime) = match &node.0 {
@@ -394,6 +395,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     }
 
     pub fn update_table(&mut self) {
+        let mut stat = DiffStatistics::default();
         let old_selection = if self.tree.nodes.is_empty() {
             None
         } else {
@@ -401,7 +403,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         };
         let mut rows = Vec::new();
         for node in &self.tree.nodes {
-            let row = self.ls_row(node);
+            let row = self.ls_row(node, &mut stat);
             rows.push(row);
         }
 
@@ -410,7 +412,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         self.table.block = Block::new()
             .borders(Borders::BOTTOM | Borders::TOP)
             .title_bottom(format!(
-                "{} equal, {} metadata",
+                "total: {}, files: {}, dirs: {}; {} equal, {} metadata",
+                self.tree.nodes.len(),
+                stat.files,
+                stat.dirs,
                 if self.ignore_identical {
                     "hide"
                 } else {

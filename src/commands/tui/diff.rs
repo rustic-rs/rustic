@@ -52,6 +52,7 @@ Diff Commands:
           m : toggle ignoring metadata
           d : toggle show only different entries
           s : compute information for (sub-)dirs
+          I : show information about snapshots
 
 General Commands:
 
@@ -66,7 +67,7 @@ General Commands:
 struct DiffNode(EitherOrBoth<Node>);
 
 impl DiffNode {
-    fn only_subtrees(&self) -> Option<DiffNode> {
+    fn only_subtrees(&self) -> Option<Self> {
         let (left, right) = self
             .0
             .clone()
@@ -76,9 +77,9 @@ impl DiffNode {
             )
             .left_and_right();
         match (left.flatten(), right.flatten()) {
-            (Some(l), Some(r)) => Some(DiffNode(EitherOrBoth::Both(l, r))),
-            (Some(l), None) => Some(DiffNode(EitherOrBoth::Left(l))),
-            (None, Some(r)) => Some(DiffNode(EitherOrBoth::Right(r))),
+            (Some(l), Some(r)) => Some(Self(EitherOrBoth::Both(l, r))),
+            (Some(l), None) => Some(Self(EitherOrBoth::Left(l))),
+            (None, Some(r)) => Some(Self(EitherOrBoth::Right(r))),
             (None, None) => None,
         }
     }
@@ -99,17 +100,19 @@ impl DiffTree {
         node: &DiffNode,
     ) -> Result<Self> {
         let tree_from_node = |node: Option<&Node>| {
-            if let Some(left) = node {
-                if let Some(id) = left.subtree {
-                    repo.get_tree(&id)
-                } else {
-                    Ok(Tree {
-                        nodes: vec![left.clone()],
-                    })
-                }
-            } else {
-                Ok(Tree::default())
-            }
+            node.map_or_else(
+                || Ok(Tree::default()),
+                |node| {
+                    node.subtree.map_or_else(
+                        || {
+                            Ok(Tree {
+                                nodes: vec![node.clone()],
+                            })
+                        },
+                        |id| repo.get_tree(&id),
+                    )
+                },
+            )
         };
 
         let left_tree = tree_from_node(node.0.as_ref().left())?;
@@ -406,6 +409,19 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
 
         self.table.block = Block::new()
             .borders(Borders::BOTTOM | Borders::TOP)
+            .title_bottom(format!(
+                "{} equal, {} metadata",
+                if self.ignore_identical {
+                    "hide"
+                } else {
+                    "show"
+                },
+                if self.ignore_metadata {
+                    "with"
+                } else {
+                    "without"
+                }
+            ))
             .title(format!(
                 "{} | {}",
                 if self.node.0.has_left() {

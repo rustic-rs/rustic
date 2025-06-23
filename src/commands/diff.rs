@@ -258,12 +258,6 @@ pub enum NodeDiff {
 }
 
 impl NodeDiff {
-    pub fn diff(node1: Option<&Node>, node2: Option<&Node>) -> Self {
-        Self::from(node1, node2, |node1, node2| {
-            node1.content == node2.content && node1.subtree == node2.subtree
-        })
-    }
-
     pub fn from(
         node1: Option<&Node>,
         node2: Option<&Node>,

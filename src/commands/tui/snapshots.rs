@@ -488,16 +488,17 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn diff(&self) -> Result<Option<Diff<'a, P, S>>> {
-        if self.count_marked_snaps() != 2 {
-            return Ok(None);
-        }
-
         let snaps: Vec<_> = self
             .snapshots
             .iter()
             .zip(self.snaps_status.iter())
             .filter_map(|(snap, status)| status.marked.then_some(snap))
             .collect();
+
+        if snaps.len() != 2 {
+            return Ok(None);
+        }
+
         let left = snaps[0];
         let right = snaps[1];
         Some(Diff::new(self.repo, left.clone(), right.clone(), "", "")).transpose()

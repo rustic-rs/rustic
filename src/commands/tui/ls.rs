@@ -43,7 +43,7 @@ enum CurrentScreen<'a, P, S> {
 const INFO_TEXT: &str = "(Esc) quit | (Enter) enter dir | (Backspace) return to parent | (v) view | (r) restore | (?) show all commands";
 
 const HELP_TEXT: &str = r"
-Diff Commands:
+Ls Commands:
 
           v : view file contents (text files only, up to 1MiB)
           r : restore selected item

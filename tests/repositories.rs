@@ -107,7 +107,7 @@ fn test_rustic_repo_passes(rustic_repo: Result<TestSource>) -> TestResult<()> {
             .arg("86371783")
             .assert()
             .success()
-            .stdout(predicates::str::contains("1 removed"));
+            .stdout(predicates::str::contains("1 -"));
     }
 
     Ok(())
@@ -142,7 +142,7 @@ fn test_restic_repo_with_rustic_passes(restic_repo: Result<TestSource>) -> TestR
             .arg("af05ecb6")
             .assert()
             .success()
-            .stdout(predicates::str::contains("1 removed"));
+            .stdout(predicates::str::contains("1 -"));
     }
 
     Ok(())

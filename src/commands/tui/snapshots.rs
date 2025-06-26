@@ -501,7 +501,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                     // TODO: get snapshot directly from ID, once implemented in Repository
                     .get_snapshot_from_str(&parent.to_string(), |_| true)
                     .ok()
-                    .map(|p| (sn.clone(), p))
+                    .map(|p| (p, sn.clone()))
             } else {
                 None
             }

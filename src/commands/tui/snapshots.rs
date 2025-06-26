@@ -496,27 +496,19 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .collect();
 
         let from_parent = |sn: &SnapshotFile| {
-            if let Some(parent) = sn.parent {
+            sn.parent.and_then(|parent| {
                 self.repo
                     // TODO: get snapshot directly from ID, once implemented in Repository
                     .get_snapshot_from_str(&parent.to_string(), |_| true)
                     .ok()
                     .map(|p| (p, sn.clone()))
-            } else {
-                None
-            }
+            })
         };
 
         let snaps = match snaps.len() {
             2 => Some((snaps[0].clone(), snaps[1].clone())),
             1 => from_parent(snaps[0]),
-            0 => {
-                if let Some(snap) = self.selected_snapshot() {
-                    from_parent(snap)
-                } else {
-                    None
-                }
-            }
+            0 => self.selected_snapshot().and_then(from_parent),
             _ => None,
         };
 

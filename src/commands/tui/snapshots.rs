@@ -103,7 +103,7 @@ const HELP_TEXT: &str = r"General Commands:
   Ctrl-l : remove label for snapshot(s)
        d : set description for snapshot(s)
   Ctrl-d : remove description for snapshot(s)
-       D : diff snapshots if 2 snapshots are selected
+       D : diff snapshots if 2 snapshots are selected or with parent
        t : add tag(s) for snapshot(s)
   Ctrl-t : remove all tags for snapshot(s)
        s : set tag(s) for snapshot(s)
@@ -495,13 +495,36 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             .filter_map(|(snap, status)| status.marked.then_some(snap))
             .collect();
 
-        if snaps.len() != 2 {
-            return Ok(None);
-        }
+        let from_parent = |sn: &SnapshotFile| {
+            if let Some(parent) = sn.parent {
+                self.repo
+                    // TODO: get snapshot directly from ID, once implemented in Repository
+                    .get_snapshot_from_str(&parent.to_string(), |_| true)
+                    .ok()
+                    .map(|p| (sn.clone(), p))
+            } else {
+                None
+            }
+        };
 
-        let left = snaps[0];
-        let right = snaps[1];
-        Some(Diff::new(self.repo, left.clone(), right.clone(), "", "")).transpose()
+        let snaps = match snaps.len() {
+            2 => Some((snaps[0].clone(), snaps[1].clone())),
+            1 => from_parent(snaps[0]),
+            0 => {
+                if let Some(snap) = self.selected_snapshot() {
+                    from_parent(snap)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        if let Some((left, right)) = snaps {
+            Some(Diff::new(self.repo, left, right, "", "")).transpose()
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn count_marked_snaps(&self) -> usize {

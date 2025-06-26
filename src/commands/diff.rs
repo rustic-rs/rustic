@@ -124,6 +124,10 @@ impl DiffCmd {
             }
             (Some(id1), None) => {
                 // diff between snapshot and local path
+                #[cfg(feature = "tui")]
+                if self.interactive {
+                    bail!("interactive diff with local path is not yet implemented!");
+                }
                 let snap1 =
                     repo.get_snapshot_from_str(id1, |sn| config.snapshot_filter.matches(sn))?;
 

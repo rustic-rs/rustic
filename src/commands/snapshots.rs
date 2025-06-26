@@ -16,12 +16,12 @@ use itertools::Itertools;
 use serde::Serialize;
 
 use rustic_core::{
-    SnapshotGroup, SnapshotGroupCriterion,
+    Progress, ProgressBars, SnapshotGroup, SnapshotGroupCriterion,
     repofile::{DeleteOption, SnapshotFile},
 };
 
 #[cfg(feature = "tui")]
-use super::tui;
+use crate::commands::tui;
 
 /// `snapshot` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -74,7 +74,22 @@ impl SnapshotCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         #[cfg(feature = "tui")]
         if self.interactive {
-            return tui::run(self.group_by);
+            return tui::run(|progress| {
+                let config = RUSTIC_APP.config();
+                config
+                    .repository
+                    .run_indexed_with_progress(progress.clone(), |repo| {
+                        let p = progress.progress_spinner("starting rustic in interactive mode...");
+                        p.finish();
+                        // create app and run it
+                        let snapshots = tui::Snapshots::new(
+                            &repo,
+                            config.snapshot_filter.clone(),
+                            self.group_by,
+                        )?;
+                        tui::run_app(progress.terminal, snapshots)
+                    })
+            });
         }
 
         let config = RUSTIC_APP.config();

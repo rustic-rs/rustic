@@ -83,15 +83,14 @@ impl BlobInfo {
 pub struct BlobInfoRef<'a>(BTreeSet<&'a DataId>);
 impl<'a> BlobInfoRef<'a> {
     pub fn from_node_or_map(node: &'a Node, summary_map: &'a SummaryMap) -> Self {
-        if let Some(id) = node.subtree {
-            if let Some(summary) = summary_map.get(&id) {
-                summary.blobs.as_ref()
-            } else {
-                Self::from_node(node)
-            }
-        } else {
-            Self::from_node(node)
-        }
+        node.subtree.map_or_else(
+            || Self::from_node(node),
+            |id| {
+                summary_map
+                    .get(&id)
+                    .map_or_else(|| Self::from_node(node), |summary| summary.blobs.as_ref())
+            },
+        )
     }
     fn from_node(node: &'a Node) -> Self {
         Self(node.content.iter().flatten().collect())

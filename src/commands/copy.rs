@@ -88,7 +88,7 @@ impl CopyCmd {
             target_config.merge_profile(target, &mut merge_logs, Level::Error)?;
             // display logs from merging
             for (level, merge_log) in merge_logs {
-                log!(level, "{}", merge_log);
+                log!(level, "{merge_log}");
             }
             let target_opt = &target_config.repository;
             if let Err(err) =

@@ -26,10 +26,7 @@ use crate::{
     helpers::bytes_size_to_string,
 };
 
-use super::{
-    summary::{SummaryMap, TreeSummary},
-    widgets::PopUpInput,
-};
+use super::{summary::SummaryMap, widgets::PopUpInput};
 
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
@@ -224,7 +221,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
     pub fn compute_sizes(&mut self) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        let _ = TreeSummary::from_tree(self.repo, self.tree_id, &mut self.summary_map, &p)?;
+        self.summary_map.compute(self.repo, self.tree_id, &p)?;
         p.finish();
         self.update_table();
         Ok(())

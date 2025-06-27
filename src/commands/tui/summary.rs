@@ -8,7 +8,24 @@ use rustic_core::{
 
 use crate::{commands::ls::Summary, helpers::bytes_size_to_string};
 
-pub type SummaryMap = BTreeMap<TreeId, TreeSummary>;
+#[derive(Default)]
+pub struct SummaryMap(BTreeMap<TreeId, TreeSummary>);
+
+impl SummaryMap {
+    pub fn get(&self, id: &TreeId) -> Option<&TreeSummary> {
+        self.0.get(id)
+    }
+
+    pub fn compute<P, S: IndexedFull>(
+        &mut self,
+        repo: &Repository<P, S>,
+        id: TreeId,
+        p: &impl Progress,
+    ) -> Result<()> {
+        let _ = TreeSummary::from_tree(repo, id, &mut self.0, p)?;
+        Ok(())
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct TreeSummary {

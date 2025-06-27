@@ -30,7 +30,7 @@ use crate::{
 
 use super::{
     TuiResult,
-    summary::{SummaryMap, TreeSummary},
+    summary::SummaryMap,
     widgets::{PopUpTable, popup_table},
 };
 
@@ -388,12 +388,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         let (left, right) = self.node.0.as_ref().left_and_right();
         if let Some(node) = left {
             if let Some(id) = node.subtree {
-                let _ = TreeSummary::from_tree(self.repo, id, &mut self.summary_map, &p)?;
+                self.summary_map.compute(self.repo, id, &p)?;
             }
         }
         if let Some(node) = right {
             if let Some(id) = node.subtree {
-                let _ = TreeSummary::from_tree(self.repo, id, &mut self.summary_map, &p)?;
+                self.summary_map.compute(self.repo, id, &p)?;
             }
         }
 

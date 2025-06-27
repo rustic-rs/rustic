@@ -4,7 +4,7 @@ mod ls;
 mod progress;
 mod restore;
 mod snapshots;
-mod summary;
+pub mod summary;
 mod tree;
 mod widgets;
 pub use diff::Diff;

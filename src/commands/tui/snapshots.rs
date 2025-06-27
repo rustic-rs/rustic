@@ -1,9 +1,4 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    iter::once,
-    mem,
-    str::FromStr,
-};
+use std::{collections::BTreeSet, iter::once, mem, str::FromStr};
 
 use anyhow::Result;
 use chrono::Local;
@@ -161,7 +156,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             default_filter: filter.clone(),
             filter,
             group_by,
-            summary_map: BTreeMap::new(),
+            summary_map: SummaryMap::default(),
         };
         app.reread()?;
         Ok(app)

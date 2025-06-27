@@ -13,7 +13,7 @@ use ratatui::{
 };
 use rustic_core::{
     DataId, IndexedFull, Progress, ProgressBars, Repository, TreeId,
-    repofile::{Metadata, Node, SnapshotFile, Tree},
+    repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
 
@@ -31,6 +31,7 @@ use crate::{
 
 use super::{
     TuiResult,
+    summary::TreeSummary,
     widgets::{PopUpTable, popup_table},
 };
 
@@ -126,91 +127,6 @@ impl DiffTree {
             .map(DiffNode)
             .collect();
         Ok(Self { nodes })
-    }
-}
-
-#[derive(Default, Clone)]
-struct TreeSummary {
-    id_without_meta: TreeId,
-    blobs: BTreeSet<DataId>,
-    size: u64,
-}
-
-impl TreeSummary {
-    fn update(&mut self, mut other: Self) {
-        self.blobs.append(&mut other.blobs);
-        self.size += other.size;
-    }
-
-    fn update_from_node(&mut self, node: &Node) {
-        for id in node.content.iter().flatten() {
-            _ = self.blobs.insert(*id);
-        }
-        self.size += node.meta.size;
-    }
-
-    fn from_repo<P, S>(
-        repo: &'_ Repository<P, S>,
-        ids: &DiffNode,
-        summary_map: &mut BTreeMap<TreeId, Self>,
-        p: &impl Progress,
-    ) -> Result<()>
-    where
-        P: ProgressBars,
-        S: IndexedFull,
-    {
-        let (left, right) = ids.0.as_ref().left_and_right();
-        if let Some(node) = left {
-            if let Some(id) = node.subtree {
-                let _ = Self::from_tree(repo, id, summary_map, p)?;
-            }
-        }
-        if let Some(node) = right {
-            if let Some(id) = node.subtree {
-                let _ = Self::from_tree(repo, id, summary_map, p)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn from_tree<P, S>(
-        repo: &'_ Repository<P, S>,
-        id: TreeId,
-        summary_map: &mut BTreeMap<TreeId, Self>,
-        p: &impl Progress,
-    ) -> Result<Self>
-    where
-        S: IndexedFull,
-    {
-        if let Some(summary) = summary_map.get(&id) {
-            return Ok(summary.clone());
-        }
-
-        let mut summary = Self::default();
-
-        let tree = repo.get_tree(&id)?;
-        let mut tree_without_meta = Tree::default();
-        p.inc(1);
-        for node in &tree.nodes {
-            let mut node_without_meta = Node::new_node(
-                node.name().as_os_str(),
-                node.node_type.clone(),
-                Metadata::default(),
-            );
-            node_without_meta.content = node.content.clone();
-            summary.update_from_node(node);
-            if let Some(id) = node.subtree {
-                let subtree_summary = Self::from_tree(repo, id, summary_map, p)?;
-                node_without_meta.subtree = Some(subtree_summary.id_without_meta);
-                summary.update(subtree_summary);
-            }
-            tree_without_meta.nodes.push(node_without_meta);
-        }
-        let (_, id_without_meta) = tree_without_meta.serialize()?;
-        summary.id_without_meta = id_without_meta;
-
-        _ = summary_map.insert(id, summary.clone());
-        Ok(summary)
     }
 }
 
@@ -322,7 +238,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             let size = node.subtree.map_or(node.meta.size, |id| {
                 self.summary_map
                     .get(&id)
-                    .map_or(node.meta.size, |summary| summary.size)
+                    .map_or(node.meta.size, |summary| summary.summary.size)
             });
             (
                 bytes_size_to_string(size),
@@ -497,7 +413,19 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn compute_summary(&mut self) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        TreeSummary::from_repo(self.repo, &self.node, &mut self.summary_map, &p)?;
+
+        let (left, right) = self.node.0.as_ref().left_and_right();
+        if let Some(node) = left {
+            if let Some(id) = node.subtree {
+                let _ = TreeSummary::from_tree(self.repo, id, &mut self.summary_map, &p)?;
+            }
+        }
+        if let Some(node) = right {
+            if let Some(id) = node.subtree {
+                let _ = TreeSummary::from_tree(self.repo, id, &mut self.summary_map, &p)?;
+            }
+        }
+
         p.finish();
         self.update_table();
         Ok(())

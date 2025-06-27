@@ -10,7 +10,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, ProgressBars, Repository, RusticResult, TreeId,
+    IndexedFull, Progress, ProgressBars, Repository, TreeId,
     repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
@@ -29,7 +29,7 @@ use crate::{
     helpers::bytes_size_to_string,
 };
 
-use super::widgets::PopUpInput;
+use super::{summary::TreeSummary, widgets::PopUpInput};
 
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
@@ -69,7 +69,7 @@ pub(crate) struct Snapshot<'a, P, S> {
     trees: Vec<(Tree, TreeId, usize)>, // Stack of parent trees with position
     tree: Tree,
     tree_id: TreeId,
-    summary: BTreeMap<TreeId, Summary>,
+    summary: BTreeMap<TreeId, TreeSummary>,
 }
 
 pub enum SnapshotResult {
@@ -148,8 +148,8 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             if node.is_dir() {
                 let id = node.subtree.unwrap();
                 if let Some(sum) = self.summary.get(&id) {
-                    summary += *sum;
-                    node.meta.size = sum.size;
+                    summary += sum.summary;
+                    node.meta.size = sum.summary.size;
                 } else {
                     summary.update(&node);
                 }
@@ -216,9 +216,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         self.update_table();
     }
 
-    pub fn compute_sizes(&mut self) {
-        let _ = compute_tree_sizes(self.repo, &self.tree, self.tree_id, &mut self.summary).unwrap();
+    pub fn compute_sizes(&mut self) -> Result<()> {
+        let pb = self.repo.progress_bars();
+        let p = pb.progress_counter("computing (sub)-dir information");
+        let _ = TreeSummary::from_tree(self.repo, self.tree_id, &mut self.summary, &p)?;
+        p.finish();
         self.update_table();
+        Ok(())
     }
 
     pub fn input(&mut self, event: Event) -> Result<SnapshotResult> {
@@ -243,7 +247,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
-                    Char('s') => self.compute_sizes(),
+                    Char('s') => self.compute_sizes()?,
                     Char('v') => {
                         // viewing is not supported on cold repositories
                         if self.repo.config().is_hot != Some(true) {
@@ -353,29 +357,4 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             CurrentScreen::ShowFile(popup) => popup.draw(area, f),
         }
     }
-}
-
-fn compute_tree_sizes<P, S>(
-    repo: &'_ Repository<P, S>,
-    tree: &Tree,
-    id: TreeId,
-    sizes: &mut BTreeMap<TreeId, Summary>,
-) -> RusticResult<Summary>
-where
-    S: IndexedFull,
-{
-    if let Some(summary) = sizes.get(&id) {
-        return Ok(*summary);
-    }
-    let mut summary = Summary::default();
-    for node in &tree.nodes {
-        summary.update(node);
-        if node.is_dir() {
-            let id = node.subtree.unwrap();
-            let tree = repo.get_tree(&id)?;
-            summary += compute_tree_sizes(repo, &tree, id, sizes)?;
-        }
-    }
-    _ = sizes.insert(id, summary);
-    Ok(summary)
 }

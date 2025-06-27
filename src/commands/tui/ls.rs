@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
@@ -29,7 +26,10 @@ use crate::{
     helpers::bytes_size_to_string,
 };
 
-use super::{summary::TreeSummary, widgets::PopUpInput};
+use super::{
+    summary::{SummaryMap, TreeSummary},
+    widgets::PopUpInput,
+};
 
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
@@ -49,6 +49,7 @@ Ls Commands:
           r : restore selected item
           n : toggle numeric IDs
           s : compute information for (sub)-dirs
+          D : diff current selection
 
 General Commands:
 
@@ -69,17 +70,21 @@ pub(crate) struct Snapshot<'a, P, S> {
     trees: Vec<(Tree, TreeId, usize)>, // Stack of parent trees with position
     tree: Tree,
     tree_id: TreeId,
-    summary: BTreeMap<TreeId, TreeSummary>,
+    summary_map: SummaryMap,
 }
 
 pub enum SnapshotResult {
     Exit,
-    Return,
+    Return(SummaryMap),
     None,
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
-    pub fn new(repo: &'a Repository<P, S>, snapshot: SnapshotFile) -> Result<Self> {
+    pub fn new(
+        repo: &'a Repository<P, S>,
+        snapshot: SnapshotFile,
+        summary_map: SummaryMap,
+    ) -> Result<Self> {
         let header = ["Name", "Size", "Mode", "User", "Group", "Time"]
             .into_iter()
             .map(Text::from)
@@ -97,7 +102,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             trees: Vec::new(),
             tree,
             tree_id,
-            summary: BTreeMap::new(),
+            summary_map,
         };
         app.update_table();
         Ok(app)
@@ -147,7 +152,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             let mut node = node.clone();
             if node.is_dir() {
                 let id = node.subtree.unwrap();
-                if let Some(sum) = self.summary.get(&id) {
+                if let Some(sum) = self.summary_map.get(&id) {
                     summary += sum.summary;
                     node.meta.size = sum.summary.size;
                 } else {
@@ -219,7 +224,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
     pub fn compute_sizes(&mut self) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        let _ = TreeSummary::from_tree(self.repo, self.tree_id, &mut self.summary, &p)?;
+        let _ = TreeSummary::from_tree(self.repo, self.tree_id, &mut self.summary_map, &p)?;
         p.finish();
         self.update_table();
         Ok(())
@@ -233,7 +238,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                     Enter | Right => self.enter()?,
                     Backspace | Left => {
                         if self.goback() {
-                            return Ok(SnapshotResult::Return);
+                            return Ok(SnapshotResult::Return(std::mem::take(
+                                &mut self.summary_map,
+                            )));
                         }
                     }
                     Esc | Char('q') => {

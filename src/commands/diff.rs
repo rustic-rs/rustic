@@ -9,6 +9,7 @@ use log::debug;
 
 use std::{
     cmp::Ordering,
+    collections::BTreeMap,
     fmt::{Display, Write},
     path::{Path, PathBuf},
 };
@@ -105,6 +106,7 @@ impl DiffCmd {
                                     snap2.clone(),
                                     path1,
                                     path2,
+                                    BTreeMap::new(),
                                 )?;
                                 tui::run_app(progress.terminal, diff)
                             })

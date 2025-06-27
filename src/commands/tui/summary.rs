@@ -6,24 +6,26 @@ use rustic_core::{
     repofile::{Metadata, Node, Tree},
 };
 
-use crate::commands::ls::Summary;
+use crate::{commands::ls::Summary, helpers::bytes_size_to_string};
+
+pub type SummaryMap = BTreeMap<TreeId, TreeSummary>;
 
 #[derive(Default, Clone)]
 pub struct TreeSummary {
     pub id_without_meta: TreeId,
-    pub blobs: BTreeSet<DataId>,
+    pub blobs: BlobInfo,
     pub summary: Summary,
 }
 
 impl TreeSummary {
     fn update(&mut self, mut other: Self) {
-        self.blobs.append(&mut other.blobs);
+        self.blobs.0.append(&mut other.blobs.0);
         self.summary += other.summary;
     }
 
     fn update_from_node(&mut self, node: &Node) {
         for id in node.content.iter().flatten() {
-            _ = self.blobs.insert(*id);
+            _ = self.blobs.0.insert(*id);
         }
         self.summary.update(node);
     }
@@ -66,5 +68,52 @@ impl TreeSummary {
 
         _ = summary_map.insert(id, summary.clone());
         Ok(summary)
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct BlobInfo(BTreeSet<DataId>);
+
+impl BlobInfo {
+    pub fn as_ref(&self) -> BlobInfoRef<'_> {
+        BlobInfoRef(self.0.iter().collect())
+    }
+}
+
+pub struct BlobInfoRef<'a>(BTreeSet<&'a DataId>);
+impl<'a> BlobInfoRef<'a> {
+    pub fn from_node_or_map(node: &'a Node, summary_map: &'a SummaryMap) -> Self {
+        if let Some(id) = node.subtree {
+            if let Some(summary) = summary_map.get(&id) {
+                summary.blobs.as_ref()
+            } else {
+                Self::from_node(node)
+            }
+        } else {
+            Self::from_node(node)
+        }
+    }
+    fn from_node(node: &'a Node) -> Self {
+        Self(node.content.iter().flatten().collect())
+    }
+
+    pub fn text_diff<P, S: IndexedFull>(
+        blobs1: &Option<Self>,
+        blobs2: &Option<Self>,
+        repo: &'a Repository<P, S>,
+    ) -> String {
+        if let (Some(blobs1), Some(blobs2)) = (blobs1, blobs2) {
+            blobs1
+                .0
+                .difference(&blobs2.0)
+                .map(|id| repo.get_index_entry(*id))
+                .try_fold(0u64, |sum, b| -> Result<_> {
+                    Ok(sum + u64::from(b?.length))
+                })
+                .ok()
+                .map_or("?".to_string(), bytes_size_to_string)
+        } else {
+            String::new()
+        }
     }
 }

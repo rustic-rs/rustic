@@ -407,7 +407,7 @@ mod tests {
             let _ = config
                 .global
                 .env
-                .insert(format!("KEY{}", i), format!("VALUE{}", i));
+                .insert(format!("KEY{i}"), format!("VALUE{i}"));
         }
 
         let serialized = toml::to_string(&config).unwrap();

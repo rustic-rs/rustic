@@ -188,7 +188,7 @@ impl RemoveCmd {
         if !RUSTIC_APP.config().global.dry_run {
             for id in ids {
                 repo.delete_key(&id)?;
-                info!("key {} successfully removed.", id);
+                info!("key {id} successfully removed.");
             }
             return Ok(());
         }

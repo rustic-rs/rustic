@@ -74,12 +74,13 @@ jobs:
             architecture: arm64
             binary-postfix: ""
             use-cross: true
-          - os: ubuntu-latest
-            os-name: linux
-            target: i686-unknown-linux-gnu
-            architecture: i686
-            binary-postfix: ""
-            use-cross: true
+          # FIXME: cross-compile-problem with `concurrent-arena`
+          # - os: ubuntu-latest
+          #   os-name: linux
+          #   target: i686-unknown-linux-gnu
+          #   architecture: i686
+          #   binary-postfix: ""
+          #   use-cross: false
           # FIXME: `aws-lc-sys` doesn't cross compile
           # - os: ubuntu-latest
           #   os-name: netbsd

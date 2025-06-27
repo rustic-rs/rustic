@@ -500,7 +500,7 @@ fn diff(
         }
 
         if !diff.is_identical() {
-            println!("{diff}    {:?}", path);
+            println!("{diff}    {path:?}");
         }
         diff_statistics.apply(diff);
     }

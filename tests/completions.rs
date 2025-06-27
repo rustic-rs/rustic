@@ -59,7 +59,7 @@ fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
         }
     }
 
-    let name = format!("completions-{}-{}", shell, os);
+    let name = format!("completions-{shell}-{os}");
 
     assert_snapshot!(name, output);
 

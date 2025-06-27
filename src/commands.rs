@@ -305,7 +305,7 @@ impl Configurable<RusticConfig> for EntryPoint {
 
         // display logs from merging
         for (level, merge_log) in merge_logs {
-            log!(level, "{}", merge_log);
+            log!(level, "{merge_log}");
         }
 
         match &self.commands {

@@ -31,6 +31,8 @@ use crate::{
     filtering::SnapshotFilter,
 };
 
+use super::summary::SummaryMap;
+
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
     Snapshots,
@@ -125,6 +127,7 @@ pub struct Snapshots<'a, P, S> {
     filter: SnapshotFilter,
     default_filter: SnapshotFilter,
     group_by: SnapshotGroupCriterion,
+    summary_map: SummaryMap,
 }
 
 impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
@@ -153,6 +156,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             default_filter: filter.clone(),
             filter,
             group_by,
+            summary_map: SummaryMap::default(),
         };
         app.reread()?;
         Ok(app)
@@ -481,13 +485,18 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         popup_table("snapshot details", rows)
     }
 
-    pub fn dir(&self) -> Result<Option<Snapshot<'a, P, S>>> {
-        self.selected_snapshot().map_or(Ok(None), |snap| {
-            Some(Snapshot::new(self.repo, snap.clone())).transpose()
+    pub fn dir(&mut self) -> Result<Option<Snapshot<'a, P, S>>> {
+        self.selected_snapshot().cloned().map_or(Ok(None), |snap| {
+            Some(Snapshot::new(
+                self.repo,
+                snap,
+                mem::take(&mut self.summary_map),
+            ))
+            .transpose()
         })
     }
 
-    pub fn diff(&self) -> Result<Option<Diff<'a, P, S>>> {
+    pub fn diff(&mut self) -> Result<Option<Diff<'a, P, S>>> {
         let snaps: Vec<_> = self
             .snapshots
             .iter()
@@ -513,7 +522,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         };
 
         if let Some((left, right)) = snaps {
-            Some(Diff::new(self.repo, left, right, "", "")).transpose()
+            Some(Diff::new(
+                self.repo,
+                left,
+                right,
+                "",
+                "",
+                mem::take(&mut self.summary_map),
+            ))
+            .transpose()
         } else {
             Ok(None)
         }
@@ -925,12 +942,18 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
             },
             CurrentScreen::Dir(dir) => match dir.input(event)? {
                 SnapshotResult::Exit => return Ok(true),
-                SnapshotResult::Return => self.current_screen = CurrentScreen::Snapshots,
+                SnapshotResult::Return(summary_map) => {
+                    self.current_screen = CurrentScreen::Snapshots;
+                    self.summary_map = summary_map;
+                }
                 SnapshotResult::None => {}
             },
             CurrentScreen::Diff(diff) => match diff.input(event)? {
                 DiffResult::Exit => return Ok(true),
-                DiffResult::Return => self.current_screen = CurrentScreen::Snapshots,
+                DiffResult::Return(summary_map) => {
+                    self.current_screen = CurrentScreen::Snapshots;
+                    self.summary_map = summary_map;
+                }
                 DiffResult::None => {}
             },
         }

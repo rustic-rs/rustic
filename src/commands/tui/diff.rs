@@ -1,8 +1,4 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    ffi::OsString,
-    path::PathBuf,
-};
+use std::{ffi::OsString, path::PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
@@ -12,8 +8,8 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    DataId, IndexedFull, Progress, ProgressBars, Repository, TreeId,
-    repofile::{Metadata, Node, SnapshotFile, Tree},
+    IndexedFull, Progress, ProgressBars, Repository,
+    repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
 
@@ -21,9 +17,12 @@ use crate::{
     commands::{
         diff::{DiffStatistics, NodeDiff},
         snapshots::fill_table,
-        tui::widgets::{
-            Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
-            popup_prompt, popup_text,
+        tui::{
+            summary::BlobInfoRef,
+            widgets::{
+                Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
+                popup_prompt, popup_text,
+            },
         },
     },
     helpers::bytes_size_to_string,
@@ -31,6 +30,7 @@ use crate::{
 
 use super::{
     TuiResult,
+    summary::SummaryMap,
     widgets::{PopUpTable, popup_table},
 };
 
@@ -129,91 +129,6 @@ impl DiffTree {
     }
 }
 
-#[derive(Default, Clone)]
-struct TreeSummary {
-    id_without_meta: TreeId,
-    blobs: BTreeSet<DataId>,
-    size: u64,
-}
-
-impl TreeSummary {
-    fn update(&mut self, mut other: Self) {
-        self.blobs.append(&mut other.blobs);
-        self.size += other.size;
-    }
-
-    fn update_from_node(&mut self, node: &Node) {
-        for id in node.content.iter().flatten() {
-            _ = self.blobs.insert(*id);
-        }
-        self.size += node.meta.size;
-    }
-
-    fn from_repo<P, S>(
-        repo: &'_ Repository<P, S>,
-        ids: &DiffNode,
-        summary_map: &mut BTreeMap<TreeId, Self>,
-        p: &impl Progress,
-    ) -> Result<()>
-    where
-        P: ProgressBars,
-        S: IndexedFull,
-    {
-        let (left, right) = ids.0.as_ref().left_and_right();
-        if let Some(node) = left {
-            if let Some(id) = node.subtree {
-                let _ = Self::from_tree(repo, id, summary_map, p)?;
-            }
-        }
-        if let Some(node) = right {
-            if let Some(id) = node.subtree {
-                let _ = Self::from_tree(repo, id, summary_map, p)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn from_tree<P, S>(
-        repo: &'_ Repository<P, S>,
-        id: TreeId,
-        summary_map: &mut BTreeMap<TreeId, Self>,
-        p: &impl Progress,
-    ) -> Result<Self>
-    where
-        S: IndexedFull,
-    {
-        if let Some(summary) = summary_map.get(&id) {
-            return Ok(summary.clone());
-        }
-
-        let mut summary = Self::default();
-
-        let tree = repo.get_tree(&id)?;
-        let mut tree_without_meta = Tree::default();
-        p.inc(1);
-        for node in &tree.nodes {
-            let mut node_without_meta = Node::new_node(
-                node.name().as_os_str(),
-                node.node_type.clone(),
-                Metadata::default(),
-            );
-            node_without_meta.content = node.content.clone();
-            summary.update_from_node(node);
-            if let Some(id) = node.subtree {
-                let subtree_summary = Self::from_tree(repo, id, summary_map, p)?;
-                node_without_meta.subtree = Some(subtree_summary.id_without_meta);
-                summary.update(subtree_summary);
-            }
-            tree_without_meta.nodes.push(node_without_meta);
-        }
-        let (_, id_without_meta) = tree_without_meta.serialize()?;
-        summary.id_without_meta = id_without_meta;
-
-        _ = summary_map.insert(id, summary.clone());
-        Ok(summary)
-    }
-}
-
 pub struct Diff<'a, P, S> {
     current_screen: CurrentScreen,
     table: WithBlock<SelectTable>,
@@ -225,14 +140,14 @@ pub struct Diff<'a, P, S> {
     trees: Vec<(DiffTree, DiffNode, usize)>, // Stack of parent trees with position
     tree: DiffTree,
     node: DiffNode,
-    summary_map: BTreeMap<TreeId, TreeSummary>,
+    summary_map: SummaryMap,
     ignore_metadata: bool,
     ignore_identical: bool,
 }
 
 pub enum DiffResult {
     Exit,
-    Return,
+    Return(SummaryMap),
     None,
 }
 
@@ -249,6 +164,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         snap_right: SnapshotFile,
         path_left: &str,
         path_right: &str,
+        summary_map: SummaryMap,
     ) -> Result<Self> {
         let header = [
             "Name",
@@ -279,7 +195,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             trees: Vec::new(),
             tree: DiffTree::default(),
             node,
-            summary_map: BTreeMap::new(),
+            summary_map,
             ignore_metadata: true,
             ignore_identical: true,
         };
@@ -322,7 +238,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             let size = node.subtree.map_or(node.meta.size, |id| {
                 self.summary_map
                     .get(&id)
-                    .map_or(node.meta.size, |summary| summary.size)
+                    .map_or(node.meta.size, |summary| summary.summary.size)
             });
             (
                 bytes_size_to_string(size),
@@ -333,40 +249,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             )
         };
 
-        let compute_diff = |blobs1: &BTreeSet<&DataId>, blobs2: &BTreeSet<&DataId>| {
-            if blobs1.is_empty() {
-                String::new()
-            } else {
-                blobs1
-                    .difference(blobs2)
-                    .map(|id| self.repo.get_index_entry(*id))
-                    .try_fold(0u64, |sum, b| -> Result<_> {
-                        Ok(sum + u64::from(b?.length))
-                    })
-                    .ok()
-                    .map_or("?".to_string(), bytes_size_to_string)
-            }
-        };
-
         let (left, right) = node.0.as_ref().left_and_right();
-        let left_blobs = left.map_or_else(BTreeSet::new, |node| {
-            if let Some(id) = node.subtree {
-                if let Some(summary) = self.summary_map.get(&id) {
-                    return summary.blobs.iter().collect();
-                }
-            }
-            node.content.iter().flatten().collect()
-        });
-        let right_blobs = right.map_or_else(BTreeSet::new, |node| {
-            if let Some(id) = node.subtree {
-                if let Some(summary) = self.summary_map.get(&id) {
-                    return summary.blobs.iter().collect();
-                }
-            }
-            node.content.iter().flatten().collect()
-        });
-        let left_only = compute_diff(&left_blobs, &right_blobs);
-        let right_only = compute_diff(&right_blobs, &left_blobs);
+        let left_blobs = left.map(|node| BlobInfoRef::from_node_or_map(node, &self.summary_map));
+        let right_blobs = right.map(|node| BlobInfoRef::from_node_or_map(node, &self.summary_map));
+        let left_only = BlobInfoRef::text_diff(&left_blobs, &right_blobs, self.repo);
+        let right_only = BlobInfoRef::text_diff(&right_blobs, &left_blobs, self.repo);
 
         let changed = self.node_changed(node);
         stat.apply(changed);
@@ -497,7 +384,19 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     pub fn compute_summary(&mut self) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        TreeSummary::from_repo(self.repo, &self.node, &mut self.summary_map, &p)?;
+
+        let (left, right) = self.node.0.as_ref().left_and_right();
+        if let Some(node) = left {
+            if let Some(id) = node.subtree {
+                self.summary_map.compute(self.repo, id, &p)?;
+            }
+        }
+        if let Some(node) = right {
+            if let Some(id) = node.subtree {
+                self.summary_map.compute(self.repo, id, &p)?;
+            }
+        }
+
         p.finish();
         self.update_table();
         Ok(())
@@ -572,7 +471,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
                 PromptResult::None => {}
             },
             CurrentScreen::PromptLeave(prompt) => match prompt.input(event) {
-                PromptResult::Ok => return Ok(DiffResult::Return),
+                PromptResult::Ok => {
+                    return Ok(DiffResult::Return(std::mem::take(&mut self.summary_map)));
+                }
                 PromptResult::Cancel => self.current_screen = CurrentScreen::Diff,
                 PromptResult::None => {}
             },

@@ -90,6 +90,7 @@ impl DiffCmd {
 
                 #[cfg(feature = "tui")]
                 if self.interactive {
+                    use tui::summary::SummaryMap;
                     return tui::run(|progress| {
                         let config = RUSTIC_APP.config();
                         config
@@ -105,6 +106,7 @@ impl DiffCmd {
                                     snap2.clone(),
                                     path1,
                                     path2,
+                                    SummaryMap::default(),
                                 )?;
                                 tui::run_app(progress.terminal, diff)
                             })

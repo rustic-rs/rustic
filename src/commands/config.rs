@@ -31,7 +31,7 @@ impl ConfigCmd {
 
         let changed = config
             .repository
-            .run_open(|repo| Ok(repo.apply_config(&self.config_opts)?))?;
+            .run_open(|mut repo| Ok(repo.apply_config(&self.config_opts)?))?;
 
         if changed {
             println!("saved new config");

@@ -342,7 +342,6 @@ impl BackupCmd {
             info!("snapshot {} successfully saved.", snap.id);
         }
 
-        #[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
         if config.global.is_metrics_configured() {
             // Merge global metrics labels
             conflate::btreemap::append_or_ignore(
@@ -357,6 +356,15 @@ impl BackupCmd {
         info!("backup of {source} done.");
         Ok(())
     }
+}
+
+#[cfg(not(any(feature = "prometheus", feature = "opentelemetry")))]
+fn publish_metrics(
+    snap: &SnapshotFile,
+    job_name: Option<String>,
+    mut labels: BTreeMap<String, String>,
+) -> Result<()> {
+    Err(anyhow!("metrics support is not compiled-in!"))
 }
 
 #[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
@@ -520,6 +528,11 @@ fn publish_metrics(
             .context("pushing prometheus metrics")?;
     }
 
+    #[cfg(not(feature = "prometheus"))]
+    if global_config.prometheus.is_some() {
+        bail!("prometheus metrics support is not compiled-in!");
+    }
+
     #[cfg(feature = "opentelemetry")]
     if let Some(otlp_endpoint) = &global_config.opentelemetry {
         use crate::metrics::opentelemetry::OpentelemetryExporter;
@@ -533,6 +546,11 @@ fn publish_metrics(
         metrics_exporter
             .push_metrics(metrics.as_slice())
             .context("pushing opentelemetry metrics")?;
+    }
+
+    #[cfg(not(feature = "opentelemetry"))]
+    if global_config.opentelemetry.is_some() {
+        bail!("opentelemetry metrics support is not compiled-in!");
     }
 
     Ok(())

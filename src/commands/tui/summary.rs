@@ -30,13 +30,13 @@ impl SummaryMap {
 #[derive(Default, Clone)]
 pub struct TreeSummary {
     pub id_without_meta: TreeId,
-    pub blobs: BlobInfo,
     pub summary: Summary,
+    blobs: BlobInfo,
+    subtrees: Vec<TreeId>,
 }
 
 impl TreeSummary {
-    fn update(&mut self, mut other: Self) {
-        self.blobs.0.append(&mut other.blobs.0);
+    fn update(&mut self, other: Self) {
         self.summary += other.summary;
     }
 
@@ -77,6 +77,7 @@ impl TreeSummary {
                 let subtree_summary = Self::from_tree(repo, id, summary_map, p)?;
                 node_without_meta.subtree = Some(subtree_summary.id_without_meta);
                 summary.update(subtree_summary);
+                summary.subtrees.push(id);
             }
             tree_without_meta.nodes.push(node_without_meta);
         }
@@ -97,17 +98,24 @@ impl BlobInfo {
     }
 }
 
+#[derive(Default, Clone)]
 pub struct BlobInfoRef<'a>(BTreeSet<&'a DataId>);
+
 impl<'a> BlobInfoRef<'a> {
     pub fn from_node_or_map(node: &'a Node, summary_map: &'a SummaryMap) -> Self {
-        node.subtree.map_or_else(
+        node.subtree.as_ref().map_or_else(
             || Self::from_node(node),
-            |id| {
-                summary_map
-                    .get(&id)
-                    .map_or_else(|| Self::from_node(node), |summary| summary.blobs.as_ref())
-            },
+            |id| Self::from_id(id, summary_map),
         )
+    }
+    fn from_id(id: &'a TreeId, summary_map: &'a SummaryMap) -> Self {
+        summary_map.get(id).map_or_else(Self::default, |summary| {
+            let mut blobs = summary.blobs.as_ref();
+            for id in &summary.subtrees {
+                blobs.0.append(&mut Self::from_id(id, summary_map).0);
+            }
+            blobs
+        })
     }
     fn from_node(node: &'a Node) -> Self {
         Self(node.content.iter().flatten().collect())

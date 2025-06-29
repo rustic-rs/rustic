@@ -238,8 +238,8 @@ fn identical_content_local<P, S: IndexedFull>(
 
     for id in node.content.iter().flatten() {
         let ie = repo.get_index_entry(id)?;
-        let length = ie.data_length();
-        if !id.blob_matches_reader(length as usize, &mut open_file) {
+        let length: u64 = ie.data_length().into();
+        if !id.blob_matches_reader(length, &mut open_file) {
             return Ok(false);
         }
     }

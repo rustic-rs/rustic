@@ -66,6 +66,7 @@ use clap::builder::{
 use convert_case::{Case, Casing};
 use human_panic::setup_panic;
 use log::{Level, info, log};
+use reqwest::Url;
 use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 use self::find::FindCmd;
@@ -220,7 +221,9 @@ impl Configurable<RusticConfig> for EntryPoint {
         // That's why it says `_config`, because it's not read at all and therefore not needed.
         let mut config = self.config.clone();
 
-        // collect "RUSTIC_REPO_OPT*" and "OPENDAL*" env variables
+        // collect "RUSTIC_REPO_OPT*" and "OPENDAL*" env variables.
+        // also add the standardized OTEL variables manually
+        // since clap does not support multiple variables for a single arg
         for (var, value) in std::env::vars() {
             if let Some(var) = var.strip_prefix("RUSTIC_REPO_OPT_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Kebab);
@@ -240,6 +243,13 @@ impl Configurable<RusticConfig> for EntryPoint {
             } else if let Some(var) = var.strip_prefix("OPENDALCOLD_") {
                 let var = var.from_case(Case::UpperSnake).to_case(Case::Snake);
                 _ = config.repository.be.options_cold.insert(var, value);
+            } else if var == "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT" {
+                #[cfg(feature = "opentelemetry")]
+                if let Ok(url) = Url::parse(&value) {
+                    _ = config.global.opentelemetry.insert(url);
+                }
+            } else if var == "OTEL_SERVICE_NAME" && cfg!(feature = "opentelemetry") {
+                _ = config.backup.metrics_job.insert(value);
             }
         }
 

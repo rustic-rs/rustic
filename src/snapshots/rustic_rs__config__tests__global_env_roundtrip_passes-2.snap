@@ -26,7 +26,7 @@ KEY7 = "VALUE7"
 KEY8 = "VALUE8"
 KEY9 = "VALUE9"
 
-[global.prometheus-labels]
+[global.metrics-labels]
 
 [repository]
 no-cache = false
@@ -85,7 +85,7 @@ run-after = []
 run-failed = []
 run-finally = []
 
-[backup.prometheus-labels]
+[backup.metrics-labels]
 
 [copy]
 targets = []

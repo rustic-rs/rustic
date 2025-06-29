@@ -24,7 +24,8 @@ RusticConfig {
         prometheus: None,
         prometheus_user: None,
         prometheus_pass: None,
-        prometheus_labels: {},
+        metrics_labels: {},
+        opentelemetry: None,
     },
     repository: AllRepositoryOptions {
         be: BackendOptions {
@@ -140,8 +141,8 @@ RusticConfig {
         },
         snapshots: [],
         sources: [],
-        prometheus_job: None,
-        prometheus_labels: {},
+        metrics_job: None,
+        metrics_labels: {},
     },
     copy: CopyCmd {
         ids: [],

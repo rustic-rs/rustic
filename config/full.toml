@@ -18,6 +18,9 @@ check-index = false
 prometheus = "http://push-gateway/"
 prometheus-user = "user"
 prometheus-pass = "secret"
+# Sending metrics directly to the Prometheus in this example
+# See https://prometheus.io/docs/guides/opentelemetry/
+opentelemetry = "http://prometheus/api/v1/otlp/v1/metrics"
 
 # Global hooks: The given commands are called for every command
 [global.hooks]
@@ -35,7 +38,7 @@ run-finally = ["echo finally"] # Always run after, default: []
 # This is only an example how to set an rclone env variable. Default: No variables are defined.
 RCLONE_XXX = "true"
 
-[global.prometheus-labels]
+[global.metrics-labels]
 label-a = "xxx"
 
 # Repository options: These options define which backend to use and which password to use.
@@ -138,7 +141,7 @@ init = false
 no-scan = false
 quiet = false
 skip-if-unchanged = false
-prometheus-job = "my-backup-jobs" # Only used if global prometheus option is set; default: not set
+metrics-job = "my-backup-jobs" # Only used if global prometheus or opentelemetry option is set; default: not set
 
 # Backup hooks: The given commands are called for the `backup` command
 [backup.hooks]
@@ -147,7 +150,7 @@ run-after = ["echo after"] # Run after if successful, default: []
 run-failed = ["echo failed"] # Default: []
 run-finally = ["echo finally"] # Always run after, default: []
 
-[backup.prometheus-labels]
+[backup.metrics-labels]
 label-a = "xxx"
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
@@ -163,7 +166,7 @@ run-after = ["echo after"] # Run after if successful, default: []
 run-failed = ["echo failed"] # Default: []
 run-finally = ["echo finally"] # Always run after, default: []
 
-[backup.snapshots.prometheus-labels]
+[backup.snapshots.metrics-labels]
 label-a = "xxx"
 
 [[backup.snapshots]]

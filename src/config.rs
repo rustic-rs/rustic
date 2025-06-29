@@ -239,7 +239,6 @@ pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
         .try_collect()
 }
 
-#[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
 impl GlobalOptions {
     pub fn is_metrics_configured(&self) -> bool {
         self.prometheus.is_some() || self.opentelemetry.is_some()

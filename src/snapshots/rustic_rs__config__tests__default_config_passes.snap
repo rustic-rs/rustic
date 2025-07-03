@@ -87,8 +87,11 @@ RusticConfig {
         stdin_command: None,
         as_path: None,
         ignore_save_opts: LocalSourceSaveOptions {
-            with_atime: false,
-            with_devid: None,
+            set_atime: None,
+            set_ctime: None,
+            set_devid: None,
+            set_blockdev: None,
+            set_xattrs: None,
         },
         no_scan: false,
         json: false,

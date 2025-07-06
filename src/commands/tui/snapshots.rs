@@ -38,16 +38,59 @@ enum CurrentScreen<'a, P, S> {
     Snapshots,
     ShowHelp(PopUpText),
     SnapshotDetails(PopUpTable),
-    EnterLabel(PopUpInput),
-    EnterDescription(PopUpInput),
-    EnterAddTags(PopUpInput),
-    EnterSetTags(PopUpInput),
-    EnterRemoveTags(PopUpInput),
+    EnterProperty((PopUpInput, SnapshotProperty)),
     EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
     Dir(Box<Snapshot<'a, P, S>>),
     Diff(Box<Diff<'a, P, S>>),
+}
+
+#[derive(Clone, Copy)]
+pub enum SnapshotProperty {
+    Label,
+    Description,
+    AddTags,
+    SetTags,
+    RemoveTags,
+    Hostname,
+}
+
+impl SnapshotProperty {
+    fn process(self, snap: &mut SnapshotFile, value: &String) -> bool {
+        match self {
+            Self::Label => {
+                if &snap.label == value {
+                    return false;
+                }
+                snap.label.clone_from(value);
+                true
+            }
+            Self::Description => {
+                if snap.description.is_none() && value.is_empty()
+                    || snap.description.as_ref() == Some(value)
+                {
+                    return false;
+                }
+                if value.is_empty() {
+                    snap.description = None;
+                } else {
+                    snap.description = Some(value.clone());
+                }
+                true
+            }
+            Self::AddTags => snap.add_tags(vec![StringList::from_str(value).unwrap()]),
+            Self::SetTags => snap.set_tags(vec![StringList::from_str(value).unwrap()]),
+            Self::RemoveTags => snap.remove_tags(&[StringList::from_str(value).unwrap()]),
+            Self::Hostname => {
+                if &snap.hostname == value {
+                    return false;
+                }
+                snap.hostname.clone_from(value);
+                true
+            }
+        }
+    }
 }
 
 // status of each snapshot
@@ -110,6 +153,7 @@ const HELP_TEXT: &str = r"General Commands:
   Ctrl-t : remove all tags for snapshot(s)
        s : set tag(s) for snapshot(s)
        r : remove tag(s) for snapshot(s)
+       H : set hostname for snapshot(s) 
        p : set delete protection for snapshot(s)
   Ctrl-p : remove delete protection for snapshot(s)
 ";
@@ -605,6 +649,10 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         self.get_snap_entity(|snap| snap.tags.formatln())
     }
 
+    pub fn get_hostname(&mut self) -> String {
+        self.get_snap_entity(|snap| snap.hostname.clone())
+    }
+
     pub fn get_description(&mut self) -> String {
         self.get_snap_entity(|snap| snap.description.clone().unwrap_or_default())
     }
@@ -620,53 +668,20 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         }
     }
 
-    pub fn set_label(&mut self, label: String) {
-        self.process_marked_snaps(|snap| {
-            if snap.label == label {
-                return false;
-            }
-            snap.label.clone_from(&label);
-            true
-        });
+    pub fn set_poperty(&mut self, property: SnapshotProperty, value: String) {
+        self.process_marked_snaps(|snap| property.process(snap, &value));
     }
 
     pub fn clear_label(&mut self) {
-        self.set_label(String::new());
-    }
-
-    pub fn set_description(&mut self, desc: String) {
-        let desc = if desc.is_empty() { None } else { Some(desc) };
-        self.process_marked_snaps(|snap| {
-            if snap.description == desc {
-                return false;
-            }
-            snap.description.clone_from(&desc);
-            true
-        });
+        self.set_poperty(SnapshotProperty::Label, String::new());
     }
 
     pub fn clear_description(&mut self) {
-        self.set_description(String::new());
-    }
-
-    pub fn add_tags(&mut self, tags: String) {
-        let tags = vec![StringList::from_str(&tags).unwrap()];
-        self.process_marked_snaps(|snap| snap.add_tags(tags.clone()));
-    }
-
-    pub fn set_tags(&mut self, tags: String) {
-        let tags = vec![StringList::from_str(&tags).unwrap()];
-        self.process_marked_snaps(|snap| snap.set_tags(tags.clone()));
-    }
-
-    pub fn remove_tags(&mut self, tags: String) {
-        let tags = vec![StringList::from_str(&tags).unwrap()];
-        self.process_marked_snaps(|snap| snap.remove_tags(&tags));
+        self.set_poperty(SnapshotProperty::Description, String::new());
     }
 
     pub fn clear_tags(&mut self) {
-        let no_tags = vec![StringList::default()];
-        self.process_marked_snaps(|snap| snap.set_tags(no_tags.clone()));
+        self.set_poperty(SnapshotProperty::SetTags, String::new());
     }
 
     pub fn set_delete_protection_to(&mut self, delete: DeleteOption) {
@@ -712,11 +727,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn apply_input(&mut self, input: String) {
         match self.current_screen {
-            CurrentScreen::EnterLabel(_) => self.set_label(input),
-            CurrentScreen::EnterDescription(_) => self.set_description(input),
-            CurrentScreen::EnterAddTags(_) => self.add_tags(input),
-            CurrentScreen::EnterSetTags(_) => self.set_tags(input),
-            CurrentScreen::EnterRemoveTags(_) => self.remove_tags(input),
+            CurrentScreen::EnterProperty((_, prop)) => self.set_poperty(prop, input),
             CurrentScreen::EnterFilter(_) => self.set_filter(input),
             _ => {}
         }
@@ -844,21 +855,26 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                                         CurrentScreen::SnapshotDetails(self.snapshot_details());
                                 }
                                 Char('l') => {
-                                    self.current_screen = CurrentScreen::EnterLabel(popup_input(
-                                        "set label",
-                                        "enter label",
-                                        &self.get_label(),
-                                        1,
+                                    self.current_screen = CurrentScreen::EnterProperty((
+                                        popup_input(
+                                            "set label",
+                                            "enter label",
+                                            &self.get_label(),
+                                            1,
+                                        ),
+                                        SnapshotProperty::Label,
                                     ));
                                 }
                                 Char('d') => {
-                                    self.current_screen =
-                                        CurrentScreen::EnterDescription(popup_input(
+                                    self.current_screen = CurrentScreen::EnterProperty((
+                                        popup_input(
                                             "set description (Ctrl-s to confirm)",
                                             "enter description",
                                             &self.get_description(),
                                             5,
-                                        ));
+                                        ),
+                                        SnapshotProperty::Description,
+                                    ));
                                 }
                                 Char('D') => {
                                     if let Some(diff) = self.diff()? {
@@ -866,25 +882,33 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                                     }
                                 }
                                 Char('t') => {
-                                    self.current_screen = CurrentScreen::EnterAddTags(popup_input(
-                                        "add tags",
-                                        "enter tags",
-                                        "",
-                                        1,
+                                    self.current_screen = CurrentScreen::EnterProperty((
+                                        popup_input("add tags", "enter tags", "", 1),
+                                        SnapshotProperty::AddTags,
                                     ));
                                 }
                                 Char('s') => {
-                                    self.current_screen = CurrentScreen::EnterSetTags(popup_input(
-                                        "set tags",
-                                        "enter tags",
-                                        &self.get_tags(),
-                                        1,
+                                    self.current_screen = CurrentScreen::EnterProperty((
+                                        popup_input("set tags", "enter tags", &self.get_tags(), 1),
+                                        SnapshotProperty::SetTags,
                                     ));
                                 }
                                 Char('r') => {
-                                    self.current_screen = CurrentScreen::EnterRemoveTags(
+                                    self.current_screen = CurrentScreen::EnterProperty((
                                         popup_input("remove tags", "enter tags", "", 1),
-                                    );
+                                        SnapshotProperty::RemoveTags,
+                                    ));
+                                }
+                                Char('H') => {
+                                    self.current_screen = CurrentScreen::EnterProperty((
+                                        popup_input(
+                                            "set hostname",
+                                            "enter hostname",
+                                            &self.get_hostname(),
+                                            1,
+                                        ),
+                                        SnapshotProperty::Hostname,
+                                    ));
                                 }
                                 // TODO: Allow to enter delete protection option
                                 Char('p') => self.set_delete_protection(),
@@ -914,19 +938,16 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                 }
                 _ => {}
             },
-            CurrentScreen::EnterLabel(prompt)
-            | CurrentScreen::EnterDescription(prompt)
-            | CurrentScreen::EnterAddTags(prompt)
-            | CurrentScreen::EnterSetTags(prompt)
-            | CurrentScreen::EnterRemoveTags(prompt)
-            | CurrentScreen::EnterFilter(prompt) => match prompt.input(event) {
-                TextInputResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
-                TextInputResult::Input(input) => {
-                    self.apply_input(input);
-                    self.current_screen = CurrentScreen::Snapshots;
+            CurrentScreen::EnterProperty((prompt, _)) | CurrentScreen::EnterFilter(prompt) => {
+                match prompt.input(event) {
+                    TextInputResult::Cancel => self.current_screen = CurrentScreen::Snapshots,
+                    TextInputResult::Input(input) => {
+                        self.apply_input(input);
+                        self.current_screen = CurrentScreen::Snapshots;
+                    }
+                    TextInputResult::None => {}
                 }
-                TextInputResult::None => {}
-            },
+            }
             CurrentScreen::PromptWrite(prompt) => match prompt.input(event) {
                 PromptResult::Ok => {
                     self.write()?;
@@ -990,12 +1011,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Draw for Snapshots<'a, P, S> {
         match &mut self.current_screen {
             CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
-            CurrentScreen::EnterLabel(popup)
-            | CurrentScreen::EnterDescription(popup)
-            | CurrentScreen::EnterAddTags(popup)
-            | CurrentScreen::EnterSetTags(popup)
-            | CurrentScreen::EnterRemoveTags(popup)
-            | CurrentScreen::EnterFilter(popup) => popup.draw(area, f),
+            CurrentScreen::EnterProperty((popup, _)) | CurrentScreen::EnterFilter(popup) => {
+                popup.draw(area, f);
+            }
             CurrentScreen::PromptWrite(popup) | CurrentScreen::PromptExit(popup) => {
                 popup.draw(area, f);
             }

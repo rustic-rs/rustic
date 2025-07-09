@@ -190,41 +190,41 @@ See [Global Hooks](#global-hooks-globalhooks).
 **Note**: If set here, the backup options apply for all sources, although they
 can be overwritten in the source-specific configuration, see below.
 
-| Attribute          | Description                                                                             | Default Value         | Example Value | CLI Option              |
-| ------------------ | --------------------------------------------------------------------------------------- | --------------------- | ------------- | ----------------------- |
-| as-path            | Specifies the path for the backup when the source contains a single path.               | Not set               |               | --as-path               |
-| command            | Set the command saved in the snapshot.                                                  | The full command used |               | --command               |
-| custom-ignorefiles | Array of names of custom ignorefiles which will be used to exclude files.               | []                    |               | --custom-ignorefile     |
-| description        | Description for the snapshot.                                                           | Not set               |               | --description           |
-| description-from   | Path to a file containing the description for the snapshot.                             | Not set               |               | --description-from      |
-| delete-never       | If true, never delete the snapshot.                                                     | false                 |               | --delete-never          |
-| delete-after       | Time duration after which the snapshot be deleted.                                      | Not set               |               | --delete-after          |
-| exclude-if-present | Array of filenames to exclude from the backup if they are present.                      | []                    |               | --exclude-if-present    |
-| force              | If true, forces the backup even if no changes are detected.                             | false                 |               | --force                 |
-| git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory. | false                 |               | --git-ignore            |
-| globs              | Array of globs specifying what to include/exclude in the backup.                        | []                    |               | --glob                  |
-| glob-files         | Array or string of glob files specifying what to include/exclude in the backup.         | []                    |               | --glob-file             |
-| group-by           | Grouping strategy to find parent snapshot.                                              | "host,label,paths"    |               | --group-by              |
-| host               | Host name used in the snapshot.                                                         | local hostname        |               | --host                  |
-| iglobs             | Like glob, but apply case-insensitive                                                   | []                    |               | --iglob                 |
-| iglob-files        | Like glob-file, but apply case-insensitive                                              | []                    |               | --iglob-file            |
-| ignore-devid       | If true, don't save device ID.                                                          | false                 |               | --ignore-devid          |
-| ignore-ctime       | If true, ignore file change time (ctime).                                               | false                 |               | --ignore-ctime          |
-| ignore-inode       | If true, ignore file inode for the backup.                                              | false                 |               | --ignore-inode          |
-| init               | If true, initialize repository if it doesn't exist, yet.                                | false                 |               | --init                  |
-| json               | If true, returns output of the command as json.                                         | false                 |               | --json                  |
-| label              | Set label for the snapshot.                                                             | Not set               |               | --label                 |
-| no-require-git     | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.    | false                 |               | --no-require-git        |
-| no-scan            | Don't scan the backup source for its size (disables ETA).                               | false                 |               | --no-scan               |
-| one-file-system    | If true, only backs up files from the same filesystem as the source.                    | false                 |               | --one-file-system       |
-| parent             | Parent snapshot ID for the backup.                                                      | Not set               |               | --parent                |
-| quiet              | Don't output backup summary.                                                            | false                 |               | --quiet                 |
-| skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                           | false                 |               | --skip-identical-parent |
-| stdin-filename     | File name to be used when reading from stdin.                                           | Not set               |               | --stdin-filename        |
-| tags               | Array of tags for the backup.                                                           | []                    |               | --tag                   |
-| time               | Set the time saved in the snapshot.                                                     | current time          |               | --time                  |
-| with-atime         | If true, includes file access time (atime) in the backup.                               | false                 |               | --with-atime            |
-| metrics-job        | jobname used when pushing metrics (if global prometheus or opentelemetry option is set) | "rustic-backup"       | "myjob"       | --metrics-job           |
+| Attribute          | Description                                                                                     | Default Value         | Example Value | CLI Option              |
+| ------------------ | ----------------------------------------------------------------------------------------------- | --------------------- | ------------- | ----------------------- |
+| as-path            | Specifies the path for the backup when the source contains a single path.                       | Not set               |               | --as-path               |
+| command            | Set the command saved in the snapshot.                                                          | The full command used |               | --command               |
+| custom-ignorefiles | Array of names of custom ignorefiles which will be used to exclude files.                       | []                    |               | --custom-ignorefile     |
+| description        | Description for the snapshot.                                                                   | Not set               |               | --description           |
+| description-from   | Path to a file containing the description for the snapshot.                                     | Not set               |               | --description-from      |
+| delete-never       | If true, never delete the snapshot.                                                             | false                 |               | --delete-never          |
+| delete-after       | Time duration after which the snapshot be deleted.                                              | Not set               |               | --delete-after          |
+| exclude-if-present | Array of filenames which will exclude its parent directory from the backup if they are present. | []                    |               | --exclude-if-present    |
+| force              | If true, forces the backup even if no changes are detected.                                     | false                 |               | --force                 |
+| git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory.         | false                 |               | --git-ignore            |
+| globs              | Array of globs specifying what to include/exclude in the backup.                                | []                    |               | --glob                  |
+| glob-files         | Array or string of glob files specifying what to include/exclude in the backup.                 | []                    |               | --glob-file             |
+| group-by           | Grouping strategy to find parent snapshot.                                                      | "host,label,paths"    |               | --group-by              |
+| host               | Host name used in the snapshot.                                                                 | local hostname        |               | --host                  |
+| iglobs             | Like glob, but apply case-insensitive                                                           | []                    |               | --iglob                 |
+| iglob-files        | Like glob-file, but apply case-insensitive                                                      | []                    |               | --iglob-file            |
+| ignore-devid       | If true, don't save device ID.                                                                  | false                 |               | --ignore-devid          |
+| ignore-ctime       | If true, ignore file change time (ctime).                                                       | false                 |               | --ignore-ctime          |
+| ignore-inode       | If true, ignore file inode for the backup.                                                      | false                 |               | --ignore-inode          |
+| init               | If true, initialize repository if it doesn't exist, yet.                                        | false                 |               | --init                  |
+| json               | If true, returns output of the command as json.                                                 | false                 |               | --json                  |
+| label              | Set label for the snapshot.                                                                     | Not set               |               | --label                 |
+| no-require-git     | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.            | false                 |               | --no-require-git        |
+| no-scan            | Don't scan the backup source for its size (disables ETA).                                       | false                 |               | --no-scan               |
+| one-file-system    | If true, only backs up files from the same filesystem as the source.                            | false                 |               | --one-file-system       |
+| parent             | Parent snapshot ID for the backup.                                                              | Not set               |               | --parent                |
+| quiet              | Don't output backup summary.                                                                    | false                 |               | --quiet                 |
+| skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                   | false                 |               | --skip-identical-parent |
+| stdin-filename     | File name to be used when reading from stdin.                                                   | Not set               |               | --stdin-filename        |
+| tags               | Array of tags for the backup.                                                                   | []                    |               | --tag                   |
+| time               | Set the time saved in the snapshot.                                                             | current time          |               | --time                  |
+| with-atime         | If true, includes file access time (atime) in the backup.                                       | false                 |               | --with-atime            |
+| metrics-job        | jobname used when pushing metrics (if global prometheus or opentelemetry option is set)         | "rustic-backup"       | "myjob"       | --metrics-job           |
 
 ### Backup Hooks `[backup.hooks]`
 

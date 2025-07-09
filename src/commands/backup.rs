@@ -221,7 +221,10 @@ impl BackupCmd {
                 })
                 .collect();
 
-            let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
+            let snapshot_sources = match (
+                self.cli_sources.is_empty(),
+                config_snapshot_sources.is_empty(),
+            ) {
                 (false, _) => {
                     let item = PathList::from_iter(&self.cli_sources).sanitize()?;
                     vec![item]
@@ -231,12 +234,9 @@ impl BackupCmd {
                     config_snapshot_sources.clone()
                 }
                 (true, true) => {
-                    bail!("no backup source given.");
+                    bail!("No usable backup source. Please make sure that the given sources are valid.");
                 }
             };
-            if snapshot_sources.is_empty() {
-                return Ok(());
-            }
 
             let mut is_err = false;
             for sources in snapshot_sources {
@@ -252,6 +252,7 @@ impl BackupCmd {
                     is_err = true;
                 }
             }
+
             if is_err {
                 Err(anyhow!("Not all snapshots were generated successfully!"))
             } else {

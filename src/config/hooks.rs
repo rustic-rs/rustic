@@ -12,6 +12,8 @@
 //! - backup hooks
 //! - specific source-related hooks
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use conflate::Merge;
 use serde::{Deserialize, Serialize};
@@ -40,6 +42,10 @@ pub struct Hooks {
     #[serde(skip)]
     #[merge(skip)]
     pub context: String,
+
+    #[serde(skip)]
+    #[merge(skip)]
+    pub env: HashMap<String, String>,
 }
 
 impl Hooks {
@@ -49,28 +55,46 @@ impl Hooks {
         hooks
     }
 
-    fn run_all(cmds: &[CommandInput], context: &str, what: &str) -> Result<()> {
+    pub fn with_env(&self, env: &HashMap<String, String>) -> Self {
+        let mut hooks = self.clone();
+        hooks.env = HashMap::<String, String>::new();
+        for (key, val) in env.iter() {
+            _ = hooks.env.insert(key.clone(), val.clone());
+        }
+        hooks
+    }
+
+    fn run_all(
+        cmds: &[CommandInput],
+        context: &str,
+        what: &str,
+        env: &HashMap<String, String>,
+    ) -> Result<()> {
+        let mut env = env.clone();
+
+        let _ = env.insert("RUSTIC_HOOK_TYPE".to_string(), what.to_string());
+
         for cmd in cmds {
-            cmd.run(context, what, None::<(&str, &str)>)?;
+            cmd.run(context, what, &env)?;
         }
 
         Ok(())
     }
 
     pub fn run_before(&self) -> Result<()> {
-        Self::run_all(&self.run_before, &self.context, "run-before")
+        Self::run_all(&self.run_before, &self.context, "run-before", &self.env)
     }
 
     pub fn run_after(&self) -> Result<()> {
-        Self::run_all(&self.run_after, &self.context, "run-after")
+        Self::run_all(&self.run_after, &self.context, "run-after", &self.env)
     }
 
     pub fn run_failed(&self) -> Result<()> {
-        Self::run_all(&self.run_failed, &self.context, "run-failed")
+        Self::run_all(&self.run_failed, &self.context, "run-failed", &self.env)
     }
 
     pub fn run_finally(&self) -> Result<()> {
-        Self::run_all(&self.run_finally, &self.context, "run-finally")
+        Self::run_all(&self.run_finally, &self.context, "run-finally", &self.env)
     }
 
     /// Run the given closure using the specified hooks.

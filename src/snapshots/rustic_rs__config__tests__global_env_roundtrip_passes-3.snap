@@ -19,6 +19,7 @@ RusticConfig {
             run_failed: [],
             run_finally: [],
             context: "",
+            env: {},
         },
         env: {
             "KEY0": "VALUE0",
@@ -63,6 +64,7 @@ RusticConfig {
             run_failed: [],
             run_finally: [],
             context: "",
+            env: {},
         },
     },
     snapshot_filter: SnapshotFilter {
@@ -153,6 +155,7 @@ RusticConfig {
             run_failed: [],
             run_finally: [],
             context: "",
+            env: {},
         },
         snapshots: [],
         sources: [],

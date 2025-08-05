@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Generate GitHub token
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2
         id: generate-token
         with:
           app-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
@@ -30,7 +30,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
   
       - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@394e0e463367550953346be95d427f80f4f7ae30 # v0.5
+        uses: MarcoIeni/release-plz-action@068d76d2aa32d3c9cd0b1ccdd9ac921e28ba2be9 # v0.5
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

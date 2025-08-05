@@ -33,12 +33,12 @@ jobs:
           # FIXME: windows compat tests temporarily not working
           # - os: windows-latest
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         if: github.event_name != 'pull_request'
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -48,7 +48,7 @@ jobs:
         uses: rustic-rs/setup-restic@main
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1482605bfc5719782e1267fd0c0cc350fe7646b8 # v1
+        uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b # v1
         with:
           toolchain: stable
 
@@ -64,7 +64,7 @@ jobs:
           RESTIC_REPOSITORY: ./tests/repository-fixtures/repo
           RESTIC_PASSWORD: restic
             
-      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
+      - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
 
       - name: Run Cargo Test
         run: cargo test -r --test repositories --features ${{ matrix.feature }} -- test_restic_latest_repo_with_rustic_passes --exact --show-output --ignored

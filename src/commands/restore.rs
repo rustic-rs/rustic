@@ -94,9 +94,7 @@ impl RestoreCmd {
             info!("all file contents are fine.");
         }
 
-        if dry_run {
-            repo.warm_up(restore_infos.to_packs().into_iter())?;
-        } else {
+        if !dry_run {
             // save some memory
             let repo = repo.drop_data_from_index();
 

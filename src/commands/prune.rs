@@ -40,9 +40,7 @@ impl PruneCmd {
 
         print_stats(&prune_plan.stats);
 
-        if config.global.dry_run {
-            repo.warm_up(prune_plan.repack_packs().into_iter())?;
-        } else {
+        if !config.global.dry_run {
             repo.prune(&self.opts, prune_plan)?;
         }
 

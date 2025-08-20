@@ -244,10 +244,11 @@ See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 **Note**: All of the backup options mentioned before can also be used as
 snapshot-specific option and then only apply to this snapshot.
 
-| Attribute | Description                                                   | Default Value | Example Value                                                          |
-| --------- | ------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
-| sources   | Array of source directories or file(s) to back up.            | []            | ["/dir1", "/dir2"]                                                     |
-| hooks     | Hooks to run before and after backing up the defined sources. | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
+| Attribute | Description                                                        | Default Value | Example Value                                                          |
+| --------- | ------------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------- |
+| id        | Id to identify this snapshot (to be used with the --id CLI option) | ""            | "myid"                                                                 |
+| sources   | Array of source directories or file(s) to back up.                 | []            | ["/dir1", "/dir2"]                                                     |
+| hooks     | Hooks to run before and after backing up the defined sources.      | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
 
 Source-specific hooks are called additionally to global, repository and backup
 hooks when backing up the defined sources into a snapshot.

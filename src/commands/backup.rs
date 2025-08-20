@@ -48,6 +48,16 @@ pub struct BackupCmd {
     #[serde(skip)]
     cli_sources: Vec<String>,
 
+    /// Backup sources defined in the config profile by the given id (can be specified multiple times)
+    #[clap(long = "id", value_name = "ID", conflicts_with = "cli_sources")]
+    #[merge(skip)]
+    #[serde(skip)]
+    cli_id: Vec<String>,
+
+    #[clap(skip)]
+    #[merge(skip)]
+    id: String,
+
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
     #[merge(skip)]
@@ -153,9 +163,13 @@ pub struct BackupCmd {
 ///
 /// * `left` - Vector of backup sources
 pub(crate) fn merge_snapshots(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCmd>) {
+    let order = |opt1: &BackupCmd, opt2: &BackupCmd| {
+        opt1.id.cmp(&opt2.id).then(opt1.sources.cmp(&opt2.sources))
+    };
+
     left.append(&mut right);
-    left.sort_by(|opt1, opt2| opt1.sources.cmp(&opt2.sources));
-    left.dedup_by(|opt1, opt2| opt1.sources == opt2.sources);
+    left.sort_by(order);
+    left.dedup_by(|opt1, opt2| order(opt1, opt2).is_eq());
 }
 
 impl Runnable for BackupCmd {
@@ -210,6 +224,7 @@ impl BackupCmd {
         hooks.use_with(|| -> Result<_> {
             let config_snapshot_sources: Vec<_> = snapshot_opts
                 .iter()
+                .filter(|opt| self.cli_id.is_empty() || self.cli_id.contains(&opt.id))
                 .map(|opt| -> Result<_> {
                     Ok(PathList::from_iter(&opt.sources)
                         .sanitize()
@@ -230,7 +245,10 @@ impl BackupCmd {
                 })
                 .collect();
 
-            let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
+            let snapshot_sources = match (
+                self.cli_sources.is_empty(),
+                config_snapshot_sources.is_empty(),
+            ) {
                 (false, _) => {
                     let item = PathList::from_iter(&self.cli_sources).sanitize()?;
                     vec![item]

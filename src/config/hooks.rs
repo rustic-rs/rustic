@@ -51,7 +51,7 @@ impl Hooks {
 
     fn run_all(cmds: &[CommandInput], context: &str, what: &str) -> Result<()> {
         for cmd in cmds {
-            cmd.run(context, what)?;
+            cmd.run(context, what, None::<(&str, &str)>)?;
         }
 
         Ok(())

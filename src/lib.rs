@@ -53,7 +53,7 @@ Application based on the [Abscissa] framework.
     // Popped up in 1.83.0
     non_local_definitions,
     // False-positive in WebDavFs
-    elided_named_lifetimes,
+    mismatched_lifetime_syntaxes,
     clippy::module_name_repetitions,
     clippy::redundant_pub_crate,
     clippy::missing_const_for_fn

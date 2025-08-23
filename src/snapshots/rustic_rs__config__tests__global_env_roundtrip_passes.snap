@@ -6,6 +6,7 @@ expression: serialized
 profile-substitute-env = false
 use-profiles = []
 dry-run = false
+dry-run-warmup = false
 check-index = false
 no-progress = false
 

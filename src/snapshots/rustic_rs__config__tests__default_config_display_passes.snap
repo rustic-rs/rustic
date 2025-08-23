@@ -5,6 +5,7 @@ expression: config
 [global]
 use-profiles = []
 dry-run = false
+dry-run-warmup = false
 check-index = false
 no-progress = false
 

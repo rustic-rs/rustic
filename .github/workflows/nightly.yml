@@ -80,12 +80,13 @@ jobs:
           #   architecture: i686
           #   binary-postfix: ""
           #   use-cross: false
-          - os: ubuntu-latest
-            os-name: netbsd
-            target: x86_64-unknown-netbsd
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: true
+          # FIXME: cross-compile-problem: error: linking with `x86_64-unknown-netbsd-gcc` failed: exit status: 1
+          # - os: ubuntu-latest
+          #   os-name: netbsd
+          #   target: x86_64-unknown-netbsd
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: armv7-unknown-linux-gnueabihf

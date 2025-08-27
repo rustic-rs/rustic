@@ -119,8 +119,12 @@ RusticConfig {
             with_created: false,
         },
         config_opts: ConfigOptions {
-            set_compression: None,
             set_version: None,
+            set_chunker: None,
+            set_chunk_size: None,
+            set_chunk_min_size: None,
+            set_chunk_max_size: None,
+            set_compression: None,
             set_append_only: None,
             set_treepack_size: None,
             set_treepack_size_limit: None,

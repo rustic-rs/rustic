@@ -6,6 +6,7 @@ RusticConfig {
     global: GlobalOptions {
         use_profiles: [],
         dry_run: false,
+        dry_run_warmup: false,
         check_index: false,
         log_level: None,
         log_file: None,

@@ -5,6 +5,7 @@ expression: deserialized
 RusticConfig {
     global: GlobalOptions {
         use_profiles: [],
+        group_by: None,
         dry_run: false,
         check_index: false,
         log_level: None,

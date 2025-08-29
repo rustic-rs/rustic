@@ -200,7 +200,11 @@ impl BackupCmd {
         }
         .to_indexed_ids()?;
 
-        let hooks = self.hooks("backup", itertools::join(&config.backup.sources, ","));
+        let hooks = self.hooks(
+            &config.backup.hooks,
+            "backup",
+            itertools::join(&config.backup.sources, ","),
+        );
 
         hooks.use_with(|| -> Result<_> {
             let config_snapshot_sources: Vec<_> = snapshot_opts
@@ -264,7 +268,7 @@ impl BackupCmd {
         })
     }
 
-    fn hooks(&self, action: &str, source: impl Display) -> Hooks {
+    fn hooks(&self, hooks: &Hooks, action: &str, source: impl Display) -> Hooks {
         let mut hooks_variables =
             HashMap::from([("RUSTIC_ACTION".to_string(), action.to_string())]);
 
@@ -285,9 +289,9 @@ impl BackupCmd {
         }
 
         let hooks = if action == "backup" {
-            self.hooks.with_context("backup")
+            hooks.with_context("backup")
         } else {
-            self.hooks.with_context(&format!("backup {source}"))
+            hooks.with_context(&format!("backup {source}"))
         };
 
         hooks.with_env(&hooks_variables)
@@ -317,10 +321,13 @@ impl BackupCmd {
             }
         }
 
+        // use hooks definition before merging "backup" section
+        let hooks = self.hooks.clone();
+
         // merge "backup" section from config file, if given
         self.merge(config.backup.clone());
 
-        let hooks = self.hooks("source-specific-backup", &source);
+        let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename)

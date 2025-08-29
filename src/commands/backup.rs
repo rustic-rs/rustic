@@ -1,5 +1,7 @@
 //! `backup` subcommand
 
+use std::collections::HashMap;
+use std::fmt::Display;
 use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
 
@@ -18,6 +20,7 @@ use clap::ValueHint;
 use comfy_table::Cell;
 use conflate::Merge;
 use log::{debug, error, info, warn};
+use rustic_core::StringList;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -197,7 +200,12 @@ impl BackupCmd {
         }
         .to_indexed_ids()?;
 
-        let hooks = config.backup.hooks.with_context("backup");
+        let hooks = self.hooks(
+            &config.backup.hooks,
+            "backup",
+            itertools::join(&config.backup.sources, ","),
+        );
+
         hooks.use_with(|| -> Result<_> {
             let config_snapshot_sources: Vec<_> = snapshot_opts
                 .iter()
@@ -260,6 +268,35 @@ impl BackupCmd {
         })
     }
 
+    fn hooks(&self, hooks: &Hooks, action: &str, source: impl Display) -> Hooks {
+        let mut hooks_variables =
+            HashMap::from([("RUSTIC_ACTION".to_string(), action.to_string())]);
+
+        if let Some(label) = &self.snap_opts.label {
+            let _ = hooks_variables.insert("RUSTIC_BACKUP_LABEL".to_string(), label.to_string());
+        }
+
+        let source = source.to_string();
+        if !source.is_empty() {
+            let _ = hooks_variables.insert("RUSTIC_BACKUP_SOURCES".to_string(), source.clone());
+        }
+
+        let mut tags = StringList::default();
+        tags.add_all(self.snap_opts.tags.clone());
+        let tags = tags.to_string();
+        if !tags.is_empty() {
+            let _ = hooks_variables.insert("RUSTIC_BACKUP_TAGS".to_string(), tags);
+        }
+
+        let hooks = if action == "backup" {
+            hooks.with_context("backup")
+        } else {
+            hooks.with_context(&format!("backup {source}"))
+        };
+
+        hooks.with_env(&hooks_variables)
+    }
+
     fn backup_snapshot<P: ProgressBars, S: IndexedIds>(
         mut self,
         source: PathList,
@@ -284,11 +321,13 @@ impl BackupCmd {
             }
         }
 
-        // use the correct source-specific hooks
-        let hooks = self.hooks.with_context(&format!("backup {source}"));
+        // use hooks definition before merging "backup" section
+        let hooks = self.hooks.clone();
 
         // merge "backup" section from config file, if given
         self.merge(config.backup.clone());
+
+        let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename)

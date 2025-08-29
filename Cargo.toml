@@ -18,7 +18,7 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 """
 
 [features]
-default = ["jq", "prometheus", "opentelemetry", "rhai", "tui", "webdav"]
+default = ["jq", "prometheus", "opentelemetry", "tui", "webdav"]
 release = ["default", "self-update"]
 
 # Allocators

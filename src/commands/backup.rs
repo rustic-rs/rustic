@@ -18,7 +18,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Context, Result, anyhow, bail};
 use clap::ValueHint;
 use comfy_table::Cell;
-use conflate::Merge;
+use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
 use rustic_core::StringList;
 use serde::{Deserialize, Serialize};
@@ -213,7 +213,6 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let snapshot_opts = &config.backup.snapshots;
 
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
@@ -236,64 +235,8 @@ impl BackupCmd {
         );
 
         hooks.use_with(|| -> Result<_> {
-            let config_snapshot_sources: Vec<_> = snapshot_opts
-                .iter()
-                .filter(|opt| {
-                    self.cli_name.is_empty()
-                        || opt
-                            .name
-                            .as_ref()
-                            .is_some_and(|name| self.cli_name.contains(name))
-                })
-                .map(|opt| -> Result<_> {
-                    Ok(PathList::from_iter(&opt.sources)
-                        .sanitize()
-                        .with_context(|| {
-                            format!(
-                                "error sanitizing sources=\"{:?}\" in config file",
-                                opt.sources
-                            )
-                        })?
-                        .merge())
-                })
-                .filter_map(|p| match p {
-                    Ok(paths) => Some(paths),
-                    Err(err) => {
-                        warn!("{err}");
-                        None
-                    }
-                })
-                .collect();
-
-            let snapshot_sources = match (
-                self.cli_sources.is_empty(),
-                config_snapshot_sources.is_empty(),
-            ) {
-                (false, _) => {
-                    let item = PathList::from_iter(&self.cli_sources).sanitize()?;
-                    vec![item]
-                }
-                (true, false) => {
-                    info!("using backup sources from config file.");
-                    config_snapshot_sources.clone()
-                }
-                (true, true) => {
-                    bail!("no backup source given.");
-                }
-            };
-            if snapshot_sources.is_empty() {
-                return Ok(());
-            }
-
             let mut is_err = false;
-            for sources in snapshot_sources {
-                let mut opts = self.clone();
-
-                // merge Options from config file, if given
-                if let Some(idx) = config_snapshot_sources.iter().position(|s| s == &sources) {
-                    info!("merging sources={sources} section from config file");
-                    opts.merge(snapshot_opts[idx].clone());
-                }
+            for (opts, sources) in self.get_snapshots_to_backup()? {
                 if let Err(err) = opts.backup_snapshot(sources.clone(), &repo) {
                     error!("error backing up {sources}: {err}");
                     is_err = true;
@@ -305,6 +248,65 @@ impl BackupCmd {
                 Ok(())
             }
         })
+    }
+
+    fn get_snapshots_to_backup(&self) -> Result<Vec<(Self, PathList)>> {
+        let config = RUSTIC_APP.config();
+        let mut config_snapshots = config
+            .backup
+            .snapshots
+            .iter()
+            .map(|opt| -> Result<_> {
+                Ok((
+                    opt.clone(),
+                    PathList::from_iter(&opt.sources)
+                        .sanitize()
+                        .with_context(|| {
+                            format!(
+                                "error sanitizing sources=\"{:?}\" in config file",
+                                opt.sources
+                            )
+                        })?
+                        .merge(),
+                ))
+            })
+            .filter_map(|p| match p {
+                Ok(paths) => Some(paths),
+                Err(err) => {
+                    warn!("{err}");
+                    None
+                }
+            });
+
+        if !self.cli_sources.is_empty() {
+            let sources = PathList::from_iter(&self.cli_sources).sanitize()?;
+            let mut opts = self.clone();
+            // merge Options from config file, if given
+            if let Some((config_opts, _)) = config_snapshots.find(|(_, s)| s == &sources) {
+                info!("merging sources={sources} section from config file");
+                opts.merge(config_opts);
+            }
+            return Ok(vec![(opts, sources)]);
+        }
+
+        let config_snapshots: Vec<_> = config_snapshots
+            // filter out using cli_name, if given
+            .filter(|(opt, _)| {
+                self.cli_name.is_empty()
+                    || opt
+                        .name
+                        .as_ref()
+                        .is_some_and(|name| self.cli_name.contains(name))
+            })
+            .map(|(opt, sources)| (self.clone().merge_from(opt), sources))
+            .collect();
+
+        if config_snapshots.is_empty() {
+            bail!("no backup source given.");
+        }
+
+        info!("using backup sources from config file.");
+        Ok(config_snapshots)
     }
 
     fn hooks(&self, hooks: &Hooks, action: &str, source: impl Display) -> Hooks {

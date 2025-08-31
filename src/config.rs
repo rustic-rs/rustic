@@ -159,7 +159,7 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::vec::append)]
     pub use_profiles: Vec<String>,
 
-    /// Group snapshots by any combination of host,label,paths,tags to find a suitable parent [default: "host,label,paths"]
+    /// Group snapshots by any combination of host,label,paths,tags, e.g. to find the latest snapshot [default: "host,label,paths"]
     #[clap(
         long,
         short = 'g',

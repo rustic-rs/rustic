@@ -2,6 +2,7 @@
 
 #[cfg(feature = "rhai")]
 use rhai::EvalAltResult;
+#[cfg(feature = "rhai")]
 use thiserror::Error;
 
 /// Kinds of [`rhai`] errors

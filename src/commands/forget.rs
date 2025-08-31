@@ -107,7 +107,11 @@ impl ForgetCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let group_by = config.forget.group_by.unwrap_or_default();
+        let group_by = config
+            .forget
+            .group_by
+            .or(config.global.group_by)
+            .unwrap_or_default();
 
         let groups = if self.ids.is_empty() {
             repo.get_forget_snapshots(&config.forget.keep, group_by, |sn| {

@@ -21,6 +21,7 @@ use directories::ProjectDirs;
 use itertools::Itertools;
 use log::Level;
 use reqwest::Url;
+use rustic_core::SnapshotGroupCriterion;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 #[cfg(not(all(feature = "mount", feature = "webdav")))]
@@ -157,6 +158,18 @@ pub struct GlobalOptions {
     )]
     #[merge(strategy=conflate::vec::append)]
     pub use_profiles: Vec<String>,
+
+    /// Group snapshots by any combination of host,label,paths,tags, e.g. to find the latest snapshot [default: "host,label,paths"]
+    #[clap(
+        long,
+        short = 'g',
+        global = true,
+        value_name = "CRITERION",
+        env = "RUSTIC_USE_PROFILE"
+    )]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    pub group_by: Option<SnapshotGroupCriterion>,
 
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]

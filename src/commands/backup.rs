@@ -174,6 +174,7 @@ impl Runnable for BackupCmd {
             status_err!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
+
         if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -329,11 +330,15 @@ impl BackupCmd {
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 
+        // use global group-by if not set
+        let mut parent_opts = self.parent_opts;
+        parent_opts.group_by = parent_opts.group_by.or(config.global.group_by);
+
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename)
             .stdin_command(self.stdin_command)
             .as_path(self.as_path)
-            .parent_opts(self.parent_opts)
+            .parent_opts(parent_opts)
             .ignore_save_opts(self.ignore_save_opts)
             .ignore_filter_opts(self.ignore_filter_opts)
             .no_scan(self.no_scan)

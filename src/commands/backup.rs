@@ -56,7 +56,7 @@ pub struct BackupCmd {
 
     #[clap(skip)]
     #[merge(skip)]
-    name: String,
+    name: Option<String>,
 
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
@@ -226,7 +226,13 @@ impl BackupCmd {
         hooks.use_with(|| -> Result<_> {
             let config_snapshot_sources: Vec<_> = snapshot_opts
                 .iter()
-                .filter(|opt| self.cli_name.is_empty() || self.cli_name.contains(&opt.name))
+                .filter(|opt| {
+                    self.cli_name.is_empty()
+                        || opt
+                            .name
+                            .as_ref()
+                            .is_some_and(|name| self.cli_name.contains(name))
+                })
                 .map(|opt| -> Result<_> {
                     Ok(PathList::from_iter(&opt.sources)
                         .sanitize()

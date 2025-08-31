@@ -84,7 +84,7 @@ RusticConfig {
     backup: BackupCmd {
         cli_sources: [],
         cli_name: [],
-        name: "",
+        name: None,
         stdin_filename: "",
         stdin_command: None,
         as_path: None,

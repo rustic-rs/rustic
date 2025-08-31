@@ -256,7 +256,7 @@ impl BackupCmd {
                     vec![item]
                 }
                 (true, false) => {
-                    info!("using all backup sources from config file.");
+                    info!("using backup sources from config file.");
                     config_snapshot_sources.clone()
                 }
                 (true, true) => {

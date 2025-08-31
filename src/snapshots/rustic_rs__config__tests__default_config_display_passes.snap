@@ -43,7 +43,7 @@ filter-tags = []
 filter-tags-exact = []
 
 [backup]
-id = ""
+name = ""
 stdin-filename = ""
 with-atime = false
 ignore-devid = false

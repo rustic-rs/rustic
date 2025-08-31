@@ -48,15 +48,15 @@ pub struct BackupCmd {
     #[serde(skip)]
     cli_sources: Vec<String>,
 
-    /// Backup sources defined in the config profile by the given id (can be specified multiple times)
-    #[clap(long = "id", value_name = "ID", conflicts_with = "cli_sources")]
+    /// Backup sources defined in the config profile by the given name (can be specified multiple times)
+    #[clap(long = "name", value_name = "NAME", conflicts_with = "cli_sources")]
     #[merge(skip)]
     #[serde(skip)]
-    cli_id: Vec<String>,
+    cli_name: Vec<String>,
 
     #[clap(skip)]
     #[merge(skip)]
-    id: String,
+    name: String,
 
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
@@ -164,7 +164,9 @@ pub struct BackupCmd {
 /// * `left` - Vector of backup sources
 pub(crate) fn merge_snapshots(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCmd>) {
     let order = |opt1: &BackupCmd, opt2: &BackupCmd| {
-        opt1.id.cmp(&opt2.id).then(opt1.sources.cmp(&opt2.sources))
+        opt1.name
+            .cmp(&opt2.name)
+            .then(opt1.sources.cmp(&opt2.sources))
     };
 
     left.append(&mut right);
@@ -224,7 +226,7 @@ impl BackupCmd {
         hooks.use_with(|| -> Result<_> {
             let config_snapshot_sources: Vec<_> = snapshot_opts
                 .iter()
-                .filter(|opt| self.cli_id.is_empty() || self.cli_id.contains(&opt.id))
+                .filter(|opt| self.cli_name.is_empty() || self.cli_name.contains(&opt.name))
                 .map(|opt| -> Result<_> {
                     Ok(PathList::from_iter(&opt.sources)
                         .sanitize()

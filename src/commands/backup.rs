@@ -256,30 +256,10 @@ impl BackupCmd {
             .backup
             .snapshots
             .iter()
-            .map(|opt| -> Result<_> {
-                Ok((
-                    opt.clone(),
-                    PathList::from_iter(&opt.sources)
-                        .sanitize()
-                        .with_context(|| {
-                            format!(
-                                "error sanitizing sources=\"{:?}\" in config file",
-                                opt.sources
-                            )
-                        })?
-                        .merge(),
-                ))
-            })
-            .filter_map(|p| match p {
-                Ok(paths) => Some(paths),
-                Err(err) => {
-                    warn!("{err}");
-                    None
-                }
-            });
+            .map(|opt| (opt.clone(), PathList::from_iter(&opt.sources)));
 
         if !self.cli_sources.is_empty() {
-            let sources = PathList::from_iter(&self.cli_sources).sanitize()?;
+            let sources = PathList::from_iter(&self.cli_sources);
             let mut opts = self.clone();
             // merge Options from config file, if given
             if let Some((config_opts, _)) = config_snapshots.find(|(_, s)| s == &sources) {
@@ -385,6 +365,11 @@ impl BackupCmd {
             .dry_run(config.global.dry_run);
 
         let snap = hooks.use_with(|| -> Result<_> {
+            let source = source
+                .clone()
+                .sanitize()
+                .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
+                .merge();
             Ok(repo.backup(&backup_opts, &source, self.snap_opts.to_snapshot()?)?)
         })?;
 

@@ -192,7 +192,7 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
 
-    /// Same as dry run, but still issue warm-up command if configured
+    /// Additional to dry run, but still issue warm-up command if configured
     #[clap(long, global = true, env = "RUSTIC_DRY_RUN_WARMUP")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run_warmup: bool,

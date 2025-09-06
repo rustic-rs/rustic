@@ -94,15 +94,19 @@ impl RestoreCmd {
             info!("all file contents are fine.");
         }
 
-        if dry_run {
+        if dry_run && config.global.dry_run_warmup {
             repo.warm_up(restore_infos.to_packs().into_iter())?;
-        } else {
+        } else if !dry_run && !config.global.dry_run_warmup {
             // save some memory
             let repo = repo.drop_data_from_index();
 
             let ls = repo.ls(&node, &ls_opts)?;
             repo.restore(restore_infos, &self.opts, ls, &dest)?;
             println!("restore done.");
+        } else {
+            info!(
+                "--dry-run is without warmup, --dry-run --dry-run-warmup also issues the warmup script."
+            );
         }
 
         Ok(())

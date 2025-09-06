@@ -5,6 +5,7 @@ expression: config
 RusticConfig {
     global: GlobalOptions {
         use_profiles: [],
+        group_by: None,
         dry_run: false,
         check_index: false,
         log_level: None,
@@ -67,11 +68,12 @@ RusticConfig {
         filter_before: None,
         filter_size: None,
         filter_size_added: None,
-        filter_fn: None,
         filter_jq: None,
     },
     backup: BackupCmd {
         cli_sources: [],
+        cli_name: [],
+        name: None,
         stdin_filename: "",
         stdin_command: None,
         as_path: None,
@@ -175,7 +177,6 @@ RusticConfig {
             filter_before: None,
             filter_size: None,
             filter_size_added: None,
-            filter_fn: None,
             filter_jq: None,
         },
         keep: KeepOptions {

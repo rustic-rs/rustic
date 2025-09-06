@@ -120,7 +120,7 @@ impl CopyCmd {
             target_repo.open()?
         };
 
-        if repo.config().poly()? != target_repo.config().poly()? {
+        if !repo.config().has_same_chunker(target_repo.config()) {
             bail!(
                 "cannot copy to repository with different chunker parameter (re-chunking not implemented)!"
             );

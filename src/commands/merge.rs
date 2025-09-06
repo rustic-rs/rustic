@@ -53,8 +53,13 @@ impl MergeCmd {
             repo.get_snapshots(&self.ids)?
         };
 
-        let snap = SnapshotFile::from_options(&self.snap_opts)?;
+        // Handle dry-run mode
+        if config.global.dry_run {
+            println!("would have modified the following snapshots:\n {snapshots:?}");
+            return Ok(());
+        }
 
+        let snap = SnapshotFile::from_options(&self.snap_opts)?;
         let snap = repo.merge_snapshots(&snapshots, &last_modified_node, snap)?;
 
         if self.json {

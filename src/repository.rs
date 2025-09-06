@@ -4,6 +4,7 @@
 //! application's configuration file and/or command-line options
 //! for specifying it.
 
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -51,22 +52,34 @@ pub type RusticIndexedRepo<P> = Repository<P, IndexedStatus<FullIndex, OpenStatu
 pub type CliIndexedRepo = RusticIndexedRepo<ProgressOptions>;
 
 impl AllRepositoryOptions {
-    fn repository<P>(&self, po: P) -> Result<RusticRepo<P>> {
+    pub fn repository<P>(&self, po: P) -> Result<RusticRepo<P>> {
         let backends = self.be.to_backends()?;
         let repo = Repository::new_with_progress(&self.repo, &backends, po)?;
         Ok(RusticRepo(repo))
     }
 
-    pub fn run<T>(&self, f: impl FnOnce(CliRepo) -> Result<T>) -> Result<T> {
-        let hooks = self.hooks.with_context("repository");
-        let po = RUSTIC_APP.config().global.progress_options;
+    pub fn run_with_progress<P: Clone + ProgressBars, T>(
+        &self,
+        po: P,
+        f: impl FnOnce(RusticRepo<P>) -> Result<T>,
+    ) -> Result<T> {
+        let hooks = self
+            .hooks
+            .with_env(&HashMap::from([(
+                "RUSTIC_ACTION".to_string(),
+                "repository".to_string(),
+            )]))
+            .with_context("repository");
         hooks.use_with(|| f(self.repository(po)?))
     }
 
-    pub fn run_open<T>(&self, f: impl FnOnce(CliOpenRepo) -> Result<T>) -> Result<T> {
-        let hooks = self.hooks.with_context("repository");
+    pub fn run<T>(&self, f: impl FnOnce(CliRepo) -> Result<T>) -> Result<T> {
         let po = RUSTIC_APP.config().global.progress_options;
-        hooks.use_with(|| f(self.repository(po)?.open()?))
+        self.run_with_progress(po, f)
+    }
+
+    pub fn run_open<T>(&self, f: impl FnOnce(CliOpenRepo) -> Result<T>) -> Result<T> {
+        self.run(|repo| f(repo.open()?))
     }
 
     pub fn run_open_or_init_with<T: Clone>(
@@ -75,13 +88,7 @@ impl AllRepositoryOptions {
         init: impl FnOnce(CliRepo) -> Result<CliOpenRepo>,
         f: impl FnOnce(CliOpenRepo) -> Result<T>,
     ) -> Result<T> {
-        let hooks = self.hooks.with_context("repository");
-        let po = RUSTIC_APP.config().global.progress_options;
-        hooks.use_with(|| {
-            f(self
-                .repository(po)?
-                .open_or_init_repository_with(do_init, init)?)
-        })
+        self.run(|repo| f(repo.open_or_init_repository_with(do_init, init)?))
     }
 
     pub fn run_indexed_with_progress<P: Clone + ProgressBars, T>(
@@ -89,13 +96,11 @@ impl AllRepositoryOptions {
         po: P,
         f: impl FnOnce(RusticIndexedRepo<P>) -> Result<T>,
     ) -> Result<T> {
-        let hooks = self.hooks.with_context("repository");
-        hooks.use_with(|| f(self.repository(po)?.indexed()?))
+        self.run_with_progress(po, |repo| f(repo.indexed()?))
     }
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(CliIndexedRepo) -> Result<T>) -> Result<T> {
-        let po = RUSTIC_APP.config().global.progress_options;
-        self.run_indexed_with_progress(po, f)
+        self.run(|repo| f(repo.indexed()?))
     }
 }
 

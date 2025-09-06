@@ -4,7 +4,7 @@ use crate::{Application, RUSTIC_APP, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 
 use rustic_core::ConfigOptions;
 
@@ -28,6 +28,11 @@ impl Runnable for ConfigCmd {
 impl ConfigCmd {
     fn inner_run(&self) -> Result<()> {
         let config = RUSTIC_APP.config();
+
+        // Handle dry-run mode
+        if config.global.dry_run {
+            bail!("cannot modify config in dry-run mode!",);
+        }
 
         let changed = config
             .repository

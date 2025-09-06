@@ -5,6 +5,7 @@ expression: config
 RusticConfig {
     global: GlobalOptions {
         use_profiles: [],
+        group_by: None,
         dry_run: false,
         dry_run_warmup: false,
         check_index: false,
@@ -20,6 +21,7 @@ RusticConfig {
             run_failed: [],
             run_finally: [],
             context: "",
+            env: {},
         },
         env: {},
         prometheus: None,
@@ -53,6 +55,7 @@ RusticConfig {
             run_failed: [],
             run_finally: [],
             context: "",
+            env: {},
         },
     },
     snapshot_filter: SnapshotFilter {
@@ -66,11 +69,12 @@ RusticConfig {
         filter_before: None,
         filter_size: None,
         filter_size_added: None,
-        filter_fn: None,
         filter_jq: None,
     },
     backup: BackupCmd {
         cli_sources: [],
+        cli_name: [],
+        name: None,
         stdin_filename: "",
         stdin_command: None,
         as_path: None,
@@ -120,8 +124,12 @@ RusticConfig {
             with_created: false,
         },
         config_opts: ConfigOptions {
-            set_compression: None,
             set_version: None,
+            set_chunker: None,
+            set_chunk_size: None,
+            set_chunk_min_size: None,
+            set_chunk_max_size: None,
+            set_compression: None,
             set_append_only: None,
             set_treepack_size: None,
             set_treepack_size_limit: None,
@@ -139,6 +147,7 @@ RusticConfig {
             run_failed: [],
             run_finally: [],
             context: "",
+            env: {},
         },
         snapshots: [],
         sources: [],
@@ -169,7 +178,6 @@ RusticConfig {
             filter_before: None,
             filter_size: None,
             filter_size_added: None,
-            filter_fn: None,
             filter_jq: None,
         },
         keep: KeepOptions {

@@ -75,19 +75,20 @@ If you want to contribute your own configuration, please
 
 ### Global Options `[global]`
 
-| Attribute         | Description                                                                       | Default Value | Example Value            | Environment Variable                             | CLI Option          |
-| ----------------- | --------------------------------------------------------------------------------- | ------------- | ------------------------ | ------------------------------------------------ | ------------------- |
-| check-index       | If true, check the index and read pack headers if index information is missing.   | false         |                          | RUSTIC_CHECK_INDEX                               | --check-index       |
-| dry-run           | If true, performs a dry run without making any changes.                           | false         |                          | RUSTIC_DRY_RUN                                   | --dry-run, -n       |
-| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"        |                          | RUSTIC_LOG_LEVEL                                 | --log-level         |
-| log-file          | Path to the log file.                                                             | No log file   | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file          |
-| no-progress       | If true, disables progress indicators.                                            | false         |                          | RUSTIC_NO_PROGRESS                               | --no-progress       |
-| progress-interval | The interval at which progress indicators are shown.                              | "100ms"       | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval |
-| use-profiles      | Array of profiles to use. Allows to recursively use other profiles.               | Empty array   | ["2nd", "3rd"]           | RUSTIC_USE_PROFILE                               | --use-profile, -P   |
-| prometheus        | URL of a Prometheus Pushgateway to push metrics to.                               | Not set       | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus        |
-| prometheus-user   | Username to authenticate to the Prometheus Pushgateway                            | Not set       | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user   |
-| prometheus-pass   | Password to authenticate to the Prometheus Pushgateway                            | Not set       | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass   |
-| opentelemetry     | OpenTelemetry metrics endpoint (HTTP Protobuf)                                    | Not set       | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry     |
+| Attribute         | Description                                                                       | Default Value      | Example Value            | Environment Variable                             | CLI Option          |
+| ----------------- | --------------------------------------------------------------------------------- | ------------------ | ------------------------ | ------------------------------------------------ | ------------------- |
+| check-index       | If true, check the index and read pack headers if index information is missing.   | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index       |
+| dry-run           | If true, performs a dry run without making any changes.                           | false              |                          | RUSTIC_DRY_RUN                                   | --dry-run, -n       |
+| group-by          | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"     | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g      |
+| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"             |                          | RUSTIC_LOG_LEVEL                                 | --log-level         |
+| log-file          | Path to the log file.                                                             | No log file        | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file          |
+| no-progress       | If true, disables progress indicators.                                            | false              |                          | RUSTIC_NO_PROGRESS                               | --no-progress       |
+| progress-interval | The interval at which progress indicators are shown.                              | "100ms"            | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval |
+| use-profiles      | Array of profiles to use. Allows to recursively use other profiles.               | Empty array        | ["2nd", "3rd"]           | RUSTIC_USE_PROFILE                               | --use-profile, -P   |
+| prometheus        | URL of a Prometheus Pushgateway to push metrics to.                               | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus        |
+| prometheus-user   | Username to authenticate to the Prometheus Pushgateway                            | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user   |
+| prometheus-pass   | Password to authenticate to the Prometheus Pushgateway                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass   |
+| opentelemetry     | OpenTelemetry metrics endpoint (HTTP Protobuf)                                    | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry     |
 
 ### Global Hooks `[global.hooks]`
 
@@ -168,63 +169,63 @@ See [Global Hooks](#global-hooks-globalhooks).
 
 ### Snapshot-Filter Options `[snapshot-filter]`
 
-| Attribute          | Description                                                            | Default Value | Example Value              | CLI Option           |
-| ------------------ | ---------------------------------------------------------------------- | ------------- | -------------------------- | -------------------- |
-| filter-hosts       | Array of hosts to filter snapshots.                                    | Not set       | ["myhost", "host2"]        | --filter-host        |
-| filter-labels      | Array of labels to filter snapshots.                                   | Not set       | ["mylabal"]                | --filter-label       |
-| filter-paths       | Array of pathlists to filter snapshots.                                | Not set       | ["/home,/root"]            | --filter-paths       |
-| filter-paths-exact | Array or string of paths to filter snapshots. Exact match.             | Not set       | ["path1,path2", "path3"]   | --filter-paths-exact |
-| filter-tags        | Array of taglists to filter snapshots.                                 | Not set       | ["tag1,tag2"]              | --filter-tags        |
-| filter-tags-exact  | Array or string of tags to filter snapshots. Exact match.              | Not set       | ["tag1,tag2", "tag3"]      | --filter-tags-exact  |
-| filter-before      | Filter snapshots before the given date/time                            | Not set       | "2024-01-01"               | --filter-before      |
-| filter-after       | Filter snapshots after the given date/time                             | Not set       | "2023-01-01 11:15:23"      | --filter-after       |
-| filter-size        | Filter snapshots for a total size in the size range.                   | Not set       | "1MB..1GB"                 | --filter-size        |
-|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                    |                      |
-| filter-size-added  | Filter snapshots for a size added to the repository in the size range. | Not set       | "1MB..1GB"                 | --filter-size-added  |
-|                    | If a single value is given, this is taken as lower bound.              |               | "500 k"                    |                      |
-| filter-fn          | Custom filter function for snapshots.                                  | Not set       |                            | --filter-fn          |
-| filter-jq          | Custom filter jq function for snapshots. Should return bool            | Not set       | ".summary.files_added > 1" | --filter-jq          |
+| Attribute          | Description                                                                   | Default Value | Example Value              | CLI Option           |
+| ------------------ | ----------------------------------------------------------------------------- | ------------- | -------------------------- | -------------------- |
+| filter-hosts       | Array of hosts to filter snapshots.                                           | Not set       | ["myhost", "host2"]        | --filter-host        |
+| filter-labels      | Array of labels to filter snapshots.                                          | Not set       | ["mylabal"]                | --filter-label       |
+| filter-paths       | Array of pathlists to filter snapshots.                                       | Not set       | ["/home,/root"]            | --filter-paths       |
+| filter-paths-exact | Array or string of paths to filter snapshots. Exact match.                    | Not set       | ["path1,path2", "path3"]   | --filter-paths-exact |
+| filter-tags        | Array of taglists to filter snapshots.                                        | Not set       | ["tag1,tag2"]              | --filter-tags        |
+| filter-tags-exact  | Array or string of tags to filter snapshots. Exact match.                     | Not set       | ["tag1,tag2", "tag3"]      | --filter-tags-exact  |
+| filter-before      | Filter snapshots before the given date/time                                   | Not set       | "2024-01-01"               | --filter-before      |
+| filter-after       | Filter snapshots after the given date/time                                    | Not set       | "2023-01-01 11:15:23"      | --filter-after       |
+| filter-size        | Filter snapshots for a total size in the size range.                          | Not set       | "1MB..1GB"                 | --filter-size        |
+|                    | If a single value is given, this is taken as lower bound.                     |               | "500 k"                    |                      |
+| filter-size-added  | Filter snapshots for a size added to the repository in the size range.        | Not set       | "1MB..1GB"                 | --filter-size-added  |
+|                    | If a single value is given, this is taken as lower bound.                     |               | "500 k"                    |                      |
+| filter-fn          | Custom filter function for snapshots. (only when compiled with `rhai`feature) | Not set       |                            | --filter-fn          |
+| filter-jq          | Custom filter jq function for snapshots. Should return bool                   | Not set       | ".summary.files_added > 1" | --filter-jq          |
 
 ### Backup Options `[backup]`
 
 **Note**: If set here, the backup options apply for all sources, although they
 can be overwritten in the source-specific configuration, see below.
 
-| Attribute          | Description                                                                                     | Default Value         | Example Value | CLI Option              |
-| ------------------ | ----------------------------------------------------------------------------------------------- | --------------------- | ------------- | ----------------------- |
-| as-path            | Specifies the path for the backup when the source contains a single path.                       | Not set               |               | --as-path               |
-| command            | Set the command saved in the snapshot.                                                          | The full command used |               | --command               |
-| custom-ignorefiles | Array of names of custom ignorefiles which will be used to exclude files.                       | []                    |               | --custom-ignorefile     |
-| description        | Description for the snapshot.                                                                   | Not set               |               | --description           |
-| description-from   | Path to a file containing the description for the snapshot.                                     | Not set               |               | --description-from      |
-| delete-never       | If true, never delete the snapshot.                                                             | false                 |               | --delete-never          |
-| delete-after       | Time duration after which the snapshot be deleted.                                              | Not set               |               | --delete-after          |
-| exclude-if-present | Array of filenames which will exclude its parent directory from the backup if they are present. | []                    |               | --exclude-if-present    |
-| force              | If true, forces the backup even if no changes are detected.                                     | false                 |               | --force                 |
-| git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory.         | false                 |               | --git-ignore            |
-| globs              | Array of globs specifying what to include/exclude in the backup.                                | []                    |               | --glob                  |
-| glob-files         | Array or string of glob files specifying what to include/exclude in the backup.                 | []                    |               | --glob-file             |
-| group-by           | Grouping strategy to find parent snapshot.                                                      | "host,label,paths"    |               | --group-by              |
-| host               | Host name used in the snapshot.                                                                 | local hostname        |               | --host                  |
-| iglobs             | Like glob, but apply case-insensitive                                                           | []                    |               | --iglob                 |
-| iglob-files        | Like glob-file, but apply case-insensitive                                                      | []                    |               | --iglob-file            |
-| ignore-devid       | If true, don't save device ID.                                                                  | false                 |               | --ignore-devid          |
-| ignore-ctime       | If true, ignore file change time (ctime).                                                       | false                 |               | --ignore-ctime          |
-| ignore-inode       | If true, ignore file inode for the backup.                                                      | false                 |               | --ignore-inode          |
-| init               | If true, initialize repository if it doesn't exist, yet.                                        | false                 |               | --init                  |
-| json               | If true, returns output of the command as json.                                                 | false                 |               | --json                  |
-| label              | Set label for the snapshot.                                                                     | Not set               |               | --label                 |
-| no-require-git     | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.            | false                 |               | --no-require-git        |
-| no-scan            | Don't scan the backup source for its size (disables ETA).                                       | false                 |               | --no-scan               |
-| one-file-system    | If true, only backs up files from the same filesystem as the source.                            | false                 |               | --one-file-system       |
-| parent             | Parent snapshot ID for the backup.                                                              | Not set               |               | --parent                |
-| quiet              | Don't output backup summary.                                                                    | false                 |               | --quiet                 |
-| skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                   | false                 |               | --skip-identical-parent |
-| stdin-filename     | File name to be used when reading from stdin.                                                   | Not set               |               | --stdin-filename        |
-| tags               | Array of tags for the backup.                                                                   | []                    |               | --tag                   |
-| time               | Set the time saved in the snapshot.                                                             | current time          |               | --time                  |
-| with-atime         | If true, includes file access time (atime) in the backup.                                       | false                 |               | --with-atime            |
-| metrics-job        | jobname used when pushing metrics (if global prometheus or opentelemetry option is set)         | "rustic-backup"       | "myjob"       | --metrics-job           |
+| Attribute          | Description                                                                                     | Default Value            | Example Value | CLI Option              |
+| ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------ | ------------- | ----------------------- |
+| as-path            | Specifies the path for the backup when the source contains a single path.                       | Not set                  |               | --as-path               |
+| command            | Set the command saved in the snapshot.                                                          | The full command used    |               | --command               |
+| custom-ignorefiles | Array of names of custom ignorefiles which will be used to exclude files.                       | []                       |               | --custom-ignorefile     |
+| description        | Description for the snapshot.                                                                   | Not set                  |               | --description           |
+| description-from   | Path to a file containing the description for the snapshot.                                     | Not set                  |               | --description-from      |
+| delete-never       | If true, never delete the snapshot.                                                             | false                    |               | --delete-never          |
+| delete-after       | Time duration after which the snapshot be deleted.                                              | Not set                  |               | --delete-after          |
+| exclude-if-present | Array of filenames which will exclude its parent directory from the backup if they are present. | []                       |               | --exclude-if-present    |
+| force              | If true, forces the backup even if no changes are detected.                                     | false                    |               | --force                 |
+| git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory.         | false                    |               | --git-ignore            |
+| globs              | Array of globs specifying what to include/exclude in the backup.                                | []                       |               | --glob                  |
+| glob-files         | Array or string of glob files specifying what to include/exclude in the backup.                 | []                       |               | --glob-file             |
+| group-by           | Grouping strategy to find parent snapshot.                                                      | global grouping strategy |               | --group-by              |
+| host               | Host name used in the snapshot.                                                                 | local hostname           |               | --host                  |
+| iglobs             | Like glob, but apply case-insensitive                                                           | []                       |               | --iglob                 |
+| iglob-files        | Like glob-file, but apply case-insensitive                                                      | []                       |               | --iglob-file            |
+| ignore-devid       | If true, don't save device ID.                                                                  | false                    |               | --ignore-devid          |
+| ignore-ctime       | If true, ignore file change time (ctime).                                                       | false                    |               | --ignore-ctime          |
+| ignore-inode       | If true, ignore file inode for the backup.                                                      | false                    |               | --ignore-inode          |
+| init               | If true, initialize repository if it doesn't exist, yet.                                        | false                    |               | --init                  |
+| json               | If true, returns output of the command as json.                                                 | false                    |               | --json                  |
+| label              | Set label for the snapshot.                                                                     | Not set                  |               | --label                 |
+| no-require-git     | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.            | false                    |               | --no-require-git        |
+| no-scan            | Don't scan the backup source for its size (disables ETA).                                       | false                    |               | --no-scan               |
+| one-file-system    | If true, only backs up files from the same filesystem as the source.                            | false                    |               | --one-file-system       |
+| parent             | Parent snapshot ID for the backup.                                                              | Not set                  |               | --parent                |
+| quiet              | Don't output backup summary.                                                                    | false                    |               | --quiet                 |
+| skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                   | false                    |               | --skip-identical-parent |
+| stdin-filename     | File name to be used when reading from stdin.                                                   | Not set                  |               | --stdin-filename        |
+| tags               | Array of tags for the backup.                                                                   | []                       |               | --tag                   |
+| time               | Set the time saved in the snapshot.                                                             | current time             |               | --time                  |
+| with-atime         | If true, includes file access time (atime) in the backup.                                       | false                    |               | --with-atime            |
+| metrics-job        | jobname used when pushing metrics (if global prometheus or opentelemetry option is set)         | "rustic-backup"          | "myjob"       | --metrics-job           |
 
 ### Backup Hooks `[backup.hooks]`
 
@@ -243,10 +244,11 @@ See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 **Note**: All of the backup options mentioned before can also be used as
 snapshot-specific option and then only apply to this snapshot.
 
-| Attribute | Description                                                   | Default Value | Example Value                                                          |
-| --------- | ------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
-| sources   | Array of source directories or file(s) to back up.            | []            | ["/dir1", "/dir2"]                                                     |
-| hooks     | Hooks to run before and after backing up the defined sources. | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
+| Attribute | Description                                                            | Default Value | Example Value                                                          |
+| --------- | ---------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
+| name      | Name to identify this snapshot (to be used with the --name CLI option) | ""            | "myid"                                                                 |
+| sources   | Array of source directories or file(s) to back up.                     | []            | ["/dir1", "/dir2"]                                                     |
+| hooks     | Hooks to run before and after backing up the defined sources.          | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
 
 Source-specific hooks are called additionally to global, repository and backup
 hooks when backing up the defined sources into a snapshot.
@@ -256,31 +258,31 @@ hooks when backing up the defined sources into a snapshot.
 **Note**: At lest on of the `keep-*` options must be given. Use
 `keep-none = true` if you want to remove all snapshots.
 
-| Attribute                  | Description                                                             | Default Value      | Example Value          | CLI Option                   |
-| -------------------------- | ----------------------------------------------------------------------- | ------------------ | ---------------------- | ---------------------------- |
-| group-by                   | Group snapshots by given criteria before applying keep policies.        | "host,label,paths" |                        | --group-by                   |
-| keep-last                  | Number of most recent snapshots to keep.                                | Not set            | 15                     | --keep-last, -l              |
-| keep-minutely, -M          | Number of minutely snapshots to keep.                                   | Not set            |                        | --keep-minutely              |
-| keep-hourly, -H            | Number of hourly snapshots to keep.                                     | Not set            |                        | --keep-hourly                |
-| keep-daily, -d             | Number of daily snapshots to keep.                                      | Not set            | 8                      | --keep-daily                 |
-| keep-weekly, -w            | Number of weekly snapshots to keep.                                     | Not set            |                        | --keep-weekly                |
-| keep-monthly, -m           | Number of monthly snapshots to keep.                                    | Not set            |                        | --keep-monthly               |
-| keep-quarter-yearly        | Number of quarter-yearly snapshots to keep.                             | Not set            |                        | --keep-quarter-yearly        |
-| keep-half-yearly           | Number of half-yearly snapshots to keep.                                | Not set            |                        | --keep-half-yearly           |
-| keep-yearly, -y            | Number of yearly snapshots to keep.                                     | Not set            |                        | --keep-yearly                |
-| keep-within-minutely       | The time duration within which minutely snapshots will be kept.         | Not set            | "2 hours"              | --keep-within-minutely       |
-| keep-within-hourly         | The time duration within which hourly snapshots will be kept.           | Not set            | "1 day"                | --keep-within-hourly         |
-| keep-within-daily          | The time duration within which daily snapshots will be kept.            | Not set            | "7 days"               | --keep-within-daily          |
-| keep-within-weekly         | The time duration within which weekly snapshots will be kept.           | Not set            |                        | --keep-within-weekly         |
-| keep-within-monthly        | The time duration within which monthly snapshots will be kept.          | Not set            |                        | --keep-within-monthly        |
-| keep-within-quarter-yearly | The time duration within which quarter-yearly snapshots will be kept.   | Not set            |                        | --keep-within-quarter-yearly |
-| keep-within-half-yearly    | The time duration within which half-yearly snapshots will be kept.      | Not set            |                        | --keep-within-half-yearly    |
-| keep-within-yearly         | The time duration within which yearly snapshots will be kept.           | Not set            |                        | --keep-within-yearly         |
-| keep-tags                  | Keep snapshots containing one of these taglists.                        | []                 | ["keep", "important" ] | --keep-tags                  |
-| keep-ids                   | Keep snapshots containing one of these IDs.                             | []                 | ["6e58f3d32" ]         | --keep-id                    |
-| keep-none                  | Allow to keep no snapshots.                                             | false              | true                   | --keep-none                  |
-| delete-unchanged           | Remove snapshots which are unchanged w.r.t their parent.                | false              | true                   | --delete-unchanged           |
-| prune                      | If set to true, prune the repository after snapshots have been removed. | false              |                        | --prune                      |
+| Attribute                  | Description                                                             | Default Value            | Example Value          | CLI Option                   |
+| -------------------------- | ----------------------------------------------------------------------- | ------------------------ | ---------------------- | ---------------------------- |
+| group-by                   | Group snapshots by given criteria before applying keep policies.        | global grouping strategy |                        | --group-by                   |
+| keep-last                  | Number of most recent snapshots to keep.                                | Not set                  | 15                     | --keep-last, -l              |
+| keep-minutely, -M          | Number of minutely snapshots to keep.                                   | Not set                  |                        | --keep-minutely              |
+| keep-hourly, -H            | Number of hourly snapshots to keep.                                     | Not set                  |                        | --keep-hourly                |
+| keep-daily, -d             | Number of daily snapshots to keep.                                      | Not set                  | 8                      | --keep-daily                 |
+| keep-weekly, -w            | Number of weekly snapshots to keep.                                     | Not set                  |                        | --keep-weekly                |
+| keep-monthly, -m           | Number of monthly snapshots to keep.                                    | Not set                  |                        | --keep-monthly               |
+| keep-quarter-yearly        | Number of quarter-yearly snapshots to keep.                             | Not set                  |                        | --keep-quarter-yearly        |
+| keep-half-yearly           | Number of half-yearly snapshots to keep.                                | Not set                  |                        | --keep-half-yearly           |
+| keep-yearly, -y            | Number of yearly snapshots to keep.                                     | Not set                  |                        | --keep-yearly                |
+| keep-within-minutely       | The time duration within which minutely snapshots will be kept.         | Not set                  | "2 hours"              | --keep-within-minutely       |
+| keep-within-hourly         | The time duration within which hourly snapshots will be kept.           | Not set                  | "1 day"                | --keep-within-hourly         |
+| keep-within-daily          | The time duration within which daily snapshots will be kept.            | Not set                  | "7 days"               | --keep-within-daily          |
+| keep-within-weekly         | The time duration within which weekly snapshots will be kept.           | Not set                  |                        | --keep-within-weekly         |
+| keep-within-monthly        | The time duration within which monthly snapshots will be kept.          | Not set                  |                        | --keep-within-monthly        |
+| keep-within-quarter-yearly | The time duration within which quarter-yearly snapshots will be kept.   | Not set                  |                        | --keep-within-quarter-yearly |
+| keep-within-half-yearly    | The time duration within which half-yearly snapshots will be kept.      | Not set                  |                        | --keep-within-half-yearly    |
+| keep-within-yearly         | The time duration within which yearly snapshots will be kept.           | Not set                  |                        | --keep-within-yearly         |
+| keep-tags                  | Keep snapshots containing one of these taglists.                        | []                       | ["keep", "important" ] | --keep-tags                  |
+| keep-ids                   | Keep snapshots containing one of these IDs.                             | []                       | ["6e58f3d32" ]         | --keep-id                    |
+| keep-none                  | Allow to keep no snapshots.                                             | false                    | true                   | --keep-none                  |
+| delete-unchanged           | Remove snapshots which are unchanged w.r.t their parent.                | false                    | true                   | --delete-unchanged           |
+| prune                      | If set to true, prune the repository after snapshots have been removed. | false                    |                        | --prune                      |
 
 Additionally extra snapshot filter options can be given for the `forget` command
 here, see Snapshot-Filter options.

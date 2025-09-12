@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0](https://github.com/rustic-rs/rustic/compare/v0.9.5...v0.10.0) - 2025-09-12
+
+### Added
+
+- Add fixed size chunking and allow fine-tune of rabin chunking ([#422](https://github.com/rustic-rs/rustic_core/pull/422))
+- *(backup)* Add --name option to select snapshot(s) from config to backup ([#1531](https://github.com/rustic-rs/rustic/pull/1531))
+- *(backup)* [**breaking**] rename backup skip_identical_parent to skip_if_unchanged ([#387](https://github.com/rustic-rs/rustic_core/pull/387))
+- *(commands)* Add missing key subcommands ([#1385](https://github.com/rustic-rs/rustic/pull/1385))
+- *(commands)* [**breaking**] Fine-tune output for snapshots command when no grouping is given ([#1375](https://github.com/rustic-rs/rustic/pull/1375))
+- *(commands)* [**breaking**] Extend logging ([#1463](https://github.com/rustic-rs/rustic/pull/1463))
+- *(commands)* make group_by a global option ([#1545](https://github.com/rustic-rs/rustic/pull/1545))
+- *(forget)* Add delete_unchanged option to forget ([#386](https://github.com/rustic-rs/rustic_core/pull/386))
+- *(diff)* Use local PATH1 as PATH2 if no new snapshot/path is given ([#1474](https://github.com/rustic-rs/rustic/pull/1474))
+- *(warmup)* Add warmup wait command ([#379](https://github.com/rustic-rs/rustic_core/pull/379))
+- *(interactive)* [**breaking**] Add interactive diff / overwork diff output ([#1480](https://github.com/rustic-rs/rustic/pull/1480))
+- *(interactive)* Reduce memory consumption of summary ([#1489](https://github.com/rustic-rs/rustic/pull/1489))
+- *(interactive)* remember summary when switching snapshot/ls/diff views ([#1485](https://github.com/rustic-rs/rustic/pull/1485))
+- *(interactive)* ls: Add options to compute cumulative statistics ([#1479](https://github.com/rustic-rs/rustic/pull/1479))
+- *(interactive)* Add possibility to change snapshot hostname ([#1498](https://github.com/rustic-rs/rustic/pull/1498))
+- Add environment variables to the hooks ([#1518](https://github.com/rustic-rs/rustic/pull/1518))
+- push prometheus metrics to pushgateway on-demand ([#1404](https://github.com/rustic-rs/rustic/pull/1404))
+- OpenTelemetry Protocol support for metrics ([#1473](https://github.com/rustic-rs/rustic/pull/1473))
+- Allow to use OPENDALHOT_* and OPENDALCOLD_* env variables ([#1392](https://github.com/rustic-rs/rustic/pull/1392), [#1393](https://github.com/rustic-rs/rustic/pull/1393))
+
+### Fixed
+
+- Allow to unset append-only mode ([#414](https://github.com/rustic-rs/rustic_core/pull/414))
+- Fix repair index ([#406](https://github.com/rustic-rs/rustic_core/pull/406))
+- Allow to request identical snapshot multiple times ([#408](https://github.com/rustic-rs/rustic_core/pull/408))
+- Don't panic when reading empty files ([#381](https://github.com/rustic-rs/rustic_core/pull/381))
+- sanitize paths after run-before hook ([#1549](https://github.com/rustic-rs/rustic/pull/1549))
+- Handle dry-run for all commands ([#1546](https://github.com/rustic-rs/rustic/pull/1546))
+- Don't allow wrong commands in front of valid ones ([#1464](https://github.com/rustic-rs/rustic/pull/1464))
+- *(commands)* remove SIGPIPE default handler ([#1431](https://github.com/rustic-rs/rustic/pull/1431))
+- *(config)* set a non-zero default progress interval for progress options ([#1378](https://github.com/rustic-rs/rustic/pull/1378))
+
+### Other
+
+- [**breaking**] Remove --filter-fn from default ([#1482](https://github.com/rustic-rs/rustic/pull/1482))
+- *(config)* Correct the `exclude-if-present` option descritption ([#1506](https://github.com/rustic-rs/rustic/pull/1506))
+- use 2024 edition ([#1453](https://github.com/rustic-rs/rustic/pull/1453))
+- Add Homebrew instructions ([#1416](https://github.com/rustic-rs/rustic/pull/1416))
+- code formatting
+- dependency updates
+
 ## [0.9.5](https://github.com/rustic-rs/rustic/compare/v0.9.4...v0.9.5) - 2024-12-02
 
 ### Added

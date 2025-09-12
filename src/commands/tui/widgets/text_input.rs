@@ -63,7 +63,7 @@ impl ProcessEvent for TextInput {
                         return TextInputResult::Input(self.textarea.lines().join("\n"));
                     }
                     _ => {
-                        _ = self.textarea.input(key);
+                        _ = self.textarea.input(event);
                     }
                 }
             } else {

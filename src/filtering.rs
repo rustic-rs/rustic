@@ -367,11 +367,11 @@ impl FromStr for SizeRange {
 impl Display for SizeRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(from) = self.from {
-            f.write_str(&from.to_string_as(true))?;
+            Display::fmt(&from.display(), f)?;
         }
         f.write_str("..")?;
         if let Some(to) = self.to {
-            f.write_str(&to.to_string_as(true))?;
+            Display::fmt(&to.display(), f)?;
         }
 
         Ok(())

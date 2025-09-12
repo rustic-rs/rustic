@@ -43,5 +43,5 @@ pub fn table_right_from<I: IntoIterator<Item = T>, T: ToString>(start: usize, ti
 /// Convert a [`ByteSize`] to a human readable string
 #[must_use]
 pub fn bytes_size_to_string(b: u64) -> String {
-    ByteSize(b).to_string_as(true)
+    ByteSize(b).display().to_string()
 }

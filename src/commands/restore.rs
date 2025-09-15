@@ -17,6 +17,8 @@ use crate::filtering::SnapshotFilter;
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct RestoreCmd {
     /// Snapshot/path to restore
+    ///
+    /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 

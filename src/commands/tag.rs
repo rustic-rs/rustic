@@ -12,8 +12,9 @@ use rustic_core::{StringList, repofile::DeleteOption};
 /// `tag` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct TagCmd {
-    /// Snapshots to change tags. If none is given, use filter to filter from all
-    /// snapshots.
+    /// Snapshots to change tags. If none is given, use filter to filter from all snapshots
+    ///
+    /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
@@ -80,7 +81,7 @@ impl TagCmd {
         let snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
         } else {
-            repo.get_snapshots(&self.ids)?
+            repo.get_snapshots_from_strs(&self.ids, |_| true)?
         };
 
         let delete = match (

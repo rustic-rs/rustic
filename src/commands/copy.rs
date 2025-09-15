@@ -18,7 +18,8 @@ use rustic_core::{CopySnapshot, Id, KeyOptions, repofile::SnapshotFile};
 /// `copy` subcommand
 #[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
 pub struct CopyCmd {
-    /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
+    /// Snapshots to copy. If none is given, use filter options to filter from all snapshots
+    ///
     /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     #[serde(skip)]

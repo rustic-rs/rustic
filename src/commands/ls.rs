@@ -34,7 +34,9 @@ use constants::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S
 /// `ls` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct LsCmd {
-    /// Snapshot:path to list. The snapshot can be an id: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
+    /// Snapshot:path to list
+    ///
+    /// The snapshot can be an id: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 

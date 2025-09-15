@@ -25,6 +25,8 @@ use zip::{ZipWriter, write::SimpleFileOptions};
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct DumpCmd {
     /// file from snapshot to dump
+    ///
+    /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     snap: String,
 

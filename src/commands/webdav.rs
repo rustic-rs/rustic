@@ -46,6 +46,8 @@ pub struct WebDavCmd {
     file_access: Option<String>,
 
     /// Specify directly which snapshot/path to serve
+    ///
+    /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT[:PATH]")]
     #[merge(strategy=conflate::option::overwrite_none)]
     snapshot_path: Option<String>,

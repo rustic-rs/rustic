@@ -28,10 +28,14 @@ use crate::commands::tui;
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct DiffCmd {
     /// Reference snapshot/path
+    ///
+    /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
     snap1: String,
 
     /// New snapshot/path (uses PATH2 = PATH1, if not given; uses local path if no snapshot is given)
+    ///
+    /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT2[:PATH2]|PATH2", value_hint = ValueHint::AnyPath)]
     snap2: Option<String>,
 
@@ -83,7 +87,7 @@ impl DiffCmd {
         match (id1, id2) {
             (Some(id1), Some(id2)) => {
                 // diff between two snapshots
-                let snaps = repo.get_snapshots(&[id1, id2])?;
+                let snaps = repo.get_snapshots_from_strs(&[id1, id2], |_| true)?;
 
                 let snap1 = &snaps[0];
                 let snap2 = &snaps[1];

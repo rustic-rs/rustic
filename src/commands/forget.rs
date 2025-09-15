@@ -22,6 +22,7 @@ use rustic_core::{
 #[derive(clap::Parser, Command, Debug)]
 pub(super) struct ForgetCmd {
     /// Snapshots to forget. If none is given, use filter options to filter from all snapshots
+    /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 
@@ -118,7 +119,7 @@ impl ForgetCmd {
             let item = ForgetGroup {
                 group: SnapshotGroup::default(),
                 snapshots: repo
-                    .get_snapshots(&self.ids)?
+                    .get_snapshots_from_strs(&self.ids, |_| true)?
                     .into_iter()
                     .map(|sn| {
                         if sn.must_keep(now) {

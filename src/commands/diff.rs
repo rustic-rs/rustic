@@ -92,24 +92,18 @@ impl DiffCmd {
                 if self.interactive {
                     use tui::summary::SummaryMap;
                     return tui::run(|progress| {
-                        let config = RUSTIC_APP.config();
-                        config
-                            .repository
-                            .run_indexed_with_progress(progress.clone(), |repo| {
-                                let p = progress
-                                    .progress_spinner("starting rustic in interactive mode...");
-                                p.finish();
-                                // create app and run it
-                                let diff = tui::Diff::new(
-                                    &repo,
-                                    snap1.clone(),
-                                    snap2.clone(),
-                                    path1,
-                                    path2,
-                                    SummaryMap::default(),
-                                )?;
-                                tui::run_app(progress.terminal, diff)
-                            })
+                        let p = progress.progress_spinner("starting rustic in interactive mode...");
+                        p.finish();
+                        // create app and run it
+                        let diff = tui::Diff::new(
+                            &repo,
+                            snap1.clone(),
+                            snap2.clone(),
+                            path1,
+                            path2,
+                            SummaryMap::default(),
+                        )?;
+                        tui::run_app(progress.terminal, diff)
                     });
                 }
 

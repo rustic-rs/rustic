@@ -7,7 +7,9 @@ mod snapshots;
 pub mod summary;
 mod tree;
 mod widgets;
+
 pub use diff::Diff;
+pub use ls::Ls;
 pub use snapshots::Snapshots;
 
 use std::io;

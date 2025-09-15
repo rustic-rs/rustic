@@ -19,6 +19,7 @@ use rustic_core::{CopySnapshot, Id, KeyOptions, repofile::SnapshotFile};
 #[derive(clap::Parser, Command, Default, Clone, Debug, Serialize, Deserialize, Merge)]
 pub struct CopyCmd {
     /// Snapshots to copy. If none is given, use filter options to filter from all snapshots.
+    /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     #[serde(skip)]
     #[merge(skip)]
@@ -77,7 +78,7 @@ impl CopyCmd {
         let mut snapshots = if self.ids.is_empty() {
             repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
         } else {
-            repo.get_snapshots(&self.ids)?
+            repo.get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
         };
         // sort for nicer output
         snapshots.sort_unstable();

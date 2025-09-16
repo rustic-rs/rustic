@@ -144,7 +144,6 @@ exclude-larger-than = "100MB" # Default: not set
 json = false
 init = false
 no-scan = false
-quiet = false
 skip-if-unchanged = false
 metrics-job = "my-backup-jobs" # Only used if global prometheus or opentelemetry option is set; default: not set
 

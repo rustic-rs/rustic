@@ -228,7 +228,6 @@ can be overwritten in the source-specific configuration, see below.
 | no-scan            | Don't scan the backup source for its size (disables ETA).                                       | false                    |               | --no-scan               |
 | one-file-system    | If true, only backs up files from the same filesystem as the source.                            | false                    |               | --one-file-system       |
 | parents            | Parent snapshot(s) for the backup.                                                              | Not set                  |               | --parent                |
-| quiet              | Don't output backup summary.                                                                    | false                    |               | --quiet                 |
 | skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                   | false                    |               | --skip-identical-parent |
 | stdin-filename     | File name to be used when reading from stdin.                                                   | Not set                  |               | --stdin-filename        |
 | tags               | Array of tags for the backup.                                                                   | []                       |               | --tag                   |

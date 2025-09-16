@@ -62,7 +62,6 @@ ignore-devid = false
 no-scan = false
 json = false
 long = false
-quiet = false
 init = false
 parents = []
 skip-if-unchanged = false

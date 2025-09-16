@@ -208,11 +208,17 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::option::overwrite_none)]
     pub log_level: Option<String>,
 
-    /// Write log messages to the given file instead of printing them.
-    ///
-    /// # Note
-    ///
-    /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
+    /// Use this log level for the log file [default: info]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_LOGFILE")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    pub log_level_logfile: Option<String>,
+
+    /// Use this log level in dry-run mode [default: info]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_DRYRUN")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    pub log_level_dryrun: Option<String>,
+
+    /// Write log messages to the given file (using log-level-logfile)
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
     #[merge(strategy=conflate::option::overwrite_none)]
     pub log_file: Option<PathBuf>,

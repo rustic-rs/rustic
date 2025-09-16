@@ -19,7 +19,7 @@ use crate::{
         snapshots::{fill_table, snap_to_table},
         tui::{
             diff::{Diff, DiffResult},
-            ls::{Snapshot, SnapshotResult},
+            ls::{Ls, LsResult},
             tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
                 Draw, PopUpInput, PopUpPrompt, PopUpTable, PopUpText, ProcessEvent, PromptResult,
@@ -42,7 +42,7 @@ enum CurrentScreen<'a, P, S> {
     EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
-    Dir(Box<Snapshot<'a, P, S>>),
+    Dir(Box<Ls<'a, P, S>>),
     Diff(Box<Diff<'a, P, S>>),
 }
 
@@ -529,11 +529,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         popup_table("snapshot details", rows)
     }
 
-    pub fn dir(&mut self) -> Result<Option<Snapshot<'a, P, S>>> {
+    pub fn dir(&mut self) -> Result<Option<Ls<'a, P, S>>> {
         self.selected_snapshot().cloned().map_or(Ok(None), |snap| {
-            Some(Snapshot::new(
+            Some(Ls::new(
                 self.repo,
                 snap,
+                "",
                 mem::take(&mut self.summary_map),
             ))
             .transpose()
@@ -962,12 +963,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                 PromptResult::None => {}
             },
             CurrentScreen::Dir(dir) => match dir.input(event)? {
-                SnapshotResult::Exit => return Ok(true),
-                SnapshotResult::Return(summary_map) => {
+                LsResult::Exit => return Ok(true),
+                LsResult::Return(summary_map) => {
                     self.current_screen = CurrentScreen::Snapshots;
                     self.summary_map = summary_map;
                 }
-                SnapshotResult::None => {}
+                LsResult::None => {}
             },
             CurrentScreen::Diff(diff) => match diff.input(event)? {
                 DiffResult::Exit => return Ok(true),

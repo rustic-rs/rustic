@@ -81,6 +81,7 @@ tui-textarea = { version = "0.7.0", optional = true }
 
 # logging
 log = "0.4"
+log4rs = { version = "1.4.0", default-features = false, features = ["console_appender", "file_appender", "threshold_filter"] }
 
 # errors
 anyhow = "1"
@@ -97,7 +98,6 @@ aho-corasick = "1"
 comfy-table = "7"
 scopeguard = "1"
 semver = { version = "1", optional = true }
-simplelog = "0.12"
 
 # commands
 base64 = { version = "0.22.1", optional = true }

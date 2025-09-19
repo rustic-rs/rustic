@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1](https://github.com/rustic-rs/rustic/compare/v0.10.0...v0.10.1) - 2025-09-19
+
+### Fixed
+
+- wrong env var for grouping option ([#1566](https://github.com/rustic-rs/rustic/pull/1566))
+
 ## [0.10.0](https://github.com/rustic-rs/rustic/compare/v0.9.5...v0.10.0) - 2025-09-12
 
 ### Added

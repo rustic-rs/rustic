@@ -165,7 +165,7 @@ pub struct GlobalOptions {
         short = 'g',
         global = true,
         value_name = "CRITERION",
-        env = "RUSTIC_USE_PROFILE"
+        env = "RUSTIC_GROUP_BY"
     )]
     #[serde_as(as = "Option<DisplayFromStr>")]
     #[merge(strategy=conflate::option::overwrite_none)]

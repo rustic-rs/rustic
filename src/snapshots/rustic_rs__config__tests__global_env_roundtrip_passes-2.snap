@@ -59,7 +59,6 @@ ignore-devid = false
 no-scan = false
 json = false
 long = false
-quiet = false
 init = false
 skip-if-unchanged = false
 force = false

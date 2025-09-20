@@ -93,11 +93,6 @@ pub struct BackupCmd {
     #[merge(strategy=conflate::bool::overwrite_false)]
     long: bool,
 
-    /// Don't show any output
-    #[clap(long, conflicts_with_all = ["json", "long"])]
-    #[merge(strategy=conflate::bool::overwrite_false)]
-    quiet: bool,
-
     /// Initialize repository, if it doesn't exist yet
     #[clap(long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
@@ -385,7 +380,7 @@ impl BackupCmd {
             fill_table(&snap, add_entry);
 
             println!("{table}");
-        } else if !self.quiet {
+        } else {
             let summary = snap.summary.as_ref().unwrap();
             info!(
                 "Files:       {} new, {} changed, {} unchanged",

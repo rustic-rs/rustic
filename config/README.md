@@ -75,20 +75,22 @@ If you want to contribute your own configuration, please
 
 ### Global Options `[global]`
 
-| Attribute         | Description                                                                       | Default Value      | Example Value            | Environment Variable                             | CLI Option          |
-| ----------------- | --------------------------------------------------------------------------------- | ------------------ | ------------------------ | ------------------------------------------------ | ------------------- |
-| check-index       | If true, check the index and read pack headers if index information is missing.   | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index       |
-| dry-run           | If true, performs a dry run without making any changes.                           | false              |                          | RUSTIC_DRY_RUN                                   | --dry-run, -n       |
-| group-by          | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"     | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g      |
-| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"             |                          | RUSTIC_LOG_LEVEL                                 | --log-level         |
-| log-file          | Path to the log file.                                                             | No log file        | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file          |
-| no-progress       | If true, disables progress indicators.                                            | false              |                          | RUSTIC_NO_PROGRESS                               | --no-progress       |
-| progress-interval | The interval at which progress indicators are shown.                              | "100ms"            | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval |
-| use-profiles      | Array of profiles to use. Allows to recursively use other profiles.               | Empty array        | ["2nd", "3rd"]           | RUSTIC_USE_PROFILE                               | --use-profile, -P   |
-| prometheus        | URL of a Prometheus Pushgateway to push metrics to.                               | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus        |
-| prometheus-user   | Username to authenticate to the Prometheus Pushgateway                            | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user   |
-| prometheus-pass   | Password to authenticate to the Prometheus Pushgateway                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass   |
-| opentelemetry     | OpenTelemetry metrics endpoint (HTTP Protobuf)                                    | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry     |
+| Attribute         | Description                                                                                       | Default Value      | Example Value            | Environment Variable                             | CLI Option          |
+| ----------------- | ------------------------------------------------------------------------------------------------- | ------------------ | ------------------------ | ------------------------------------------------ | ------------------- |
+| check-index       | If true, check the index and read pack headers if index information is missing.                   | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index       |
+| dry-run           | If true, performs a dry run without making any changes.                                           | false              |                          | RUSTIC_DRY_RUN                                   | --dry-run, -n       |
+| group-by          | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"                     | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g      |
+| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace".                 | "info"             |                          | RUSTIC_LOG_LEVEL                                 | --log-level         |
+| log-level-logfile | Logging level for log file. Possible values: "off", "error", "warn", "info", "debug", "trace".    | "info"             |                          | RUSTIC_LOG_LEVEL_LOGFILE                         | --log-level-logfile |
+| log-level-dryrun  | Logging level in dry-run mode. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"             |                          | RUSTIC_LOG_LEVEL_DRYRUN                          | --log-level-dryrun  |
+| log-file          | Path to the log file.                                                                             | No log file        | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file          |
+| no-progress       | If true, disables progress indicators.                                                            | false              |                          | RUSTIC_NO_PROGRESS                               | --no-progress       |
+| progress-interval | The interval at which progress indicators are shown.                                              | "100ms"            | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval |
+| use-profiles      | Array of profiles to use. Allows to recursively use other profiles.                               | Empty array        | ["2nd", "3rd"]           | RUSTIC_USE_PROFILE                               | --use-profile, -P   |
+| prometheus        | URL of a Prometheus Pushgateway to push metrics to.                                               | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus        |
+| prometheus-user   | Username to authenticate to the Prometheus Pushgateway                                            | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user   |
+| prometheus-pass   | Password to authenticate to the Prometheus Pushgateway                                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass   |
+| opentelemetry     | OpenTelemetry metrics endpoint (HTTP Protobuf)                                                    | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry     |
 
 ### Global Hooks `[global.hooks]`
 
@@ -219,7 +221,6 @@ can be overwritten in the source-specific configuration, see below.
 | no-scan            | Don't scan the backup source for its size (disables ETA).                                       | false                    |               | --no-scan               |
 | one-file-system    | If true, only backs up files from the same filesystem as the source.                            | false                    |               | --one-file-system       |
 | parent             | Parent snapshot ID for the backup.                                                              | Not set                  |               | --parent                |
-| quiet              | Don't output backup summary.                                                                    | false                    |               | --quiet                 |
 | skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                   | false                    |               | --skip-identical-parent |
 | stdin-filename     | File name to be used when reading from stdin.                                                   | Not set                  |               | --stdin-filename        |
 | tags               | Array of tags for the backup.                                                                   | []                       |               | --tag                   |

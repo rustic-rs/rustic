@@ -135,7 +135,7 @@ impl<'a> BlobInfoRef<'a> {
                     Ok(sum + u64::from(b?.length))
                 })
                 .ok()
-                .map_or("?".to_string(), bytes_size_to_string)
+                .map_or_else(|| "?".to_string(), bytes_size_to_string)
         } else {
             String::new()
         }

@@ -201,6 +201,12 @@ pub struct SnapshotFilter {
     #[merge(strategy=conflate::option::overwrite_none)]
     filter_size_added: Option<SizeRange>,
 
+    /// Only use the last COUNT snapshots for each group
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, value_name = "COUNT")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_last: Option<usize>,
+
     /// Function to filter snapshots
     #[cfg(feature = "rhai")]
     #[clap(long, global = true, value_name = "FUNC")]
@@ -290,6 +296,17 @@ impl SnapshotFilter {
                 || self.filter_tags_exact.contains(&snapshot.tags))
             && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
             && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
+    }
+
+    pub fn post_process(&self, snapshots: &mut Vec<SnapshotFile>) {
+        snapshots.sort_unstable();
+        if let Some(last) = self.filter_last {
+            let count = snapshots.len();
+            if last < count {
+                let new = snapshots.split_off(count - last);
+                let _ = std::mem::replace(snapshots, new);
+            }
+        }
     }
 }
 

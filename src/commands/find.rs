@@ -2,7 +2,11 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP,
+    repository::{CliIndexedRepo, get_global_grouped_snapshots},
+    status_err,
+};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -64,13 +68,7 @@ impl Runnable for FindCmd {
 
 impl FindCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
-        let config = RUSTIC_APP.config();
-
-        let groups = repo.get_snapshot_group(
-            &self.ids,
-            config.global.group_by.unwrap_or_default(),
-            |sn| config.snapshot_filter.matches(sn),
-        )?;
+        let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
         for (group, mut snapshots) in groups {
             snapshots.sort_unstable();
             if !group.is_empty() {

@@ -1,10 +1,14 @@
 //! `check` subcommand
 
-use crate::{Application, RUSTIC_APP, repository::CliOpenRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP,
+    repository::{CliOpenRepo, get_global_grouped_snapshots},
+    status_err,
+};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use rustic_core::{CheckOptions, SnapshotGroupCriterion};
+use rustic_core::CheckOptions;
 
 /// `check` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -33,11 +37,7 @@ impl Runnable for CheckCmd {
 
 impl CheckCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
-        let config = RUSTIC_APP.config();
-
-        let groups = repo.get_snapshot_group(&self.ids, SnapshotGroupCriterion::new(), |sn| {
-            config.snapshot_filter.matches(sn)
-        })?;
+        let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
         let trees = groups
             .into_iter()
             .flat_map(|(_, snaps)| snaps)

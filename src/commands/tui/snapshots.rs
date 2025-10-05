@@ -288,6 +288,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 .then_some(i)
             })
             .collect();
+        // TODO: Handle filter post-processing in case of current_view == View::Filter
         self.create_tree();
     }
 

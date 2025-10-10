@@ -16,7 +16,11 @@ use fuse_mt::{FuseMT, mount};
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};
 
-use crate::{Application, RUSTIC_APP, RusticConfig, repository::CliIndexedRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP, RusticConfig,
+    repository::{CliIndexedRepo, get_filtered_snapshots},
+    status_err,
+};
 
 #[derive(Clone, Debug, Default, Command, Parser, Merge, serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -123,12 +127,12 @@ impl MountCmd {
             bail!("Please specify a mount point!");
         };
 
-        let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
-        let vfs = if let Some(snap_path) = &config.mount.snapshot_path {
-            let node = repo.node_from_snapshot_path(snap_path, sn_filter)?;
+        let vfs = if let Some(snap) = &config.mount.snapshot_path {
+            let node =
+                repo.node_from_snapshot_path(snap, |sn| config.snapshot_filter.matches(sn))?;
             Vfs::from_dir_node(&node)
         } else {
-            let snapshots = repo.get_matching_snapshots(sn_filter)?;
+            let snapshots = get_filtered_snapshots(&repo)?;
             Vfs::from_snapshots(
                 snapshots,
                 &path_template,

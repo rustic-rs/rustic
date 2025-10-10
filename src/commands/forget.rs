@@ -1,6 +1,6 @@
 //! `forget` subcommand
 
-use crate::repository::CliOpenRepo;
+use crate::repository::{CliOpenRepo, get_grouped_snapshots};
 use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, status_err};
 
 use abscissa_core::{Command, FrameworkError, Runnable};
@@ -113,10 +113,20 @@ impl ForgetCmd {
             .or(config.global.group_by)
             .unwrap_or_default();
 
+        let now = Local::now();
+
         let groups = if self.ids.is_empty() {
-            repo.get_forget_snapshots(&config.forget.keep, group_by, |sn| {
-                config.forget.filter.matches(sn)
-            })?
+            ForgetGroups(
+                get_grouped_snapshots(&repo, group_by, &[])?
+                    .into_iter()
+                    .map(|(group, snapshots)| -> Result<_> {
+                        Ok(ForgetGroup {
+                            group,
+                            snapshots: config.forget.keep.apply(snapshots, now)?,
+                        })
+                    })
+                    .collect::<Result<_>>()?,
+            )
         } else {
             let now = Local::now();
             let item = ForgetGroup {

@@ -3,7 +3,7 @@
 use crate::{
     Application, RUSTIC_APP,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
-    repository::CliOpenRepo,
+    repository::{CliOpenRepo, get_global_grouped_snapshots},
     status_err,
 };
 
@@ -83,13 +83,7 @@ impl SnapshotCmd {
             });
         }
 
-        let config = RUSTIC_APP.config();
-
-        let groups = repo.get_snapshot_group(
-            &self.ids,
-            config.global.group_by.unwrap_or_default(),
-            |sn| config.snapshot_filter.matches(sn),
-        )?;
+        let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
 
         if self.json {
             #[derive(Serialize, From)]
@@ -109,11 +103,10 @@ impl SnapshotCmd {
         }
 
         let mut total_count = 0;
-        for (group_key, mut snapshots) in groups {
+        for (group_key, snapshots) in groups {
             if !group_key.is_empty() {
                 println!("\nsnapshots for {group_key}");
             }
-            snapshots.sort_unstable();
             let count = snapshots.len();
 
             if self.long {

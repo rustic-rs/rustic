@@ -5,7 +5,11 @@
 
 use std::net::ToSocketAddrs;
 
-use crate::{Application, RUSTIC_APP, RusticConfig, repository::CliIndexedRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP, RusticConfig,
+    repository::{CliIndexedRepo, get_filtered_snapshots},
+    status_err,
+};
 use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
 use anyhow::{Result, anyhow};
 use conflate::Merge;
@@ -95,13 +99,12 @@ impl WebDavCmd {
             .clone()
             .unwrap_or_else(|| "%Y-%m-%d_%H-%M-%S".to_string());
 
-        let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
-
         let vfs = if let Some(snap) = &config.webdav.snapshot_path {
-            let node = repo.node_from_snapshot_path(snap, sn_filter)?;
+            let node =
+                repo.node_from_snapshot_path(snap, |sn| config.snapshot_filter.matches(sn))?;
             Vfs::from_dir_node(&node)
         } else {
-            let snapshots = repo.get_matching_snapshots(sn_filter)?;
+            let snapshots = get_filtered_snapshots(&repo)?;
             let (latest, identical) = if config.webdav.symlinks {
                 (Latest::AsLink, IdenticalSnapshot::AsLink)
             } else {

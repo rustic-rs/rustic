@@ -79,6 +79,7 @@ RusticConfig {
         filter_before: None,
         filter_size: None,
         filter_size_added: None,
+        filter_last: None,
         filter_jq: None,
     },
     backup: BackupCmd {
@@ -188,6 +189,7 @@ RusticConfig {
             filter_before: None,
             filter_size: None,
             filter_size_added: None,
+            filter_last: None,
             filter_jq: None,
         },
         keep: KeepOptions {

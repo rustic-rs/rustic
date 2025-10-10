@@ -5,6 +5,8 @@ use std::{
     path::Path,
 };
 
+#[cfg(feature = "tui")]
+use crate::commands::tui;
 use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -57,6 +59,11 @@ pub(crate) struct LsCmd {
     /// Listing options
     #[clap(flatten)]
     ls_opts: LsOptions,
+
+    #[cfg(feature = "tui")]
+    /// Run in interactive UI mode
+    #[clap(long, short)]
+    interactive: bool,
 }
 
 impl Runnable for LsCmd {
@@ -152,8 +159,23 @@ impl LsCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let node =
-            repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
+        let (snap_id, path) = self.snap.split_once(':').unwrap_or((&self.snap, ""));
+        let snap = repo.get_snapshot_from_str(snap_id, |sn| config.snapshot_filter.matches(sn))?;
+
+        #[cfg(feature = "tui")]
+        if self.interactive {
+            use rustic_core::{Progress, ProgressBars};
+            use tui::summary::SummaryMap;
+
+            return tui::run(|progress| {
+                let p = progress.progress_spinner("starting rustic in interactive mode...");
+                p.finish();
+                // create app and run it
+                let ls = tui::Ls::new(&repo, snap, path, SummaryMap::default())?;
+                tui::run_app(progress.terminal, ls)
+            });
+        }
+        let node = repo.node_from_snapshot_and_path(&snap, path)?;
 
         // recursive if standard if we specify a snapshot without dirs. In other cases, use the parameter `recursive`
         let mut ls_opts = self.ls_opts.clone();

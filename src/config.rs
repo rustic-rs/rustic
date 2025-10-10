@@ -13,7 +13,7 @@ use std::{
     path::PathBuf,
 };
 
-use abscissa_core::{FrameworkError, config::Config, path::AbsPathBuf};
+use abscissa_core::{FrameworkError, FrameworkErrorKind, config::Config, path::AbsPathBuf};
 use anyhow::{Result, anyhow};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
@@ -120,7 +120,17 @@ impl RusticConfig {
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
-            let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
+            let config_content = subst::substitute(
+                &std::fs::read_to_string(AbsPathBuf::canonicalize(path)?)?,
+                &subst::Env,
+            )
+            .map_err(|e| {
+                abscissa_core::error::context::Context::new(
+                    FrameworkErrorKind::ParseError,
+                    Some(Box::new(e)),
+                )
+            })?;
+            let mut config = Self::load_toml(config_content)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, merge_logs, Level::Warn)?;

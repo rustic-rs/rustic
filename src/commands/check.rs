@@ -43,7 +43,7 @@ impl CheckCmd {
             .flat_map(|(_, snaps)| snaps)
             .map(|snap| snap.tree)
             .collect();
-        repo.check_with_trees(self.opts, trees)?;
+        repo.check_with_trees(self.opts, trees)?.is_ok()?;
         Ok(())
     }
 }

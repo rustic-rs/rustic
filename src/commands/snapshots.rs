@@ -27,6 +27,8 @@ use crate::commands::tui;
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct SnapshotCmd {
     /// Snapshots to show. If none is given, use filter options to filter from all snapshots
+    ///
+    /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 

@@ -41,7 +41,9 @@ struct SnapSubCmd {
     #[clap(flatten)]
     opts: RepairSnapshotsOptions,
 
-    /// Snapshots to repair. If none is given, use filter to filter from all snapshots.
+    /// Snapshots to repair. If none is given, use filter to filter from all snapshots
+    ///
+    /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 }
@@ -86,7 +88,7 @@ impl SnapSubCmd {
         let snaps = if self.ids.is_empty() {
             repo.get_all_snapshots()?
         } else {
-            repo.get_snapshots(&self.ids)?
+            repo.get_snapshots_from_strs(&self.ids, |_| true)?
         };
         repo.repair_snapshots(&self.opts, snaps, config.global.dry_run)?;
         Ok(())

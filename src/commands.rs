@@ -22,6 +22,7 @@ pub(crate) mod prune;
 pub(crate) mod repair;
 pub(crate) mod repoinfo;
 pub(crate) mod restore;
+pub(crate) mod rewrite;
 pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
@@ -48,8 +49,8 @@ use crate::{
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
         forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
         prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
-        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
-        tag::TagCmd,
+        rewrite::RewriteCmd, self_update::SelfUpdateCmd, show_config::ShowConfigCmd,
+        snapshots::SnapshotCmd, tag::TagCmd,
     },
     config::RusticConfig,
 };
@@ -142,6 +143,9 @@ enum RusticCmd {
 
     /// Restore (a path within) a snapshot
     Restore(Box<RestoreCmd>),
+
+    /// Rewrite exitsting snapshot(s)
+    Rewrite(Box<RewriteCmd>),
 
     /// Repair a snapshot or the repository index
     Repair(Box<RepairCmd>),

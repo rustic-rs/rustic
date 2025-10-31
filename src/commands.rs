@@ -144,7 +144,7 @@ enum RusticCmd {
     /// Restore (a path within) a snapshot
     Restore(Box<RestoreCmd>),
 
-    /// Rewrite exitsting snapshot(s)
+    /// Rewrite existing snapshot(s)
     Rewrite(Box<RewriteCmd>),
 
     /// Repair a snapshot or the repository index

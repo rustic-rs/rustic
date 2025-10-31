@@ -41,7 +41,7 @@ All notable changes to this project will be documented in this file.
 ### Other
 
 - [**breaking**] Remove --filter-fn from default ([#1482](https://github.com/rustic-rs/rustic/pull/1482))
-- *(config)* Correct the `exclude-if-present` option descritption ([#1506](https://github.com/rustic-rs/rustic/pull/1506))
+- *(config)* Correct the `exclude-if-present` option description ([#1506](https://github.com/rustic-rs/rustic/pull/1506))
 - use 2024 edition ([#1453](https://github.com/rustic-rs/rustic/pull/1453))
 - Add Homebrew instructions ([#1416](https://github.com/rustic-rs/rustic/pull/1416))
 - code formatting

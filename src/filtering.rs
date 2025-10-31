@@ -90,11 +90,11 @@ pub(crate) struct SnapshotJq(Filter<Native<Val>>);
 impl FromStr for SnapshotJq {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let programm = File { code: s, path: () };
+        let program = File { code: s, path: () };
         let loader = Loader::new(jaq_std::defs().chain(jaq_json::defs()));
         let arena = Arena::default();
         let modules = loader
-            .load(&arena, programm)
+            .load(&arena, program)
             .map_err(|errs| anyhow!("errors loading modules in jq: {errs:?}"))?;
         let filter = Compiler::<_, Native<_>>::default()
             .with_funs(jaq_std::funs().chain(jaq_json::funs()))

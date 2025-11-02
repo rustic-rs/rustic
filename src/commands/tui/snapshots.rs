@@ -304,12 +304,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         {
             let mut same_id_group = Vec::new();
             for (_, s) in &snaps.into_iter().chunk_by(|i| self.snapshots[**i].tree) {
-                let leafs: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
-                let first = leafs[0].leaf_data().unwrap(); // Cannot be None as leafs[0] is a leaf!
-                if leafs.len() == 1 {
+                let leaves: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
+                let first = leaves[0].leaf_data().unwrap(); // Cannot be None as leaves[0] is a leaf!
+                if leaves.len() == 1 {
                     same_id_group.push(Tree::leaf(*first));
                 } else {
-                    same_id_group.push(Tree::node(SnapshotNode::Snap(*first), false, leafs));
+                    same_id_group.push(Tree::node(SnapshotNode::Snap(*first), false, leaves));
                 }
             }
             result.push(Tree::node(SnapshotNode::Group(group), false, same_id_group));
@@ -670,20 +670,20 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         }
     }
 
-    pub fn set_poperty(&mut self, property: SnapshotProperty, value: String) {
+    pub fn set_property(&mut self, property: SnapshotProperty, value: String) {
         self.process_marked_snaps(|snap| property.process(snap, &value));
     }
 
     pub fn clear_label(&mut self) {
-        self.set_poperty(SnapshotProperty::Label, String::new());
+        self.set_property(SnapshotProperty::Label, String::new());
     }
 
     pub fn clear_description(&mut self) {
-        self.set_poperty(SnapshotProperty::Description, String::new());
+        self.set_property(SnapshotProperty::Description, String::new());
     }
 
     pub fn clear_tags(&mut self) {
-        self.set_poperty(SnapshotProperty::SetTags, String::new());
+        self.set_property(SnapshotProperty::SetTags, String::new());
     }
 
     pub fn set_delete_protection_to(&mut self, delete: DeleteOption) {
@@ -729,7 +729,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn apply_input(&mut self, input: String) {
         match self.current_screen {
-            CurrentScreen::EnterProperty((_, prop)) => self.set_poperty(prop, input),
+            CurrentScreen::EnterProperty((_, prop)) => self.set_property(prop, input),
             CurrentScreen::EnterFilter(_) => self.set_filter(input),
             _ => {}
         }

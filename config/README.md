@@ -236,7 +236,7 @@ These external commands are run before and after each backup, respectively.
 
 See [Global Hooks](#global-hooks-globalhooks).
 
-### Backup Metrics lables `[backup.metrics-labels]`
+### Backup Metrics labels `[backup.metrics-labels]`
 
 See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 

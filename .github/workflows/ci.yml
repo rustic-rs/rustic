@@ -33,6 +33,14 @@ jobs:
       - name: Run Cargo Fmt
         run: cargo fmt --all -- --check
 
+  typos:
+    name: Typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Check for typos
+        uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1 # v1.38.1
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest

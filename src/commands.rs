@@ -270,11 +270,23 @@ impl Configurable<RusticConfig> for EntryPoint {
         }
 
         // start logger
-        let level_filter = match &config.global.log_level {
+        let log_level = if config.global.dry_run {
+            &config.global.log_level_dryrun
+        } else {
+            &config.global.log_level
+        };
+
+        let level_filter = match log_level {
             Some(level) => LevelFilter::from_str(level)
                 .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
             None => LevelFilter::Info,
         };
+        let level_filter_logfile = match &config.global.log_level_logfile {
+            Some(level) => LevelFilter::from_str(level)
+                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+            None => LevelFilter::Info,
+        };
+
         let term_config = simplelog::ConfigBuilder::new()
             .set_time_level(LevelFilter::Off)
             .build();
@@ -302,14 +314,14 @@ impl Configurable<RusticConfig> for EntryPoint {
                         .context(e)
                     })?;
                 let term_logger = TermLogger::new(
-                    level_filter.min(LevelFilter::Warn),
+                    level_filter,
                     term_config,
                     TerminalMode::Stderr,
                     ColorChoice::Auto,
                 );
                 CombinedLogger::init(vec![
                     term_logger,
-                    WriteLogger::new(level_filter, file_config, file),
+                    WriteLogger::new(level_filter_logfile, file_config, file),
                 ])
                 .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
                 info!("rustic {}", version());

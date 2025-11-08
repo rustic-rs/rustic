@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1](https://github.com/rustic-rs/rustic/compare/v0.10.0...v0.10.1) - 2025-11-08
+
+### Added
+
+- Add rewrite command ([#1583](https://github.com/rustic-rs/rustic/pull/1583))
+- *(interactive)* Add --interactive option to ls ([#1564](https://github.com/rustic-rs/rustic/pull/1564))
+- Add filter-last option ([#1574](https://github.com/rustic-rs/rustic/pull/1574))
+- Add environment variable substitution in config files ([#1577](https://github.com/rustic-rs/rustic/pull/1577))
+
+### Fixed
+
+- Fix typos using the typos tool ([#1590](https://github.com/rustic-rs/rustic/pull/1590))
+- *(metrics)* use short-lived local registry ([#1575](https://github.com/rustic-rs/rustic/pull/1575))
+- fix clippy lints ([#1570](https://github.com/rustic-rs/rustic/pull/1570))
+- wrong env var for grouping option ([#1566](https://github.com/rustic-rs/rustic/pull/1566))
+
+### Other
+
+- update dependencies ([#1594](https://github.com/rustic-rs/rustic/pull/1594))
+- (security) Update fuser ([#1569](https://github.com/rustic-rs/rustic/pull/1569))
+
 ## [0.10.0](https://github.com/rustic-rs/rustic/compare/v0.9.5...v0.10.0) - 2025-09-12
 
 ### Added

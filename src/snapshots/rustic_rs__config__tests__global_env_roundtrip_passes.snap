@@ -3,6 +3,7 @@ source: src/config.rs
 expression: serialized
 ---
 [global]
+profile-substitute-env = false
 use-profiles = []
 dry-run = false
 check-index = false

@@ -120,16 +120,17 @@ impl RusticConfig {
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
-            let config_content = subst::substitute(
-                &std::fs::read_to_string(AbsPathBuf::canonicalize(path)?)?,
-                &subst::Env,
-            )
-            .map_err(|e| {
-                abscissa_core::error::context::Context::new(
-                    FrameworkErrorKind::ParseError,
-                    Some(Box::new(e)),
-                )
-            })?;
+            let config_content = std::fs::read_to_string(AbsPathBuf::canonicalize(path)?)?;
+            let config_content = if self.global.profile_substitute_env {
+                subst::substitute(&config_content, &subst::Env).map_err(|e| {
+                    abscissa_core::error::context::Context::new(
+                        FrameworkErrorKind::ParseError,
+                        Some(Box::new(e)),
+                    )
+                })?
+            } else {
+                config_content
+            };
             let mut config = Self::load_toml(config_content)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profiles.clone() {
@@ -157,6 +158,11 @@ impl RusticConfig {
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
+    /// Substitute environment variables in profiles
+    #[clap(long, env = "RUSTIC_PROFILE_SUBSTITUTE_ENV")]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub profile_substitute_env: bool,
+
     /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
     /// [default: "rustic"]
     #[clap(

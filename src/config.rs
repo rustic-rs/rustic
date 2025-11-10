@@ -159,7 +159,7 @@ impl RusticConfig {
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
     /// Substitute environment variables in profiles
-    #[clap(long, env = "RUSTIC_PROFILE_SUBSTITUTE_ENV")]
+    #[clap(long, global = true, env = "RUSTIC_PROFILE_SUBSTITUTE_ENV")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub profile_substitute_env: bool,
 

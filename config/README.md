@@ -58,8 +58,12 @@ options. Therefore `commandline arguments` have the highest precedence.
 Configuration files can be placed in the user's local config directory, e.g.
 `~/.config/rustic/` or in the global config dir, e.g. `/etc/rustic/`. You can
 use different config files, e.g. `myconfig.toml` and use the `-P` option to
-specify the profile name, e.g. `rustic -P myconfig`. Examples for different
-configuration files can be found here in the [/config/](/config) directory.
+specify the profile name, e.g. `rustic -P myconfig`. env variables can be
+substituted in config files using the `profile-substitute-env` option. This
+allows extra customization possibilities.
+
+Examples for different configuration files can be found here in the
+[/config/](/config) directory.
 
 ## Services
 
@@ -75,20 +79,21 @@ If you want to contribute your own configuration, please
 
 ### Global Options `[global]`
 
-| Attribute         | Description                                                                       | Default Value      | Example Value            | Environment Variable                             | CLI Option          |
-| ----------------- | --------------------------------------------------------------------------------- | ------------------ | ------------------------ | ------------------------------------------------ | ------------------- |
-| check-index       | If true, check the index and read pack headers if index information is missing.   | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index       |
-| dry-run           | If true, performs a dry run without making any changes.                           | false              |                          | RUSTIC_DRY_RUN                                   | --dry-run, -n       |
-| group-by          | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"     | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g      |
-| log-level         | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"             |                          | RUSTIC_LOG_LEVEL                                 | --log-level         |
-| log-file          | Path to the log file.                                                             | No log file        | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file          |
-| no-progress       | If true, disables progress indicators.                                            | false              |                          | RUSTIC_NO_PROGRESS                               | --no-progress       |
-| progress-interval | The interval at which progress indicators are shown.                              | "100ms"            | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval |
-| use-profiles      | Array of profiles to use. Allows to recursively use other profiles.               | Empty array        | ["2nd", "3rd"]           | RUSTIC_USE_PROFILE                               | --use-profile, -P   |
-| prometheus        | URL of a Prometheus Pushgateway to push metrics to.                               | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus        |
-| prometheus-user   | Username to authenticate to the Prometheus Pushgateway                            | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user   |
-| prometheus-pass   | Password to authenticate to the Prometheus Pushgateway                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass   |
-| opentelemetry     | OpenTelemetry metrics endpoint (HTTP Protobuf)                                    | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry     |
+| Attribute              | Description                                                                       | Default Value      | Example Value            | Environment Variable                             | CLI Option               |
+| ---------------------- | --------------------------------------------------------------------------------- | ------------------ | ------------------------ | ------------------------------------------------ | ------------------------ |
+| check-index            | If true, check the index and read pack headers if index information is missing.   | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index            |
+| dry-run                | If true, performs a dry run without making any changes.                           | false              |                          | RUSTIC_DRY_RUN                                   | --dry-run, -n            |
+| group-by               | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"     | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g           |
+| log-level              | Logging level. Possible values: "off", "error", "warn", "info", "debug", "trace". | "info"             |                          | RUSTIC_LOG_LEVEL                                 | --log-level              |
+| log-file               | Path to the log file.                                                             | No log file        | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file               |
+| no-progress            | If true, disables progress indicators.                                            | false              |                          | RUSTIC_NO_PROGRESS                               | --no-progress            |
+| progress-interval      | The interval at which progress indicators are shown.                              | "100ms"            | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval      |
+| use-profiles           | Array of profiles to use. Allows to recursively use other profiles.               | Empty array        | ["2nd", "3rd"]           | RUSTIC_USE_PROFILE                               | --use-profile, -P        |
+| profile-substitute-env | Substitute env variables in profiles.                                             | false              | true                     | RUSTIC_PROFILE_SUBSTITUTE_ENV                    | --profile-substitute-env |
+| prometheus             | URL of a Prometheus Pushgateway to push metrics to.                               | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus             |
+| prometheus-user        | Username to authenticate to the Prometheus Pushgateway                            | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user        |
+| prometheus-pass        | Password to authenticate to the Prometheus Pushgateway                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass        |
+| opentelemetry          | OpenTelemetry metrics endpoint (HTTP Protobuf)                                    | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry          |
 
 ### Global Hooks `[global.hooks]`
 

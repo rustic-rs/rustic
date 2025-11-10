@@ -4,6 +4,7 @@ expression: config
 ---
 RusticConfig {
     global: GlobalOptions {
+        profile_substitute_env: false,
         use_profiles: [],
         group_by: None,
         dry_run: false,

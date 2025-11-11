@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2](https://github.com/rustic-rs/rustic/compare/v0.10.1...v0.10.2) - 2025-11-10
+
+### Fixed
+
+- Substitute environment variables in profiles only if explicitly opted-in ([#1600](https://github.com/rustic-rs/rustic/pull/1600))
+
 ## [0.10.1](https://github.com/rustic-rs/rustic/compare/v0.10.0...v0.10.1) - 2025-11-08
 
 ### Added

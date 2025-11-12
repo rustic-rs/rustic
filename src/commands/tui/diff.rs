@@ -17,12 +17,9 @@ use crate::{
     commands::{
         diff::{DiffStatistics, NodeDiff},
         snapshots::fill_table,
-        tui::{
-            summary::BlobInfoRef,
-            widgets::{
-                Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
-                popup_prompt, popup_text,
-            },
+        tui::widgets::{
+            Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
+            popup_prompt, popup_text,
         },
     },
     helpers::bytes_size_to_string,
@@ -38,7 +35,7 @@ use super::{
 enum CurrentScreen {
     Diff,
     ShowHelp(PopUpText),
-    SnapshotDetails(PopUpTable),
+    Table(PopUpTable),
     PromptExit(PopUpPrompt),
     PromptLeave(PopUpPrompt),
 }
@@ -51,7 +48,8 @@ Diff Commands:
 
           m : toggle ignoring metadata
           d : toggle show only different entries
-          s : compute information for (sub-)dirs
+          s : compute information for (sub-)dirs and show summary
+          S : compute information for selected nodes and show summary
           I : show information about snapshots
 
 General Commands:
@@ -64,7 +62,7 @@ General Commands:
  ";
 
 #[derive(Clone)]
-struct DiffNode(EitherOrBoth<Node>);
+pub struct DiffNode(pub EitherOrBoth<Node>);
 
 impl DiffNode {
     fn only_subtrees(&self) -> Option<Self> {
@@ -86,6 +84,13 @@ impl DiffNode {
 
     fn name(&self) -> OsString {
         self.0.as_ref().reduce(|l, _| l).name()
+    }
+
+    pub fn map<'a, F, T>(&'a self, f: F) -> EitherOrBoth<T>
+    where
+        F: Fn(&'a Node) -> T,
+    {
+        self.0.as_ref().map_any(&f, &f)
     }
 }
 
@@ -234,45 +239,37 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     }
 
     fn ls_row(&self, node: &DiffNode, stat: &mut DiffStatistics) -> Vec<Text<'static>> {
-        let node_info = |node: &Node| {
-            let size = node.subtree.map_or(node.meta.size, |id| {
-                self.summary_map
-                    .get(&id)
-                    .map_or(node.meta.size, |summary| summary.summary.size)
-            });
-            (
-                bytes_size_to_string(size),
-                node.meta.mtime.map_or_else(
-                    || "?".to_string(),
-                    |t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")),
-                ),
+        let node_mtime = |node: &Node| {
+            node.meta.mtime.map_or_else(
+                || "?".to_string(),
+                |t| t.format("%Y-%m-%d %H:%M:%S").to_string(),
             )
         };
 
-        let (left, right) = node.0.as_ref().left_and_right();
-        let left_blobs = left.map(|node| BlobInfoRef::from_node_or_map(node, &self.summary_map));
-        let right_blobs = right.map(|node| BlobInfoRef::from_node_or_map(node, &self.summary_map));
-        let left_only = BlobInfoRef::text_diff(&left_blobs, &right_blobs, self.repo);
-        let right_only = BlobInfoRef::text_diff(&right_blobs, &left_blobs, self.repo);
+        let statistics = self
+            .summary_map
+            .compute_diff_statistics(node, self.repo)
+            .unwrap_or_default();
+
+        let (left, right) = statistics.stats.as_ref().left_and_right();
+
+        let left_size = left.map_or_else(String::new, |s| bytes_size_to_string(s.summary.size));
+        let right_size = right.map_or_else(String::new, |s| bytes_size_to_string(s.summary.size));
+        let left_only = left.map_or_else(String::new, |s| bytes_size_to_string(s.sizes.repo_size));
+        let right_only =
+            right.map_or_else(String::new, |s| bytes_size_to_string(s.sizes.repo_size));
 
         let changed = self.node_changed(node);
         stat.apply(changed);
         let name = node.name();
         let name = format!("{changed} {}", name.to_string_lossy());
-        let (left_size, left_mtime) = match &node.0 {
-            EitherOrBoth::Left(node) | EitherOrBoth::Both(node, _) => node_info(node),
-            _ => (String::new(), String::new()),
-        };
-        let (right_size, right_mtime) = match &node.0 {
-            EitherOrBoth::Right(node) | EitherOrBoth::Both(_, node) => node_info(node),
-            _ => (String::new(), String::new()),
-        };
+        let (left_mtime, right_mtime) = node.map(node_mtime).left_and_right();
         [
             name,
-            left_mtime,
+            left_mtime.unwrap_or_default(),
             left_size,
             left_only,
-            right_mtime,
+            right_mtime.unwrap_or_default(),
             right_size,
             right_only,
         ]
@@ -331,6 +328,13 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         self.table.widget.select(old_selection);
     }
 
+    pub fn selected_node(&self) -> Option<DiffNode> {
+        self.table
+            .widget
+            .selected()
+            .map(|idx| self.tree.nodes[idx].clone())
+    }
+
     pub fn enter(&mut self) -> Result<()> {
         if let Some(idx) = self.table.widget.selected() {
             let node = &self.tree.nodes[idx];
@@ -381,11 +385,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         Ok(())
     }
 
-    pub fn compute_summary(&mut self) -> Result<()> {
+    pub fn compute_summary(&mut self, node: &DiffNode) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
 
-        let (left, right) = self.node.0.as_ref().left_and_right();
+        let (left, right) = node.0.as_ref().left_and_right();
         if let Some(node) = left {
             if let Some(id) = node.subtree {
                 self.summary_map.compute(self.repo, id, &p)?;
@@ -400,6 +404,29 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         p.finish();
         self.update_table();
         Ok(())
+    }
+
+    pub fn show_summary(&mut self, node: &DiffNode) -> Result<PopUpTable> {
+        self.compute_summary(node)?;
+        // Compute total sizes diff
+        let stats = self
+            .summary_map
+            .compute_diff_statistics(node, self.repo)
+            .unwrap_or_default();
+
+        let title_left = if node.0.has_left() {
+            format!("{}:{}", self.snapshot_left.id, self.path_left.display())
+        } else {
+            format!("({})", self.snapshot_left.id)
+        };
+        let title_right = if node.0.has_right() {
+            format!("{}:{}", self.snapshot_right.id, self.path_right.display())
+        } else {
+            format!("({})", self.snapshot_right.id)
+        };
+
+        let rows = stats.table(title_left, title_right);
+        Ok(popup_table("diff summary", rows))
     }
 
     pub fn snapshot_details(&self) -> PopUpTable {
@@ -448,16 +475,23 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
                     }
                     Char('m') => self.toggle_ignore_metadata(),
                     Char('d') => self.toggle_ignore_identical()?,
-                    Char('s') => self.compute_summary()?,
-                    Char('I') => {
+                    Char('s') => {
                         self.current_screen =
-                            CurrentScreen::SnapshotDetails(self.snapshot_details());
+                            CurrentScreen::Table(self.show_summary(&self.node.clone())?);
+                    }
+                    Char('S') => {
+                        if let Some(node) = self.selected_node() {
+                            self.current_screen = CurrentScreen::Table(self.show_summary(&node)?);
+                        }
+                    }
+                    Char('I') => {
+                        self.current_screen = CurrentScreen::Table(self.snapshot_details());
                     }
                     _ => self.table.input(event),
                 },
                 _ => {}
             },
-            CurrentScreen::SnapshotDetails(_) | CurrentScreen::ShowHelp(_) => match event {
+            CurrentScreen::Table(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     if matches!(key.code, Char('q' | ' ' | 'I' | '?') | Esc | Enter) {
                         self.current_screen = CurrentScreen::Diff;
@@ -500,7 +534,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Draw for Diff<'a, P, S> {
         // draw popups
         match &mut self.current_screen {
             CurrentScreen::Diff => {}
-            CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
+            CurrentScreen::Table(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::PromptExit(popup) | CurrentScreen::PromptLeave(popup) => {
                 popup.draw(area, f);

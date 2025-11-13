@@ -6,6 +6,7 @@ expression: output
 profile-substitute-env = false
 use-profiles = []
 dry-run = false
+dry-run-warmup = false
 check-index = false
 no-progress = false
 
@@ -20,6 +21,8 @@ run-finally = []
 [global.metrics-labels]
 
 [repository]
+repository = "/tmp/repo"
+password = "test"
 no-cache = false
 warm-up = false
 

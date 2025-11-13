@@ -192,6 +192,11 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
 
+    /// Additional to dry run, but still issue warm-up command if configured
+    #[clap(long, global = true, env = "RUSTIC_DRY_RUN_WARMUP")]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub dry_run_warmup: bool,
+
     /// Check if index matches pack files and read pack headers if necessary
     #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
     #[merge(strategy=conflate::bool::overwrite_false)]

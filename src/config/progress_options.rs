@@ -2,13 +2,18 @@
 
 use std::{borrow::Cow, fmt::Write, time::Duration};
 
+use std::io::IsTerminal;
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
+
+use bytesize::ByteSize;
 use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
 use conflate::Merge;
 
 use serde::{Deserialize, Serialize};
-use serde_with::{DisplayFromStr, serde_as};
+use serde_with::{serde_as, DisplayFromStr};
 
 use rustic_core::{Progress, ProgressBars};
 
@@ -16,6 +21,7 @@ mod constants {
     use std::time::Duration;
 
     pub(super) const DEFAULT_INTERVAL: Duration = Duration::from_millis(100);
+    pub(super) const DEFAULT_LOG_INTERVAL: Duration = Duration::from_secs(10);
 }
 
 /// Progress Bar Config
@@ -94,6 +100,26 @@ impl ProgressBars for ProgressOptions {
         if self.no_progress {
             return Self::no_progress();
         }
+
+        // Non-Terminal mode: piped or systemd
+        if !std::io::stderr().is_terminal() {
+            // user-defined interval
+            // otherwise default to 10s
+            let interval = self
+                .progress_interval
+                .map(|d| *d)
+                .unwrap_or(constants::DEFAULT_LOG_INTERVAL);
+            if interval > Duration::ZERO {
+                let p = ProgressBar::hidden(); // invisible bar
+                p.set_prefix(prefix);
+                return RusticProgress(
+                    p,
+                    ProgressType::PeriodicLog(Arc::new(Mutex::new(Instant::now())), interval),
+                );
+            }
+        }
+
+        // Terminal mode: keep fancy progress bar
         let p = ProgressBar::new(0).with_style(
             ProgressStyle::default_bar()
             .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}            {bytes_per_sec:12}")
@@ -111,6 +137,8 @@ enum ProgressType {
     Spinner,
     Counter,
     Bytes,
+    // for headless logging:
+    PeriodicLog(Arc<Mutex<Instant>>, Duration),
 }
 
 /// A default progress bar
@@ -159,6 +187,25 @@ impl Progress for RusticProgress {
 
     fn inc(&self, inc: u64) {
         self.0.inc(inc);
+
+        // Non-Terminal mode: piped or systemd
+        if let ProgressType::PeriodicLog(last_log, interval) = &self.1 {
+            if let Ok(mut last) = last_log.try_lock() {
+                if last.elapsed() >= *interval {
+                    let pos = self.0.position();
+                    let prefix = self.0.prefix();
+
+                    // print to stderr, handle case where length isn't set yet
+                    if let Some(len) = self.0.length() {
+                        eprintln!("[INFO] {}: {} / {}", prefix, ByteSize(pos), ByteSize(len));
+                    } else {
+                        eprintln!("[INFO] {}: {}", prefix, ByteSize(pos));
+                    }
+
+                    *last = Instant::now();
+                }
+            }
+        }
     }
 
     fn finish(&self) {

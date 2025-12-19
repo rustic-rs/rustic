@@ -340,7 +340,7 @@ impl ProgressBars for ProgressOptions {
 
 impl ProgressOptions {
     /// Factory Pattern: Create progress indicator based on terminal capabilities
-    /// 
+    ///
     /// * `Hidden`: If --no-progress is set.
     /// * `Interactive`: If running in a TTY.
     /// * `NonInteractive`: If running in a pipe/service (logs to stderr).

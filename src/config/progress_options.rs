@@ -211,14 +211,16 @@ impl NonInteractiveProgress {
     }
 
     fn log_progress(&self, state: &NonInteractiveState) {
-        let progress = match state.length {
-            Some(len) => format!(
-                "{} / {}",
-                self.format_value(state.position),
-                self.format_value(len)
-            ),
-            None => self.format_value(state.position),
-        };
+        let progress = state.length.map_or_else(
+            || self.format_value(state.position),
+            |len| {
+                format!(
+                    "{} / {}",
+                    self.format_value(state.position),
+                    self.format_value(len)
+                )
+            },
+        );
         eprintln!("[INFO] {}: {}", state.prefix, progress);
     }
 }

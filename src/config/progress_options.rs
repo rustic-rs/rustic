@@ -11,6 +11,7 @@ use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
 use conflate::Merge;
+use log::info;
 
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
@@ -59,6 +60,36 @@ impl ProgressOptions {
         self.progress_interval
             .map_or(constants::DEFAULT_LOG_INTERVAL, |i| *i)
     }
+
+    /// Factory Pattern: Create progress indicator based on terminal capabilities
+    ///
+    /// * `Hidden`: If --no-progress is set.
+    /// * `Interactive`: If running in a TTY.
+    /// * `NonInteractive`: If running in a pipe/service (logs to stderr).
+    fn create_progress(
+        &self,
+        prefix: impl Into<Cow<'static, str>>,
+        kind: ProgressKind,
+    ) -> RusticProgress {
+        if self.no_progress {
+            return RusticProgress::Hidden(HiddenProgress);
+        }
+
+        if std::io::stderr().is_terminal() {
+            RusticProgress::Interactive(InteractiveProgress::new(
+                prefix,
+                kind,
+                self.interactive_interval(),
+            ))
+        } else {
+            let interval = self.log_interval();
+            if interval > Duration::ZERO {
+                RusticProgress::NonInteractive(NonInteractiveProgress::new(prefix, interval, kind))
+            } else {
+                RusticProgress::Hidden(HiddenProgress)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,8 +120,8 @@ impl Progress for HiddenProgress {
 /// Wrapper around `indicatif::ProgressBar` for interactive terminal usage
 #[derive(Debug, Clone)]
 pub struct InteractiveProgress {
-    bar: ProgressBar,   // 0
-    kind: ProgressKind, // 1
+    bar: ProgressBar,
+    kind: ProgressKind,
 }
 
 impl InteractiveProgress {
@@ -184,7 +215,7 @@ pub struct NonInteractiveProgress {
     state: Arc<Mutex<NonInteractiveState>>,
     start: Instant,
     interval: Duration,
-    kind: ProgressKind, // 1
+    kind: ProgressKind,
 }
 
 impl NonInteractiveProgress {
@@ -221,7 +252,7 @@ impl NonInteractiveProgress {
                 )
             },
         );
-        eprintln!("[INFO] {}: {}", state.prefix, progress);
+        info!("{}: {}", state.prefix, progress);
     }
 }
 
@@ -258,8 +289,8 @@ impl Progress for NonInteractiveProgress {
             return;
         };
 
-        eprintln!(
-            "[INFO] {}: {} done in {:.2?}",
+        info!(
+            "{}: {} done in {:.2?}",
             state.prefix,
             self.format_value(state.position),
             self.start.elapsed()
@@ -337,37 +368,5 @@ impl ProgressBars for ProgressOptions {
 
     fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
         self.create_progress(prefix, ProgressKind::Bytes)
-    }
-}
-
-impl ProgressOptions {
-    /// Factory Pattern: Create progress indicator based on terminal capabilities
-    ///
-    /// * `Hidden`: If --no-progress is set.
-    /// * `Interactive`: If running in a TTY.
-    /// * `NonInteractive`: If running in a pipe/service (logs to stderr).
-    fn create_progress(
-        &self,
-        prefix: impl Into<Cow<'static, str>>,
-        kind: ProgressKind,
-    ) -> RusticProgress {
-        if self.no_progress {
-            return RusticProgress::Hidden(HiddenProgress);
-        }
-
-        if std::io::stderr().is_terminal() {
-            RusticProgress::Interactive(InteractiveProgress::new(
-                prefix,
-                kind,
-                self.interactive_interval(),
-            ))
-        } else {
-            let interval = self.log_interval();
-            if interval > Duration::ZERO {
-                RusticProgress::NonInteractive(NonInteractiveProgress::new(prefix, interval, kind))
-            } else {
-                RusticProgress::Hidden(HiddenProgress)
-            }
-        }
     }
 }

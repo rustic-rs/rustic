@@ -137,7 +137,7 @@ pub struct BackupCmd {
     /// Backup snapshots to generate
     #[clap(skip)]
     #[merge(strategy = merge_snapshots)]
-    snapshots: Vec<BackupCmd>,
+    snapshots: Vec<Self>,
 
     /// Backup source, used within config file
     #[clap(skip)]

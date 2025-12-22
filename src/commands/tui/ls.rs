@@ -19,8 +19,9 @@ use crate::{
             TuiResult,
             restore::Restore,
             widgets::{
-                Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable,
-                TextInputResult, WithBlock, popup_prompt, popup_scrollable_text, popup_text,
+                Draw, PopUpPrompt, PopUpTable, PopUpText, ProcessEvent, PromptResult, SelectTable,
+                TextInputResult, WithBlock, popup_prompt, popup_scrollable_text, popup_table,
+                popup_text,
             },
         },
     },
@@ -33,6 +34,7 @@ use super::{summary::SummaryMap, widgets::PopUpInput};
 enum CurrentScreen<'a, P, S> {
     Ls,
     ShowHelp(PopUpText),
+    Table(PopUpTable),
     Restore(Box<Restore<'a, P, S>>),
     PromptExit(PopUpPrompt),
     PromptLeave(PopUpPrompt),
@@ -47,7 +49,8 @@ Ls Commands:
           v : view file contents (text files only, up to 1MiB)
           r : restore selected item
           n : toggle numeric IDs
-          s : compute information for (sub)-dirs
+          s : compute information for (sub-)dirs and show summary
+          S : compute information for selected node and show summary
           D : diff current selection
 
 General Commands:
@@ -238,13 +241,45 @@ impl<'a, P: ProgressBars, S: IndexedFull> Ls<'a, P, S> {
         self.update_table();
     }
 
-    pub fn compute_sizes(&mut self) -> Result<()> {
+    pub fn compute_summary(&mut self, tree_id: TreeId) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        self.summary_map.compute(self.repo, self.tree_id, &p)?;
+        self.summary_map.compute(self.repo, tree_id, &p)?;
         p.finish();
         self.update_table();
         Ok(())
+    }
+
+    pub fn summary(&mut self) -> Result<PopUpTable> {
+        // Compute and show summary
+        self.compute_summary(self.tree_id)?;
+        let header = format!("{}:{}", self.snapshot.id, self.path.display());
+        let mut stats = self
+            .summary_map
+            .compute_statistics(&self.tree.nodes, self.repo)?;
+        // Current dir
+        stats.summary.dirs += 1;
+
+        let rows = stats.table(header);
+        Ok(popup_table("summary", rows))
+    }
+
+    pub fn summary_selected(&mut self) -> Result<Option<PopUpTable>> {
+        let Some(selected) = self.table.widget.selected() else {
+            return Ok(None);
+        };
+        // Compute and show summary
+        self.compute_summary(self.tree_id)?;
+        let node = &self.tree.nodes[selected];
+        let header = format!(
+            "{}:{}",
+            self.snapshot.id,
+            self.path.join(node.name()).display()
+        );
+        let stats = self.summary_map.compute_statistics(Some(node), self.repo)?;
+
+        let rows = stats.table(header);
+        Ok(Some(popup_table("summary", rows)))
     }
 }
 
@@ -277,7 +312,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Ls<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
-                    Char('s') => self.compute_sizes()?,
+                    Char('s') => {
+                        self.current_screen = CurrentScreen::Table(self.summary()?);
+                    }
+                    Char('S') => {
+                        if let Some(table) = self.summary_selected()? {
+                            self.current_screen = CurrentScreen::Table(table);
+                        }
+                    }
                     Char('v') => {
                         // viewing is not supported on cold repositories
                         if self.repo.config().is_hot != Some(true) {
@@ -339,7 +381,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Ls<'a, P, S> {
                 }
                 TextInputResult::None => {}
             },
-            CurrentScreen::ShowHelp(_) => match event {
+            CurrentScreen::Table(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     if matches!(key.code, Char('q' | ' ' | '?') | Esc | Enter) {
                         self.current_screen = CurrentScreen::Ls;
@@ -391,6 +433,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Draw for Ls<'a, P, S> {
         // draw popups
         match &mut self.current_screen {
             CurrentScreen::Ls | CurrentScreen::Restore(_) => {}
+            CurrentScreen::Table(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::PromptExit(popup) | CurrentScreen::PromptLeave(popup) => {
                 popup.draw(area, f);

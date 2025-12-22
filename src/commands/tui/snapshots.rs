@@ -9,7 +9,8 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion, StringList,
+    IndexedFull, Progress, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion,
+    StringList,
     repofile::{DeleteOption, SnapshotFile},
 };
 use style::palette::tailwind;
@@ -20,6 +21,7 @@ use crate::{
         tui::{
             diff::{Diff, DiffResult},
             ls::{Ls, LsResult},
+            summary::StatisticsBuilder,
             tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
                 Draw, PopUpInput, PopUpPrompt, PopUpTable, PopUpText, ProcessEvent, PromptResult,
@@ -37,7 +39,7 @@ use super::summary::SummaryMap;
 enum CurrentScreen<'a, P, S> {
     Snapshots,
     ShowHelp(PopUpText),
-    SnapshotDetails(PopUpTable),
+    Table(PopUpTable),
     EnterProperty((PopUpInput, SnapshotProperty)),
     EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
@@ -134,13 +136,13 @@ const HELP_TEXT: &str = r"General Commands:
        w : write modified snapshots and delete snapshots to-forget
        ? : show this help page
  
- Commands for marking snapshot(s):
+Commands for marking snapshot(s):
  
-       x : toggle marking for selected snapshot
+ x,Space : toggle marking for selected snapshot
        X : toggle markings for all snapshots
   Ctrl-x : clear all markings
  
- Commands applied to marked snapshot(s) (selected if none marked):
+Commands applied to marked snapshot(s) (selected if none marked):
  
        f : toggle to-forget for snapshot(s)
   Ctrl-f : clear to-forget for snapshot(s)
@@ -149,6 +151,7 @@ const HELP_TEXT: &str = r"General Commands:
        d : set description for snapshot(s)
   Ctrl-d : remove description for snapshot(s)
        D : diff snapshots if 2 snapshots are selected or with parent
+       S : compute information for snapshot(s) and show summary
        t : add tag(s) for snapshot(s)
   Ctrl-t : remove all tags for snapshot(s)
        s : set tag(s) for snapshot(s)
@@ -530,6 +533,37 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         popup_table("snapshot details", rows)
     }
 
+    pub fn snapshots_summary(&mut self) -> Result<PopUpTable> {
+        let pb = self.repo.progress_bars();
+        let p = pb.progress_counter("computing (sub)-dir information");
+        // Take out summary_map to fix lifetime issues
+        let mut summary_map = mem::take(&mut self.summary_map);
+
+        self.process_marked_snaps(|snap| {
+            // TODO: error handling
+            _ = summary_map.compute(self.repo, snap.tree, &p);
+            false
+        });
+
+        let mut stats_builder = StatisticsBuilder::default();
+        let mut count = 0;
+        self.process_marked_snaps(|snap| {
+            stats_builder.append_from_tree(snap.tree, &summary_map);
+            count += 1;
+            false
+        });
+        p.finish();
+        let stats = stats_builder.build(self.repo)?;
+
+        // put summary_map back into place
+        self.summary_map = summary_map;
+
+        Ok(popup_table(
+            "snapshots summary",
+            stats.table(format!("{count} snapshot(s)")),
+        ))
+    }
+
     pub fn dir(&mut self) -> Result<Option<Ls<'a, P, S>>> {
         self.selected_snapshot().cloned().map_or(Ok(None), |snap| {
             Some(Ls::new(
@@ -796,7 +830,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                         if key.modifiers == KeyModifiers::CONTROL {
                             match key.code {
                                 Char('f') => self.clear_to_forget(),
-                                Char('x') => self.clear_marks(),
+                                Char('x') | Char(' ') => self.clear_marks(),
                                 Char('l') => self.clear_label(),
                                 Char('d') => self.clear_description(),
                                 Char('t') => self.clear_tags(),
@@ -838,7 +872,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                                         HELP_TEXT.into(),
                                     ));
                                 }
-                                Char('x') => {
+                                Char('x') | Char(' ') => {
                                     self.toggle_mark();
                                     self.table.widget.next();
                                 }
@@ -854,7 +888,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                                 }
                                 Char('i') => {
                                     self.current_screen =
-                                        CurrentScreen::SnapshotDetails(self.snapshot_details());
+                                        CurrentScreen::Table(self.snapshot_details());
+                                }
+                                Char('S') => {
+                                    self.current_screen =
+                                        CurrentScreen::Table(self.snapshots_summary()?);
                                 }
                                 Char('l') => {
                                     self.current_screen = CurrentScreen::EnterProperty((
@@ -932,7 +970,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                     _ => {}
                 }
             }
-            CurrentScreen::SnapshotDetails(_) | CurrentScreen::ShowHelp(_) => match event {
+            CurrentScreen::Table(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     if matches!(key.code, Char('q' | ' ' | 'i' | '?') | Esc | Enter) {
                         self.current_screen = CurrentScreen::Snapshots;
@@ -1011,7 +1049,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Draw for Snapshots<'a, P, S> {
 
         // draw popups
         match &mut self.current_screen {
-            CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
+            CurrentScreen::Table(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::EnterProperty((popup, _)) | CurrentScreen::EnterFilter(popup) => {
                 popup.draw(area, f);

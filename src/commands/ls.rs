@@ -1,9 +1,6 @@
 //! `ls` subcommand
 
-use std::{
-    ops::{Add, AddAssign},
-    path::Path,
-};
+use std::{ops::AddAssign, path::Path};
 
 #[cfg(feature = "tui")]
 use crate::commands::tui;
@@ -12,6 +9,7 @@ use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 
+use derive_more::Add;
 use rustic_core::{
     LsOptions,
     repofile::{Node, NodeType},
@@ -82,7 +80,7 @@ impl Runnable for LsCmd {
 /// Summary of a ls command
 ///
 /// This struct is used to print a summary of the ls command.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Add)]
 pub struct Summary {
     pub files: usize,
     pub size: u64,
@@ -92,17 +90,6 @@ pub struct Summary {
 impl AddAssign for Summary {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
-    }
-}
-
-impl Add for Summary {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            files: self.files + rhs.files,
-            size: self.size + rhs.size,
-            dirs: self.dirs + rhs.dirs,
-        }
     }
 }
 
@@ -120,6 +107,12 @@ impl Summary {
             self.files += 1;
             self.size += node.meta.size;
         }
+    }
+
+    pub fn from_node(node: &Node) -> Self {
+        let mut summary = Self::default();
+        summary.update(node);
+        summary
     }
 }
 

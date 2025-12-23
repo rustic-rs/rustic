@@ -6,7 +6,7 @@ use crate::{
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use log::info;
+use log::{debug, info};
 
 use rustic_core::{LocalDestination, LsOptions, RestoreOptions};
 
@@ -104,7 +104,7 @@ impl RestoreCmd {
             repo.restore(restore_infos, &self.opts, ls, &dest)?;
             println!("restore done.");
         } else {
-            info!(
+            debug!(
                 "--dry-run is without warmup, --dry-run --dry-run-warmup also issues the warmup script."
             );
         }

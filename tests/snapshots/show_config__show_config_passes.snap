@@ -21,8 +21,6 @@ run-finally = []
 [global.metrics-labels]
 
 [repository]
-repository = "/tmp/repo"
-password = "test"
 no-cache = false
 warm-up = false
 

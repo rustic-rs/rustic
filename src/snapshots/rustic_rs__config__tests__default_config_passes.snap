@@ -8,6 +8,7 @@ RusticConfig {
         use_profiles: [],
         group_by: None,
         dry_run: false,
+        dry_run_warmup: false,
         check_index: false,
         log_level: None,
         log_file: None,

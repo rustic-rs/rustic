@@ -7,9 +7,8 @@ use crate::{
 };
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use jiff::Zoned;
 use log::info;
-
-use chrono::Local;
 
 use rustic_core::{SnapshotOptions, last_modified_node, repofile::SnapshotFile};
 
@@ -73,11 +72,11 @@ impl MergeCmd {
         info!("saved new snapshot as {}.", snap.id);
 
         if self.delete {
-            let now = Local::now();
+            let now = Zoned::now();
             // TODO: Maybe use this check in repo.delete_snapshots?
             let snap_ids: Vec<_> = snapshots
                 .iter()
-                .filter(|sn| !sn.must_keep(now))
+                .filter(|sn| !sn.must_keep(&now))
                 .map(|sn| sn.id)
                 .collect();
             repo.delete_snapshots(&snap_ids)?;

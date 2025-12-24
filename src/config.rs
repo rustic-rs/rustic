@@ -19,6 +19,7 @@ use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
+use jiff::{Zoned, tz::TimeZone};
 use log::Level;
 use reqwest::Url;
 use rustic_core::SnapshotGroupCriterion;
@@ -256,6 +257,11 @@ pub struct GlobalOptions {
     #[clap(long, global = true, env = "RUSTIC_OTEL", value_name = "ENDPOINT_URL", value_hint = ValueHint::Url)]
     #[merge(strategy=conflate::option::overwrite_none)]
     pub opentelemetry: Option<Url>,
+
+    /// Show time offsets instead of converting to system time zone
+    #[clap(long, global = true, env = "RUSTIC_SHOW_TIME_OFFSET")]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub show_time_offset: bool,
 }
 
 pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
@@ -276,6 +282,19 @@ pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
 impl GlobalOptions {
     pub fn is_metrics_configured(&self) -> bool {
         self.prometheus.is_some() || self.opentelemetry.is_some()
+    }
+
+    pub fn format_time(&self, time: &Zoned) -> impl Display {
+        if self.show_time_offset {
+            time.strftime("%Y-%m-%d %H:%M:%S%z")
+        } else {
+            let tz = TimeZone::system();
+            if time.offset() == tz.to_offset(time.timestamp()) {
+                time.strftime("%Y-%m-%d %H:%M:%S")
+            } else {
+                time.with_time_zone(tz).strftime("%Y-%m-%d %H:%M:%S*")
+            }
+        }
     }
 }
 

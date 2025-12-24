@@ -124,18 +124,19 @@ impl FindCmd {
         mut idx: impl Iterator,
         mut g: impl Iterator<Item = &'a SnapshotFile>,
     ) {
+        let config = RUSTIC_APP.config();
         let empty_result = idx.next().is_none();
         let not = if empty_result { "not " } else { "" };
         if self.show_misses || !empty_result {
             if self.all {
                 for sn in g {
-                    let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+                    let time = config.global.format_time(&sn.time);
                     println!("{not}found in {} from {time}", sn.id);
                 }
             } else {
                 let sn = g.next().unwrap();
                 let count = g.count();
-                let time = sn.time.format("%Y-%m-%d %H:%M:%S");
+                let time = config.global.format_time(&sn.time);
                 match count {
                     0 => println!("{not}found in {} from {time}", sn.id),
                     count => println!("{not}found in {} from {time} (+{count})", sn.id),

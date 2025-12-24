@@ -34,7 +34,7 @@ pub struct WebDavCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     path_template: Option<String>,
 
-    /// The time template to use to display times in the path template. See https://docs.rs/chrono/latest/chrono/format/strftime/index.html for format options. [default: "%Y-%m-%d_%H-%M-%S"]
+    /// The time template to use to display times in the path template. See https://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.html for format options. [default: "%Y-%m-%d_%H-%M-%S"]
     #[clap(long)]
     #[merge(strategy=conflate::option::overwrite_none)]
     time_template: Option<String>,

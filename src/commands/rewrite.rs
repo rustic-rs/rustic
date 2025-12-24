@@ -9,11 +9,9 @@ use crate::{
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
-
 use anyhow::Result;
-use chrono::{DateTime, Duration, Local};
-
 use clap::ValueHint;
+use jiff::{Span, Zoned};
 use rustic_core::{StringList, repofile::DeleteOption};
 
 /// `rewrite` subcommand
@@ -29,7 +27,7 @@ pub(crate) struct RewriteCmd {
 
     /// Set the backup time (e.g. "2021-01-21 14:15:23+0000")
     #[clap(long, help_heading = "Snapshot options")]
-    pub set_time: Option<DateTime<Local>>,
+    pub set_time: Option<Zoned>,
 
     /// Set the host name
     #[clap(long, value_name = "NAME", help_heading = "Snapshot options")]
@@ -83,7 +81,7 @@ pub(crate) struct RewriteCmd {
 
     /// Mark snapshot to be deleted after given duration (e.g. 10d)
     #[clap(long, value_name = "DURATION", help_heading = "Delete mark options")]
-    pub set_delete_after: Option<humantime::Duration>,
+    pub set_delete_after: Option<Span>,
 
     /// Remove any delete mark
     #[clap(
@@ -124,7 +122,7 @@ impl RewriteCmd {
         ) {
             (true, _, _) => Some(DeleteOption::NotSet),
             (_, true, _) => Some(DeleteOption::Never),
-            (_, _, Some(d)) => Some(DeleteOption::After(Local::now() + Duration::from_std(*d)?)),
+            (_, _, Some(d)) => Some(DeleteOption::After(Zoned::now() + d)),
             (false, false, None) => None,
         };
 

@@ -41,6 +41,7 @@ RusticConfig {
         prometheus_pass: None,
         metrics_labels: {},
         opentelemetry: None,
+        show_time_offset: false,
     },
     repository: AllRepositoryOptions {
         be: BackendOptions {
@@ -102,7 +103,7 @@ RusticConfig {
         init: false,
         parent_opts: ParentOptions {
             group_by: None,
-            parent: None,
+            parents: [],
             skip_if_unchanged: false,
             force: false,
             ignore_ctime: false,

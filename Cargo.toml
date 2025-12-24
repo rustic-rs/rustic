@@ -62,8 +62,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.9.0", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.5.4", features = ["cli"] }
-rustic_core = { version = "0.9.0", features = ["cli"] }
+rustic_backend = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"] }
+rustic_core = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -94,7 +94,6 @@ serde_with = { version = "3", features = ["base64"] }
 
 # other dependencies
 aho-corasick = "1"
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 comfy-table = "7"
 scopeguard = "1"
 semver = { version = "1", optional = true }
@@ -120,16 +119,16 @@ futures = { version = "0.3.31", optional = true }
 gethostname = "1.1"
 globset = "0.4.18"
 human-panic = "2"
-humantime = "2"
 indicatif = "0.18"
 itertools = "0.14"
+jiff = "0.2.16"
 open = "5.3.2"
 prometheus = { version = "0.14.0", optional = true }
 reqwest = { version = "0.12.24", default-features = false, features = ["rustls-tls-native-roots", "blocking"] }
 self_update = { version = "=0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
 tar = "0.4.44"
 toml = "0.9"
-zip = { version = "6.0.0", default-features = false, features = ["deflate", "chrono"] }
+zip = { version = "7.0.0", default-features = false, features = ["deflate", "jiff-02"] }
 
 # filtering
 jaq-core = { version = "2", optional = true }
@@ -153,7 +152,7 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.26"
-rustic_testing = { version = "0.3.4" }
+rustic_testing = { git = "https://github.com/rustic-rs/rustic_core" }
 tar = "0.4.44"
 tempfile = "3.23"
 toml = "0.9"

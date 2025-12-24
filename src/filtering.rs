@@ -12,11 +12,14 @@ use std::{
 use anyhow::{anyhow, bail};
 use bytesize::ByteSize;
 use derive_more::derive::Display;
+use jiff::{Zoned, civil::Time, tz::TimeZone};
 use log::warn;
-use rustic_core::{StringList, repofile::SnapshotFile};
+use rustic_core::{
+    StringList,
+    repofile::{RusticTime, SnapshotFile},
+};
 
 use cached::proc_macro::cached;
-use chrono::{DateTime, Local, NaiveTime};
 use conflate::Merge;
 
 #[cfg(feature = "jq")]
@@ -274,8 +277,8 @@ impl SnapshotFilter {
         }
 
         // For the `Option`s we check if the option is set and the condition is not matched. In this case we can early return false.
-        if matches!(&self.filter_after, Some(after) if !after.matches(snapshot.time))
-            || matches!(&self.filter_before, Some(before) if !before.matches(snapshot.time))
+        if matches!(&self.filter_after, Some(after) if !after.matches(&snapshot.time))
+            || matches!(&self.filter_before, Some(before) if !before.matches(&snapshot.time))
             || matches!((&self.filter_size,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.total_bytes_processed))
             || matches!((&self.filter_size_added,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.data_added))
         {
@@ -311,28 +314,26 @@ impl SnapshotFilter {
 }
 
 #[derive(Debug, Clone, Display)]
-struct AfterDate(DateTime<Local>);
+struct AfterDate(Zoned);
 
 impl AfterDate {
-    fn matches(&self, datetime: DateTime<Local>) -> bool {
-        self.0 < datetime
+    fn matches(&self, datetime: &Zoned) -> bool {
+        &self.0 < datetime
     }
 }
 
 impl FromStr for AfterDate {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let before_midnight = NaiveTime::from_hms_nano_opt(23, 59, 59, 999_999_999).unwrap();
-        let datetime = dateparser::parse_with(s, &Local, before_midnight)?;
-        Ok(Self(datetime.into()))
+        Ok(Self(RusticTime::parse(s, Time::MAX, TimeZone::system())?))
     }
 }
 
 #[derive(Debug, Clone, Display)]
-struct BeforeDate(DateTime<Local>);
+struct BeforeDate(Zoned);
 
 impl BeforeDate {
-    fn matches(&self, datetime: DateTime<Local>) -> bool {
+    fn matches(&self, datetime: &Zoned) -> bool {
         datetime < self.0
     }
 }
@@ -340,9 +341,7 @@ impl BeforeDate {
 impl FromStr for BeforeDate {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let midnight = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-        let datetime = dateparser::parse_with(s, &Local, midnight)?;
-        Ok(Self(datetime.into()))
+        Ok(Self(RusticTime::parse_system(s)?))
     }
 }
 

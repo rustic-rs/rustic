@@ -11,6 +11,7 @@ use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
 use conflate::Merge;
+use jiff::SignedDuration;
 use log::info;
 
 use serde::{Deserialize, Serialize};
@@ -45,20 +46,24 @@ pub struct ProgressOptions {
     )]
     #[serde_as(as = "Option<DisplayFromStr>")]
     #[merge(strategy=conflate::option::overwrite_none)]
-    pub progress_interval: Option<humantime::Duration>,
+    pub progress_interval: Option<SignedDuration>,
 }
 
 impl ProgressOptions {
     /// Get interval for interactive progress bars
     fn interactive_interval(&self) -> Duration {
         self.progress_interval
-            .map_or(constants::DEFAULT_INTERVAL, |i| *i)
+            .map_or(constants::DEFAULT_INTERVAL, |i| {
+                i.try_into().expect("negative durations are not allowed")
+            })
     }
 
     /// Get interval for non-interactive logging
     fn log_interval(&self) -> Duration {
         self.progress_interval
-            .map_or(constants::DEFAULT_LOG_INTERVAL, |i| *i)
+            .map_or(constants::DEFAULT_LOG_INTERVAL, |i| {
+                i.try_into().expect("negative durations are not allowed")
+            })
     }
 
     /// Factory Pattern: Create progress indicator based on terminal capabilities

@@ -9,12 +9,15 @@
 # Global options: These options are used for all commands.
 [global]
 use-profiles = []
+profile-substitute-env = false
+dry-run = false
 log-level = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
 log-file = "/path/to/rustic.log" # Default: not set
 no-progress = false
 progress-interval = "100ms"
-dry-run = false
+group-by = "host,label,paths"
 check-index = false
+show-time-offset = false
 prometheus = "http://push-gateway/"
 prometheus-user = "user"
 prometheus-pass = "secret"
@@ -118,7 +121,7 @@ delete-never = false
 delete-after = "5d" # Default: not set
 host = "manually_set_host" # Default: host name
 group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
-parent = "123abc" # Default: not set
+parents = ["123abc"] # Default: not set
 force = false
 ignore-ctime = false
 ignore-inode = false

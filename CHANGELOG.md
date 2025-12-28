@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.3](https://github.com/rustic-rs/rustic/compare/v0.10.2...v0.10.3) - 2025-12-23
+
+### Added
+
+- *(interactive)* show summary in snapshots, ls and diff views ([#1615](https://github.com/rustic-rs/rustic/pull/1615))
+- Progress Update on non-interactive runs ([#1395](https://github.com/rustic-rs/rustic/pull/1395)) ([#1620](https://github.com/rustic-rs/rustic/pull/1620))
+
+### Fixed
+
+- *(commands)* Skip warmup script on --dry-run ([#1523](https://github.com/rustic-rs/rustic/pull/1523))
+- fix clippy lints ([#1621](https://github.com/rustic-rs/rustic/pull/1621))
+
 ## [0.10.2](https://github.com/rustic-rs/rustic/compare/v0.10.1...v0.10.2) - 2025-11-10
 
 ### Fixed

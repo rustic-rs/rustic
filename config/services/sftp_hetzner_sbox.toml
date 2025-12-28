@@ -6,3 +6,4 @@ repository = "opendal:sftp"
 endpoint = "ssh://XXXXX.your-storagebox.de:23"
 user = "XXXXX"
 key = "/root/.ssh/id_XXXXX_ed25519"
+root = "/home/backup" # The storage box' root directory is "/home/".

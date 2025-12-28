@@ -450,7 +450,7 @@ fn publish_metrics(
         Metric {
             name: "rustic_backup_time",
             description: "Timestamp of this snapshot",
-            value: Float(snap.time.timestamp_millis() as f64 / 1000.),
+            value: Float(snap.time.timestamp().as_millisecond() as f64 / 1000.),
         },
         Metric {
             name: "rustic_backup_files_new",
@@ -545,12 +545,12 @@ fn publish_metrics(
         Metric {
             name: "rustic_backup_backup_start",
             description: "Start time of the backup. This may differ from the snapshot `time`.",
-            value: Float(summary.backup_start.timestamp_millis() as f64 / 1000.),
+            value: Float(summary.backup_start.timestamp().as_millisecond() as f64 / 1000.),
         },
         Metric {
             name: "rustic_backup_backup_end",
             description: "The time that the backup has been finished.",
-            value: Float(summary.backup_end.timestamp_millis() as f64 / 1000.),
+            value: Float(summary.backup_end.timestamp().as_millisecond() as f64 / 1000.),
         },
         Metric {
             name: "rustic_backup_backup_duration",

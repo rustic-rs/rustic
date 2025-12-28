@@ -242,7 +242,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         let node_mtime = |node: &Node| {
             node.meta.mtime.map_or_else(
                 || "?".to_string(),
-                |t| t.format("%Y-%m-%d %H:%M:%S").to_string(),
+                |t| t.strftime("%Y-%m-%d %H:%M:%S").to_string(),
             )
         };
 

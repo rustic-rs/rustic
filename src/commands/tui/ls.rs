@@ -147,7 +147,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Ls<'a, P, S> {
         let size = bytes_size_to_string(node.meta.size);
         let mtime = node.meta.mtime.map_or_else(
             || "?".to_string(),
-            |t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")),
+            |t| format!("{}", t.strftime("%Y-%m-%d %H:%M:%S")),
         );
         [name, size, node.mode_str(), user, group, mtime]
             .into_iter()

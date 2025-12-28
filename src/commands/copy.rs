@@ -136,7 +136,7 @@ impl CopyCmd {
         for CopySnapshot { relevant, sn } in &snaps {
             let tags = sn.tags.formatln();
             let paths = sn.paths.formatln();
-            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+            let time = config.global.format_time(&sn.time).to_string();
             _ = table.add_row([
                 &sn.id.to_string(),
                 &time,

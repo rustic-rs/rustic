@@ -6,8 +6,8 @@ use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, s
 use abscissa_core::{Command, FrameworkError, Runnable};
 use abscissa_core::{Shutdown, config::Override};
 use anyhow::Result;
-use chrono::Local;
 use conflate::Merge;
+use jiff::Zoned;
 use log::info;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
@@ -113,7 +113,7 @@ impl ForgetCmd {
             .or(config.global.group_by)
             .unwrap_or_default();
 
-        let now = Local::now();
+        let now = Zoned::now();
 
         let groups = if self.ids.is_empty() {
             ForgetGroups(
@@ -122,20 +122,19 @@ impl ForgetCmd {
                     .map(|(group, snapshots)| -> Result<_> {
                         Ok(ForgetGroup {
                             group,
-                            snapshots: config.forget.keep.apply(snapshots, now)?,
+                            snapshots: config.forget.keep.apply(snapshots, &now)?,
                         })
                     })
                     .collect::<Result<_>>()?,
             )
         } else {
-            let now = Local::now();
             let item = ForgetGroup {
                 group: SnapshotGroup::default(),
                 snapshots: repo
                     .get_snapshots(&self.ids)?
                     .into_iter()
                     .map(|sn| {
-                        if sn.must_keep(now) {
+                        if sn.must_keep(&now) {
                             ForgetSnapshot {
                                 snapshot: sn,
                                 keep: true,
@@ -190,6 +189,7 @@ impl ForgetCmd {
 ///
 /// * `groups` - forget groups to print
 fn print_groups(groups: &ForgetGroups) {
+    let config = RUSTIC_APP.config();
     for ForgetGroup { group, snapshots } in &groups.0 {
         let mut table = table_with_titles([
             "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
@@ -201,7 +201,7 @@ fn print_groups(groups: &ForgetGroups) {
             reasons,
         } in snapshots
         {
-            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+            let time = config.global.format_time(&sn.time).to_string();
             let tags = sn.tags.formatln();
             let paths = sn.paths.formatln();
             let action = if *keep { "keep" } else { "remove" };

@@ -237,7 +237,7 @@ pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
         node.meta.size,
         node.meta.mtime.map_or_else(
             || "?".to_string(),
-            |t| t.format("%_d %b %Y %H:%M").to_string()
+            |t| t.strftime("%_d %b %Y %H:%M").to_string()
         ),
         node.link_str(),
     );

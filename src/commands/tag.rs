@@ -1,6 +1,6 @@
 //! `tag` subcommand
 use abscissa_core::{Command, Runnable};
-use rustic_core::StringList;
+use rustic_core::{StringList, repofile::SnapshotModification};
 
 use crate::commands::rewrite::RewriteCmd;
 
@@ -38,11 +38,14 @@ pub(crate) struct TagCmd {
 
 impl Runnable for TagCmd {
     fn run(&self) {
+        let modification = SnapshotModification::default()
+            .add_tags(self.add.clone())
+            .remove_tags(self.remove.clone())
+            .set_tags(self.set.clone());
         let rewrite = RewriteCmd {
             ids: self.ids.clone(),
-            add_tags: self.add.clone(),
-            remove_tags: self.remove.clone(),
-            set_tags: self.set.clone(),
+            modification,
+            forget: true,
             ..Default::default()
         };
         rewrite.run();

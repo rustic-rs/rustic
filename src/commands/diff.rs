@@ -16,8 +16,9 @@ use std::{
 use anyhow::{Context, Result, bail};
 
 use rustic_core::{
-    IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
-    LsOptions, Progress, ProgressBars, ReadSource, ReadSourceEntry, Repository, RusticResult,
+    Excludes, IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, LsOptions, Progress, ProgressBars, ReadSource, ReadSourceEntry,
+    Repository, RusticResult,
     repofile::{Node, NodeType},
 };
 
@@ -51,14 +52,18 @@ pub(crate) struct DiffCmd {
     #[clap(long, conflicts_with = "no_content")]
     only_identical: bool,
 
-    /// Ignore options
-    #[clap(flatten)]
-    ignore_opts: LocalSourceFilterOptions,
-
     #[cfg(feature = "tui")]
     /// Run in interactive UI mode
     #[clap(long, short)]
     pub interactive: bool,
+
+    /// Exclude options
+    #[clap(flatten, next_help_heading = "Exclude options")]
+    excludes: Excludes,
+
+    /// Exclude options for local source
+    #[clap(flatten, next_help_heading = "Exclude options for local source")]
+    ignore_opts: LocalSourceFilterOptions,
 }
 
 impl Runnable for DiffCmd {
@@ -123,9 +128,10 @@ impl DiffCmd {
                 let node1 = repo.node_from_snapshot_and_path(snap1, path1)?;
                 let node2 = repo.node_from_snapshot_and_path(snap2, path2)?;
 
+                let ls_opts = LsOptions::default().excludes(self.excludes.clone());
                 diff(
-                    repo.ls(&node1, &LsOptions::default())?,
-                    repo.ls(&node2, &LsOptions::default())?,
+                    repo.ls(&node1, &ls_opts)?,
+                    repo.ls(&node2, &ls_opts)?,
                     self.no_content,
                     |_path, node1, node2| Ok(node1.content == node2.content),
                     self.metadata,
@@ -167,6 +173,7 @@ impl DiffCmd {
                     .is_dir();
                 let src = LocalSource::new(
                     LocalSourceSaveOptions::default(),
+                    &self.excludes,
                     &self.ignore_opts,
                     &[&path2],
                 )?

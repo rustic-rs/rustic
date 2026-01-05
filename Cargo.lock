@@ -2510,6 +2510,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "jiff"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a87d9b8105c23642f50cbbae03d1f75d8422c5cb98ce7ee9271f7ff7505be6b8"
+dependencies = [
+ "jiff-static",
+ "jiff-tzdb-platform",
+ "log",
+ "portable-atomic",
+ "portable-atomic-util",
+ "serde_core",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "jiff-static"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b787bebb543f8969132630c51fd0afab173a86c6abae56ff3b9e5e3e3f9f6e58"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.109",
+]
+
+[[package]]
+name = "jiff-tzdb"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68971ebff725b9e2ca27a601c5eb38a4c5d64422c4cbab0c535f248087eda5c2"
+
+[[package]]
+name = "jiff-tzdb-platform"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "875a5a69ac2bab1a891711cf5eccbec1ce0341ea805560dcd90b7a2e925132e8"
+dependencies = [
+ "jiff-tzdb",
+]
+
+[[package]]
 name = "jobserver"
 version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2970,16 +3011,15 @@ dependencies = [
 
 [[package]]
 name = "opendal"
-version = "0.54.1"
+version = "0.55.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42afda58fa2cf50914402d132cc1caacff116a85d10c72ab2082bb7c50021754"
+checksum = "d075ab8a203a6ab4bc1bce0a4b9fe486a72bf8b939037f4b78d95386384bc80a"
 dependencies = [
  "anyhow",
  "backon",
  "base64 0.22.1",
  "bb8",
  "bytes",
- "chrono",
  "crc32c",
  "futures",
  "getrandom 0.2.16",
@@ -2987,6 +3027,7 @@ dependencies = [
  "governor",
  "http 1.3.1",
  "http-body 1.0.1",
+ "jiff",
  "log",
  "md-5",
  "moka",
@@ -3001,6 +3042,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
+ "url",
  "uuid",
 ]
 
@@ -3441,6 +3483,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483"
 
 [[package]]
+name = "portable-atomic-util"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8a2f0d8d040d7848a709caf78912debcc3f33ee4b3cac47d73d1e1069e83507"
+dependencies = [
+ "portable-atomic",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3586,7 +3637,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.109",
@@ -3599,7 +3650,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.109",
@@ -4237,7 +4288,6 @@ dependencies = [
  "bytesize",
  "cached",
  "cfg-if 1.0.4",
- "chrono",
  "clap",
  "clap_complete",
  "comfy-table",
@@ -4258,7 +4308,6 @@ dependencies = [
  "gethostname",
  "globset",
  "human-panic",
- "humantime",
  "indicatif 0.18.2",
  "insta",
  "itertools 0.14.0",
@@ -4266,6 +4315,7 @@ dependencies = [
  "jaq-json",
  "jaq-std",
  "jemallocator-global",
+ "jiff",
  "libc",
  "log",
  "mimalloc",
@@ -4306,8 +4356,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6ae24f6a1375102573750fdd4bc400f4d2a2f27d773a71ac9d9463a75976741"
+source = "git+https://github.com/rustic-rs/rustic_core#3f1dba03810082ecf3d0b6fc615c921dc9d706c4"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4346,8 +4395,7 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e533b621b0b59c7fd6e1e648e869ff83d7c099ab15245e13a63e3620b4ecbce"
+source = "git+https://github.com/rustic-rs/rustic_core#3f1dba03810082ecf3d0b6fc615c921dc9d706c4"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4355,7 +4403,6 @@ dependencies = [
  "bytesize",
  "cached",
  "cachedir",
- "chrono",
  "clap",
  "conflate",
  "crossbeam-channel",
@@ -4371,10 +4418,10 @@ dependencies = [
  "filetime",
  "gethostname",
  "hex",
- "humantime",
  "ignore",
  "integer-sqrt",
  "itertools 0.14.0",
+ "jiff",
  "log",
  "nix 0.30.1",
  "pariter",
@@ -4402,8 +4449,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f2490e83e8b9e52285983aab518115b98086a031d849393581a92e3c7c33b23"
+source = "git+https://github.com/rustic-rs/rustic_core#3f1dba03810082ecf3d0b6fc615c921dc9d706c4"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -4707,7 +4753,6 @@ version = "4.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "207f67b28fe90fb596503a9bf0bf1ea5e831e21307658e177c5dfcdfc3ab8a0a"
 dependencies = [
- "chrono",
  "serde",
  "serde-value",
  "serde_json",
@@ -6529,15 +6574,15 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "6.0.0"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb2a05c7c36fde6c09b08576c9f7fb4cda705990f73b58fe011abf7dfb24168b"
+checksum = "bdd8a47718a4ee5fe78e07667cd36f3de80e7c2bfe727c7074245ffc7303c037"
 dependencies = [
  "arbitrary",
- "chrono",
  "crc32fast",
  "flate2",
  "indexmap 2.12.0",
+ "jiff",
  "memchr",
  "zopfli",
 ]

@@ -1,9 +1,9 @@
 use std::{collections::BTreeSet, iter::once, mem, str::FromStr};
 
 use anyhow::Result;
-use chrono::Local;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use itertools::Itertools;
+use jiff::Zoned;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph},
@@ -725,7 +725,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             if snap.delete == delete {
                 return false;
             }
-            snap.delete = delete;
+            snap.delete = delete.clone();
             true
         });
     }
@@ -737,12 +737,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             self.toggle_mark();
         }
 
-        let now = Local::now();
+        let now = Zoned::now();
         for (snap, status) in self.snapshots.iter_mut().zip(self.snaps_status.iter_mut()) {
             if status.marked {
                 if status.to_forget {
                     status.to_forget = false;
-                } else if !snap.must_keep(now) {
+                } else if !snap.must_keep(&now) {
                     status.to_forget = true;
                 }
             }

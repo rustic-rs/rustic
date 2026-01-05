@@ -9,6 +9,7 @@ dry-run = false
 dry-run-warmup = false
 check-index = false
 no-progress = false
+show-time-offset = false
 
 [global.hooks]
 run-before = []
@@ -63,6 +64,7 @@ json = false
 long = false
 quiet = false
 init = false
+parents = []
 skip-if-unchanged = false
 force = false
 ignore-ctime = false

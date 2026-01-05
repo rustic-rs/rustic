@@ -32,6 +32,7 @@ impl Runnable for ListCmd {
 
 impl ListCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+        let config = RUSTIC_APP.config();
         match self.tpe.as_str() {
             // special treatment for listing blobs: read the index and display it
             "blobs" | "indexpacks" | "indexcontent" => {
@@ -61,10 +62,10 @@ impl ListCmd {
                                 pack.blob_type(),
                                 pack.id,
                                 pack.pack_size(),
-                                pack.time.map_or_else(String::new, |time| format!(
-                                    "{}",
-                                    time.format("%Y-%m-%d %H:%M:%S")
-                                ))
+                                pack.time.map_or_else(String::new, |time| config
+                                    .global
+                                    .format_time(&time)
+                                    .to_string())
                             ),
                             t => {
                                 bail!("invalid type: {}", t);

@@ -5,6 +5,7 @@
 //! for specifying it.
 
 pub(crate) mod hooks;
+pub(crate) mod logging;
 pub(crate) mod progress_options;
 
 use std::{
@@ -35,7 +36,7 @@ use crate::commands::webdav::WebDavCmd;
 
 use crate::{
     commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
-    config::{hooks::Hooks, progress_options::ProgressOptions},
+    config::{hooks::Hooks, logging::LoggingOptions, progress_options::ProgressOptions},
     filtering::SnapshotFilter,
     repository::AllRepositoryOptions,
 };
@@ -203,19 +204,10 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub check_index: bool,
 
-    /// Use this log level [default: info]
-    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
-    #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_level: Option<String>,
-
-    /// Write log messages to the given file instead of printing them.
-    ///
-    /// # Note
-    ///
-    /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
-    #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
-    #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_file: Option<PathBuf>,
+    /// Settings to customize logging
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub logging_options: LoggingOptions,
 
     /// Settings to customize progress bars
     #[clap(flatten)]

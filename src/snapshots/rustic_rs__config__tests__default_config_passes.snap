@@ -10,8 +10,13 @@ RusticConfig {
         dry_run: false,
         dry_run_warmup: false,
         check_index: false,
-        log_level: None,
-        log_file: None,
+        logging_options: LoggingOptions {
+            log_level: None,
+            log_level_logfile: None,
+            log_level_dryrun: None,
+            log_level_dependencies: None,
+            log_file: None,
+        },
         progress_options: ProgressOptions {
             no_progress: false,
             progress_interval: None,
@@ -88,7 +93,6 @@ RusticConfig {
         no_scan: false,
         json: false,
         long: false,
-        quiet: false,
         init: false,
         parent_opts: ParentOptions {
             group_by: None,

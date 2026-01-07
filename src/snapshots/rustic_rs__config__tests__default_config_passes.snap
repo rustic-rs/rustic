@@ -88,7 +88,7 @@ RusticConfig {
         as_path: None,
         ignore_save_opts: LocalSourceSaveOptions {
             with_atime: false,
-            ignore_devid: false,
+            with_devid: None,
         },
         no_scan: false,
         json: false,

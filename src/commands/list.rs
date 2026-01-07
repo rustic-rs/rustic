@@ -64,8 +64,7 @@ impl ListCmd {
                                 pack.pack_size(),
                                 pack.time.map_or_else(String::new, |time| config
                                     .global
-                                    .format_time(&time)
-                                    .to_string())
+                                    .format_timestamp(time))
                             ),
                             t => {
                                 bail!("invalid type: {}", t);

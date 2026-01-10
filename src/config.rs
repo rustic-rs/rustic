@@ -20,7 +20,7 @@ use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
-use jiff::{Zoned, tz::TimeZone};
+use jiff::{Timestamp, Zoned, tz::TimeZone};
 use log::Level;
 use reqwest::Url;
 use rustic_core::SnapshotGroupCriterion;
@@ -274,6 +274,11 @@ pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
 impl GlobalOptions {
     pub fn is_metrics_configured(&self) -> bool {
         self.prometheus.is_some() || self.opentelemetry.is_some()
+    }
+
+    pub fn format_timestamp(&self, timestamp: Timestamp) -> String {
+        self.format_time(&timestamp.to_zoned(TimeZone::UTC))
+            .to_string()
     }
 
     pub fn format_time(&self, time: &Zoned) -> impl Display {

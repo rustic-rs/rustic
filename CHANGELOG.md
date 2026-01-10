@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0](https://github.com/rustic-rs/rustic/compare/v0.10.3...v0.11.0) - 2026-01-10
+
+### Added
+
+- [**breaking**] Update rustic_core ([#1635](https://github.com/rustic-rs/rustic/pull/1635))
+- [**breaking**] Add log-level-logfile, -dryrun and -dependencies options; remove quiet options ([#1565](https://github.com/rustic-rs/rustic/pull/1565))
+
+### Other
+
+- [**breaking**] Use jiff instead of chrono ([#1625](https://github.com/rustic-rs/rustic/pull/1625))
+- Add root directory to sftp_hetzner_sbox.toml ([#1628](https://github.com/rustic-rs/rustic/pull/1628))
+
 ## [0.10.3](https://github.com/rustic-rs/rustic/compare/v0.10.2...v0.10.3) - 2025-12-23
 
 ### Added

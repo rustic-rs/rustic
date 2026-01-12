@@ -53,7 +53,7 @@ impl MergeCmd {
         let snapshots = if self.ids.is_empty() {
             get_filtered_snapshots(&repo)?
         } else {
-            repo.get_snapshots_from_strs(&self.ids, |_| true)?
+            repo.get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
         };
 
         // Handle dry-run mode

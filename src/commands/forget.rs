@@ -129,7 +129,7 @@ impl ForgetCmd {
             let item = ForgetGroup {
                 group: SnapshotGroup::default(),
                 snapshots: repo
-                    .get_snapshots_from_strs(&self.ids, |_| true)?
+                    .get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
                     .into_iter()
                     .map(|sn| {
                         if sn.must_keep(&now) {

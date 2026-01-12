@@ -1,4 +1,4 @@
-//! `smapshot` subcommand
+//! `snapshot` subcommand
 
 use crate::{
     Application, RUSTIC_APP,

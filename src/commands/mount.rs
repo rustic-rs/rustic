@@ -16,7 +16,11 @@ use fuse_mt::{FuseMT, mount};
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};
 
-use crate::{Application, RUSTIC_APP, RusticConfig, repository::CliIndexedRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP, RusticConfig,
+    repository::{CliIndexedRepo, get_filtered_snapshots},
+    status_err,
+};
 
 #[derive(Clone, Debug, Default, Command, Parser, Merge, serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -26,7 +30,7 @@ pub struct MountCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     path_template: Option<String>,
 
-    /// The time template to use to display times in the path template. See https://docs.rs/chrono/latest/chrono/format/strftime/index.html for format options. [default: "%Y-%m-%d_%H-%M-%S"]
+    /// The time template to use to display times in the path template. See https://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.html for format options. [default: "%Y-%m-%d_%H-%M-%S"]
     #[clap(long)]
     #[merge(strategy=conflate::option::overwrite_none)]
     time_template: Option<String>,
@@ -125,12 +129,12 @@ impl MountCmd {
             bail!("Please specify a mount point!");
         };
 
-        let sn_filter = |sn: &_| config.snapshot_filter.matches(sn);
-        let vfs = if let Some(snap_path) = &config.mount.snapshot_path {
-            let node = repo.node_from_snapshot_path(snap_path, sn_filter)?;
+        let vfs = if let Some(snap) = &config.mount.snapshot_path {
+            let node =
+                repo.node_from_snapshot_path(snap, |sn| config.snapshot_filter.matches(sn))?;
             Vfs::from_dir_node(&node)
         } else {
-            let snapshots = repo.get_matching_snapshots(sn_filter)?;
+            let snapshots = get_filtered_snapshots(&repo)?;
             Vfs::from_snapshots(
                 snapshots,
                 &path_template,

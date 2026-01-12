@@ -1,15 +1,16 @@
 use std::{collections::BTreeSet, iter::once, mem, str::FromStr};
 
 use anyhow::Result;
-use chrono::Local;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use itertools::Itertools;
+use jiff::Zoned;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion, StringList,
+    IndexedFull, Progress, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion,
+    StringList,
     repofile::{DeleteOption, SnapshotFile},
 };
 use style::palette::tailwind;
@@ -19,7 +20,8 @@ use crate::{
         snapshots::{fill_table, snap_to_table},
         tui::{
             diff::{Diff, DiffResult},
-            ls::{Snapshot, SnapshotResult},
+            ls::{Ls, LsResult},
+            summary::StatisticsBuilder,
             tree::{Tree, TreeIterItem, TreeNode},
             widgets::{
                 Draw, PopUpInput, PopUpPrompt, PopUpTable, PopUpText, ProcessEvent, PromptResult,
@@ -37,12 +39,12 @@ use super::summary::SummaryMap;
 enum CurrentScreen<'a, P, S> {
     Snapshots,
     ShowHelp(PopUpText),
-    SnapshotDetails(PopUpTable),
+    Table(PopUpTable),
     EnterProperty((PopUpInput, SnapshotProperty)),
     EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
-    Dir(Box<Snapshot<'a, P, S>>),
+    Dir(Box<Ls<'a, P, S>>),
     Diff(Box<Diff<'a, P, S>>),
 }
 
@@ -134,13 +136,13 @@ const HELP_TEXT: &str = r"General Commands:
        w : write modified snapshots and delete snapshots to-forget
        ? : show this help page
  
- Commands for marking snapshot(s):
+Commands for marking snapshot(s):
  
-       x : toggle marking for selected snapshot
+ x,Space : toggle marking for selected snapshot
        X : toggle markings for all snapshots
   Ctrl-x : clear all markings
  
- Commands applied to marked snapshot(s) (selected if none marked):
+Commands applied to marked snapshot(s) (selected if none marked):
  
        f : toggle to-forget for snapshot(s)
   Ctrl-f : clear to-forget for snapshot(s)
@@ -149,6 +151,7 @@ const HELP_TEXT: &str = r"General Commands:
        d : set description for snapshot(s)
   Ctrl-d : remove description for snapshot(s)
        D : diff snapshots if 2 snapshots are selected or with parent
+       S : compute information for snapshot(s) and show summary
        t : add tag(s) for snapshot(s)
   Ctrl-t : remove all tags for snapshot(s)
        s : set tag(s) for snapshot(s)
@@ -288,6 +291,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
                 .then_some(i)
             })
             .collect();
+        // TODO: Handle filter post-processing in case of current_view == View::Filter
         self.create_tree();
     }
 
@@ -303,12 +307,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         {
             let mut same_id_group = Vec::new();
             for (_, s) in &snaps.into_iter().chunk_by(|i| self.snapshots[**i].tree) {
-                let leafs: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
-                let first = leafs[0].leaf_data().unwrap(); // Cannot be None as leafs[0] is a leaf!
-                if leafs.len() == 1 {
+                let leaves: Vec<_> = s.map(|i| Tree::leaf(*i)).collect();
+                let first = leaves[0].leaf_data().unwrap(); // Cannot be None as leaves[0] is a leaf!
+                if leaves.len() == 1 {
                     same_id_group.push(Tree::leaf(*first));
                 } else {
-                    same_id_group.push(Tree::node(SnapshotNode::Snap(*first), false, leafs));
+                    same_id_group.push(Tree::node(SnapshotNode::Snap(*first), false, leaves));
                 }
             }
             result.push(Tree::node(SnapshotNode::Group(group), false, same_id_group));
@@ -529,11 +533,43 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         popup_table("snapshot details", rows)
     }
 
-    pub fn dir(&mut self) -> Result<Option<Snapshot<'a, P, S>>> {
+    pub fn snapshots_summary(&mut self) -> Result<PopUpTable> {
+        let pb = self.repo.progress_bars();
+        let p = pb.progress_counter("computing (sub)-dir information");
+        // Take out summary_map to fix lifetime issues
+        let mut summary_map = mem::take(&mut self.summary_map);
+
+        self.process_marked_snaps(|snap| {
+            // TODO: error handling
+            _ = summary_map.compute(self.repo, snap.tree, &p);
+            false
+        });
+
+        let mut stats_builder = StatisticsBuilder::default();
+        let mut count = 0;
+        self.process_marked_snaps(|snap| {
+            stats_builder.append_from_tree(snap.tree, &summary_map);
+            count += 1;
+            false
+        });
+        p.finish();
+        let stats = stats_builder.build(self.repo)?;
+
+        // put summary_map back into place
+        self.summary_map = summary_map;
+
+        Ok(popup_table(
+            "snapshots summary",
+            stats.table(format!("{count} snapshot(s)")),
+        ))
+    }
+
+    pub fn dir(&mut self) -> Result<Option<Ls<'a, P, S>>> {
         self.selected_snapshot().cloned().map_or(Ok(None), |snap| {
-            Some(Snapshot::new(
+            Some(Ls::new(
                 self.repo,
                 snap,
+                "",
                 mem::take(&mut self.summary_map),
             ))
             .transpose()
@@ -668,20 +704,20 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         }
     }
 
-    pub fn set_poperty(&mut self, property: SnapshotProperty, value: String) {
+    pub fn set_property(&mut self, property: SnapshotProperty, value: String) {
         self.process_marked_snaps(|snap| property.process(snap, &value));
     }
 
     pub fn clear_label(&mut self) {
-        self.set_poperty(SnapshotProperty::Label, String::new());
+        self.set_property(SnapshotProperty::Label, String::new());
     }
 
     pub fn clear_description(&mut self) {
-        self.set_poperty(SnapshotProperty::Description, String::new());
+        self.set_property(SnapshotProperty::Description, String::new());
     }
 
     pub fn clear_tags(&mut self) {
-        self.set_poperty(SnapshotProperty::SetTags, String::new());
+        self.set_property(SnapshotProperty::SetTags, String::new());
     }
 
     pub fn set_delete_protection_to(&mut self, delete: DeleteOption) {
@@ -689,7 +725,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             if snap.delete == delete {
                 return false;
             }
-            snap.delete = delete;
+            snap.delete = delete.clone();
             true
         });
     }
@@ -701,12 +737,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
             self.toggle_mark();
         }
 
-        let now = Local::now();
+        let now = Zoned::now();
         for (snap, status) in self.snapshots.iter_mut().zip(self.snaps_status.iter_mut()) {
             if status.marked {
                 if status.to_forget {
                     status.to_forget = false;
-                } else if !snap.must_keep(now) {
+                } else if !snap.must_keep(&now) {
                     status.to_forget = true;
                 }
             }
@@ -727,7 +763,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
 
     pub fn apply_input(&mut self, input: String) {
         match self.current_screen {
-            CurrentScreen::EnterProperty((_, prop)) => self.set_poperty(prop, input),
+            CurrentScreen::EnterProperty((_, prop)) => self.set_property(prop, input),
             CurrentScreen::EnterFilter(_) => self.set_filter(input),
             _ => {}
         }
@@ -794,7 +830,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                         if key.modifiers == KeyModifiers::CONTROL {
                             match key.code {
                                 Char('f') => self.clear_to_forget(),
-                                Char('x') => self.clear_marks(),
+                                Char('x') | Char(' ') => self.clear_marks(),
                                 Char('l') => self.clear_label(),
                                 Char('d') => self.clear_description(),
                                 Char('t') => self.clear_tags(),
@@ -836,7 +872,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                                         HELP_TEXT.into(),
                                     ));
                                 }
-                                Char('x') => {
+                                Char('x') | Char(' ') => {
                                     self.toggle_mark();
                                     self.table.widget.next();
                                 }
@@ -852,7 +888,11 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                                 }
                                 Char('i') => {
                                     self.current_screen =
-                                        CurrentScreen::SnapshotDetails(self.snapshot_details());
+                                        CurrentScreen::Table(self.snapshot_details());
+                                }
+                                Char('S') => {
+                                    self.current_screen =
+                                        CurrentScreen::Table(self.snapshots_summary()?);
                                 }
                                 Char('l') => {
                                     self.current_screen = CurrentScreen::EnterProperty((
@@ -930,7 +970,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                     _ => {}
                 }
             }
-            CurrentScreen::SnapshotDetails(_) | CurrentScreen::ShowHelp(_) => match event {
+            CurrentScreen::Table(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     if matches!(key.code, Char('q' | ' ' | 'i' | '?') | Esc | Enter) {
                         self.current_screen = CurrentScreen::Snapshots;
@@ -962,12 +1002,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
                 PromptResult::None => {}
             },
             CurrentScreen::Dir(dir) => match dir.input(event)? {
-                SnapshotResult::Exit => return Ok(true),
-                SnapshotResult::Return(summary_map) => {
+                LsResult::Exit => return Ok(true),
+                LsResult::Return(summary_map) => {
                     self.current_screen = CurrentScreen::Snapshots;
                     self.summary_map = summary_map;
                 }
-                SnapshotResult::None => {}
+                LsResult::None => {}
             },
             CurrentScreen::Diff(diff) => match diff.input(event)? {
                 DiffResult::Exit => return Ok(true),
@@ -1009,7 +1049,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Draw for Snapshots<'a, P, S> {
 
         // draw popups
         match &mut self.current_screen {
-            CurrentScreen::SnapshotDetails(popup) => popup.draw(area, f),
+            CurrentScreen::Table(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
             CurrentScreen::EnterProperty((popup, _)) | CurrentScreen::EnterFilter(popup) => {
                 popup.draw(area, f);

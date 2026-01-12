@@ -1,15 +1,15 @@
 //! `ls` subcommand
 
-use std::{
-    ops::{Add, AddAssign},
-    path::Path,
-};
+use std::{ops::AddAssign, path::Path};
 
+#[cfg(feature = "tui")]
+use crate::commands::tui;
 use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 
+use derive_more::Add;
 use rustic_core::{
     LsOptions,
     repofile::{Node, NodeType},
@@ -59,6 +59,11 @@ pub(crate) struct LsCmd {
     /// Listing options
     #[clap(flatten)]
     ls_opts: LsOptions,
+
+    #[cfg(feature = "tui")]
+    /// Run in interactive UI mode
+    #[clap(long, short)]
+    interactive: bool,
 }
 
 impl Runnable for LsCmd {
@@ -77,7 +82,7 @@ impl Runnable for LsCmd {
 /// Summary of a ls command
 ///
 /// This struct is used to print a summary of the ls command.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Add)]
 pub struct Summary {
     pub files: usize,
     pub size: u64,
@@ -87,17 +92,6 @@ pub struct Summary {
 impl AddAssign for Summary {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
-    }
-}
-
-impl Add for Summary {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            files: self.files + rhs.files,
-            size: self.size + rhs.size,
-            dirs: self.dirs + rhs.dirs,
-        }
     }
 }
 
@@ -115,6 +109,12 @@ impl Summary {
             self.files += 1;
             self.size += node.meta.size;
         }
+    }
+
+    pub fn from_node(node: &Node) -> Self {
+        let mut summary = Self::default();
+        summary.update(node);
+        summary
     }
 }
 
@@ -154,8 +154,23 @@ impl LsCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let node =
-            repo.node_from_snapshot_path(&self.snap, |sn| config.snapshot_filter.matches(sn))?;
+        let (snap_id, path) = self.snap.split_once(':').unwrap_or((&self.snap, ""));
+        let snap = repo.get_snapshot_from_str(snap_id, |sn| config.snapshot_filter.matches(sn))?;
+
+        #[cfg(feature = "tui")]
+        if self.interactive {
+            use rustic_core::{Progress, ProgressBars};
+            use tui::summary::SummaryMap;
+
+            return tui::run(|progress| {
+                let p = progress.progress_spinner("starting rustic in interactive mode...");
+                p.finish();
+                // create app and run it
+                let ls = tui::Ls::new(&repo, snap, path, SummaryMap::default())?;
+                tui::run_app(progress.terminal, ls)
+            });
+        }
+        let node = repo.node_from_snapshot_and_path(&snap, path)?;
 
         // recursive if standard if we specify a snapshot without dirs. In other cases, use the parameter `recursive`
         let mut ls_opts = self.ls_opts.clone();
@@ -224,7 +239,7 @@ pub fn print_node(node: &Node, path: &Path, numeric_uid_gid: bool) {
         node.meta.size,
         node.meta.mtime.map_or_else(
             || "?".to_string(),
-            |t| t.format("%_d %b %Y %H:%M").to_string()
+            |t| t.strftime("%_d %b %Y %H:%M").to_string()
         ),
         node.link_str(),
     );

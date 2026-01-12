@@ -122,11 +122,8 @@ impl TuiProgress {
                 format!(
                     "{} {prefix} {}{}{eta}",
                     fmt_duration(elapsed),
-                    ByteSize(count).to_string_as(true),
-                    length.map_or(String::new(), |l| format!(
-                        "/{}",
-                        ByteSize(l).to_string_as(true)
-                    ))
+                    ByteSize(count).display(),
+                    length.map_or(String::new(), |l| format!("/{}", ByteSize(l).display()))
                 )
             }
             TuiProgressType::Hidden => String::new(),

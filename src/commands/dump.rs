@@ -12,6 +12,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use derive_more::FromStr;
 use flate2::{Compression, write::GzEncoder};
+use jiff::tz::TimeZone;
 use log::warn;
 use rustic_core::{
     LsOptions,
@@ -200,7 +201,7 @@ fn dump_tar(
             header.set_groupname(group)?;
         }
         if let Some(mtime) = node.meta.mtime {
-            header.set_mtime(mtime.timestamp().try_into().unwrap_or_default());
+            header.set_mtime(mtime.as_second().try_into().unwrap_or_default());
         }
 
         // handle special files
@@ -279,8 +280,13 @@ fn write_zip_contents(
             options = options.unix_permissions(mode);
         }
         if let Some(mtime) = node.meta.mtime {
-            options =
-                options.last_modified_time(mtime.naive_local().try_into().unwrap_or_default());
+            options = options.last_modified_time(
+                mtime
+                    .to_zoned(TimeZone::UTC)
+                    .datetime()
+                    .try_into()
+                    .unwrap_or_default(),
+            );
         }
         if node.is_file() {
             zip.start_file_from_path(path, options)?;

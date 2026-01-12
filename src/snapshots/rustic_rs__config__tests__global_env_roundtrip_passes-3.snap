@@ -4,11 +4,19 @@ expression: deserialized
 ---
 RusticConfig {
     global: GlobalOptions {
+        profile_substitute_env: false,
         use_profiles: [],
+        group_by: None,
         dry_run: false,
+        dry_run_warmup: false,
         check_index: false,
-        log_level: None,
-        log_file: None,
+        logging_options: LoggingOptions {
+            log_level: None,
+            log_level_logfile: None,
+            log_level_dryrun: None,
+            log_level_dependencies: None,
+            log_file: None,
+        },
         progress_options: ProgressOptions {
             no_progress: false,
             progress_interval: None,
@@ -38,6 +46,7 @@ RusticConfig {
         prometheus_pass: None,
         metrics_labels: {},
         opentelemetry: None,
+        show_time_offset: false,
     },
     repository: AllRepositoryOptions {
         be: BackendOptions {
@@ -78,25 +87,27 @@ RusticConfig {
         filter_before: None,
         filter_size: None,
         filter_size_added: None,
+        filter_last: None,
         filter_jq: None,
     },
     backup: BackupCmd {
         cli_sources: [],
+        cli_name: [],
+        name: None,
         stdin_filename: "",
         stdin_command: None,
         as_path: None,
         ignore_save_opts: LocalSourceSaveOptions {
             with_atime: false,
-            ignore_devid: false,
+            with_devid: None,
         },
         no_scan: false,
         json: false,
         long: false,
-        quiet: false,
         init: false,
         parent_opts: ParentOptions {
             group_by: None,
-            parent: None,
+            parents: [],
             skip_if_unchanged: false,
             force: false,
             ignore_ctime: false,
@@ -185,6 +196,7 @@ RusticConfig {
             filter_before: None,
             filter_size: None,
             filter_size_added: None,
+            filter_last: None,
             filter_jq: None,
         },
         keep: KeepOptions {

@@ -1,13 +1,13 @@
 //! `forget` subcommand
 
-use crate::repository::CliOpenRepo;
+use crate::repository::{CliOpenRepo, get_grouped_snapshots};
 use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, status_err};
 
 use abscissa_core::{Command, FrameworkError, Runnable};
 use abscissa_core::{Shutdown, config::Override};
 use anyhow::Result;
-use chrono::Local;
 use conflate::Merge;
+use jiff::Zoned;
 use log::info;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
@@ -30,10 +30,6 @@ pub(super) struct ForgetCmd {
     /// Show infos in json format
     #[clap(long)]
     json: bool,
-
-    /// Don't show any output
-    #[clap(long, conflicts_with = "json")]
-    quiet: bool,
 
     /// Forget options
     #[clap(flatten)]
@@ -109,21 +105,34 @@ impl ForgetCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let group_by = config.forget.group_by.unwrap_or_default();
+        let group_by = config
+            .forget
+            .group_by
+            .or(config.global.group_by)
+            .unwrap_or_default();
+
+        let now = Zoned::now();
 
         let groups = if self.ids.is_empty() {
-            repo.get_forget_snapshots(&config.forget.keep, group_by, |sn| {
-                config.forget.filter.matches(sn)
-            })?
+            ForgetGroups(
+                get_grouped_snapshots(&repo, group_by, &[])?
+                    .into_iter()
+                    .map(|(group, snapshots)| -> Result<_> {
+                        Ok(ForgetGroup {
+                            group,
+                            snapshots: config.forget.keep.apply(snapshots, &now)?,
+                        })
+                    })
+                    .collect::<Result<_>>()?,
+            )
         } else {
-            let now = Local::now();
             let item = ForgetGroup {
                 group: SnapshotGroup::default(),
                 snapshots: repo
                     .get_snapshots_from_strs(&self.ids, |_| true)?
                     .into_iter()
                     .map(|sn| {
-                        if sn.must_keep(now) {
+                        if sn.must_keep(&now) {
                             ForgetSnapshot {
                                 snapshot: sn,
                                 keep: true,
@@ -145,7 +154,7 @@ impl ForgetCmd {
         if self.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &groups)?;
-        } else if !self.quiet {
+        } else {
             print_groups(&groups);
         }
 
@@ -178,6 +187,7 @@ impl ForgetCmd {
 ///
 /// * `groups` - forget groups to print
 fn print_groups(groups: &ForgetGroups) {
+    let config = RUSTIC_APP.config();
     for ForgetGroup { group, snapshots } in &groups.0 {
         let mut table = table_with_titles([
             "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
@@ -189,7 +199,7 @@ fn print_groups(groups: &ForgetGroups) {
             reasons,
         } in snapshots
         {
-            let time = sn.time.format("%Y-%m-%d %H:%M:%S").to_string();
+            let time = config.global.format_time(&sn.time).to_string();
             let tags = sn.tags.formatln();
             let paths = sn.paths.formatln();
             let action = if *keep { "keep" } else { "remove" };

@@ -9,12 +9,18 @@
 # Global options: These options are used for all commands.
 [global]
 use-profiles = []
+profile-substitute-env = false
+dry-run = false
 log-level = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
+log-level-logfile = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
+log-level-dryrun = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
+log-level-dependencies = "warn" # any of "off", "error", "warn", "info", "debug", "trace"; default: "warn"
 log-file = "/path/to/rustic.log" # Default: not set
 no-progress = false
 progress-interval = "100ms"
-dry-run = false
+group-by = "host,label,paths"
 check-index = false
+show-time-offset = false
 prometheus = "http://push-gateway/"
 prometheus-user = "user"
 prometheus-pass = "secret"
@@ -105,6 +111,7 @@ filter-before = "2024-02-05 12:15" # Default: not set
 filter-size = "200MiB" # Default: not set
 filter-size-added = "1 MB..10MB" # Default: not set
 filter-jq = '.description | contains ("test")' # Default: no jq filter function
+filter-last = "5" # Default: not set
 
 # Backup options: These options are used for all sources when calling the backup command.
 # They can be overwritten by source-specific options (see below) or command line options.
@@ -117,14 +124,14 @@ delete-never = false
 delete-after = "5d" # Default: not set
 host = "manually_set_host" # Default: host name
 group-by = "host,label,paths" # Can be any combination of host,label,paths,tags
-parent = "123abc" # Default: not set
+parents = ["123abc"] # Default: not set
 force = false
 ignore-ctime = false
 ignore-inode = false
 stdin-filename = "stdin" # Only for stdin source
 as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
 with-atime = false
-ignore-devid = false
+with-devid = "hardlink" # Allowed: "always", "never", "hardlink"
 globs = []
 iglobs = []
 glob-files = []
@@ -138,7 +145,6 @@ exclude-larger-than = "100MB" # Default: not set
 json = false
 init = false
 no-scan = false
-quiet = false
 skip-if-unchanged = false
 metrics-job = "my-backup-jobs" # Only used if global prometheus or opentelemetry option is set; default: not set
 
@@ -191,6 +197,7 @@ filter-before = "2024-02-05 12:15" # Default: not set
 filter-size = "200MiB" # Default: not set
 filter-size-added = "1 MB..10MB" # Default: not set
 filter-jq = '.description | contains ("test")' # Default: no jq filter function
+filter-last = "5" # Default: not set
 # The retention options follow. All of these are not set by default.
 keep-tags = ["tag1", "tag2,tag3"] # Default: not set
 keep-ids = [

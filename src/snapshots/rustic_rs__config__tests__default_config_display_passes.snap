@@ -3,10 +3,13 @@ source: src/config.rs
 expression: config
 ---
 [global]
+profile-substitute-env = false
 use-profiles = []
 dry-run = false
+dry-run-warmup = false
 check-index = false
 no-progress = false
+show-time-offset = false
 
 [global.hooks]
 run-before = []
@@ -45,12 +48,11 @@ filter-tags-exact = []
 [backup]
 stdin-filename = ""
 with-atime = false
-ignore-devid = false
 no-scan = false
 json = false
 long = false
-quiet = false
 init = false
+parents = []
 skip-if-unchanged = false
 force = false
 ignore-ctime = false

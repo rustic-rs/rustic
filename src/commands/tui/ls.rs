@@ -16,10 +16,12 @@ use crate::{
     commands::{
         ls::{NodeLs, Summary},
         tui::{
+            TuiResult,
             restore::Restore,
             widgets::{
-                Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable,
-                TextInputResult, WithBlock, popup_prompt, popup_scrollable_text, popup_text,
+                Draw, PopUpPrompt, PopUpTable, PopUpText, ProcessEvent, PromptResult, SelectTable,
+                TextInputResult, WithBlock, popup_prompt, popup_scrollable_text, popup_table,
+                popup_text,
             },
         },
     },
@@ -30,10 +32,12 @@ use super::{summary::SummaryMap, widgets::PopUpInput};
 
 // the states this screen can be in
 enum CurrentScreen<'a, P, S> {
-    Snapshot,
+    Ls,
     ShowHelp(PopUpText),
+    Table(PopUpTable),
     Restore(Box<Restore<'a, P, S>>),
     PromptExit(PopUpPrompt),
+    PromptLeave(PopUpPrompt),
     ShowFile(Box<PopUpInput>),
 }
 
@@ -45,7 +49,8 @@ Ls Commands:
           v : view file contents (text files only, up to 1MiB)
           r : restore selected item
           n : toggle numeric IDs
-          s : compute information for (sub)-dirs
+          s : compute information for (sub-)dirs and show summary
+          S : compute information for selected node and show summary
           D : diff current selection
 
 General Commands:
@@ -57,7 +62,7 @@ General Commands:
 
  ";
 
-pub(crate) struct Snapshot<'a, P, S> {
+pub struct Ls<'a, P, S> {
     current_screen: CurrentScreen<'a, P, S>,
     numeric: bool,
     table: WithBlock<SelectTable>,
@@ -70,16 +75,23 @@ pub(crate) struct Snapshot<'a, P, S> {
     summary_map: SummaryMap,
 }
 
-pub enum SnapshotResult {
+pub enum LsResult {
     Exit,
     Return(SummaryMap),
     None,
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
+impl TuiResult for LsResult {
+    fn exit(&self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
+impl<'a, P: ProgressBars, S: IndexedFull> Ls<'a, P, S> {
     pub fn new(
         repo: &'a Repository<P, S>,
         snapshot: SnapshotFile,
+        path: &str,
         summary_map: SummaryMap,
     ) -> Result<Self> {
         let header = ["Name", "Size", "Mode", "User", "Group", "Time"]
@@ -87,15 +99,25 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             .map(Text::from)
             .collect();
 
-        let tree_id = snapshot.tree;
-        let tree = repo.get_tree(&tree_id)?;
+        let node = repo.node_from_snapshot_and_path(&snapshot, path)?;
+        let (tree_id, tree) = node.subtree.map_or_else(
+            || -> Result<_> {
+                Ok((
+                    TreeId::default(),
+                    Tree {
+                        nodes: vec![node.clone()],
+                    },
+                ))
+            },
+            |id| Ok((id, repo.get_tree(&id)?)),
+        )?;
         let mut app = Self {
-            current_screen: CurrentScreen::Snapshot,
+            current_screen: CurrentScreen::Ls,
             numeric: false,
             table: WithBlock::new(SelectTable::new(header), Block::new()),
             repo,
             snapshot,
-            path: PathBuf::new(),
+            path: PathBuf::from(path),
             trees: Vec::new(),
             tree,
             tree_id,
@@ -125,7 +147,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         let size = bytes_size_to_string(node.meta.size);
         let mtime = node.meta.mtime.map_or_else(
             || "?".to_string(),
-            |t| format!("{}", t.format("%Y-%m-%d %H:%M:%S")),
+            |t| format!("{}", t.strftime("%Y-%m-%d %H:%M:%S")),
         );
         [name, size, node.mode_str(), user, group, mtime]
             .into_iter()
@@ -200,17 +222,18 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         Ok(())
     }
 
-    pub fn goback(&mut self) -> bool {
+    pub fn goback(&mut self) {
         _ = self.path.pop();
         if let Some((tree, tree_id, idx)) = self.trees.pop() {
             self.tree = tree;
             self.tree_id = tree_id;
             self.table.widget.set_to(idx);
             self.update_table();
-            false
-        } else {
-            true
         }
+    }
+
+    pub fn in_root(&self) -> bool {
+        self.trees.is_empty()
     }
 
     pub fn toggle_numeric(&mut self) {
@@ -218,26 +241,64 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
         self.update_table();
     }
 
-    pub fn compute_sizes(&mut self) -> Result<()> {
+    pub fn compute_summary(&mut self, tree_id: TreeId) -> Result<()> {
         let pb = self.repo.progress_bars();
         let p = pb.progress_counter("computing (sub)-dir information");
-        self.summary_map.compute(self.repo, self.tree_id, &p)?;
+        self.summary_map.compute(self.repo, tree_id, &p)?;
         p.finish();
         self.update_table();
         Ok(())
     }
 
-    pub fn input(&mut self, event: Event) -> Result<SnapshotResult> {
+    pub fn summary(&mut self) -> Result<PopUpTable> {
+        // Compute and show summary
+        self.compute_summary(self.tree_id)?;
+        let header = format!("{}:{}", self.snapshot.id, self.path.display());
+        let mut stats = self
+            .summary_map
+            .compute_statistics(&self.tree.nodes, self.repo)?;
+        // Current dir
+        stats.summary.dirs += 1;
+
+        let rows = stats.table(header);
+        Ok(popup_table("summary", rows))
+    }
+
+    pub fn summary_selected(&mut self) -> Result<Option<PopUpTable>> {
+        let Some(selected) = self.table.widget.selected() else {
+            return Ok(None);
+        };
+        // Compute and show summary
+        self.compute_summary(self.tree_id)?;
+        let node = &self.tree.nodes[selected];
+        let header = format!(
+            "{}:{}",
+            self.snapshot.id,
+            self.path.join(node.name()).display()
+        );
+        let stats = self.summary_map.compute_statistics(Some(node), self.repo)?;
+
+        let rows = stats.table(header);
+        Ok(Some(popup_table("summary", rows)))
+    }
+}
+
+impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Ls<'a, P, S> {
+    type Result = Result<LsResult>;
+    fn input(&mut self, event: Event) -> Result<LsResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
         match &mut self.current_screen {
-            CurrentScreen::Snapshot => match event {
+            CurrentScreen::Ls => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
                     Enter | Right => self.enter()?,
                     Backspace | Left => {
-                        if self.goback() {
-                            return Ok(SnapshotResult::Return(std::mem::take(
-                                &mut self.summary_map,
-                            )));
+                        if self.in_root() {
+                            self.current_screen = CurrentScreen::PromptLeave(popup_prompt(
+                                "leave ls",
+                                "do you want to leave the ls view? (y/n)".into(),
+                            ));
+                        } else {
+                            self.goback();
                         }
                     }
                     Esc | Char('q') => {
@@ -251,7 +312,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
                             CurrentScreen::ShowHelp(popup_text("help", HELP_TEXT.into()));
                     }
                     Char('n') => self.toggle_numeric(),
-                    Char('s') => self.compute_sizes()?,
+                    Char('s') => {
+                        self.current_screen = CurrentScreen::Table(self.summary()?);
+                    }
+                    Char('S') => {
+                        if let Some(table) = self.summary_selected()? {
+                            self.current_screen = CurrentScreen::Table(table);
+                        }
+                    }
                     Char('v') => {
                         // viewing is not supported on cold repositories
                         if self.repo.config().is_hot != Some(true) {
@@ -309,33 +377,42 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
             },
             CurrentScreen::ShowFile(prompt) => match prompt.input(event) {
                 TextInputResult::Cancel | TextInputResult::Input(_) => {
-                    self.current_screen = CurrentScreen::Snapshot;
+                    self.current_screen = CurrentScreen::Ls;
                 }
                 TextInputResult::None => {}
             },
-            CurrentScreen::ShowHelp(_) => match event {
+            CurrentScreen::Table(_) | CurrentScreen::ShowHelp(_) => match event {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     if matches!(key.code, Char('q' | ' ' | '?') | Esc | Enter) {
-                        self.current_screen = CurrentScreen::Snapshot;
+                        self.current_screen = CurrentScreen::Ls;
                     }
                 }
                 _ => {}
             },
             CurrentScreen::Restore(restore) => {
                 if restore.input(event)? {
-                    self.current_screen = CurrentScreen::Snapshot;
+                    self.current_screen = CurrentScreen::Ls;
                 }
             }
             CurrentScreen::PromptExit(prompt) => match prompt.input(event) {
-                PromptResult::Ok => return Ok(SnapshotResult::Exit),
-                PromptResult::Cancel => self.current_screen = CurrentScreen::Snapshot,
+                PromptResult::Ok => return Ok(LsResult::Exit),
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Ls,
+                PromptResult::None => {}
+            },
+            CurrentScreen::PromptLeave(prompt) => match prompt.input(event) {
+                PromptResult::Ok => {
+                    return Ok(LsResult::Return(std::mem::take(&mut self.summary_map)));
+                }
+                PromptResult::Cancel => self.current_screen = CurrentScreen::Ls,
                 PromptResult::None => {}
             },
         }
-        Ok(SnapshotResult::None)
+        Ok(LsResult::None)
     }
+}
 
-    pub fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
+impl<'a, P: ProgressBars, S: IndexedFull> Draw for Ls<'a, P, S> {
+    fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
         if let CurrentScreen::Restore(restore) = &mut self.current_screen {
@@ -355,9 +432,12 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshot<'a, P, S> {
 
         // draw popups
         match &mut self.current_screen {
-            CurrentScreen::Snapshot | CurrentScreen::Restore(_) => {}
+            CurrentScreen::Ls | CurrentScreen::Restore(_) => {}
+            CurrentScreen::Table(popup) => popup.draw(area, f),
             CurrentScreen::ShowHelp(popup) => popup.draw(area, f),
-            CurrentScreen::PromptExit(popup) => popup.draw(area, f),
+            CurrentScreen::PromptExit(popup) | CurrentScreen::PromptLeave(popup) => {
+                popup.draw(area, f);
+            }
             CurrentScreen::ShowFile(popup) => popup.draw(area, f),
         }
     }

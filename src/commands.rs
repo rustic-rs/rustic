@@ -22,6 +22,7 @@ pub(crate) mod prune;
 pub(crate) mod repair;
 pub(crate) mod repoinfo;
 pub(crate) mod restore;
+pub(crate) mod rewrite;
 pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
@@ -32,9 +33,7 @@ pub(crate) mod tui;
 pub(crate) mod webdav;
 
 use std::fmt::Debug;
-use std::fs::File;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::mpsc::channel;
 
 #[cfg(feature = "mount")]
@@ -48,15 +47,14 @@ use crate::{
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
         forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
         prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
-        self_update::SelfUpdateCmd, show_config::ShowConfigCmd, snapshots::SnapshotCmd,
-        tag::TagCmd,
+        rewrite::RewriteCmd, self_update::SelfUpdateCmd, show_config::ShowConfigCmd,
+        snapshots::SnapshotCmd, tag::TagCmd,
     },
     config::RusticConfig,
 };
 
 use abscissa_core::{
-    Command, Configurable, FrameworkError, FrameworkErrorKind, Runnable, Shutdown,
-    config::Override, terminal::ColorChoice,
+    Command, Configurable, FrameworkError, FrameworkErrorKind, Runnable, Shutdown, config::Override,
 };
 use anyhow::Result;
 use clap::builder::{
@@ -67,7 +65,6 @@ use convert_case::{Case, Casing};
 use human_panic::setup_panic;
 use log::{Level, info, log};
 use reqwest::Url;
-use simplelog::{CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 
 use self::find::FindCmd;
 
@@ -142,6 +139,9 @@ enum RusticCmd {
 
     /// Restore (a path within) a snapshot
     Restore(Box<RestoreCmd>),
+
+    /// Rewrite existing snapshot(s)
+    Rewrite(Box<RewriteCmd>),
 
     /// Repair a snapshot or the repository index
     Repair(Box<RepairCmd>),
@@ -266,51 +266,15 @@ impl Configurable<RusticConfig> for EntryPoint {
         }
 
         // start logger
-        let level_filter = match &config.global.log_level {
-            Some(level) => LevelFilter::from_str(level)
-                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
-            None => LevelFilter::Info,
-        };
-        let term_config = simplelog::ConfigBuilder::new()
-            .set_time_level(LevelFilter::Off)
-            .build();
-        match &config.global.log_file {
-            None => TermLogger::init(
-                level_filter,
-                term_config,
-                TerminalMode::Stderr,
-                ColorChoice::Auto,
-            )
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?,
+        config
+            .global
+            .logging_options
+            .start_logger(config.global.dry_run)
+            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
 
-            Some(file) => {
-                let file_config = simplelog::ConfigBuilder::new()
-                    .set_time_format_rfc3339()
-                    .build();
-                let file = File::options()
-                    .create(true)
-                    .append(true)
-                    .open(file)
-                    .map_err(|e| {
-                        FrameworkErrorKind::PathError {
-                            name: Some(file.clone()),
-                        }
-                        .context(e)
-                    })?;
-                let term_logger = TermLogger::new(
-                    level_filter.min(LevelFilter::Warn),
-                    term_config,
-                    TerminalMode::Stderr,
-                    ColorChoice::Auto,
-                );
-                CombinedLogger::init(vec![
-                    term_logger,
-                    WriteLogger::new(level_filter, file_config, file),
-                ])
-                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
-                info!("rustic {}", version());
-                info!("command: {:?}", std::env::args_os().collect::<Vec<_>>());
-            }
+        if config.global.logging_options.log_file.is_some() {
+            info!("rustic {}", version());
+            info!("command: {:?}", std::env::args_os().collect::<Vec<_>>());
         }
 
         // display logs from merging

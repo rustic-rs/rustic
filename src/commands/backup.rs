@@ -18,7 +18,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Context, Result, anyhow, bail};
 use clap::ValueHint;
 use comfy_table::Cell;
-use conflate::Merge;
+use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
 use rustic_core::StringList;
 use serde::{Deserialize, Serialize};
@@ -47,6 +47,16 @@ pub struct BackupCmd {
     #[merge(skip)]
     #[serde(skip)]
     cli_sources: Vec<String>,
+
+    /// Backup sources defined in the config profile by the given name (can be specified multiple times)
+    #[clap(long = "name", value_name = "NAME", conflicts_with = "cli_sources")]
+    #[merge(skip)]
+    #[serde(skip)]
+    cli_name: Vec<String>,
+
+    #[clap(skip)]
+    #[merge(skip)]
+    name: Option<String>,
 
     /// Set filename to be used when backing up from stdin
     #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
@@ -82,11 +92,6 @@ pub struct BackupCmd {
     #[clap(long, conflicts_with = "json")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     long: bool,
-
-    /// Don't show any output
-    #[clap(long, conflicts_with_all = ["json", "long"])]
-    #[merge(strategy=conflate::bool::overwrite_false)]
-    quiet: bool,
 
     /// Initialize repository, if it doesn't exist yet
     #[clap(long)]
@@ -127,7 +132,7 @@ pub struct BackupCmd {
     /// Backup snapshots to generate
     #[clap(skip)]
     #[merge(strategy = merge_snapshots)]
-    snapshots: Vec<BackupCmd>,
+    snapshots: Vec<Self>,
 
     /// Backup source, used within config file
     #[clap(skip)]
@@ -145,6 +150,27 @@ pub struct BackupCmd {
     metrics_labels: BTreeMap<String, String>,
 }
 
+impl BackupCmd {
+    fn validate(&self) -> Result<(), &str> {
+        // manually check for a "source" field, check is not done by serde, see above.
+        if !self.sources.is_empty() {
+            return Err("key \"sources\" is not valid in the [backup] section!");
+        }
+
+        // manually check for a "name" field, check is not done by serde, see above.
+        if self.name.is_some() {
+            return Err("key \"name\" is not valid in the [backup] section!");
+        }
+
+        let snapshot_opts = &self.snapshots;
+        // manually check for a "sources" field, check is not done by serde, see above.
+        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
+            return Err("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
+        }
+        Ok(())
+    }
+}
+
 /// Merge backup snapshots to generate
 ///
 /// If a snapshot is already defined on left, use that. Else add it.
@@ -153,27 +179,25 @@ pub struct BackupCmd {
 ///
 /// * `left` - Vector of backup sources
 pub(crate) fn merge_snapshots(left: &mut Vec<BackupCmd>, mut right: Vec<BackupCmd>) {
+    let order = |opt1: &BackupCmd, opt2: &BackupCmd| {
+        opt1.name
+            .cmp(&opt2.name)
+            .then(opt1.sources.cmp(&opt2.sources))
+    };
+
     left.append(&mut right);
-    left.sort_by(|opt1, opt2| opt1.sources.cmp(&opt2.sources));
-    left.dedup_by(|opt1, opt2| opt1.sources == opt2.sources);
+    left.sort_by(order);
+    left.dedup_by(|opt1, opt2| order(opt1, opt2).is_eq());
 }
 
 impl Runnable for BackupCmd {
     fn run(&self) {
         let config = RUSTIC_APP.config();
-
-        // manually check for a "source" field, check is not done by serde, see above.
-        if !config.backup.sources.is_empty() {
-            status_err!("key \"sources\" is not valid in the [backup] section!");
+        if let Err(err) = config.backup.validate() {
+            status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
-        let snapshot_opts = &config.backup.snapshots;
-        // manually check for a "sources" field, check is not done by serde, see above.
-        if snapshot_opts.iter().any(|opt| !opt.snapshots.is_empty()) {
-            status_err!("key \"snapshots\" is not valid in a [[backup.snapshots]] section!");
-            RUSTIC_APP.shutdown(Shutdown::Crash);
-        }
         if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -184,7 +208,6 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let snapshot_opts = &config.backup.snapshots;
 
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if self.init && repo.config_id()?.is_none() {
@@ -207,54 +230,8 @@ impl BackupCmd {
         );
 
         hooks.use_with(|| -> Result<_> {
-            let config_snapshot_sources: Vec<_> = snapshot_opts
-                .iter()
-                .map(|opt| -> Result<_> {
-                    Ok(PathList::from_iter(&opt.sources)
-                        .sanitize()
-                        .with_context(|| {
-                            format!(
-                                "error sanitizing sources=\"{:?}\" in config file",
-                                opt.sources
-                            )
-                        })?
-                        .merge())
-                })
-                .filter_map(|p| match p {
-                    Ok(paths) => Some(paths),
-                    Err(err) => {
-                        warn!("{err}");
-                        None
-                    }
-                })
-                .collect();
-
-            let snapshot_sources = match (self.cli_sources.is_empty(), snapshot_opts.is_empty()) {
-                (false, _) => {
-                    let item = PathList::from_iter(&self.cli_sources).sanitize()?;
-                    vec![item]
-                }
-                (true, false) => {
-                    info!("using all backup sources from config file.");
-                    config_snapshot_sources.clone()
-                }
-                (true, true) => {
-                    bail!("no backup source given.");
-                }
-            };
-            if snapshot_sources.is_empty() {
-                return Ok(());
-            }
-
             let mut is_err = false;
-            for sources in snapshot_sources {
-                let mut opts = self.clone();
-
-                // merge Options from config file, if given
-                if let Some(idx) = config_snapshot_sources.iter().position(|s| s == &sources) {
-                    info!("merging sources={sources} section from config file");
-                    opts.merge(snapshot_opts[idx].clone());
-                }
+            for (opts, sources) in self.get_snapshots_to_backup()? {
                 if let Err(err) = opts.backup_snapshot(sources.clone(), &repo) {
                     error!("error backing up {sources}: {err}");
                     is_err = true;
@@ -266,6 +243,45 @@ impl BackupCmd {
                 Ok(())
             }
         })
+    }
+
+    fn get_snapshots_to_backup(&self) -> Result<Vec<(Self, PathList)>> {
+        let config = RUSTIC_APP.config();
+        let mut config_snapshots = config
+            .backup
+            .snapshots
+            .iter()
+            .map(|opt| (opt.clone(), PathList::from_iter(&opt.sources)));
+
+        if !self.cli_sources.is_empty() {
+            let sources = PathList::from_iter(&self.cli_sources);
+            let mut opts = self.clone();
+            // merge Options from config file, if given
+            if let Some((config_opts, _)) = config_snapshots.find(|(_, s)| s == &sources) {
+                info!("merging sources={sources} section from config file");
+                opts.merge(config_opts);
+            }
+            return Ok(vec![(opts, sources)]);
+        }
+
+        let config_snapshots: Vec<_> = config_snapshots
+            // filter out using cli_name, if given
+            .filter(|(opt, _)| {
+                self.cli_name.is_empty()
+                    || opt
+                        .name
+                        .as_ref()
+                        .is_some_and(|name| self.cli_name.contains(name))
+            })
+            .map(|(opt, sources)| (self.clone().merge_from(opt), sources))
+            .collect();
+
+        if config_snapshots.is_empty() {
+            bail!("no backup source given.");
+        }
+
+        info!("using backup sources from config file.");
+        Ok(config_snapshots)
     }
 
     fn hooks(&self, hooks: &Hooks, action: &str, source: impl Display) -> Hooks {
@@ -329,17 +345,26 @@ impl BackupCmd {
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 
+        // use global group-by if not set
+        let mut parent_opts = self.parent_opts;
+        parent_opts.group_by = parent_opts.group_by.or(config.global.group_by);
+
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename)
             .stdin_command(self.stdin_command)
             .as_path(self.as_path)
-            .parent_opts(self.parent_opts)
+            .parent_opts(parent_opts)
             .ignore_save_opts(self.ignore_save_opts)
             .ignore_filter_opts(self.ignore_filter_opts)
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);
 
         let snap = hooks.use_with(|| -> Result<_> {
+            let source = source
+                .clone()
+                .sanitize()
+                .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
+                .merge();
             Ok(repo.backup(&backup_opts, &source, self.snap_opts.to_snapshot()?)?)
         })?;
 
@@ -355,7 +380,7 @@ impl BackupCmd {
             fill_table(&snap, add_entry);
 
             println!("{table}");
-        } else if !self.quiet {
+        } else {
             let summary = snap.summary.as_ref().unwrap();
             info!(
                 "Files:       {} new, {} changed, {} unchanged",
@@ -420,7 +445,7 @@ fn publish_metrics(
         Metric {
             name: "rustic_backup_time",
             description: "Timestamp of this snapshot",
-            value: Float(snap.time.timestamp_millis() as f64 / 1000.),
+            value: Float(snap.time.timestamp().as_millisecond() as f64 / 1000.),
         },
         Metric {
             name: "rustic_backup_files_new",
@@ -515,12 +540,12 @@ fn publish_metrics(
         Metric {
             name: "rustic_backup_backup_start",
             description: "Start time of the backup. This may differ from the snapshot `time`.",
-            value: Float(summary.backup_start.timestamp_millis() as f64 / 1000.),
+            value: Float(summary.backup_start.timestamp().as_millisecond() as f64 / 1000.),
         },
         Metric {
             name: "rustic_backup_backup_end",
             description: "The time that the backup has been finished.",
-            value: Float(summary.backup_end.timestamp_millis() as f64 / 1000.),
+            value: Float(summary.backup_end.timestamp().as_millisecond() as f64 / 1000.),
         },
         Metric {
             name: "rustic_backup_backup_duration",

@@ -12,11 +12,14 @@ use std::{
 use anyhow::{anyhow, bail};
 use bytesize::ByteSize;
 use derive_more::derive::Display;
+use jiff::{Zoned, civil::Time, tz::TimeZone};
 use log::warn;
-use rustic_core::{StringList, repofile::SnapshotFile};
+use rustic_core::{
+    StringList,
+    repofile::{RusticTime, SnapshotFile},
+};
 
 use cached::proc_macro::cached;
-use chrono::{DateTime, Local, NaiveTime};
 use conflate::Merge;
 
 #[cfg(feature = "jq")]
@@ -90,11 +93,11 @@ pub(crate) struct SnapshotJq(Filter<Native<Val>>);
 impl FromStr for SnapshotJq {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let programm = File { code: s, path: () };
+        let program = File { code: s, path: () };
         let loader = Loader::new(jaq_std::defs().chain(jaq_json::defs()));
         let arena = Arena::default();
         let modules = loader
-            .load(&arena, programm)
+            .load(&arena, program)
             .map_err(|errs| anyhow!("errors loading modules in jq: {errs:?}"))?;
         let filter = Compiler::<_, Native<_>>::default()
             .with_funs(jaq_std::funs().chain(jaq_json::funs()))
@@ -201,6 +204,12 @@ pub struct SnapshotFilter {
     #[merge(strategy=conflate::option::overwrite_none)]
     filter_size_added: Option<SizeRange>,
 
+    /// Only use the last COUNT snapshots for each group
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, value_name = "COUNT")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    filter_last: Option<usize>,
+
     /// Function to filter snapshots
     #[cfg(feature = "rhai")]
     #[clap(long, global = true, value_name = "FUNC")]
@@ -268,8 +277,8 @@ impl SnapshotFilter {
         }
 
         // For the `Option`s we check if the option is set and the condition is not matched. In this case we can early return false.
-        if matches!(&self.filter_after, Some(after) if !after.matches(snapshot.time))
-            || matches!(&self.filter_before, Some(before) if !before.matches(snapshot.time))
+        if matches!(&self.filter_after, Some(after) if !after.matches(&snapshot.time))
+            || matches!(&self.filter_before, Some(before) if !before.matches(&snapshot.time))
             || matches!((&self.filter_size,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.total_bytes_processed))
             || matches!((&self.filter_size_added,&snapshot.summary), (Some(size),Some(summary)) if !size.matches(summary.data_added))
         {
@@ -291,31 +300,40 @@ impl SnapshotFilter {
             && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
             && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
     }
+
+    pub fn post_process(&self, snapshots: &mut Vec<SnapshotFile>) {
+        snapshots.sort_unstable();
+        if let Some(last) = self.filter_last {
+            let count = snapshots.len();
+            if last < count {
+                let new = snapshots.split_off(count - last);
+                let _ = std::mem::replace(snapshots, new);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Display)]
-struct AfterDate(DateTime<Local>);
+struct AfterDate(Zoned);
 
 impl AfterDate {
-    fn matches(&self, datetime: DateTime<Local>) -> bool {
-        self.0 < datetime
+    fn matches(&self, datetime: &Zoned) -> bool {
+        &self.0 < datetime
     }
 }
 
 impl FromStr for AfterDate {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let before_midnight = NaiveTime::from_hms_nano_opt(23, 59, 59, 999_999_999).unwrap();
-        let datetime = dateparser::parse_with(s, &Local, before_midnight)?;
-        Ok(Self(datetime.into()))
+        Ok(Self(RusticTime::parse(s, Time::MAX, TimeZone::system())?))
     }
 }
 
 #[derive(Debug, Clone, Display)]
-struct BeforeDate(DateTime<Local>);
+struct BeforeDate(Zoned);
 
 impl BeforeDate {
-    fn matches(&self, datetime: DateTime<Local>) -> bool {
+    fn matches(&self, datetime: &Zoned) -> bool {
         datetime < self.0
     }
 }
@@ -323,9 +341,7 @@ impl BeforeDate {
 impl FromStr for BeforeDate {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let midnight = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-        let datetime = dateparser::parse_with(s, &Local, midnight)?;
-        Ok(Self(datetime.into()))
+        Ok(Self(RusticTime::parse_system(s)?))
     }
 }
 
@@ -367,11 +383,11 @@ impl FromStr for SizeRange {
 impl Display for SizeRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(from) = self.from {
-            f.write_str(&from.to_string_as(true))?;
+            Display::fmt(&from.display(), f)?;
         }
         f.write_str("..")?;
         if let Some(to) = self.to {
-            f.write_str(&to.to_string_as(true))?;
+            Display::fmt(&to.display(), f)?;
         }
 
         Ok(())

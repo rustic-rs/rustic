@@ -1,11 +1,14 @@
 //! `merge` subcommand
 
-use crate::{Application, RUSTIC_APP, repository::CliOpenRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP,
+    repository::{CliOpenRepo, get_filtered_snapshots},
+    status_err,
+};
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
+use jiff::Zoned;
 use log::info;
-
-use chrono::Local;
 
 use rustic_core::{SnapshotOptions, last_modified_node, repofile::SnapshotFile};
 
@@ -48,7 +51,7 @@ impl MergeCmd {
         let repo = repo.to_indexed_ids()?;
 
         let snapshots = if self.ids.is_empty() {
-            repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
+            get_filtered_snapshots(&repo)?
         } else {
             repo.get_snapshots_from_strs(&self.ids, |_| true)?
         };
@@ -69,11 +72,11 @@ impl MergeCmd {
         info!("saved new snapshot as {}.", snap.id);
 
         if self.delete {
-            let now = Local::now();
+            let now = Zoned::now();
             // TODO: Maybe use this check in repo.delete_snapshots?
             let snap_ids: Vec<_> = snapshots
                 .iter()
-                .filter(|sn| !sn.must_keep(now))
+                .filter(|sn| !sn.must_keep(&now))
                 .map(|sn| sn.id)
                 .collect();
             repo.delete_snapshots(&snap_ids)?;

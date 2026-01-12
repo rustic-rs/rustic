@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, bail};
 use log::debug;
-use prometheus::register_gauge;
+use prometheus::{Registry, register_gauge_with_registry};
 use reqwest::Url;
 use std::collections::BTreeMap;
 
@@ -21,8 +21,10 @@ impl MetricsExporter for PrometheusExporter {
         use prometheus::{Encoder, ProtobufEncoder};
         use reqwest::{StatusCode, blocking::Client, header::CONTENT_TYPE};
 
+        let registry = Registry::new();
+
         for metric in metrics {
-            let gauge = register_gauge!(metric.name, metric.description,)
+            let gauge = register_gauge_with_registry!(metric.name, metric.description, registry)
                 .context("registering prometheus gauge")?;
 
             gauge.set(match metric.value {
@@ -31,7 +33,7 @@ impl MetricsExporter for PrometheusExporter {
             });
         }
 
-        let (full_url, encoded_metrics) = self.make_url_and_encoded_metrics()?;
+        let (full_url, encoded_metrics) = self.make_url_and_encoded_metrics(&registry)?;
 
         debug!("using url: {full_url}");
 
@@ -64,7 +66,7 @@ impl MetricsExporter for PrometheusExporter {
 
 impl PrometheusExporter {
     // TODO: This should be actually part of the prometheus crate, see https://github.com/tikv/rust-prometheus/issues/536
-    fn make_url_and_encoded_metrics(&self) -> Result<(Url, Vec<u8>)> {
+    fn make_url_and_encoded_metrics(&self, registry: &Registry) -> Result<(Url, Vec<u8>)> {
         use base64::prelude::*;
         use prometheus::{Encoder, ProtobufEncoder};
 
@@ -87,7 +89,7 @@ impl PrometheusExporter {
 
         let encoder = ProtobufEncoder::new();
         let mut buf = Vec::new();
-        for mf in prometheus::gather() {
+        for mf in registry.gather() {
             // Note: We don't check here for pre-existing grouping labels, as we don't set them
 
             // Ignore error, `no metrics` and `no name`.
@@ -121,7 +123,7 @@ fn test_make_url_and_encoded_metrics() -> Result<()> {
         prometheus_pass: None,
     };
 
-    let (url, _) = exporter.make_url_and_encoded_metrics()?;
+    let (url, _) = exporter.make_url_and_encoded_metrics(&Registry::new())?;
     assert_eq!(
         url.to_string(),
         "http://host/metrics/job@base64/dGVzdF9qb2I/abc@base64/eHl6/path@base64/L215L3BhdGg/tags@base64/YSxiLGNkZQ"

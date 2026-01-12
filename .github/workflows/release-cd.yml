@@ -1,6 +1,7 @@
 name: Continuous Deployment (Release)
 
 on:
+  workflow_dispatch:
   push:
     tags:
       # Run on stable releases
@@ -42,7 +43,7 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
-          - os: macos-13
+          - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin
             architecture: x86_64
@@ -84,12 +85,12 @@ jobs:
             architecture: i686
             binary-postfix: ""
             use-cross: true
-          - os: ubuntu-latest
-            os-name: netbsd
-            target: x86_64-unknown-netbsd
-            architecture: x86_64
-            binary-postfix: ""
-            use-cross: true
+          # - os: ubuntu-latest
+          #   os-name: netbsd
+          #   target: x86_64-unknown-netbsd
+          #   architecture: x86_64
+          #   binary-postfix: ""
+          #   use-cross: true
           - os: ubuntu-latest
             os-name: linux
             target: armv7-unknown-linux-gnueabihf

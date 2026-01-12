@@ -5,6 +5,7 @@
 //! for specifying it.
 
 pub(crate) mod hooks;
+pub(crate) mod logging;
 pub(crate) mod progress_options;
 
 use std::{
@@ -13,14 +14,16 @@ use std::{
     path::PathBuf,
 };
 
-use abscissa_core::{FrameworkError, config::Config, path::AbsPathBuf};
+use abscissa_core::{FrameworkError, FrameworkErrorKind, config::Config, path::AbsPathBuf};
 use anyhow::{Result, anyhow};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
 use directories::ProjectDirs;
 use itertools::Itertools;
+use jiff::{Timestamp, Zoned, tz::TimeZone};
 use log::Level;
 use reqwest::Url;
+use rustic_core::SnapshotGroupCriterion;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 #[cfg(not(all(feature = "mount", feature = "webdav")))]
@@ -33,7 +36,7 @@ use crate::commands::webdav::WebDavCmd;
 
 use crate::{
     commands::{backup::BackupCmd, copy::CopyCmd, forget::ForgetOptions},
-    config::{hooks::Hooks, progress_options::ProgressOptions},
+    config::{hooks::Hooks, logging::LoggingOptions, progress_options::ProgressOptions},
     filtering::SnapshotFilter,
     repository::AllRepositoryOptions,
 };
@@ -119,7 +122,18 @@ impl RusticConfig {
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
-            let mut config = Self::load_toml_file(AbsPathBuf::canonicalize(path)?)?;
+            let config_content = std::fs::read_to_string(AbsPathBuf::canonicalize(path)?)?;
+            let config_content = if self.global.profile_substitute_env {
+                subst::substitute(&config_content, &subst::Env).map_err(|e| {
+                    abscissa_core::error::context::Context::new(
+                        FrameworkErrorKind::ParseError,
+                        Some(Box::new(e)),
+                    )
+                })?
+            } else {
+                config_content
+            };
+            let mut config = Self::load_toml(config_content)?;
             // if "use_profile" is defined in config file, merge the referenced profiles first
             for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, merge_logs, Level::Warn)?;
@@ -146,6 +160,11 @@ impl RusticConfig {
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
+    /// Substitute environment variables in profiles
+    #[clap(long, global = true, env = "RUSTIC_PROFILE_SUBSTITUTE_ENV")]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub profile_substitute_env: bool,
+
     /// Config profile to use. This parses the file `<PROFILE>.toml` in the config directory.
     /// [default: "rustic"]
     #[clap(
@@ -158,29 +177,37 @@ pub struct GlobalOptions {
     #[merge(strategy=conflate::vec::append)]
     pub use_profiles: Vec<String>,
 
+    /// Group snapshots by any combination of host,label,paths,tags, e.g. to find the latest snapshot [default: "host,label,paths"]
+    #[clap(
+        long,
+        short = 'g',
+        global = true,
+        value_name = "CRITERION",
+        env = "RUSTIC_GROUP_BY"
+    )]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    pub group_by: Option<SnapshotGroupCriterion>,
+
     /// Only show what would be done without modifying anything. Does not affect read-only commands.
     #[clap(long, short = 'n', global = true, env = "RUSTIC_DRY_RUN")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub dry_run: bool,
+
+    /// Additional to dry run, but still issue warm-up command if configured
+    #[clap(long, global = true, env = "RUSTIC_DRY_RUN_WARMUP")]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub dry_run_warmup: bool,
 
     /// Check if index matches pack files and read pack headers if necessary
     #[clap(long, global = true, env = "RUSTIC_CHECK_INDEX")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub check_index: bool,
 
-    /// Use this log level [default: info]
-    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
-    #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_level: Option<String>,
-
-    /// Write log messages to the given file instead of printing them.
-    ///
-    /// # Note
-    ///
-    /// Warnings and errors are still additionally printed unless they are ignored by `--log-level`
-    #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
-    #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_file: Option<PathBuf>,
+    /// Settings to customize logging
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub logging_options: LoggingOptions,
 
     /// Settings to customize progress bars
     #[clap(flatten)]
@@ -222,6 +249,11 @@ pub struct GlobalOptions {
     #[clap(long, global = true, env = "RUSTIC_OTEL", value_name = "ENDPOINT_URL", value_hint = ValueHint::Url)]
     #[merge(strategy=conflate::option::overwrite_none)]
     pub opentelemetry: Option<Url>,
+
+    /// Show time offsets instead of converting to system time zone
+    #[clap(long, global = true, env = "RUSTIC_SHOW_TIME_OFFSET")]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub show_time_offset: bool,
 }
 
 pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
@@ -242,6 +274,24 @@ pub fn parse_labels(s: &str) -> Result<BTreeMap<String, String>> {
 impl GlobalOptions {
     pub fn is_metrics_configured(&self) -> bool {
         self.prometheus.is_some() || self.opentelemetry.is_some()
+    }
+
+    pub fn format_timestamp(&self, timestamp: Timestamp) -> String {
+        self.format_time(&timestamp.to_zoned(TimeZone::UTC))
+            .to_string()
+    }
+
+    pub fn format_time(&self, time: &Zoned) -> impl Display {
+        if self.show_time_offset {
+            time.strftime("%Y-%m-%d %H:%M:%S%z")
+        } else {
+            let tz = TimeZone::system();
+            if time.offset() == tz.to_offset(time.timestamp()) {
+                time.strftime("%Y-%m-%d %H:%M:%S")
+            } else {
+                time.with_time_zone(tz).strftime("%Y-%m-%d %H:%M:%S*")
+            }
+        }
     }
 }
 

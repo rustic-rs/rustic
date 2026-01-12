@@ -173,8 +173,12 @@ pub fn print_index_info(index_info: IndexInfos) {
         _ = table.add_row([
             format!("{:?} packs", packs.blob_type),
             packs.count.to_string(),
-            packs.min_size.map_or("-".to_string(), bytes_size_to_string),
-            packs.max_size.map_or("-".to_string(), bytes_size_to_string),
+            packs
+                .min_size
+                .map_or_else(|| "-".to_string(), bytes_size_to_string),
+            packs
+                .max_size
+                .map_or_else(|| "-".to_string(), bytes_size_to_string),
         ]);
     }
     for packs in index_info.packs_delete {
@@ -182,8 +186,12 @@ pub fn print_index_info(index_info: IndexInfos) {
             _ = table.add_row([
                 format!("{:?} packs to delete", packs.blob_type),
                 packs.count.to_string(),
-                packs.min_size.map_or("-".to_string(), bytes_size_to_string),
-                packs.max_size.map_or("-".to_string(), bytes_size_to_string),
+                packs
+                    .min_size
+                    .map_or_else(|| "-".to_string(), bytes_size_to_string),
+                packs
+                    .max_size
+                    .map_or_else(|| "-".to_string(), bytes_size_to_string),
             ]);
         }
     }

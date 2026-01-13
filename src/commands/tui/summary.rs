@@ -240,8 +240,8 @@ impl Sizes {
                 let ie = ie?;
                 Ok(Self {
                     blobs: sum.blobs + 1,
-                    repo_size: sum.repo_size + u64::from(ie.length),
-                    dedup_size: sum.dedup_size + u64::from(ie.data_length()),
+                    repo_size: sum.repo_size + u64::from(ie.location.length),
+                    dedup_size: sum.dedup_size + u64::from(ie.location.data_length()),
                 })
             })
     }

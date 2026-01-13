@@ -52,8 +52,8 @@ impl ListCmd {
                                         blob.tpe,
                                         blob.id,
                                         pack.id,
-                                        blob.length,
-                                        blob.uncompressed_length.map_or(0, NonZero::get)
+                                        blob.location.length,
+                                        blob.location.uncompressed_length.map_or(0, NonZero::get)
                                     );
                                 }
                             }

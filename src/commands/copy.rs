@@ -4,7 +4,7 @@ use crate::{
     Application, RUSTIC_APP, RusticConfig,
     commands::init::init_password,
     helpers::table_with_titles,
-    repository::{CliIndexedRepo, CliRepo, get_filtered_snapshots},
+    repository::{CliIndexedRepo, CliRepo, get_snapots_from_ids},
     status_err,
 };
 use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
@@ -76,11 +76,8 @@ impl Runnable for CopyCmd {
 impl CopyCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let mut snapshots = if self.ids.is_empty() {
-            get_filtered_snapshots(&repo)?
-        } else {
-            repo.get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
-        };
+        let config = config;
+        let mut snapshots = get_snapots_from_ids(&repo, &self.ids)?;
         // sort for nicer output
         snapshots.sort_unstable();
 

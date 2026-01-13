@@ -7,8 +7,9 @@ use crate::commands::rewrite::RewriteCmd;
 /// `tag` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct TagCmd {
-    /// Snapshots to change tags. If none is given, use filter to filter from all
-    /// snapshots.
+    /// Snapshots to change tags. If none is given, use filter to filter from all snapshots
+    ///
+    /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     ids: Vec<String>,
 

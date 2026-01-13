@@ -18,6 +18,8 @@ use rustic_core::{StringList, repofile::DeleteOption};
 #[derive(clap::Parser, Command, Debug, Default)]
 pub(crate) struct RewriteCmd {
     /// Snapshots to rewrite. If none is given, use filter to filter from all snapshots.
+    ///
+    /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     pub ids: Vec<String>,
 
@@ -112,7 +114,7 @@ impl RewriteCmd {
         let snapshots = if self.ids.is_empty() {
             get_filtered_snapshots(&repo)?
         } else {
-            repo.get_snapshots(&self.ids)?
+            repo.get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
         };
 
         let delete = match (

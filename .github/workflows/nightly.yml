@@ -37,6 +37,12 @@ jobs:
             architecture: x86_64
             binary-postfix: ".exe"
             use-cross: false
+          - os: windows-latest
+            os-name: windows
+            target: x86_64-win7-windows-msvc
+            architecture: x86_64
+            binary-postfix: ".exe"
+            use-cross: true
           - os: macos-latest
             os-name: macos
             target: x86_64-apple-darwin

@@ -5,7 +5,7 @@ use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
 use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
 use itertools::{EitherOrBoth, Itertools};
-use log::debug;
+use log::{debug, info};
 
 use std::{
     cmp::Ordering,
@@ -78,11 +78,12 @@ impl DiffCmd {
     fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let (id1, path1) = arg_to_snap_path(&self.snap1, "");
+        let (id1, path1) = arg_to_snap_path(&self.snap1);
         let (id2, path2) = self
             .snap2
             .as_ref()
-            .map_or((None, path1), |snap2| arg_to_snap_path(snap2, path1));
+            .map_or((None, None), |snap2| arg_to_snap_path(snap2));
+        let self_snap2 = self.snap2.as_ref().map_or("", String::as_str);
 
         match (id1, id2) {
             (Some(id1), Some(id2)) => {
@@ -93,6 +94,12 @@ impl DiffCmd {
 
                 let snap1 = &snaps[0];
                 let snap2 = &snaps[1];
+                let path1 = path1.unwrap_or("");
+                let path2 = path2.unwrap_or(path1);
+                info!(
+                    "comparing {}:{path1} ({}) with {}:{path2} ({self_snap2})",
+                    snap1.id, self.snap1, snap2.id,
+                );
 
                 #[cfg(feature = "tui")]
                 if self.interactive {
@@ -132,6 +139,24 @@ impl DiffCmd {
                 }
                 let snap1 =
                     repo.get_snapshot_from_str(id1, |sn| config.snapshot_filter.matches(sn))?;
+                let (path1, path2) = match (path1, path2) {
+                    (Some(path1), Some(path2)) => (path1, path2),
+                    (None, Some(path2)) => ("", path2),
+                    (Some(""), None) => ("", "."),
+                    (Some(path1), None) => (path1, path1),
+                    (None, None) => {
+                        if snap1.paths.iter().count() == 1 {
+                            let path = snap1.paths.iter().next().unwrap();
+                            (path.as_str(), path.as_str())
+                        } else {
+                            ("", ".")
+                        }
+                    }
+                };
+                info!(
+                    "comparing {}:{path1} ({}) with local dir {path2} ({self_snap2})",
+                    snap1.id, self.snap1
+                );
 
                 let node1 = repo.node_from_snapshot_and_path(&snap1, path1)?;
                 let local = LocalDestination::new(path2, false, !node1.is_dir())?;
@@ -188,20 +213,21 @@ impl DiffCmd {
 /// # Arguments
 ///
 /// * `arg` - argument to split
-/// * `default_path` - default path if no path is given
 ///
 /// # Returns
 ///
 /// A tuple of the snapshot id and the path
-fn arg_to_snap_path<'a>(arg: &'a str, default_path: &'a str) -> (Option<&'a str>, &'a str) {
+fn arg_to_snap_path(arg: &str) -> (Option<&str>, Option<&str>) {
     match arg.split_once(':') {
-        Some(("local", path)) => (None, path),
-        Some((id, path)) => (Some(id), path),
+        Some(("local", path)) => (None, Some(path)),
+        Some((id, path)) => (Some(id), Some(path)),
         None => {
-            if arg.contains('/') {
-                (None, arg)
+            if arg == "local" {
+                (None, None)
+            } else if arg.contains('/') {
+                (None, Some(arg))
             } else {
-                (Some(arg), default_path)
+                (Some(arg), None)
             }
         }
     }

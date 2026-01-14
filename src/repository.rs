@@ -172,6 +172,21 @@ impl<P: Clone + ProgressBars> RusticRepo<P> {
     }
 }
 
+// get snapshots from ids allowing `latest`, if empty use all snapshots respecting the filters.
+pub fn get_snapots_from_ids<P: ProgressBars, S: Open>(
+    repo: &Repository<P, S>,
+    ids: &[String],
+) -> Result<Vec<SnapshotFile>> {
+    let config = RUSTIC_APP.config();
+    let snapshots = if ids.is_empty() {
+        get_filtered_snapshots(repo)?
+    } else {
+        repo.get_snapshots_from_strs(ids, |sn| config.snapshot_filter.matches(sn))?
+    };
+    Ok(snapshots)
+}
+
+// get all snapshots respecting the filters
 pub fn get_filtered_snapshots<P: ProgressBars, S: Open>(
     repo: &Repository<P, S>,
 ) -> Result<Vec<SnapshotFile>> {

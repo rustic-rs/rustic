@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{CliOpenRepo, get_filtered_snapshots},
+    repository::{CliOpenRepo, get_snapots_from_ids},
     status_err,
 };
 
@@ -110,12 +110,7 @@ impl Runnable for RewriteCmd {
 impl RewriteCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-
-        let snapshots = if self.ids.is_empty() {
-            get_filtered_snapshots(&repo)?
-        } else {
-            repo.get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
-        };
+        let snapshots = get_snapots_from_ids(&repo, &self.ids)?;
 
         let delete = match (
             self.remove_delete,

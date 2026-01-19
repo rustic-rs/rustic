@@ -105,11 +105,13 @@ RusticConfig {
             ignore_ctime: false,
             ignore_inode: false,
         },
-        ignore_filter_opts: LocalSourceFilterOptions {
+        excludes: Excludes {
             globs: [],
             iglobs: [],
             glob_files: [],
             iglob_files: [],
+        },
+        ignore_filter_opts: LocalSourceFilterOptions {
             git_ignore: false,
             no_require_git: false,
             custom_ignorefiles: [],

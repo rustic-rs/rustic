@@ -15,7 +15,7 @@ use flate2::{Compression, write::GzEncoder};
 use jiff::tz::TimeZone;
 use log::warn;
 use rustic_core::{
-    LsOptions,
+    Excludes, LsOptions,
     repofile::{Node, NodeType},
     vfs::OpenFile,
 };
@@ -39,21 +39,8 @@ pub(crate) struct DumpCmd {
     #[clap(long)]
     file: Option<PathBuf>,
 
-    /// Glob pattern to exclude/include (can be specified multiple times)
-    #[clap(long, help_heading = "Exclude options")]
-    glob: Vec<String>,
-
-    /// Same as --glob pattern but ignores the casing of filenames
-    #[clap(long, value_name = "GLOB", help_heading = "Exclude options")]
-    iglob: Vec<String>,
-
-    /// Read glob patterns to exclude/include from this file (can be specified multiple times)
-    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
-    glob_file: Vec<String>,
-
-    /// Same as --glob-file ignores the casing of filenames in patterns
-    #[clap(long, value_name = "FILE", help_heading = "Exclude options")]
-    iglob_file: Vec<String>,
+    #[clap(flatten, next_help_heading = "Exclude options")]
+    excludes: Excludes,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, FromStr)]
@@ -88,10 +75,7 @@ impl DumpCmd {
         let stdout = std::io::stdout();
 
         let ls_opts = LsOptions::default()
-            .glob(self.glob.clone())
-            .glob_file(self.glob_file.clone())
-            .iglob(self.iglob.clone())
-            .iglob_file(self.iglob_file.clone())
+            .excludes(self.excludes.clone())
             .recursive(true);
 
         let ext = self

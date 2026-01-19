@@ -20,7 +20,7 @@ use clap::ValueHint;
 use comfy_table::Cell;
 use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
-use rustic_core::StringList;
+use rustic_core::{Excludes, StringList};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -105,6 +105,11 @@ pub struct BackupCmd {
 
     /// Exclude options
     #[clap(flatten, next_help_heading = "Exclude options")]
+    #[serde(flatten)]
+    excludes: Excludes,
+
+    /// Exclude options for local source
+    #[clap(flatten, next_help_heading = "Exclude options for local source")]
     #[serde(flatten)]
     ignore_filter_opts: LocalSourceFilterOptions,
 
@@ -355,6 +360,7 @@ impl BackupCmd {
             .as_path(self.as_path)
             .parent_opts(parent_opts)
             .ignore_save_opts(self.ignore_save_opts)
+            .excludes(self.excludes)
             .ignore_filter_opts(self.ignore_filter_opts)
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);

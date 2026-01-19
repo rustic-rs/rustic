@@ -109,51 +109,54 @@ impl SnapshotCmd {
             if !group_key.is_empty() {
                 println!("\nsnapshots for {group_key}");
             }
-            let count = snapshots.len();
-
-            if self.long {
-                for snap in snapshots {
-                    let mut table = table();
-
-                    let add_entry = |title: &str, value: String| {
-                        _ = table.add_row([bold_cell(title), Cell::new(value)]);
-                    };
-                    fill_table(&snap, add_entry);
-
-                    println!("{table}");
-                    println!();
-                }
-            } else {
-                let mut table = table_right_from(
-                    6,
-                    [
-                        "ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
-                    ],
-                );
-
-                if self.all {
-                    // Add all snapshots to output table
-                    _ = table.add_rows(snapshots.into_iter().map(|sn| snap_to_table(&sn, 0)));
-                } else {
-                    // Group snapshts by treeid and output into table
-                    _ = table.add_rows(
-                        snapshots
-                            .into_iter()
-                            .chunk_by(|sn| sn.tree)
-                            .into_iter()
-                            .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count())),
-                    );
-                }
-                println!("{table}");
-            }
-            println!("{count} snapshot(s)");
-            total_count += count;
+            total_count += snapshots.len();
+            print_snapshots(snapshots, self.long, self.all);
         }
         println!();
         println!("total: {total_count} snapshot(s)");
 
         Ok(())
     }
+}
+
+pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
+    let count = snapshots.len();
+    if long {
+        for snap in snapshots {
+            let mut table = table();
+
+            let add_entry = |title: &str, value: String| {
+                _ = table.add_row([bold_cell(title), Cell::new(value)]);
+            };
+            fill_table(&snap, add_entry);
+
+            println!("{table}");
+            println!();
+        }
+    } else {
+        let mut table = table_right_from(
+            6,
+            [
+                "ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
+            ],
+        );
+
+        if all {
+            // Add all snapshots to output table
+            _ = table.add_rows(snapshots.into_iter().map(|sn| snap_to_table(&sn, 0)));
+        } else {
+            // Group snapshts by treeid and output into table
+            _ = table.add_rows(
+                snapshots
+                    .into_iter()
+                    .chunk_by(|sn| sn.tree)
+                    .into_iter()
+                    .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count())),
+            );
+        }
+        println!("{table}");
+    }
+    println!("{count} snapshot(s)");
 }
 
 pub fn snap_to_table(sn: &SnapshotFile, count: usize) -> [String; 9] {

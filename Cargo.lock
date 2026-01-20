@@ -2106,7 +2106,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "tokio",
  "tower-service",
  "tracing",
@@ -3792,7 +3792,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.35",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -3829,7 +3829,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -4381,7 +4381,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.4"
-source = "git+https://github.com/rustic-rs/rustic_core#9975ab96b5ec263b40857457c234058b0d92e458"
+source = "git+https://github.com/rustic-rs/rustic_core#a6f458932e4f13316dfc2daad9f4d2f15c239fb7"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4420,7 +4420,7 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.9.0"
-source = "git+https://github.com/rustic-rs/rustic_core#9975ab96b5ec263b40857457c234058b0d92e458"
+source = "git+https://github.com/rustic-rs/rustic_core#a6f458932e4f13316dfc2daad9f4d2f15c239fb7"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4474,7 +4474,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.3.4"
-source = "git+https://github.com/rustic-rs/rustic_core#9975ab96b5ec263b40857457c234058b0d92e458"
+source = "git+https://github.com/rustic-rs/rustic_core#a6f458932e4f13316dfc2daad9f4d2f15c239fb7"
 dependencies = [
  "aho-corasick",
  "anyhow",

@@ -102,6 +102,8 @@ impl Runnable for LsCmd {
 /// Summary of a ls command
 ///
 /// This struct is used to print a summary of the ls command.
+//
+// TODO: The same is defined in core - consolidate!
 #[derive(Default, Clone, Copy, Add)]
 pub struct Summary {
     pub files: usize,
@@ -124,9 +126,11 @@ impl Summary {
     pub fn update(&mut self, node: &Node) {
         if node.is_dir() {
             self.dirs += 1;
-        }
-        if node.is_file() {
+        } else {
             self.files += 1;
+        }
+
+        if node.is_file() {
             self.size += node.meta.size;
         }
     }

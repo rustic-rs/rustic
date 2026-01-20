@@ -1,17 +1,24 @@
 //! `ls` subcommand
 
-use std::{ops::AddAssign, path::Path};
+use std::{
+    ops::AddAssign,
+    path::{Path, PathBuf},
+};
 
 #[cfg(feature = "tui")]
 use crate::commands::tui;
-use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
+use crate::{
+    Application, RUSTIC_APP, commands::diff::arg_to_snap_path, repository::CliIndexedRepo,
+    status_err,
+};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 
 use derive_more::Add;
 use rustic_core::{
-    LsOptions,
+    Excludes, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, LsOptions, ReadSource,
+    ReadSourceEntry, RusticResult,
     repofile::{Node, NodeType},
 };
 
@@ -34,10 +41,10 @@ use constants::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S
 /// `ls` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct LsCmd {
-    /// Snapshot:path to list
+    /// Snapshot:path to list (uses local path if no snapshot is given)
     ///
     /// The snapshot can be an id: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
-    #[clap(value_name = "SNAPSHOT[:PATH]")]
+    #[clap(value_name = "SNAPSHOT[:PATH]|PATH")]
     snap: String,
 
     /// show summary
@@ -56,23 +63,36 @@ pub(crate) struct LsCmd {
     #[clap(long, long("numeric-uid-gid"))]
     numeric_id: bool,
 
-    /// Listing options
-    #[clap(flatten)]
-    ls_opts: LsOptions,
+    /// recursively list the dir
+    #[clap(long)]
+    pub recursive: bool,
 
     #[cfg(feature = "tui")]
     /// Run in interactive UI mode
     #[clap(long, short)]
     interactive: bool,
+
+    #[clap(flatten, next_help_heading = "Exclude options")]
+    /// exclude options
+    pub excludes: Excludes,
+
+    #[clap(flatten, next_help_heading = "Exclude options for local source")]
+    ignore_opts: LocalSourceFilterOptions,
 }
 
 impl Runnable for LsCmd {
     fn run(&self) {
-        if let Err(err) = RUSTIC_APP
-            .config()
-            .repository
-            .run_indexed(|repo| self.inner_run(repo))
-        {
+        let (snap_id, path) = arg_to_snap_path(&self.snap);
+
+        if let Err(err) = snap_id.map_or_else(
+            || self.inner_run_local(path),
+            |snap_id| {
+                RUSTIC_APP
+                    .config()
+                    .repository
+                    .run_indexed(|repo| self.inner_run_snapshot(repo, snap_id, path))
+            },
+        ) {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -151,10 +171,15 @@ impl NodeLs for Node {
 }
 
 impl LsCmd {
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run_snapshot(
+        &self,
+        repo: CliIndexedRepo,
+        snap_id: &str,
+        path: Option<&str>,
+    ) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let (snap_id, path) = self.snap.split_once(':').unwrap_or((&self.snap, ""));
+        let path = path.unwrap_or("");
         let snap = repo.get_snapshot_from_str(snap_id, |sn| config.snapshot_filter.matches(sn))?;
 
         #[cfg(feature = "tui")]
@@ -172,10 +197,40 @@ impl LsCmd {
         }
         let node = repo.node_from_snapshot_and_path(&snap, path)?;
 
-        // recursive if standard if we specify a snapshot without dirs. In other cases, use the parameter `recursive`
-        let mut ls_opts = self.ls_opts.clone();
-        ls_opts.recursive = !self.snap.contains(':') || ls_opts.recursive;
+        // recursive is standard if we specify a snapshot without dirs. In other cases, use the parameter `recursive`
+        let ls_opts = LsOptions::default()
+            .excludes(self.excludes.clone())
+            .recursive(!self.snap.contains(':') || self.recursive);
 
+        self.display(repo.ls(&node, &ls_opts)?)?;
+        Ok(())
+    }
+
+    fn inner_run_local(&self, path: Option<&str>) -> Result<()> {
+        #[cfg(feature = "tui")]
+        if self.interactive {
+            anyhow::bail!("interactive ls with local path is not yet implemented!");
+        }
+        let path = path.unwrap_or(".");
+        let src = LocalSource::new(
+            LocalSourceSaveOptions::default(),
+            &self.excludes,
+            &self.ignore_opts,
+            &[&path],
+        )?
+        .entries()
+        .map(|item| -> RusticResult<_> {
+            let ReadSourceEntry { path, node, .. } = item?;
+            Ok((path, node))
+        });
+        self.display(src)?;
+        Ok(())
+    }
+
+    fn display(
+        &self,
+        tree_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
+    ) -> Result<()> {
         let mut summary = Summary::default();
 
         if self.json {
@@ -183,7 +238,7 @@ impl LsCmd {
         }
 
         let mut first_item = true;
-        for item in repo.ls(&node, &ls_opts)? {
+        for item in tree_streamer {
             let (path, node) = item?;
             summary.update(&node);
             if self.json {
@@ -209,7 +264,6 @@ impl LsCmd {
                 summary.dirs, summary.files, summary.size
             );
         }
-
         Ok(())
     }
 }

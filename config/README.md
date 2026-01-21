@@ -47,8 +47,8 @@ options. Therefore `commandline arguments` have the highest precedence.
 
 **NOTE**: There are the following restrictions:
 
-- Not all options are available as environment variables or commandline
-  arguments. There are also commandline options which cannot be set in the
+- Not all options are available as environment variables or command line
+  arguments. There are also command line options which cannot be set in the
   profile TOML files.
 - You can overwrite values, but for most values, you cannot "unset" them on a
   higher priority level.
@@ -94,9 +94,9 @@ If you want to contribute your own configuration, please
 | group-by               | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"                      | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g           |
 | check-index            | If true, check the index and read pack headers if index information is missing.                    | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index            |
 | show-time-offset       | If true, show stored time with offset instead of converting to local time                          | false              | true                     | RUSTIC_SHOW_TIME_OFFSET                          | --show-time-offset       |
-| prometheus             | URL of a Prometheus Pushgateway to push metrics to.                                                | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus             |
-| prometheus-user        | Username to authenticate to the Prometheus Pushgateway                                             | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user        |
-| prometheus-pass        | Password to authenticate to the Prometheus Pushgateway                                             | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass        |
+| prometheus             | URL of a Prometheus Push Gateway to push metrics to.                                               | Not set            | "http://gateway/"        | RUSTIC_PROMETHEUS                                | --prometheus             |
+| prometheus-user        | Username to authenticate to the Prometheus Push Gateway                                            | Not set            | "myuser"                 | RUSTIC_PROMETHEUS_USER                           | --prometheus-user        |
+| prometheus-pass        | Password to authenticate to the Prometheus Push Gateway                                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass        |
 | opentelemetry          | OpenTelemetry metrics endpoint (HTTP Protobuf)                                                     | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry          |
 
 ### Global Hooks `[global.hooks]`
@@ -146,9 +146,13 @@ All given labels are included with the metrics, if it is configured.
 ### Repository Options (Additional) `[repository.options]`
 
 Additional repository options - depending on backend. These can be only set in
-the config file or using env variables. For env variables use upper snake case
-and prefix with "RUSTIC_REPO_OPT_", e.g. `use-password = "true"` becomes
-`RUSTIC_REPO_OPT_USE_PASSWORD=true`
+the config file or using env variables. For variables in kebab case, use upper
+snake case and prefix with "RUSTIC_REPO_OPT_" to obtain the env variable name,
+e.g. `use-password = "true"` becomes `RUSTIC_REPO_OPT_USE_PASSWORD=true`.
+
+Moreover, for opendal parameters (which need to be in lower snake case), you can
+use upper snake case and prefix with "OPENDAL_" as env variable, e.g.
+`application_key = "my-key"` becomes `OPENDAL_APPLICATION_KEY=my-key`.
 
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
@@ -158,16 +162,22 @@ and prefix with "RUSTIC_REPO_OPT_", e.g. `use-password = "true"` becomes
 ### Repository Options for cold repo (Additional) `[repository.options-cold]`
 
 Additional repository options for cold repository - depending on backend. These
-can be only set in the config file or using env variables. For env variables use
-upper snake case and prefix with "RUSTIC_REPO_OPTCOLD_".
+can be only set in the config file or using env variables. For variables in
+kebab case use upper snake case and prefix with `RUSTIC_REPO_OPTCOLD_` to obtain
+the env variable name, for variables in lower snake case use upper snake case
+and prefix with `OPENDALCOLD_`.
+
+see [Repository Options](#repository-options-repository)
 
 ### Repository Options for hot repo (Additional) `[repository.options-hot]`
 
 Additional repository options for hot repository - depending on backend. These
-can be only set in the config file or using env variables. For env variables use
-upper snake case and prefix with "RUSTIC_REPO_OPTHOT_".
+can be only set in the config file or using env variables. For variables in
+kebab case use upper snake case and prefix with `RUSTIC_REPO_OPTHOT_` to obtain
+the env variable name, for variables in lower snake case use upper snake case
+and prefix with `OPENDALHOT_`.
 
-see Repository Options
+see [Repository Options](#repository-options-repository)
 
 ### Repository Hooks `[repository.hooks]`
 

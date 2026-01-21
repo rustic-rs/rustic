@@ -8,8 +8,8 @@ password = "<rustic_passwd>"
 # B2 specific options
 [repository.options]
 # Here, we give the required b2 options, see https://opendal.apache.org/docs/rust/opendal/services/struct.B2.html
-application_key_id = "my_id" # B2 application key ID
+application_key_id = "my_id" # B2 application key ID. Can be also set using OPENDAL_APPLICATION_KEY_ID
 application_key = "my_key" # B2 application key secret. Can be also set using OPENDAL_APPLICATION_KEY
-bucket = "bucket_name" # B2 bucket name
-bucket_id = "bucket_id" # B2 bucket ID
+bucket = "bucket_name" # B2 bucket name or in OPENDAL_BUCKET
+bucket_id = "bucket_id" # B2 bucket ID or in OPENDAL_BUCKET_ID
 # root = "/" # Set a repository root directory if not using the root directory of the bucket

@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0](https://github.com/rustic-rs/rustic/compare/v0.10.3...v0.11.0) - 2026-01-24
+
+### Added
+
+- update rewrite ([#1651](https://github.com/rustic-rs/rustic/pull/1651))
+- Allow ls to list local files (using excludes) ([#1645](https://github.com/rustic-rs/rustic/pull/1645))
+- [**breaking**] Allow to rewrite trees ([#1644](https://github.com/rustic-rs/rustic/pull/1644))
+- [**breaking**] Update rustic_core ([#1637](https://github.com/rustic-rs/rustic/pull/1637))
+- *(commands)* allow to identify snapshots with "latest" or "latest~N" (N >= 0) ([#1563](https://github.com/rustic-rs/rustic/pull/1563))
+- [**breaking**] Update rustic_core ([#1635](https://github.com/rustic-rs/rustic/pull/1635))
+- [**breaking**] Add log-level-logfile, -dryrun and -dependencies options; remove quiet options ([#1565](https://github.com/rustic-rs/rustic/pull/1565))
+
+### Fixed
+
+- handle all arg combinations for `diff` command ([#1639](https://github.com/rustic-rs/rustic/pull/1639))
+- use filtered snapshots for repair command ([#1636](https://github.com/rustic-rs/rustic/pull/1636))
+
+### Other
+
+- Document OPENDAL* env variables ([#1646](https://github.com/rustic-rs/rustic/pull/1646))
+- [**breaking**] Use jiff instead of chrono ([#1625](https://github.com/rustic-rs/rustic/pull/1625))
+- Add root directory to sftp_hetzner_sbox.toml ([#1628](https://github.com/rustic-rs/rustic/pull/1628))
+
 ## [0.10.3](https://github.com/rustic-rs/rustic/compare/v0.10.2...v0.10.3) - 2025-12-23
 
 ### Added

@@ -32,6 +32,8 @@ enum CatSubCmd {
     Snapshot(IdOpt),
     /// Display a tree within a snapshot
     Tree(TreeOpts),
+    /// Display the masterkey
+    Masterkey,
 }
 
 #[derive(Default, clap::Parser, Debug)]
@@ -78,6 +80,9 @@ impl CatCmd {
             CatSubCmd::Tree(opt) => config.repository.run_indexed(|repo| {
                 Ok(repo.cat_tree(&opt.snap, |sn| config.snapshot_filter.matches(sn))?)
             })?,
+            CatSubCmd::Masterkey => config
+                .repository
+                .run_open(|repo| Ok(serde_json::to_vec(&repo.key())?.into()))?,
         };
         println!("{}", String::from_utf8(data.to_vec())?);
 

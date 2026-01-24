@@ -57,15 +57,20 @@ RusticConfig {
             options_cold: {},
         },
         repo: RepositoryOptions {
-            password: None,
-            password_file: None,
-            password_command: None,
             no_cache: false,
             cache_dir: None,
             warm_up: false,
             warm_up_command: None,
             warm_up_wait_command: None,
             warm_up_wait: None,
+        },
+        credential_opts: CredentialOptions {
+            key: None,
+            key_file: None,
+            key_command: None,
+            password: None,
+            password_file: None,
+            password_command: None,
         },
         hooks: Hooks {
             run_before: [],

@@ -2,9 +2,9 @@
 
 use crate::{
     Application, RUSTIC_APP, RusticConfig,
-    commands::init::init_password,
+    commands::init::init_credentials,
     helpers::table_with_titles,
-    repository::{CliIndexedRepo, CliRepo, get_snapots_from_ids},
+    repository::{AllRepositoryOptions, CliIndexedRepo, CliRepo, get_snapots_from_ids},
     status_err,
 };
 use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
@@ -97,7 +97,7 @@ impl CopyCmd {
             }
             let target_opt = &target_config.repository;
             if let Err(err) =
-                target_opt.run(|target_repo| self.copy(&repo, target_repo, &snapshots))
+                target_opt.run(|target_repo| self.copy(&repo, target_repo, target_opt, &snapshots))
             {
                 error!("error copying to target: {err}");
             }
@@ -109,6 +109,7 @@ impl CopyCmd {
         &self,
         repo: &CliIndexedRepo,
         target_repo: CliRepo,
+        target_opt: &AllRepositoryOptions,
         snapshots: &[SnapshotFile],
     ) -> Result<()> {
         let config = RUSTIC_APP.config();
@@ -117,12 +118,12 @@ impl CopyCmd {
         let target_repo = if self.init && target_repo.config_id()?.is_none() {
             let mut config_dest = repo.config().clone();
             config_dest.id = Id::random().into();
-            let pass = init_password(&target_repo)?;
+            let pass = init_credentials(&target_opt.credential_opts)?;
             target_repo
                 .0
                 .init_with_config(&pass, &self.key_opts, config_dest)?
         } else {
-            target_repo.open()?
+            target_repo.open(&target_opt.credential_opts)?
         };
 
         if !repo.config().has_same_chunker(target_repo.config()) {

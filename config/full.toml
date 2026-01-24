@@ -51,10 +51,6 @@ label-a = "xxx"
 [repository]
 repository = "/repo/rustic" # Must be set
 repo-hot = "/my/hot/repo" # Default: not set
-# one of the three password options must be set
-password = "mySecretPassword"
-password-file = "/my/password.txt"
-password-command = "my_command.sh"
 no-cache = false
 cache-dir = "/my/rustic/cachedir" # Default: Applications default cache dir, e.g. ~/.cache/rustic
 # use either warm-up (warm-up by file access) or warm-up-command to specify warming up
@@ -62,6 +58,13 @@ warm-up = false
 warm-up-command = "warmup.sh %id" # Default: not set
 warm-up-wait = "10min" # Default: not set
 warm-up-wait-command = "warmup_wait.sh" # Default: not set
+# one of the following credential options should be set; if not you will be always asked for a password
+key = '{"mac":{"k":"TEQN3py56U36eH4hTTgaUA==","r":"+/Cc+P7jN42a7bZVZYyAcw=="},"encrypt":"LKyGDH7dfX24a9u+3q8DgvuFVDfI3fNrzeo6l4r8u64="}'
+key-file = "/my/key.txt"
+key-command = "my_key_command.sh"
+password = "mySecretPassword"
+password-file = "/my/password.txt"
+password-command = "my_command.sh"
 
 # Additional repository options - depending on backend. These can be only set in the config file or using env variables.
 # For env variables use upper snake case and prefix with "RUSTIC_REPO_OPT_", e.g. `use-passwort = "true"` becomes

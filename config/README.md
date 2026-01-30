@@ -129,19 +129,22 @@ All given labels are included with the metrics, if it is configured.
 
 ### Repository Options `[repository]`
 
-| Attribute            | Description                                                | Default Value            | Example Value          | Environment Variable    | CLI Option             |
-| -------------------- | ---------------------------------------------------------- | ------------------------ | ---------------------- | ----------------------- | ---------------------- |
-| cache-dir            | Path to the cache directory.                               | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/ | RUSTIC_CACHE_DIR        | --cache-dir            |
-| no-cache             | If true, disables caching.                                 | false                    |                        | RUSTIC_NO_CACHE         | --no-cache             |
-| repository           | The path to the repository. Required.                      | Not set                  | "/tmp/rustic"          | RUSTIC_REPOSITORY       | --repositoy, -r        |
-| repo-hot             | The path to the hot repository.                            | Not set                  |                        | RUSTIC_REPO_HOT         | --repo-hot             |
-| password             | The password for the repository.                           | Not set                  | "mySecretPassword"     | RUSTIC_PASSWORD         | --password             |
-| password-file        | Path to a file containing the password for the repository. | Not set                  |                        | RUSTIC_PASSWORD_FILE    | --password-file, -p    |
-| password-command     | Command to retrieve the password for the repository.       | Not set                  |                        | RUSTIC_PASSWORD_COMMAND | --password-command     |
-| warm-up              | If true, warms up the repository by file access.           | false                    |                        |                         | ---warm-up             |
-| warm-up-command      | Command to warm up the repository.                         | Not set                  |                        |                         | --warm-up-command      |
-| warm-up-wait         | The wait time for warming up the repository.               | Not set                  |                        |                         | --warm-up-wait         |
-| warm-up-wait-command | Command to run to wait for packs to be warmed-up.          | Not set                  |                        |                         | --warm-up-wait-command |
+| Attribute            | Description                                                 | Default Value            | Example Value                          | Environment Variable    | CLI Option             |
+| -------------------- | ----------------------------------------------------------- | ------------------------ | -------------------------------------- | ----------------------- | ---------------------- |
+| repository           | The path to the repository. Required.                       | Not set                  | "/tmp/rustic"                          | RUSTIC_REPOSITORY       | --repositoy, -r        |
+| repo-hot             | The path to the hot repository.                             | Not set                  |                                        | RUSTIC_REPO_HOT         | --repo-hot             |
+| cache-dir            | Path to the cache directory.                                | ~/.cache/rustic/$REPO_ID | ~/.cache/my_own_cache/                 | RUSTIC_CACHE_DIR        | --cache-dir            |
+| no-cache             | If true, disables caching.                                  | false                    |                                        | RUSTIC_NO_CACHE         | --no-cache             |
+| warm-up              | If true, warms up the repository by file access.            | false                    |                                        |                         | ---warm-up             |
+| warm-up-command      | Command to warm up the repository.                          | Not set                  |                                        |                         | --warm-up-command      |
+| warm-up-wait         | The wait time for warming up the repository.                | Not set                  |                                        |                         | --warm-up-wait         |
+| warm-up-wait-command | Command to run to wait for packs to be warmed-up.           | Not set                  |                                        |                         | --warm-up-wait-command |
+| key                  | The masterkey for the repository.                           | Not set                  | (create one using `rustic key create`) | RUSTIC_KEY              | --key                  |
+| key-file             | Path to a file containing the masterkey for the repository. | Not set                  |                                        | RUSTIC_KEY_FILE         | --key-file             |
+| key-command          | Command to retrieve the masterkey for the repository.       | Not set                  |                                        | RUSTIC_KEY_COMMAND      | --key-command          |
+| password             | The password for the repository.                            | Not set                  | "mySecretPassword"                     | RUSTIC_PASSWORD         | --password             |
+| password-file        | Path to a file containing the password for the repository.  | Not set                  |                                        | RUSTIC_PASSWORD_FILE    | --password-file, -p    |
+| password-command     | Command to retrieve the password for the repository.        | Not set                  |                                        | RUSTIC_PASSWORD_COMMAND | --password-command     |
 
 ### Repository Options (Additional) `[repository.options]`
 

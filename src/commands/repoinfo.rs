@@ -16,7 +16,7 @@ use rustic_core::{IndexInfos, RepoFileInfo, RepoFileInfos};
 /// `repoinfo` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct RepoInfoCmd {
-    /// Only scan repository files (doesn't need repository password)
+    /// Only scan repository files (doesn't need credentials)
     #[clap(long)]
     only_files: bool,
 
@@ -54,12 +54,17 @@ struct Infos {
 
 impl RepoInfoCmd {
     fn inner_run(&self, repo: CliRepo) -> Result<()> {
+        let config = RUSTIC_APP.config();
         let infos = Infos {
             files: (!self.only_index)
                 .then(|| -> Result<_> { Ok(repo.infos_files()?) })
                 .transpose()?,
             index: (!self.only_files)
-                .then(|| -> Result<_> { Ok(repo.open()?.infos_index()?) })
+                .then(|| -> Result<_> {
+                    Ok(repo
+                        .open(&config.repository.credential_opts)?
+                        .infos_index()?)
+                })
                 .transpose()?,
         };
 

@@ -6,7 +6,9 @@ use dialoguer::Password;
 
 use crate::{Application, RUSTIC_APP, repository::CliRepo};
 
-use rustic_core::{ConfigOptions, KeyOptions, OpenStatus, Repository};
+use rustic_core::{
+    ConfigOptions, CredentialOptions, Credentials, KeyOptions, OpenStatus, Repository,
+};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -37,7 +39,7 @@ impl InitCmd {
     fn inner_run(&self, repo: CliRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        // Note: This is again checked in repo.init_with_password(), however we want to inform
+        // Note: This is again checked in init(), however we want to inform
         // users before they are prompted to enter a password
         if repo.config_id()?.is_some() {
             bail!("Config file already exists. Aborting.");
@@ -51,7 +53,12 @@ impl InitCmd {
             );
         }
 
-        let _ = init(repo.0, &self.key_opts, &self.config_opts)?;
+        let _ = init(
+            repo.0,
+            &config.repository.credential_opts,
+            &self.key_opts,
+            &self.config_opts,
+        )?;
         Ok(())
     }
 }
@@ -61,44 +68,36 @@ impl InitCmd {
 /// # Arguments
 ///
 /// * `repo` - Repository to initialize
-/// * `key_opts` - Key options
+/// * `credential_opts` - Credential options
+/// * `key_opts` - Key options (only used when generating a new key)
 /// * `config_opts` - Config options
 ///
 /// # Errors
 ///
-///  * [`RepositoryErrorKind::OpeningPasswordFileFailed`] - If opening the password file failed
-/// * [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`] - If reading the password failed
-/// * [`RepositoryErrorKind::FromSplitError`] - If splitting the password command failed
-/// * [`RepositoryErrorKind::PasswordCommandExecutionFailed`] - If executing the password command failed
-/// * [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`] - If reading the password from the command failed
+/// * If getting the credentials from the options fails
 ///
 /// # Returns
 ///
 /// Returns the initialized repository
-///
-/// [`RepositoryErrorKind::OpeningPasswordFileFailed`]: rustic_core::error::RepositoryErrorKind::OpeningPasswordFileFailed
-/// [`RepositoryErrorKind::ReadingPasswordFromReaderFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromReaderFailed
-/// [`RepositoryErrorKind::FromSplitError`]: rustic_core::error::RepositoryErrorKind::FromSplitError
-/// [`RepositoryErrorKind::PasswordCommandExecutionFailed`]: rustic_core::error::RepositoryErrorKind::PasswordCommandExecutionFailed
-/// [`RepositoryErrorKind::ReadingPasswordFromCommandFailed`]: rustic_core::error::RepositoryErrorKind::ReadingPasswordFromCommandFailed
 pub(crate) fn init<P, S>(
     repo: Repository<P, S>,
+    credential_opts: &CredentialOptions,
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
 ) -> Result<Repository<P, OpenStatus>> {
-    let pass = init_password(&repo)?;
-    Ok(repo.init_with_password(&pass, key_opts, config_opts)?)
+    let pass = init_credentials(credential_opts)?;
+    Ok(repo.init(&pass, key_opts, config_opts)?)
 }
 
-pub(crate) fn init_password<P, S>(repo: &Repository<P, S>) -> Result<String> {
-    let pass = repo.password()?.unwrap_or_else(|| {
+pub(crate) fn init_credentials(credential_opts: &CredentialOptions) -> Result<Credentials> {
+    let credentials = credential_opts.credentials()?.unwrap_or_else(|| {
         match Password::new()
             .with_prompt("enter password for new key")
             .allow_empty_password(true)
             .with_confirmation("confirm password", "passwords do not match")
             .interact()
         {
-            Ok(it) => it,
+            Ok(pass) => Credentials::Password(pass),
             Err(err) => {
                 status_err!("{}", err);
                 RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -106,5 +105,5 @@ pub(crate) fn init_password<P, S>(repo: &Repository<P, S>) -> Result<String> {
         }
     });
 
-    Ok(pass)
+    Ok(credentials)
 }

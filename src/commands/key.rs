@@ -11,7 +11,11 @@ use anyhow::{Result, bail};
 use dialoguer::Password;
 use log::{info, warn};
 
-use rustic_core::{CommandInput, KeyOptions, RepositoryOptions, repofile::KeyFile};
+use qrcode::{QrCode, render::svg};
+use rustic_core::{
+    CommandInput, CredentialOptions, Credentials, KeyOptions,
+    repofile::{KeyFile, MasterKey},
+};
 
 /// `key` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -37,6 +41,10 @@ enum KeySubCmd {
     Remove(RemoveCmd),
     /// Change the password of a key
     Password(PasswordCmd),
+    /// Export the masterkey
+    Export(ExportCmd),
+    /// Create a new masterkey
+    Create(CreateCmd),
 }
 
 #[derive(clap::Parser, Debug)]
@@ -56,23 +64,21 @@ pub(crate) struct NewPasswordOptions {
 
 impl NewPasswordOptions {
     fn pass(&self, text: &str) -> Result<String> {
-        // create new Repository options which just contain password information
-        let mut pass_opts = RepositoryOptions::default();
+        // create new credential options which just contain password information
+        let mut pass_opts = CredentialOptions::default();
         pass_opts.password = self.new_password.clone();
         pass_opts.password_file = self.new_password_file.clone();
         pass_opts.password_command = self.new_password_command.clone();
 
-        let pass = pass_opts
-            .evaluate_password()
-            .map_err(Into::into)
-            .transpose()
-            .unwrap_or_else(|| -> Result<_> {
-                Ok(Password::new()
-                    .with_prompt(text)
-                    .allow_empty_password(true)
-                    .with_confirmation("confirm password", "passwords do not match")
-                    .interact()?)
-            })?;
+        let pass = if let Some(Credentials::Password(pass)) = pass_opts.credentials()? {
+            pass
+        } else {
+            Password::new()
+                .with_prompt(text)
+                .allow_empty_password(true)
+                .with_confirmation("confirm password", "passwords do not match")
+                .interact()?
+        };
         Ok(pass)
     }
 }
@@ -146,7 +152,11 @@ impl ListCmd {
         let mut table = table_with_titles(["ID", "User", "Host", "Created"]);
         _ = table.add_rows(keys.map(|key: (_, KeyFile)| {
             [
-                format!("{}{}", if used_key == &key.0 { "*" } else { "" }, key.0),
+                format!(
+                    "{}{}",
+                    if used_key == &Some(key.0) { "*" } else { "" },
+                    key.0
+                ),
                 key.1.username.unwrap_or_default(),
                 key.1.hostname.unwrap_or_default(),
                 key.1
@@ -182,7 +192,7 @@ impl RemoveCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
         let repo_key = repo.key_id();
         let ids: Vec<_> = repo.find_ids(&self.ids)?.collect();
-        if ids.iter().any(|id| id == repo_key) {
+        if ids.iter().any(|id| Some(id) == repo_key.as_ref()) {
             bail!("Cannot remove currently used key!");
         }
         if !RUSTIC_APP.config().global.dry_run {
@@ -218,6 +228,7 @@ impl RemoveCmd {
         Ok(())
     }
 }
+
 #[derive(clap::Parser, Debug)]
 pub(crate) struct PasswordCmd {
     /// New password options
@@ -240,12 +251,15 @@ impl Runnable for PasswordCmd {
 
 impl PasswordCmd {
     fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+        let Some(key_id) = repo.key_id() else {
+            bail!("No keyfile used to open the repo. Cannot change the password.")
+        };
         if RUSTIC_APP.config().global.dry_run {
             info!("changing no password in dry-run mode.");
             return Ok(());
         }
         let pass = self.pass_opts.pass("enter new password")?;
-        let old_key: KeyFile = repo.get_file(repo.key_id())?;
+        let old_key: KeyFile = repo.get_file(key_id)?;
         let key_opts = KeyOptions::default()
             .hostname(old_key.hostname)
             .username(old_key.username)
@@ -253,12 +267,65 @@ impl PasswordCmd {
         let id = repo.add_key(&pass, &key_opts)?;
         info!("key {id} successfully added.");
 
-        let old_key = *repo.key_id();
+        let old_key = *key_id; // copy key, as we need to use repo as reference
         // re-open repository using new password
-        let repo = repo.open_with_password(&pass)?;
+        let repo = repo.open(&Credentials::Password(pass))?;
         repo.delete_key(&old_key)?;
         info!("key {old_key} successfully removed.");
 
         Ok(())
+    }
+}
+
+#[derive(clap::Parser, Debug)]
+pub(crate) struct ExportCmd {
+    /// Write to file if given, else to stdout
+    pub(crate) file: Option<PathBuf>,
+
+    /// Generate a QR code in svg format
+    #[clap(long)]
+    pub(crate) qr: bool,
+}
+
+impl Runnable for ExportCmd {
+    fn run(&self) {
+        if let Err(err) = RUSTIC_APP.config().repository.run_open(|repo| {
+            let mut data = serde_json::to_string(&repo.key())?;
+            if self.qr {
+                let qr = QrCode::new(&data)?;
+                data = qr.render::<svg::Color<'_>>().build();
+            }
+            match &self.file {
+                None => println!("{}", data),
+                Some(file) => std::fs::write(file, data)?,
+            }
+            Ok(())
+        }) {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
+    }
+}
+
+#[derive(clap::Parser, Debug)]
+pub(crate) struct CreateCmd {
+    /// Write to file if given, else to stdout
+    pub(crate) file: Option<PathBuf>,
+}
+
+impl Runnable for CreateCmd {
+    fn run(&self) {
+        let inner = || -> Result<_> {
+            let data = serde_json::to_string(&MasterKey::new())?;
+            match &self.file {
+                None => println!("{}", data),
+                Some(file) => std::fs::write(file, data)?,
+            }
+            Ok(())
+        };
+        if let Err(err) = inner() {
+            status_err!("{}", err);
+            RUSTIC_APP.shutdown(Shutdown::Crash);
+        };
     }
 }

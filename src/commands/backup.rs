@@ -222,9 +222,14 @@ impl BackupCmd {
                     repo.name
                 );
             }
-            init(repo.0, &self.key_opts, &self.config_opts)?
+            init(
+                repo.0,
+                &config.repository.credential_opts,
+                &self.key_opts,
+                &self.config_opts,
+            )?
         } else {
-            repo.open()?
+            repo.open(&config.repository.credential_opts)?
         }
         .to_indexed_ids()?;
 

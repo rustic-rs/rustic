@@ -15,8 +15,8 @@ use conflate::Merge;
 use dialoguer::Password;
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    FullIndex, IndexedStatus, Open, OpenStatus, ProgressBars, Repository, RepositoryOptions,
-    SnapshotGroup, SnapshotGroupCriterion, repofile::SnapshotFile,
+    CredentialOptions, Credentials, FullIndex, IndexedStatus, Open, OpenStatus, ProgressBars,
+    Repository, RepositoryOptions, SnapshotGroup, SnapshotGroupCriterion, repofile::SnapshotFile,
 };
 use serde::{Deserialize, Serialize};
 
@@ -41,6 +41,11 @@ pub struct AllRepositoryOptions {
     #[clap(flatten)]
     #[serde(flatten)]
     pub repo: RepositoryOptions,
+
+    /// Repository options
+    #[clap(flatten, next_help_heading = "credential options")]
+    #[serde(flatten)]
+    pub credential_opts: CredentialOptions,
 
     /// Hooks
     #[clap(skip)]
@@ -80,7 +85,7 @@ impl AllRepositoryOptions {
     }
 
     pub fn run_open<T>(&self, f: impl FnOnce(CliOpenRepo) -> Result<T>) -> Result<T> {
-        self.run(|repo| f(repo.open()?))
+        self.run(|repo| f(repo.open(&self.credential_opts)?))
     }
 
     pub fn run_open_or_init_with<T: Clone>(
@@ -89,7 +94,9 @@ impl AllRepositoryOptions {
         init: impl FnOnce(CliRepo) -> Result<CliOpenRepo>,
         f: impl FnOnce(CliOpenRepo) -> Result<T>,
     ) -> Result<T> {
-        self.run(|repo| f(repo.open_or_init_repository_with(do_init, init)?))
+        self.run(|repo| {
+            f(repo.open_or_init_repository_with(&self.credential_opts, do_init, init)?)
+        })
     }
 
     pub fn run_indexed_with_progress<P: Clone + ProgressBars, T>(
@@ -97,11 +104,11 @@ impl AllRepositoryOptions {
         po: P,
         f: impl FnOnce(RusticIndexedRepo<P>) -> Result<T>,
     ) -> Result<T> {
-        self.run_with_progress(po, |repo| f(repo.indexed()?))
+        self.run_with_progress(po, |repo| f(repo.indexed(&self.credential_opts)?))
     }
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(CliIndexedRepo) -> Result<T>) -> Result<T> {
-        self.run(|repo| f(repo.indexed()?))
+        self.run(|repo| f(repo.indexed(&self.credential_opts)?))
     }
 }
 
@@ -116,31 +123,34 @@ impl<P> Deref for RusticRepo<P> {
 }
 
 impl<P: Clone + ProgressBars> RusticRepo<P> {
-    pub fn open(self) -> Result<Repository<P, OpenStatus>> {
-        match self.0.password()? {
-            // if password is given, directly return the result of find_key_in_backend and don't retry
-            Some(pass) => {
-                return Ok(self.0.open_with_password(&pass)?);
-            }
+    pub fn open(self, credential_opts: &CredentialOptions) -> Result<Repository<P, OpenStatus>> {
+        match credential_opts.credentials()? {
+            // if credentials are given, directly open the repository and don't retry
+            Some(credentials) => Ok(self.0.open(&credentials)?),
             None => {
                 for _ in 0..constants::MAX_PASSWORD_RETRIES {
                     let pass = Password::new()
                         .with_prompt("enter repository password")
                         .allow_empty_password(true)
                         .interact()?;
-                    match self.0.clone().open_with_password(&pass) {
+                    match self
+                        .0
+                        .clone() // needed; else we move repo in a loop
+                        .open(&Credentials::Password(pass))
+                    {
                         Ok(repo) => return Ok(repo),
                         Err(err) if err.is_incorrect_password() => continue,
                         Err(err) => return Err(err.into()),
                     }
                 }
+                Err(anyhow!("incorrect password"))
             }
         }
-        Err(anyhow!("incorrect password"))
     }
 
     fn open_or_init_repository_with(
         self,
+        credential_opts: &CredentialOptions,
         do_init: bool,
         init: impl FnOnce(Self) -> Result<Repository<P, OpenStatus>>,
     ) -> Result<Repository<P, OpenStatus>> {
@@ -155,13 +165,16 @@ impl<P: Clone + ProgressBars> RusticRepo<P> {
             }
             init(self)?
         } else {
-            self.open()?
+            self.open(credential_opts)?
         };
         Ok(repo)
     }
 
-    fn indexed(self) -> Result<Repository<P, IndexedStatus<FullIndex, OpenStatus>>> {
-        let open = self.open()?;
+    fn indexed(
+        self,
+        credential_opts: &CredentialOptions,
+    ) -> Result<Repository<P, IndexedStatus<FullIndex, OpenStatus>>> {
+        let open = self.open(credential_opts)?;
         let check_index = RUSTIC_APP.config().global.check_index;
         let repo = if check_index {
             open.to_indexed_checked()

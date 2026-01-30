@@ -168,8 +168,9 @@ RusticConfig {
     },
     copy: CopyCmd {
         ids: [],
-        init: false,
         targets: [],
+        init: false,
+        force: false,
         key_opts: KeyOptions {
             hostname: None,
             username: None,

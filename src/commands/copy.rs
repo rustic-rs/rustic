@@ -26,16 +26,22 @@ pub struct CopyCmd {
     #[merge(skip)]
     ids: Vec<String>,
 
+    /// Target repository (can be specified multiple times)
+    #[clap(long = "target", value_name = "TARGET")]
+    #[merge(strategy=conflate::vec::overwrite_empty)]
+    targets: Vec<String>,
+
     /// Initialize non-existing target repositories
     #[clap(long)]
     #[serde(skip)]
     #[merge(skip)]
     init: bool,
 
-    /// Target repository (can be specified multiple times)
-    #[clap(long = "target", value_name = "TARGET")]
-    #[merge(strategy=conflate::vec::overwrite_empty)]
-    targets: Vec<String>,
+    /// Copy snapshots even if the target already contains the original snapshot
+    #[clap(long)]
+    #[serde(skip)]
+    #[merge(skip)]
+    force: bool,
 
     /// Key options (when using --init)
     #[clap(flatten, next_help_heading = "Key options (when using --init)")]
@@ -125,10 +131,18 @@ impl CopyCmd {
             );
         }
 
-        let snaps = target_repo.relevant_copy_snapshots(
-            |sn| !self.ids.is_empty() || config.snapshot_filter.matches(sn),
-            snapshots,
-        )?;
+        let snaps = if self.force {
+            snapshots
+                .iter()
+                .cloned()
+                .map(|sn| CopySnapshot { sn, relevant: true })
+                .collect()
+        } else {
+            target_repo.relevant_copy_snapshots(
+                |sn| !self.ids.is_empty() || config.snapshot_filter.matches(sn),
+                snapshots,
+            )?
+        };
 
         let mut table =
             table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);

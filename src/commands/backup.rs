@@ -73,11 +73,6 @@ pub struct BackupCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     as_path: Option<PathBuf>,
 
-    /// Ignore save options
-    #[clap(flatten)]
-    #[serde(flatten)]
-    ignore_save_opts: LocalSourceSaveOptions,
-
     /// Don't scan the backup source for its size - this disables ETA estimation for backup.
     #[clap(long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
@@ -97,6 +92,11 @@ pub struct BackupCmd {
     #[clap(long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
     init: bool,
+
+    /// Node save options
+    #[clap(flatten, next_help_heading = "Node modification options")]
+    #[serde(flatten)]
+    ignore_save_opts: LocalSourceSaveOptions,
 
     /// Parent processing options
     #[clap(flatten, next_help_heading = "Options for parent processing")]

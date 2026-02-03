@@ -16,7 +16,7 @@ use jiff::SignedDuration;
 use serde::Serialize;
 
 use rustic_core::{
-    Progress, ProgressBars, SnapshotGroup,
+    ProgressBars, ProgressType, SnapshotGroup,
     repofile::{DeleteOption, SnapshotFile},
 };
 
@@ -72,7 +72,10 @@ impl SnapshotCmd {
                 config
                     .repository
                     .run_indexed_with_progress(progress.clone(), |repo| {
-                        let p = progress.progress_spinner("starting rustic in interactive mode...");
+                        let p = progress.progress(
+                            ProgressType::Spinner,
+                            "starting rustic in interactive mode...",
+                        );
                         p.finish();
                         // create app and run it
                         let snapshots = tui::Snapshots::new(

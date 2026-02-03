@@ -7,7 +7,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, Progress, ProgressBars, Repository, TreeId,
+    IndexedFull, Repository, TreeId,
     repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
@@ -31,11 +31,11 @@ use crate::{
 use super::{summary::SummaryMap, widgets::PopUpInput};
 
 // the states this screen can be in
-enum CurrentScreen<'a, P, S> {
+enum CurrentScreen<'a, S> {
     Ls,
     ShowHelp(PopUpText),
     Table(PopUpTable),
-    Restore(Box<Restore<'a, P, S>>),
+    Restore(Box<Restore<'a, S>>),
     PromptExit(PopUpPrompt),
     PromptLeave(PopUpPrompt),
     ShowFile(Box<PopUpInput>),
@@ -62,11 +62,11 @@ General Commands:
 
  ";
 
-pub struct Ls<'a, P, S> {
-    current_screen: CurrentScreen<'a, P, S>,
+pub struct Ls<'a, S> {
+    current_screen: CurrentScreen<'a, S>,
     numeric: bool,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<P, S>,
+    repo: &'a Repository<S>,
     snapshot: SnapshotFile,
     path: PathBuf,
     trees: Vec<(Tree, TreeId, usize)>, // Stack of parent trees with position
@@ -87,9 +87,9 @@ impl TuiResult for LsResult {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Ls<'a, P, S> {
+impl<'a, S: IndexedFull> Ls<'a, S> {
     pub fn new(
-        repo: &'a Repository<P, S>,
+        repo: &'a Repository<S>,
         snapshot: SnapshotFile,
         path: &str,
         summary_map: SummaryMap,
@@ -242,8 +242,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Ls<'a, P, S> {
     }
 
     pub fn compute_summary(&mut self, tree_id: TreeId) -> Result<()> {
-        let pb = self.repo.progress_bars();
-        let p = pb.progress_counter("computing (sub)-dir information");
+        let p = self
+            .repo
+            .progress_counter("computing (sub)-dir information");
         self.summary_map.compute(self.repo, tree_id, &p)?;
         p.finish();
         self.update_table();
@@ -283,7 +284,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Ls<'a, P, S> {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Ls<'a, P, S> {
+impl<'a, S: IndexedFull> ProcessEvent for Ls<'a, S> {
     type Result = Result<LsResult>;
     fn input(&mut self, event: Event) -> Result<LsResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
@@ -408,7 +409,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Ls<'a, P, S> {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Draw for Ls<'a, P, S> {
+impl<'a, S: IndexedFull> Draw for Ls<'a, S> {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 

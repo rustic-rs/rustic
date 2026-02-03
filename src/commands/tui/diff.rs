@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, Progress, ProgressBars, Repository,
+    IndexedFull, Repository,
     repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
@@ -100,10 +100,7 @@ struct DiffTree {
 }
 
 impl DiffTree {
-    fn from_node<P: ProgressBars, S: IndexedFull>(
-        repo: &'_ Repository<P, S>,
-        node: &DiffNode,
-    ) -> Result<Self> {
+    fn from_node<S: IndexedFull>(repo: &'_ Repository<S>, node: &DiffNode) -> Result<Self> {
         let tree_from_node = |node: Option<&Node>| {
             node.map_or_else(
                 || Ok(Tree::default()),
@@ -134,10 +131,10 @@ impl DiffTree {
     }
 }
 
-pub struct Diff<'a, P, S> {
+pub struct Diff<'a, S> {
     current_screen: CurrentScreen,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<P, S>,
+    repo: &'a Repository<S>,
     snapshot_left: SnapshotFile,
     snapshot_right: SnapshotFile,
     path_left: PathBuf,
@@ -162,9 +159,9 @@ impl TuiResult for DiffResult {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
+impl<'a, S: IndexedFull> Diff<'a, S> {
     pub fn new(
-        repo: &'a Repository<P, S>,
+        repo: &'a Repository<S>,
         snap_left: SnapshotFile,
         snap_right: SnapshotFile,
         path_left: &str,
@@ -385,8 +382,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     }
 
     pub fn compute_summary(&mut self, node: &DiffNode) -> Result<()> {
-        let pb = self.repo.progress_bars();
-        let p = pb.progress_counter("computing (sub)-dir information");
+        let p = self
+            .repo
+            .progress_counter("computing (sub)-dir information");
 
         let (left, right) = node.0.as_ref().left_and_right();
         if let Some(node) = left
@@ -444,7 +442,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
+impl<'a, S: IndexedFull> ProcessEvent for Diff<'a, S> {
     type Result = Result<DiffResult>;
     fn input(&mut self, event: Event) -> Result<DiffResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
@@ -515,7 +513,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Diff<'a, P, S> {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Draw for Diff<'a, P, S> {
+impl<'a, S: IndexedFull> Draw for Diff<'a, S> {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 

@@ -79,12 +79,12 @@ impl InitCmd {
 /// # Returns
 ///
 /// Returns the initialized repository
-pub(crate) fn init<P, S>(
-    repo: Repository<P, S>,
+pub(crate) fn init<S>(
+    repo: Repository<S>,
     credential_opts: &CredentialOptions,
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
-) -> Result<Repository<P, OpenStatus>> {
+) -> Result<Repository<OpenStatus>> {
     let pass = init_credentials(credential_opts)?;
     Ok(repo.init(&pass, key_opts, config_opts)?)
 }

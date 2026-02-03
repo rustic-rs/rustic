@@ -20,16 +20,16 @@ use fuse_mt::{
 };
 use itertools::Itertools;
 
-pub struct FuseFS<P, S> {
-    repo: Repository<P, S>,
+pub struct FuseFS<S> {
+    repo: Repository<S>,
     vfs: Vfs,
     open_files: RwLock<BTreeMap<u64, OpenFile>>,
     now: SystemTime,
     file_policy: FilePolicy,
 }
 
-impl<P, S: IndexedFull> FuseFS<P, S> {
-    pub(crate) fn new(repo: Repository<P, S>, vfs: Vfs, file_policy: FilePolicy) -> Self {
+impl<S: IndexedFull> FuseFS<S> {
+    pub(crate) fn new(repo: Repository<S>, vfs: Vfs, file_policy: FilePolicy) -> Self {
         let open_files = RwLock::new(BTreeMap::new());
 
         Self {
@@ -113,7 +113,7 @@ fn node_to_file_attr(node: &Node, now: SystemTime) -> FileAttr {
     }
 }
 
-impl<P, S: IndexedFull> FilesystemMT for FuseFS<P, S> {
+impl<S: IndexedFull> FilesystemMT for FuseFS<S> {
     fn getattr(&self, _req: RequestInfo, path: &Path, _fh: Option<u64>) -> ResultEntry {
         let node = self.node_from_path(path)?;
         Ok((Duration::from_secs(1), node_to_file_attr(&node, self.now)))

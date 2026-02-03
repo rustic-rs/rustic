@@ -17,8 +17,8 @@ use anyhow::Result;
 
 use derive_more::Add;
 use rustic_core::{
-    Excludes, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, LsOptions, ReadSource,
-    ReadSourceEntry, RusticResult,
+    Excludes, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, LsOptions,
+    ProgressType, ReadSource, ReadSourceEntry, RusticResult,
     repofile::{Node, NodeType},
 };
 
@@ -188,11 +188,14 @@ impl LsCmd {
 
         #[cfg(feature = "tui")]
         if self.interactive {
-            use rustic_core::{Progress, ProgressBars};
+            use rustic_core::ProgressBars;
             use tui::summary::SummaryMap;
 
             return tui::run(|progress| {
-                let p = progress.progress_spinner("starting rustic in interactive mode...");
+                let p = progress.progress(
+                    ProgressType::Spinner,
+                    "starting rustic in interactive mode...",
+                );
                 p.finish();
                 // create app and run it
                 let ls = tui::Ls::new(&repo, snap, path, SummaryMap::default())?;

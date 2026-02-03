@@ -26,7 +26,7 @@ use serde_with::serde_as;
 
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, IndexedIds, KeyOptions, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, ParentOptions, PathList, ProgressBars, Repository, SnapshotOptions,
+    LocalSourceSaveOptions, ParentOptions, PathList, Repository, SnapshotOptions,
     repofile::SnapshotFile,
 };
 
@@ -323,10 +323,10 @@ impl BackupCmd {
         hooks.with_env(&hooks_variables)
     }
 
-    fn backup_snapshot<P: ProgressBars, S: IndexedIds>(
+    fn backup_snapshot<S: IndexedIds>(
         mut self,
         source: PathList,
-        repo: &Repository<P, S>,
+        repo: &Repository<S>,
     ) -> Result<()> {
         let config = RUSTIC_APP.config();
         let snapshot_opts = &config.backup.snapshots;

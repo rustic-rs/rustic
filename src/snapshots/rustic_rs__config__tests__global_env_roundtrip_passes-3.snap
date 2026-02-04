@@ -102,6 +102,10 @@ RusticConfig {
         stdin_filename: "",
         stdin_command: None,
         as_path: None,
+        no_scan: false,
+        json: false,
+        long: false,
+        init: false,
         ignore_save_opts: LocalSourceSaveOptions {
             set_atime: None,
             set_ctime: None,
@@ -109,10 +113,6 @@ RusticConfig {
             set_blockdev: None,
             set_xattrs: None,
         },
-        no_scan: false,
-        json: false,
-        long: false,
-        init: false,
         parent_opts: ParentOptions {
             group_by: None,
             parents: [],

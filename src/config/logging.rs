@@ -23,28 +23,29 @@ use serde_with::{DisplayFromStr, serde_as};
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LoggingOptions {
     /// Use this log level [default: info]
-    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL")]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL",
+        value_parser(["off", "error", "warn", "info", "debug", "trace"]))]
     #[serde_as(as = "Option<DisplayFromStr>")]
     #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_level: Option<LevelFilter>,
+    pub log_level: Option<String>,
 
     /// Use this log level for the log file [default: info]
-    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_LOGFILE")]
-    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_LOGFILE",
+        value_parser(["off", "error", "warn", "info", "debug", "trace"]))]
     #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_level_logfile: Option<LevelFilter>,
+    pub log_level_logfile: Option<String>,
 
     /// Use this log level in dry-run mode [default: info]
-    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_DRYRUN")]
-    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_DRYRUN",
+        value_parser(["off", "error", "warn", "info", "debug", "trace"]))]
     #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_level_dryrun: Option<LevelFilter>,
+    pub log_level_dryrun: Option<String>,
 
     /// Use this log level for dependencies [default: warn]
-    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_DEPENDENCIES")]
-    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[clap(long, global = true, env = "RUSTIC_LOG_LEVEL_DEPENDENCIES",
+        value_parser(["off", "error", "warn", "info", "debug", "trace"]))]
     #[merge(strategy=conflate::option::overwrite_none)]
-    pub log_level_dependencies: Option<LevelFilter>,
+    pub log_level_dependencies: Option<String>,
 
     /// Write log messages to the given file (using log-level-logfile)
     #[clap(long, global = true, env = "RUSTIC_LOG_FILE", value_name = "LOGFILE", value_hint = ValueHint::FilePath)]
@@ -55,14 +56,22 @@ pub struct LoggingOptions {
 impl LoggingOptions {
     pub fn config(&self, dry_run: bool) -> Result<Config> {
         let log_level = if dry_run {
-            self.log_level_dryrun
+            &self.log_level_dryrun
         } else {
-            self.log_level
+            &self.log_level
         };
 
-        let level_filter = log_level.unwrap_or(LevelFilter::Info);
-        let level_filter_logfile = self.log_level_logfile.unwrap_or(LevelFilter::Info);
-        let level_filter_dependencies = self.log_level_dependencies.unwrap_or(LevelFilter::Warn);
+        let level_filter = log_level
+            .as_ref()
+            .map_or(LevelFilter::Info, |l| l.parse().unwrap());
+        let level_filter_logfile = self
+            .log_level_logfile
+            .as_ref()
+            .map_or(LevelFilter::Info, |l| l.parse().unwrap());
+        let level_filter_dependencies = self
+            .log_level_dependencies
+            .as_ref()
+            .map_or(LevelFilter::Warn, |l| l.parse().unwrap());
 
         let stdout = ConsoleAppender::builder()
             .target(Target::Stderr)

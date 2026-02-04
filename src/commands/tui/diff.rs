@@ -216,15 +216,14 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
             if left.content != right.content {
                 return false;
             }
-            if self.ignore_metadata {
-                if let (Some(id_left), Some(id_right)) = (left.subtree, right.subtree) {
-                    if let (Some(summary_left), Some(summary_right)) = (
-                        self.summary_map.get(&id_left),
-                        self.summary_map.get(&id_right),
-                    ) {
-                        return summary_left.id_without_meta == summary_right.id_without_meta;
-                    }
-                }
+            if self.ignore_metadata
+                && let (Some(id_left), Some(id_right)) = (left.subtree, right.subtree)
+                && let (Some(summary_left), Some(summary_right)) = (
+                    self.summary_map.get(&id_left),
+                    self.summary_map.get(&id_right),
+                )
+            {
+                return summary_left.id_without_meta == summary_right.id_without_meta;
             }
             left.subtree == right.subtree
         });
@@ -390,15 +389,15 @@ impl<'a, P: ProgressBars, S: IndexedFull> Diff<'a, P, S> {
         let p = pb.progress_counter("computing (sub)-dir information");
 
         let (left, right) = node.0.as_ref().left_and_right();
-        if let Some(node) = left {
-            if let Some(id) = node.subtree {
-                self.summary_map.compute(self.repo, id, &p)?;
-            }
+        if let Some(node) = left
+            && let Some(id) = node.subtree
+        {
+            self.summary_map.compute(self.repo, id, &p)?;
         }
-        if let Some(node) = right {
-            if let Some(id) = node.subtree {
-                self.summary_map.compute(self.repo, id, &p)?;
-            }
+        if let Some(node) = right
+            && let Some(id) = node.subtree
+        {
+            self.summary_map.compute(self.repo, id, &p)?;
         }
 
         p.finish();

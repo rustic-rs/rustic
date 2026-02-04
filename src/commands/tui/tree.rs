@@ -82,10 +82,10 @@ impl<Data, LeafData> Tree<Data, LeafData> {
                 return tree;
             }
             let item = tree?;
-            if let Self::Node(node) = item {
-                if node.open {
-                    iter_stack.push(node.children.iter_mut());
-                }
+            if let Self::Node(node) = item
+                && node.open
+            {
+                iter_stack.push(node.children.iter_mut());
             }
             tree = next_from_iter_stack(&mut iter_stack);
             count += 1;
@@ -115,10 +115,10 @@ impl<'a, Data, LeafData> Iterator for TreeIter<'a, Data, LeafData> {
     fn next(&mut self) -> Option<Self::Item> {
         let item = self.tree?;
         let depth = self.iter_stack.len();
-        if let Tree::Node(node) = item {
-            if !self.only_open || node.open {
-                self.iter_stack.push(node.children.iter());
-            }
+        if let Tree::Node(node) = item
+            && (!self.only_open || node.open)
+        {
+            self.iter_stack.push(node.children.iter());
         }
 
         self.tree = next_from_iter_stack(&mut self.iter_stack);

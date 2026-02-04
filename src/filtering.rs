@@ -257,21 +257,21 @@ impl SnapshotFilter {
             }
         }
         #[cfg(feature = "jq")]
-        if let Some(filter_jq) = &self.filter_jq {
-            if let Some(jq) = string_to_jq(filter_jq) {
-                match jq.call(snapshot) {
-                    Ok(result) => {
-                        if !result {
-                            return false;
-                        }
-                    }
-                    Err(err) => {
-                        warn!(
-                            "Error evaluating filter-jq for snapshot {}: {err}",
-                            snapshot.id
-                        );
+        if let Some(filter_jq) = &self.filter_jq
+            && let Some(jq) = string_to_jq(filter_jq)
+        {
+            match jq.call(snapshot) {
+                Ok(result) => {
+                    if !result {
                         return false;
                     }
+                }
+                Err(err) => {
+                    warn!(
+                        "Error evaluating filter-jq for snapshot {}: {err}",
+                        snapshot.id
+                    );
+                    return false;
                 }
             }
         }

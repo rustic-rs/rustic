@@ -336,14 +336,13 @@ impl BackupCmd {
                 bail!("as-path only works with a single source!");
             }
             // merge Options from config file using as_path, if given
-            if let Some(path) = path.as_os_str().to_str() {
-                if let Some(idx) = snapshot_opts
+            if let Some(path) = path.as_os_str().to_str()
+                && let Some(idx) = snapshot_opts
                     .iter()
                     .position(|opt| opt.sources == vec![path])
-                {
-                    info!("merging snapshot=\"{path}\" section from config file");
-                    self.merge(snapshot_opts[idx].clone());
-                }
+            {
+                info!("merging snapshot=\"{path}\" section from config file");
+                self.merge(snapshot_opts[idx].clone());
             }
         }
 

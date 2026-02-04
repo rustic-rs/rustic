@@ -322,29 +322,26 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Ls<'a, P, S> {
                     }
                     Char('v') => {
                         // viewing is not supported on cold repositories
-                        if self.repo.config().is_hot != Some(true) {
-                            if let Some(node) = self.selected_node() {
-                                if node.is_file() {
-                                    if let Ok(data) = self.repo.open_file(node)?.read_at(
-                                        self.repo,
-                                        0,
-                                        node.meta.size.min(1_000_000).try_into().unwrap(),
-                                    ) {
-                                        // viewing is only supported for text files
-                                        if let Ok(content) = String::from_utf8(data.to_vec()) {
-                                            let lines = content.lines().count();
-                                            let path = self.path.join(node.name());
-                                            let path = path.display();
-                                            self.current_screen = CurrentScreen::ShowFile(
-                                                Box::new(popup_scrollable_text(
-                                                    format!("{}:/{path}", self.snapshot.id),
-                                                    &content,
-                                                    (lines + 1).min(40).try_into().unwrap(),
-                                                )),
-                                            );
-                                        }
-                                    }
-                                }
+                        if self.repo.config().is_hot != Some(true)
+                            && let Some(node) = self.selected_node()
+                            && node.is_file()
+                            && let Ok(data) = self.repo.open_file(node)?.read_at(
+                                self.repo,
+                                0,
+                                node.meta.size.min(1_000_000).try_into().unwrap(),
+                            )
+                        {
+                            // viewing is only supported for text files
+                            if let Ok(content) = String::from_utf8(data.to_vec()) {
+                                let lines = content.lines().count();
+                                let path = self.path.join(node.name());
+                                let path = path.display();
+                                self.current_screen =
+                                    CurrentScreen::ShowFile(Box::new(popup_scrollable_text(
+                                        format!("{}:/{path}", self.snapshot.id),
+                                        &content,
+                                        (lines + 1).min(40).try_into().unwrap(),
+                                    )));
                             }
                         }
                     }

@@ -7,10 +7,7 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph},
 };
-use rustic_core::{
-    IndexedFull, Repository,
-    repofile::{Node, SnapshotFile, Tree},
-};
+use rustic_core::repofile::{Node, SnapshotFile, Tree};
 use style::palette::tailwind;
 
 use crate::{
@@ -23,6 +20,7 @@ use crate::{
         },
     },
     helpers::bytes_size_to_string,
+    repository::IndexedRepo,
 };
 
 use super::{
@@ -100,7 +98,7 @@ struct DiffTree {
 }
 
 impl DiffTree {
-    fn from_node<S: IndexedFull>(repo: &'_ Repository<S>, node: &DiffNode) -> Result<Self> {
+    fn from_node(repo: &IndexedRepo, node: &DiffNode) -> Result<Self> {
         let tree_from_node = |node: Option<&Node>| {
             node.map_or_else(
                 || Ok(Tree::default()),
@@ -131,10 +129,10 @@ impl DiffTree {
     }
 }
 
-pub struct Diff<'a, S> {
+pub struct Diff<'a> {
     current_screen: CurrentScreen,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<S>,
+    repo: &'a IndexedRepo,
     snapshot_left: SnapshotFile,
     snapshot_right: SnapshotFile,
     path_left: PathBuf,
@@ -159,9 +157,9 @@ impl TuiResult for DiffResult {
     }
 }
 
-impl<'a, S: IndexedFull> Diff<'a, S> {
+impl<'a> Diff<'a> {
     pub fn new(
-        repo: &'a Repository<S>,
+        repo: &'a IndexedRepo,
         snap_left: SnapshotFile,
         snap_right: SnapshotFile,
         path_left: &str,
@@ -442,7 +440,7 @@ impl<'a, S: IndexedFull> Diff<'a, S> {
     }
 }
 
-impl<'a, S: IndexedFull> ProcessEvent for Diff<'a, S> {
+impl<'a> ProcessEvent for Diff<'a> {
     type Result = Result<DiffResult>;
     fn input(&mut self, event: Event) -> Result<DiffResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
@@ -513,7 +511,7 @@ impl<'a, S: IndexedFull> ProcessEvent for Diff<'a, S> {
     }
 }
 
-impl<'a, S: IndexedFull> Draw for Diff<'a, S> {
+impl<'a> Draw for Diff<'a> {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 

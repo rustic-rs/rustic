@@ -8,8 +8,7 @@ use std::{
 #[cfg(feature = "tui")]
 use crate::commands::tui;
 use crate::{
-    Application, RUSTIC_APP, commands::diff::arg_to_snap_path, repository::CliIndexedRepo,
-    status_err,
+    Application, RUSTIC_APP, commands::diff::arg_to_snap_path, repository::IndexedRepo, status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -177,7 +176,7 @@ impl NodeLs for Node {
 impl LsCmd {
     fn inner_run_snapshot(
         &self,
-        repo: CliIndexedRepo,
+        repo: IndexedRepo,
         snap_id: &str,
         path: Option<&str>,
     ) -> Result<()> {

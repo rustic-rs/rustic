@@ -3,7 +3,7 @@
 use crate::{
     Application, RUSTIC_APP,
     commands::snapshots::print_snapshots,
-    repository::{CliIndexedRepo, CliOpenRepo, get_snapots_from_ids},
+    repository::{IndexedRepo, OpenRepo, get_snapots_from_ids},
     status_err,
 };
 
@@ -74,7 +74,7 @@ impl RewriteCmd {
             .dry_run(config.global.dry_run)
     }
 
-    fn inner_run_open(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run_open(&self, repo: OpenRepo) -> Result<()> {
         let snapshots = get_snapots_from_ids(&repo, &self.ids)?;
 
         let snaps = repo.rewrite_snapshots(snapshots, &self.opts())?;
@@ -84,7 +84,7 @@ impl RewriteCmd {
         Ok(())
     }
 
-    fn inner_run_indexed(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run_indexed(&self, repo: IndexedRepo) -> Result<()> {
         let snapshots = get_snapots_from_ids(&repo, &self.ids)?;
         let tree_opts = RewriteTreesOptions::default()
             .all_trees(self.all_trees)

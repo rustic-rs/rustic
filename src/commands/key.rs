@@ -1,7 +1,7 @@
 //! `key` subcommand
 
 use crate::{
-    Application, RUSTIC_APP, helpers::table_with_titles, repository::CliOpenRepo, status_err,
+    Application, RUSTIC_APP, helpers::table_with_titles, repository::OpenRepo, status_err,
 };
 
 use std::path::PathBuf;
@@ -108,7 +108,7 @@ impl Runnable for AddCmd {
 }
 
 impl AddCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         if RUSTIC_APP.config().global.dry_run {
             info!("adding no key in dry-run mode.");
             return Ok(());
@@ -138,7 +138,7 @@ impl Runnable for ListCmd {
 }
 
 impl ListCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let used_key = repo.key_id();
         let keys = repo
             .stream_files()?
@@ -189,7 +189,7 @@ impl Runnable for RemoveCmd {
 }
 
 impl RemoveCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let repo_key = repo.key_id();
         let ids: Vec<_> = repo.find_ids(&self.ids)?.collect();
         if ids.iter().any(|id| Some(id) == repo_key.as_ref()) {
@@ -250,7 +250,7 @@ impl Runnable for PasswordCmd {
 }
 
 impl PasswordCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let Some(key_id) = repo.key_id() else {
             bail!("No keyfile used to open the repo. Cannot change the password.")
         };

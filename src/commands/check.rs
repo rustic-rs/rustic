@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{CliOpenRepo, get_global_grouped_snapshots},
+    repository::{OpenRepo, get_global_grouped_snapshots},
     status_err,
 };
 
@@ -38,7 +38,7 @@ impl Runnable for CheckCmd {
 }
 
 impl CheckCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
         let trees = groups
             .into_iter()

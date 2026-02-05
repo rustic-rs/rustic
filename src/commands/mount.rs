@@ -18,7 +18,7 @@ use std::{ffi::OsStr, path::PathBuf};
 
 use crate::{
     Application, RUSTIC_APP, RusticConfig,
-    repository::{CliIndexedRepo, get_filtered_snapshots},
+    repository::{IndexedRepo, get_filtered_snapshots},
     status_err,
 };
 
@@ -111,7 +111,7 @@ impl MountCmd {
         }
     }
 
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         // We have merged the config file, the command line options, and the

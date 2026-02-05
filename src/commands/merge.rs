@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{CliOpenRepo, get_snapots_from_ids},
+    repository::{OpenRepo, get_snapots_from_ids},
     status_err,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -46,7 +46,7 @@ impl Runnable for MergeCmd {
 }
 
 impl MergeCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
         let repo = repo.to_indexed_ids()?;
 

@@ -3,7 +3,7 @@
 use crate::{
     Application, RUSTIC_APP,
     helpers::{bytes_size_to_string, table_right_from},
-    repository::CliRepo,
+    repository::Repo,
     status_err,
 };
 
@@ -53,7 +53,7 @@ struct Infos {
 }
 
 impl RepoInfoCmd {
-    fn inner_run(&self, repo: CliRepo) -> Result<()> {
+    fn inner_run(&self, repo: Repo) -> Result<()> {
         let config = RUSTIC_APP.config();
         let infos = Infos {
             files: (!self.only_index)

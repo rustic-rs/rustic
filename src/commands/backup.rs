@@ -5,12 +5,13 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
 
+use crate::repository::IndexedIdsRepo;
 use crate::{
     Application, RUSTIC_APP,
     commands::{init::init, snapshots::fill_table},
     config::{hooks::Hooks, parse_labels},
     helpers::{bold_cell, bytes_size_to_string, table},
-    repository::CliRepo,
+    repository::Repo,
     status_err,
 };
 
@@ -25,9 +26,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use rustic_core::{
-    BackupOptions, CommandInput, ConfigOptions, IndexedIds, KeyOptions, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, ParentOptions, PathList, Repository, SnapshotOptions,
-    repofile::SnapshotFile,
+    BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalSourceFilterOptions,
+    LocalSourceSaveOptions, ParentOptions, PathList, SnapshotOptions, repofile::SnapshotFile,
 };
 
 /// `backup` subcommand
@@ -211,7 +211,7 @@ impl Runnable for BackupCmd {
 }
 
 impl BackupCmd {
-    fn inner_run(&self, repo: CliRepo) -> Result<()> {
+    fn inner_run(&self, repo: Repo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         // Initialize repository if --init is set and it is not yet initialized
@@ -223,7 +223,7 @@ impl BackupCmd {
                 );
             }
             init(
-                repo.0,
+                repo,
                 &config.repository.credential_opts,
                 &self.key_opts,
                 &self.config_opts,
@@ -323,11 +323,7 @@ impl BackupCmd {
         hooks.with_env(&hooks_variables)
     }
 
-    fn backup_snapshot<S: IndexedIds>(
-        mut self,
-        source: PathList,
-        repo: &Repository<S>,
-    ) -> Result<()> {
+    fn backup_snapshot(mut self, source: PathList, repo: &IndexedIdsRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
         let snapshot_opts = &config.backup.snapshots;
         if let Some(path) = &self.as_path {

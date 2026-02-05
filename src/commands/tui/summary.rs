@@ -5,13 +5,14 @@ use derive_more::Add;
 use itertools::EitherOrBoth;
 use ratatui::text::Text;
 use rustic_core::{
-    DataId, IndexedFull, Progress, Repository, TreeId,
+    DataId, Progress, TreeId,
     repofile::{Metadata, Node, Tree},
 };
 
 use crate::{
     commands::{ls::Summary, tui::diff::DiffNode},
     helpers::bytes_size_to_string,
+    repository::IndexedRepo,
 };
 
 #[derive(Default)]
@@ -22,12 +23,7 @@ impl SummaryMap {
         self.0.get(id)
     }
 
-    pub fn compute<S: IndexedFull>(
-        &mut self,
-        repo: &Repository<S>,
-        id: TreeId,
-        p: &Progress,
-    ) -> Result<()> {
+    pub fn compute(&mut self, repo: &IndexedRepo, id: TreeId, p: &Progress) -> Result<()> {
         let _ = TreeSummary::from_tree(repo, id, &mut self.0, p)?;
         Ok(())
     }
@@ -42,10 +38,10 @@ impl SummaryMap {
         }
     }
 
-    pub fn compute_statistics<'a, S: IndexedFull>(
+    pub fn compute_statistics<'a>(
         &self,
         nodes: impl IntoIterator<Item = &'a Node>,
-        repo: &Repository<S>,
+        repo: &IndexedRepo,
     ) -> Result<Statistics> {
         let builder = nodes
             .into_iter()
@@ -55,10 +51,10 @@ impl SummaryMap {
         builder.build(repo)
     }
 
-    pub fn compute_diff_statistics<S: IndexedFull>(
+    pub fn compute_diff_statistics(
         &self,
         node: &DiffNode,
-        repo: &Repository<S>,
+        repo: &IndexedRepo,
     ) -> Result<DiffStatistics> {
         let stats = match node.map(|n| StatisticsBuilder::default().append_from_node(n, self)) {
             EitherOrBoth::Both(left, right) => {
@@ -106,16 +102,12 @@ impl TreeSummary {
         self.summary.update(node);
     }
 
-    pub fn from_tree<S>(
-        repo: &'_ Repository<S>,
+    pub fn from_tree(
+        repo: &IndexedRepo,
         id: TreeId,
         summary_map: &mut BTreeMap<TreeId, Self>,
         p: &Progress,
-        // Current dir
-    ) -> Result<Self>
-    where
-        S: IndexedFull,
-    {
+    ) -> Result<Self> {
         if let Some(summary) = summary_map.get(&id) {
             return Ok(summary.clone());
         }
@@ -180,7 +172,7 @@ impl<'a> StatisticsBuilder<'a> {
         }
         self
     }
-    pub fn build<S: IndexedFull>(self, repo: &'a Repository<S>) -> Result<Statistics> {
+    pub fn build(self, repo: &'a IndexedRepo) -> Result<Statistics> {
         let sizes = Sizes::from_blobs(&self.blobs, repo)?;
         Ok(Statistics {
             summary: self.summary,
@@ -229,9 +221,9 @@ pub struct Sizes {
 }
 
 impl Sizes {
-    pub fn from_blobs<'a, S: IndexedFull>(
+    pub fn from_blobs<'a>(
         blobs: impl IntoIterator<Item = &'a &'a DataId>,
-        repo: &'a Repository<S>,
+        repo: &'a IndexedRepo,
     ) -> Result<Self> {
         blobs
             .into_iter()

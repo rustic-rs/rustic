@@ -3,7 +3,7 @@
 use crate::{
     Application, RUSTIC_APP,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
-    repository::{CliOpenRepo, get_global_grouped_snapshots},
+    repository::{OpenRepo, get_global_grouped_snapshots},
     status_err,
 };
 
@@ -64,7 +64,7 @@ impl Runnable for SnapshotCmd {
 }
 
 impl SnapshotCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         #[cfg(feature = "tui")]
         if self.interactive {
             return tui::run(|progress| {

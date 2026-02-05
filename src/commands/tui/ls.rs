@@ -7,7 +7,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, Repository, TreeId,
+    TreeId,
     repofile::{Node, SnapshotFile, Tree},
 };
 use style::palette::tailwind;
@@ -26,16 +26,17 @@ use crate::{
         },
     },
     helpers::bytes_size_to_string,
+    repository::IndexedRepo,
 };
 
 use super::{summary::SummaryMap, widgets::PopUpInput};
 
 // the states this screen can be in
-enum CurrentScreen<'a, S> {
+enum CurrentScreen<'a> {
     Ls,
     ShowHelp(PopUpText),
     Table(PopUpTable),
-    Restore(Box<Restore<'a, S>>),
+    Restore(Box<Restore<'a>>),
     PromptExit(PopUpPrompt),
     PromptLeave(PopUpPrompt),
     ShowFile(Box<PopUpInput>),
@@ -62,11 +63,11 @@ General Commands:
 
  ";
 
-pub struct Ls<'a, S> {
-    current_screen: CurrentScreen<'a, S>,
+pub struct Ls<'a> {
+    current_screen: CurrentScreen<'a>,
     numeric: bool,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<S>,
+    repo: &'a IndexedRepo,
     snapshot: SnapshotFile,
     path: PathBuf,
     trees: Vec<(Tree, TreeId, usize)>, // Stack of parent trees with position
@@ -87,9 +88,9 @@ impl TuiResult for LsResult {
     }
 }
 
-impl<'a, S: IndexedFull> Ls<'a, S> {
+impl<'a> Ls<'a> {
     pub fn new(
-        repo: &'a Repository<S>,
+        repo: &'a IndexedRepo,
         snapshot: SnapshotFile,
         path: &str,
         summary_map: SummaryMap,
@@ -284,7 +285,7 @@ impl<'a, S: IndexedFull> Ls<'a, S> {
     }
 }
 
-impl<'a, S: IndexedFull> ProcessEvent for Ls<'a, S> {
+impl<'a> ProcessEvent for Ls<'a> {
     type Result = Result<LsResult>;
     fn input(&mut self, event: Event) -> Result<LsResult> {
         use KeyCode::{Backspace, Char, Enter, Esc, Left, Right};
@@ -409,7 +410,7 @@ impl<'a, S: IndexedFull> ProcessEvent for Ls<'a, S> {
     }
 }
 
-impl<'a, S: IndexedFull> Draw for Ls<'a, S> {
+impl<'a> Draw for Ls<'a> {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         let rects = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 

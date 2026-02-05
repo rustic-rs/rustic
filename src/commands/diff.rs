@@ -1,6 +1,6 @@
 //! `diff` subcommand
 
-use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
+use crate::{Application, RUSTIC_APP, repository::IndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use clap::ValueHint;
@@ -16,9 +16,8 @@ use std::{
 use anyhow::{Context, Result, bail};
 
 use rustic_core::{
-    Excludes, IndexedFull, LocalDestination, LocalSource, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, LsOptions, ProgressBars, ProgressType, ReadSource, ReadSourceEntry,
-    Repository, RusticResult,
+    Excludes, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
+    LsOptions, ProgressBars, ProgressType, ReadSource, ReadSourceEntry, RusticResult,
     repofile::{Node, NodeType},
 };
 
@@ -80,7 +79,7 @@ impl Runnable for DiffCmd {
 }
 
 impl DiffCmd {
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         let (id1, path1) = arg_to_snap_path(&self.snap1);
@@ -262,9 +261,9 @@ pub fn arg_to_snap_path(arg: &str) -> (Option<&str>, Option<&str>) {
 /// `false` otherwise
 ///
 /// [`RepositoryErrorKind::IdNotFound`]: rustic_core::error::RepositoryErrorKind::IdNotFound
-fn identical_content_local<S: IndexedFull>(
+fn identical_content_local(
     local: &LocalDestination,
-    repo: &Repository<S>,
+    repo: &IndexedRepo,
     path: &Path,
     node: &Node,
 ) -> Result<bool> {

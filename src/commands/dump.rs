@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{Application, RUSTIC_APP, repository::CliIndexedRepo, status_err};
+use crate::{Application, RUSTIC_APP, repository::IndexedRepo, status_err};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
@@ -66,7 +66,7 @@ impl Runnable for DumpCmd {
 }
 
 impl DumpCmd {
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         let node =
@@ -118,7 +118,7 @@ impl DumpCmd {
 }
 
 fn dump_content(
-    repo: &CliIndexedRepo,
+    repo: &IndexedRepo,
     node: &Node,
     w: &mut impl Write,
     ls_opts: &LsOptions,
@@ -131,7 +131,7 @@ fn dump_content(
 }
 
 fn dump_tar_gz(
-    repo: &CliIndexedRepo,
+    repo: &IndexedRepo,
     node: &Node,
     w: &mut impl Write,
     ls_opts: &LsOptions,
@@ -141,7 +141,7 @@ fn dump_tar_gz(
 }
 
 fn dump_tar(
-    repo: &CliIndexedRepo,
+    repo: &IndexedRepo,
     node: &Node,
     w: &mut impl Write,
     ls_opts: &LsOptions,
@@ -219,7 +219,7 @@ fn dump_tar(
 }
 
 fn dump_zip(
-    repo: &CliIndexedRepo,
+    repo: &IndexedRepo,
     node: &Node,
     w: &mut impl Write,
     ls_opts: &LsOptions,
@@ -238,7 +238,7 @@ fn dump_zip(
 }
 
 fn write_zip_to_file(
-    repo: &CliIndexedRepo,
+    repo: &IndexedRepo,
     node: &Node,
     file: &mut (impl Write + Seek),
     ls_opts: &LsOptions,
@@ -250,7 +250,7 @@ fn write_zip_to_file(
 }
 
 fn write_zip_contents(
-    repo: &CliIndexedRepo,
+    repo: &IndexedRepo,
     node: &Node,
     zip: &mut ZipWriter<impl Write + Seek>,
     ls_opts: &LsOptions,
@@ -323,7 +323,7 @@ impl<W> Seek for SeekWriter<W> {
 }
 
 struct OpenFileReader<'a> {
-    repo: &'a CliIndexedRepo,
+    repo: &'a IndexedRepo,
     open_file: OpenFile,
     offset: usize,
 }

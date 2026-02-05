@@ -17,11 +17,12 @@ use dav_server::{
 };
 use futures::FutureExt;
 use rustic_core::{
-    IndexedFull, Repository,
     repofile::Node,
     vfs::{FilePolicy, OpenFile, Vfs},
 };
 use tokio::task::spawn_blocking;
+
+use crate::repository::IndexedRepo;
 
 fn now() -> SystemTime {
     static NOW: OnceLock<SystemTime> = OnceLock::new();
@@ -29,9 +30,9 @@ fn now() -> SystemTime {
 }
 
 /// The inner state of a [`WebDavFS`] instance.
-struct DavFsInner<S> {
+struct DavFsInner {
     /// The [`Repository`] to use
-    repo: Repository<S>,
+    repo: IndexedRepo,
 
     /// The [`Vfs`] to use
     vfs: Vfs,
@@ -40,7 +41,7 @@ struct DavFsInner<S> {
     file_policy: FilePolicy,
 }
 
-impl<S> Debug for DavFsInner<S> {
+impl Debug for DavFsInner {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DavFS")
     }
@@ -51,11 +52,11 @@ impl<S> Debug for DavFsInner<S> {
 /// This is the main entry point for the DAV filesystem.
 /// It implements [`DavFileSystem`] and can be used to serve a [`Repository`] via DAV.
 #[derive(Debug)]
-pub struct WebDavFS<S> {
-    inner: Arc<DavFsInner<S>>,
+pub struct WebDavFS {
+    inner: Arc<DavFsInner>,
 }
 
-impl<S: IndexedFull + Send + Sync + 'static> WebDavFS<S> {
+impl WebDavFS {
     /// Create a new [`WebDavFS`] instance.
     ///
     /// # Arguments
@@ -67,7 +68,7 @@ impl<S: IndexedFull + Send + Sync + 'static> WebDavFS<S> {
     /// # Returns
     ///
     /// A new [`WebDavFS`] instance
-    pub(crate) fn new(repo: Repository<S>, vfs: Vfs, file_policy: FilePolicy) -> Self {
+    pub(crate) fn new(repo: IndexedRepo, vfs: Vfs, file_policy: FilePolicy) -> Self {
         let inner = DavFsInner {
             repo,
             vfs,
@@ -136,7 +137,7 @@ impl<S: IndexedFull + Send + Sync + 'static> WebDavFS<S> {
     }
 }
 
-impl<S: IndexedFull> Clone for WebDavFS<S> {
+impl Clone for WebDavFS {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -144,7 +145,7 @@ impl<S: IndexedFull> Clone for WebDavFS<S> {
     }
 }
 
-impl<S: IndexedFull + Debug + Send + Sync + 'static> DavFileSystem for WebDavFS<S> {
+impl DavFileSystem for WebDavFS {
     fn metadata<'a>(&'a self, davpath: &'a DavPath) -> FsFuture<'_, Box<dyn DavMetaData>> {
         self.symlink_metadata(davpath)
     }
@@ -250,7 +251,7 @@ impl DavDirEntry for DavFsDirEntry {
 /// A [`DavFile`] implementation for [`Node`]s.
 ///
 /// This is a read-only file.
-struct DavFsFile<S> {
+struct DavFsFile {
     /// The [`Node`] this file is for
     node: Node,
 
@@ -258,19 +259,19 @@ struct DavFsFile<S> {
     open: Arc<OpenFile>,
 
     /// The [`DavFsInner`] this file belongs to
-    fs: Arc<DavFsInner<S>>,
+    fs: Arc<DavFsInner>,
 
     /// The current seek position
     seek: usize,
 }
 
-impl<S> Debug for DavFsFile<S> {
+impl Debug for DavFsFile {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "DavFile")
     }
 }
 
-impl<S: IndexedFull + Debug + Send + Sync + 'static> DavFile for DavFsFile<S> {
+impl DavFile for DavFsFile {
     fn metadata(&mut self) -> FsFuture<'_, Box<dyn DavMetaData>> {
         async move {
             let meta: Box<dyn DavMetaData> = Box::new(DavFsMetaData(self.node.clone()));

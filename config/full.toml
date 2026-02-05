@@ -58,6 +58,7 @@ warm-up = false
 warm-up-command = "warmup.sh %id" # Default: not set
 warm-up-wait = "10min" # Default: not set
 warm-up-wait-command = "warmup_wait.sh" # Default: not set
+warm-up-batch = 1
 # one of the following credential options should be set; if not you will be always asked for a password
 key = '{"mac":{"k":"TEQN3py56U36eH4hTTgaUA==","r":"+/Cc+P7jN42a7bZVZYyAcw=="},"encrypt":"LKyGDH7dfX24a9u+3q8DgvuFVDfI3fNrzeo6l4r8u64="}'
 key-file = "/my/key.txt"

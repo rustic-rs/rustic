@@ -238,21 +238,21 @@ impl SnapshotFilter {
     #[must_use]
     pub fn matches(&self, snapshot: &SnapshotFile) -> bool {
         #[cfg(feature = "rhai")]
-        if let Some(filter_fn) = &self.filter_fn {
-            if let Some(func) = string_to_fn(filter_fn) {
-                match func.call::<bool>(snapshot) {
-                    Ok(result) => {
-                        if !result {
-                            return false;
-                        }
-                    }
-                    Err(err) => {
-                        warn!(
-                            "Error evaluating filter-fn for snapshot {}: {err}",
-                            snapshot.id
-                        );
+        if let Some(filter_fn) = &self.filter_fn
+            && let Some(func) = string_to_fn(filter_fn)
+        {
+            match func.call::<bool>(snapshot) {
+                Ok(result) => {
+                    if !result {
                         return false;
                     }
+                }
+                Err(err) => {
+                    warn!(
+                        "Error evaluating filter-fn for snapshot {}: {err}",
+                        snapshot.id
+                    );
+                    return false;
                 }
             }
         }

@@ -4,47 +4,34 @@ use std::time::{Duration, SystemTime};
 
 use bytesize::ByteSize;
 use ratatui::{Terminal, backend::CrosstermBackend};
-use rustic_core::{Progress, ProgressBars};
+use rustic_core::{Progress, ProgressBars, ProgressType, RusticProgress};
 
 use super::widgets::{Draw, popup_gauge, popup_text};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TuiProgressBars {
     pub terminal: Arc<RwLock<Terminal<CrosstermBackend<Stdout>>>>,
 }
 
 impl TuiProgressBars {
-    fn as_progress(&self, progress_type: TuiProgressType, prefix: String) -> TuiProgress {
-        TuiProgress {
+    fn as_progress(&self, progress_type: ProgressType, prefix: String) -> Progress {
+        let progress = TuiProgress {
             terminal: self.terminal.clone(),
             data: Arc::new(RwLock::new(CounterData::new(prefix))),
             progress_type,
-        }
+        };
+        progress.popup();
+        Progress::new(progress)
     }
 }
 
 impl ProgressBars for TuiProgressBars {
-    type P = TuiProgress;
-    fn progress_hidden(&self) -> Self::P {
-        self.as_progress(TuiProgressType::Hidden, String::new())
-    }
-    fn progress_spinner(&self, prefix: impl Into<std::borrow::Cow<'static, str>>) -> Self::P {
-        let progress = self.as_progress(TuiProgressType::Spinner, String::from(prefix.into()));
-        progress.popup();
-        progress
-    }
-    fn progress_counter(&self, prefix: impl Into<std::borrow::Cow<'static, str>>) -> Self::P {
-        let progress = self.as_progress(TuiProgressType::Counter, String::from(prefix.into()));
-        progress.popup();
-        progress
-    }
-    fn progress_bytes(&self, prefix: impl Into<std::borrow::Cow<'static, str>>) -> Self::P {
-        let progress = self.as_progress(TuiProgressType::Bytes, String::from(prefix.into()));
-        progress.popup();
-        progress
+    fn progress(&self, progress_type: ProgressType, prefix: &str) -> Progress {
+        self.as_progress(progress_type, prefix.to_string())
     }
 }
 
+#[derive(Debug)]
 struct CounterData {
     prefix: String,
     begin: SystemTime,
@@ -63,19 +50,11 @@ impl CounterData {
     }
 }
 
-#[derive(Clone)]
-enum TuiProgressType {
-    Hidden,
-    Spinner,
-    Counter,
-    Bytes,
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TuiProgress {
     terminal: Arc<RwLock<Terminal<CrosstermBackend<Stdout>>>>,
     data: Arc<RwLock<CounterData>>,
-    progress_type: TuiProgressType,
+    progress_type: ProgressType,
 }
 
 fn fmt_duration(d: Duration) -> String {
@@ -107,10 +86,10 @@ impl TuiProgress {
         };
         let prefix = &data.prefix;
         let message = match self.progress_type {
-            TuiProgressType::Spinner => {
+            ProgressType::Spinner => {
                 format!("{} {prefix}", fmt_duration(elapsed))
             }
-            TuiProgressType::Counter => {
+            ProgressType::Counter => {
                 format!(
                     "{} {prefix} {}{}{eta}",
                     fmt_duration(elapsed),
@@ -118,7 +97,7 @@ impl TuiProgress {
                     length.map_or(String::new(), |l| format!("/{l}"))
                 )
             }
-            TuiProgressType::Bytes => {
+            ProgressType::Bytes => {
                 format!(
                     "{} {prefix} {}{}{eta}",
                     fmt_duration(elapsed),
@@ -126,7 +105,6 @@ impl TuiProgress {
                     length.map_or(String::new(), |l| format!("/{}", ByteSize(l).display()))
                 )
             }
-            TuiProgressType::Hidden => String::new(),
         };
         drop(data);
 
@@ -135,12 +113,11 @@ impl TuiProgress {
             .draw(|f| {
                 let area = f.area();
                 match self.progress_type {
-                    TuiProgressType::Hidden => {}
-                    TuiProgressType::Spinner => {
+                    ProgressType::Spinner => {
                         let mut popup = popup_text("progress", message.into());
                         popup.draw(area, f);
                     }
-                    TuiProgressType::Counter | TuiProgressType::Bytes => {
+                    ProgressType::Counter | ProgressType::Bytes => {
                         let mut popup = popup_gauge("progress", message.into(), ratio);
                         popup.draw(area, f);
                     }
@@ -150,16 +127,16 @@ impl TuiProgress {
     }
 }
 
-impl Progress for TuiProgress {
+impl RusticProgress for TuiProgress {
     fn is_hidden(&self) -> bool {
-        matches!(self.progress_type, TuiProgressType::Hidden)
+        false
     }
     fn set_length(&self, len: u64) {
         self.data.write().unwrap().length = Some(len);
         self.popup();
     }
-    fn set_title(&self, title: &'static str) {
-        self.data.write().unwrap().prefix = String::from(title);
+    fn set_title(&self, title: &str) {
+        self.data.write().unwrap().prefix = title.to_string();
         self.popup();
     }
 

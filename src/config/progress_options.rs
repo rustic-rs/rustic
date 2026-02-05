@@ -1,6 +1,6 @@
 //! Progress Bar Config
 
-use std::{borrow::Cow, fmt::Write, time::Duration};
+use std::{fmt::Write, time::Duration};
 
 use std::io::IsTerminal;
 use std::sync::{Arc, Mutex};
@@ -17,7 +17,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
-use rustic_core::{Progress, ProgressBars};
+use rustic_core::{Progress, ProgressBars, ProgressType, RusticProgress};
 
 mod constants {
     use std::time::Duration;
@@ -71,17 +71,13 @@ impl ProgressOptions {
     /// * `Hidden`: If --no-progress is set.
     /// * `Interactive`: If running in a TTY.
     /// * `NonInteractive`: If running in a pipe/service (logs to stderr).
-    fn create_progress(
-        &self,
-        prefix: impl Into<Cow<'static, str>>,
-        kind: ProgressKind,
-    ) -> RusticProgress {
+    fn create_progress(&self, prefix: &str, kind: ProgressType) -> Progress {
         if self.no_progress {
-            return RusticProgress::Hidden(HiddenProgress);
+            return Progress::hidden();
         }
 
         if std::io::stderr().is_terminal() {
-            RusticProgress::Interactive(InteractiveProgress::new(
+            Progress::new(InteractiveProgress::new(
                 prefix,
                 kind,
                 self.interactive_interval(),
@@ -89,36 +85,18 @@ impl ProgressOptions {
         } else {
             let interval = self.log_interval();
             if interval > Duration::ZERO {
-                RusticProgress::NonInteractive(NonInteractiveProgress::new(prefix, interval, kind))
+                Progress::new(NonInteractiveProgress::new(prefix, interval, kind))
             } else {
-                RusticProgress::Hidden(HiddenProgress)
+                Progress::hidden()
             }
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ProgressKind {
-    Spinner,
-    Counter,
-    Bytes,
-}
-
-// ================ Hidden ================
-
-/// No-op progress implementation; when progress is disabled; --no-progress
-#[derive(Debug, Clone, Copy, Default)]
-pub struct HiddenProgress;
-
-impl Progress for HiddenProgress {
-    fn is_hidden(&self) -> bool {
-        true
+impl ProgressBars for ProgressOptions {
+    fn progress(&self, progress_kind: ProgressType, prefix: &str) -> Progress {
+        self.create_progress(prefix, progress_kind)
     }
-
-    fn set_length(&self, _len: u64) {}
-    fn set_title(&self, _title: &'static str) {}
-    fn inc(&self, _inc: u64) {}
-    fn finish(&self) {}
 }
 
 // ================ Interactive ================
@@ -126,28 +104,24 @@ impl Progress for HiddenProgress {
 #[derive(Debug, Clone)]
 pub struct InteractiveProgress {
     bar: ProgressBar,
-    kind: ProgressKind,
+    kind: ProgressType,
 }
 
 impl InteractiveProgress {
-    fn new(
-        prefix: impl Into<Cow<'static, str>>,
-        kind: ProgressKind,
-        tick_interval: Duration,
-    ) -> Self {
+    fn new(prefix: &str, kind: ProgressType, tick_interval: Duration) -> Self {
         let style = Self::initial_style(kind);
         let bar = ProgressBar::new(0).with_style(style);
-        bar.set_prefix(prefix);
+        bar.set_prefix(prefix.to_string());
         bar.enable_steady_tick(tick_interval);
         Self { bar, kind }
     }
 
     #[allow(clippy::literal_string_with_formatting_args)]
-    fn initial_style(kind: ProgressKind) -> ProgressStyle {
+    fn initial_style(kind: ProgressType) -> ProgressStyle {
         let template = match kind {
-            ProgressKind::Spinner => "[{elapsed_precise}] {prefix:30} {spinner}",
-            ProgressKind::Counter => "[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}",
-            ProgressKind::Bytes => {
+            ProgressType::Spinner => "[{elapsed_precise}] {prefix:30} {spinner}",
+            ProgressType::Counter => "[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}",
+            ProgressType::Bytes => {
                 "[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}            {bytes_per_sec:12}"
             }
         };
@@ -155,13 +129,13 @@ impl InteractiveProgress {
     }
 
     #[allow(clippy::literal_string_with_formatting_args)]
-    fn style_with_length(kind: ProgressKind) -> ProgressStyle {
+    fn style_with_length(kind: ProgressType) -> ProgressStyle {
         match kind {
-            ProgressKind::Spinner => Self::initial_style(kind),
-            ProgressKind::Counter => ProgressStyle::default_bar()
+            ProgressType::Spinner => Self::initial_style(kind),
+            ProgressType::Counter => ProgressStyle::default_bar()
                 .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}")
                 .unwrap(),
-            ProgressKind::Bytes => ProgressStyle::default_bar()
+            ProgressType::Bytes => ProgressStyle::default_bar()
                 .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| {
                     let _ = match (s.pos(), s.len()) {
                         (pos, Some(len)) if pos != 0 && len > pos => {
@@ -177,20 +151,20 @@ impl InteractiveProgress {
     }
 }
 
-impl Progress for InteractiveProgress {
+impl RusticProgress for InteractiveProgress {
     fn is_hidden(&self) -> bool {
         false
     }
 
     fn set_length(&self, len: u64) {
-        if matches!(self.kind, ProgressKind::Bytes | ProgressKind::Counter) {
+        if matches!(self.kind, ProgressType::Bytes | ProgressType::Counter) {
             self.bar.set_style(Self::style_with_length(self.kind));
         }
         self.bar.set_length(len);
     }
 
-    fn set_title(&self, title: &'static str) {
-        self.bar.set_prefix(title);
+    fn set_title(&self, title: &str) {
+        self.bar.set_prefix(title.to_string());
     }
 
     fn inc(&self, inc: u64) {
@@ -207,7 +181,7 @@ impl Progress for InteractiveProgress {
 /// Store state for non-interactive progress
 #[derive(Debug)]
 struct NonInteractiveState {
-    prefix: Cow<'static, str>,
+    prefix: String,
     position: u64,
     length: Option<u64>,
     last_log: Instant,
@@ -220,15 +194,15 @@ pub struct NonInteractiveProgress {
     state: Arc<Mutex<NonInteractiveState>>,
     start: Instant,
     interval: Duration,
-    kind: ProgressKind,
+    kind: ProgressType,
 }
 
 impl NonInteractiveProgress {
-    fn new(prefix: impl Into<Cow<'static, str>>, interval: Duration, kind: ProgressKind) -> Self {
+    fn new(prefix: &str, interval: Duration, kind: ProgressType) -> Self {
         let now = Instant::now();
         Self {
             state: Arc::new(Mutex::new(NonInteractiveState {
-                prefix: prefix.into(),
+                prefix: prefix.to_string(),
                 position: 0,
                 length: None,
                 last_log: now,
@@ -241,8 +215,8 @@ impl NonInteractiveProgress {
 
     fn format_value(&self, value: u64) -> String {
         match self.kind {
-            ProgressKind::Bytes => ByteSize(value).to_string(), // delegate bytesize handling
-            ProgressKind::Counter | ProgressKind::Spinner => value.to_string(),
+            ProgressType::Bytes => ByteSize(value).to_string(), // delegate bytesize handling
+            ProgressType::Counter | ProgressType::Spinner => value.to_string(),
         }
     }
 
@@ -261,7 +235,7 @@ impl NonInteractiveProgress {
     }
 }
 
-impl Progress for NonInteractiveProgress {
+impl RusticProgress for NonInteractiveProgress {
     fn is_hidden(&self) -> bool {
         false
     }
@@ -272,9 +246,9 @@ impl Progress for NonInteractiveProgress {
         }
     }
 
-    fn set_title(&self, title: &'static str) {
+    fn set_title(&self, title: &str) {
         if let Ok(mut state) = self.state.lock() {
-            state.prefix = Cow::Borrowed(title);
+            state.prefix = title.to_string();
         }
     }
 
@@ -300,78 +274,5 @@ impl Progress for NonInteractiveProgress {
             self.format_value(state.position),
             self.start.elapsed()
         );
-    }
-}
-
-// ================ Wrap all  ================
-
-/// Unified Progress Bar Type that dispatches to appropriate implementation
-/// based on the current environment (terminal, non-terminal, no progress)
-#[derive(Debug, Clone)]
-pub enum RusticProgress {
-    Hidden(HiddenProgress),
-    Interactive(InteractiveProgress),
-    NonInteractive(NonInteractiveProgress),
-}
-
-impl Progress for RusticProgress {
-    fn is_hidden(&self) -> bool {
-        match self {
-            Self::Hidden(p) => p.is_hidden(),
-            Self::Interactive(p) => p.is_hidden(),
-            Self::NonInteractive(p) => p.is_hidden(),
-        }
-    }
-
-    fn set_length(&self, len: u64) {
-        match self {
-            Self::Hidden(p) => p.set_length(len),
-            Self::Interactive(p) => p.set_length(len),
-            Self::NonInteractive(p) => p.set_length(len),
-        }
-    }
-
-    fn set_title(&self, title: &'static str) {
-        match self {
-            Self::Hidden(p) => p.set_title(title),
-            Self::Interactive(p) => p.set_title(title),
-            Self::NonInteractive(p) => p.set_title(title),
-        }
-    }
-
-    fn inc(&self, inc: u64) {
-        match self {
-            Self::Hidden(p) => p.inc(inc),
-            Self::Interactive(p) => p.inc(inc),
-            Self::NonInteractive(p) => p.inc(inc),
-        }
-    }
-
-    fn finish(&self) {
-        match self {
-            Self::Hidden(p) => p.finish(),
-            Self::Interactive(p) => p.finish(),
-            Self::NonInteractive(p) => p.finish(),
-        }
-    }
-}
-
-impl ProgressBars for ProgressOptions {
-    type P = RusticProgress;
-
-    fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
-        self.create_progress(prefix, ProgressKind::Spinner)
-    }
-
-    fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
-        self.create_progress(prefix, ProgressKind::Counter)
-    }
-
-    fn progress_hidden(&self) -> RusticProgress {
-        RusticProgress::Hidden(HiddenProgress)
-    }
-
-    fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> RusticProgress {
-        self.create_progress(prefix, ProgressKind::Bytes)
     }
 }

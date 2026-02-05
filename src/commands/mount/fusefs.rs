@@ -9,7 +9,6 @@ use std::{
 };
 
 use rustic_core::{
-    IndexedFull, Repository,
     repofile::{Node, NodeType},
     vfs::{FilePolicy, OpenFile, Vfs},
 };
@@ -20,16 +19,18 @@ use fuse_mt::{
 };
 use itertools::Itertools;
 
-pub struct FuseFS<P, S> {
-    repo: Repository<P, S>,
+use crate::repository::IndexedRepo;
+
+pub struct FuseFS {
+    repo: IndexedRepo,
     vfs: Vfs,
     open_files: RwLock<BTreeMap<u64, OpenFile>>,
     now: SystemTime,
     file_policy: FilePolicy,
 }
 
-impl<P, S: IndexedFull> FuseFS<P, S> {
-    pub(crate) fn new(repo: Repository<P, S>, vfs: Vfs, file_policy: FilePolicy) -> Self {
+impl FuseFS {
+    pub(crate) fn new(repo: IndexedRepo, vfs: Vfs, file_policy: FilePolicy) -> Self {
         let open_files = RwLock::new(BTreeMap::new());
 
         Self {
@@ -113,7 +114,7 @@ fn node_to_file_attr(node: &Node, now: SystemTime) -> FileAttr {
     }
 }
 
-impl<P, S: IndexedFull> FilesystemMT for FuseFS<P, S> {
+impl FilesystemMT for FuseFS {
     fn getattr(&self, _req: RequestInfo, path: &Path, _fh: Option<u64>) -> ResultEntry {
         let node = self.node_from_path(path)?;
         Ok((Duration::from_secs(1), node_to_file_attr(&node, self.now)))
@@ -166,13 +167,12 @@ impl<P, S: IndexedFull> FilesystemMT for FuseFS<P, S> {
         size: u32,
         callback: impl FnOnce(ResultSlice<'_>) -> CallbackResult,
     ) -> CallbackResult {
-        if let Some(open_file) = self.open_files.read().unwrap().get(&fh) {
-            if let Ok(data) =
+        if let Some(open_file) = self.open_files.read().unwrap().get(&fh)
+            && let Ok(data) =
                 self.repo
                     .read_file_at(open_file, offset.try_into().unwrap(), size as usize)
-            {
-                return callback(Ok(&data));
-            }
+        {
+            return callback(Ok(&data));
         }
         callback(Err(libc::ENOSYS))
     }

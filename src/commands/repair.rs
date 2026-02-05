@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{CliIndexedRepo, CliOpenRepo, get_snapots_from_ids},
+    repository::{IndexedRepo, OpenRepo, get_snapots_from_ids},
     status_err,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -65,7 +65,7 @@ impl Runnable for IndexSubCmd {
 }
 
 impl IndexSubCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
         repo.repair_index(&self.opts, config.global.dry_run)?;
         Ok(())
@@ -83,7 +83,7 @@ impl Runnable for SnapSubCmd {
 }
 
 impl SnapSubCmd {
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
         let snaps = get_snapots_from_ids(&repo, &self.ids)?;
         repo.repair_snapshots(&self.opts, snaps, config.global.dry_run)?;

@@ -3,7 +3,7 @@
 use crate::{
     Application, RUSTIC_APP,
     helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
-    repository::{CliOpenRepo, get_global_grouped_snapshots},
+    repository::{OpenRepo, get_global_grouped_snapshots},
     status_err,
 };
 
@@ -16,7 +16,7 @@ use jiff::SignedDuration;
 use serde::Serialize;
 
 use rustic_core::{
-    Progress, ProgressBars, SnapshotGroup,
+    ProgressBars, ProgressType, SnapshotGroup,
     repofile::{DeleteOption, SnapshotFile},
 };
 
@@ -64,7 +64,7 @@ impl Runnable for SnapshotCmd {
 }
 
 impl SnapshotCmd {
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         #[cfg(feature = "tui")]
         if self.interactive {
             return tui::run(|progress| {
@@ -72,7 +72,10 @@ impl SnapshotCmd {
                 config
                     .repository
                     .run_indexed_with_progress(progress.clone(), |repo| {
-                        let p = progress.progress_spinner("starting rustic in interactive mode...");
+                        let p = progress.progress(
+                            ProgressType::Spinner,
+                            "starting rustic in interactive mode...",
+                        );
                         p.finish();
                         // create app and run it
                         let snapshots = tui::Snapshots::new(

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{CliIndexedRepo, get_global_grouped_snapshots},
+    repository::{IndexedRepo, get_global_grouped_snapshots},
     status_err,
 };
 
@@ -69,7 +69,7 @@ impl Runnable for FindCmd {
 }
 
 impl FindCmd {
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
         for (group, mut snapshots) in groups {
             snapshots.sort_unstable();

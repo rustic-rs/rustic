@@ -8,8 +8,7 @@ use std::{
 #[cfg(feature = "tui")]
 use crate::commands::tui;
 use crate::{
-    Application, RUSTIC_APP, commands::diff::arg_to_snap_path, repository::CliIndexedRepo,
-    status_err,
+    Application, RUSTIC_APP, commands::diff::arg_to_snap_path, repository::IndexedRepo, status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -17,8 +16,8 @@ use anyhow::Result;
 
 use derive_more::Add;
 use rustic_core::{
-    Excludes, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, LsOptions, ReadSource,
-    ReadSourceEntry, RusticResult,
+    Excludes, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, LsOptions,
+    ProgressType, ReadSource, ReadSourceEntry, RusticResult,
     repofile::{Node, NodeType},
 };
 
@@ -177,7 +176,7 @@ impl NodeLs for Node {
 impl LsCmd {
     fn inner_run_snapshot(
         &self,
-        repo: CliIndexedRepo,
+        repo: IndexedRepo,
         snap_id: &str,
         path: Option<&str>,
     ) -> Result<()> {
@@ -188,11 +187,14 @@ impl LsCmd {
 
         #[cfg(feature = "tui")]
         if self.interactive {
-            use rustic_core::{Progress, ProgressBars};
+            use rustic_core::ProgressBars;
             use tui::summary::SummaryMap;
 
             return tui::run(|progress| {
-                let p = progress.progress_spinner("starting rustic in interactive mode...");
+                let p = progress.progress(
+                    ProgressType::Spinner,
+                    "starting rustic in interactive mode...",
+                );
                 p.finish();
                 // create app and run it
                 let ls = tui::Ls::new(&repo, snap, path, SummaryMap::default())?;

@@ -9,8 +9,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use rustic_core::{
-    IndexedFull, Progress, ProgressBars, Repository, SnapshotGroup, SnapshotGroupCriterion,
-    StringList,
+    SnapshotGroup, SnapshotGroupCriterion, StringList,
     repofile::{DeleteOption, SnapshotFile},
 };
 use style::palette::tailwind;
@@ -31,12 +30,13 @@ use crate::{
         },
     },
     filtering::SnapshotFilter,
+    repository::IndexedRepo,
 };
 
 use super::summary::SummaryMap;
 
 // the states this screen can be in
-enum CurrentScreen<'a, P, S> {
+enum CurrentScreen<'a> {
     Snapshots,
     ShowHelp(PopUpText),
     Table(PopUpTable),
@@ -44,8 +44,8 @@ enum CurrentScreen<'a, P, S> {
     EnterFilter(PopUpInput),
     PromptWrite(PopUpPrompt),
     PromptExit(PopUpPrompt),
-    Dir(Box<Ls<'a, P, S>>),
-    Diff(Box<Diff<'a, P, S>>),
+    Dir(Box<Ls<'a>>),
+    Diff(Box<Diff<'a>>),
 }
 
 #[derive(Clone, Copy)]
@@ -161,11 +161,11 @@ Commands applied to marked snapshot(s) (selected if none marked):
   Ctrl-p : remove delete protection for snapshot(s)
 ";
 
-pub struct Snapshots<'a, P, S> {
-    current_screen: CurrentScreen<'a, P, S>,
+pub struct Snapshots<'a> {
+    current_screen: CurrentScreen<'a>,
     current_view: View,
     table: WithBlock<SelectTable>,
-    repo: &'a Repository<P, S>,
+    repo: &'a IndexedRepo,
     snaps_status: Vec<SnapStatus>,
     snapshots: Vec<SnapshotFile>,
     original_snapshots: Vec<SnapshotFile>,
@@ -177,9 +177,9 @@ pub struct Snapshots<'a, P, S> {
     summary_map: SummaryMap,
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
+impl<'a> Snapshots<'a> {
     pub fn new(
-        repo: &'a Repository<P, S>,
+        repo: &'a IndexedRepo,
         filter: SnapshotFilter,
         group_by: SnapshotGroupCriterion,
     ) -> Result<Self> {
@@ -534,8 +534,9 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 
     pub fn snapshots_summary(&mut self) -> Result<PopUpTable> {
-        let pb = self.repo.progress_bars();
-        let p = pb.progress_counter("computing (sub)-dir information");
+        let p = self
+            .repo
+            .progress_counter("computing (sub)-dir information");
         // Take out summary_map to fix lifetime issues
         let mut summary_map = mem::take(&mut self.summary_map);
 
@@ -564,7 +565,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         ))
     }
 
-    pub fn dir(&mut self) -> Result<Option<Ls<'a, P, S>>> {
+    pub fn dir(&mut self) -> Result<Option<Ls<'a>>> {
         self.selected_snapshot().cloned().map_or(Ok(None), |snap| {
             Some(Ls::new(
                 self.repo,
@@ -576,7 +577,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
         })
     }
 
-    pub fn diff(&mut self) -> Result<Option<Diff<'a, P, S>>> {
+    pub fn diff(&mut self) -> Result<Option<Diff<'a>>> {
         let snaps: Vec<_> = self
             .snapshots
             .iter()
@@ -819,7 +820,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> Snapshots<'a, P, S> {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
+impl<'a> ProcessEvent for Snapshots<'a> {
     type Result = Result<bool>;
     fn input(&mut self, event: Event) -> Result<bool> {
         use KeyCode::{Char, Enter, Esc, F, Left, Right};
@@ -1022,7 +1023,7 @@ impl<'a, P: ProgressBars, S: IndexedFull> ProcessEvent for Snapshots<'a, P, S> {
     }
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Draw for Snapshots<'a, P, S> {
+impl<'a> Draw for Snapshots<'a> {
     fn draw(&mut self, area: Rect, f: &mut Frame<'_>) {
         if let CurrentScreen::Dir(dir) = &mut self.current_screen {
             dir.draw(area, f);

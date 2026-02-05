@@ -1,6 +1,6 @@
 //! `forget` subcommand
 
-use crate::repository::{CliOpenRepo, get_grouped_snapshots};
+use crate::repository::{OpenRepo, get_grouped_snapshots};
 use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, status_err};
 
 use abscissa_core::{Command, FrameworkError, Runnable};
@@ -102,7 +102,7 @@ impl ForgetCmd {
     /// be careful about self vs `RUSTIC_APP.config()` usage
     /// only the `RUSTIC_APP.config()` involves the TOML and ENV merged configurations
     /// see <https://github.com/rustic-rs/rustic/issues/1242>
-    fn inner_run(&self, repo: CliOpenRepo) -> Result<()> {
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         let group_by = config

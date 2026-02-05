@@ -1,7 +1,7 @@
 //! `restore` subcommand
 
 use crate::{
-    Application, RUSTIC_APP, helpers::bytes_size_to_string, repository::CliIndexedRepo, status_err,
+    Application, RUSTIC_APP, helpers::bytes_size_to_string, repository::IndexedRepo, status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -55,7 +55,7 @@ impl Runnable for RestoreCmd {
 }
 
 impl RestoreCmd {
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
         let dry_run = config.global.dry_run;
 

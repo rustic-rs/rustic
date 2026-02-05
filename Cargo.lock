@@ -2100,7 +2100,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "tokio",
  "tower-service",
  "tracing",
@@ -3656,7 +3656,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.109",
@@ -3669,7 +3669,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.109",
@@ -3792,7 +3792,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.35",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -3829,7 +3829,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -4382,7 +4382,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.5.4"
-source = "git+https://github.com/rustic-rs/rustic_core#fd592d99adfa67eba0bec0073ceea9ff9b2a85c0"
+source = "git+https://github.com/rustic-rs/rustic_core#60f8ea15403c6e02ebb1ac9df601cb3ed5192a2f"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4421,7 +4421,7 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.9.0"
-source = "git+https://github.com/rustic-rs/rustic_core#fd592d99adfa67eba0bec0073ceea9ff9b2a85c0"
+source = "git+https://github.com/rustic-rs/rustic_core#60f8ea15403c6e02ebb1ac9df601cb3ed5192a2f"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4475,7 +4475,7 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.3.4"
-source = "git+https://github.com/rustic-rs/rustic_core#fd592d99adfa67eba0bec0073ceea9ff9b2a85c0"
+source = "git+https://github.com/rustic-rs/rustic_core#60f8ea15403c6e02ebb1ac9df601cb3ed5192a2f"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -6131,7 +6131,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

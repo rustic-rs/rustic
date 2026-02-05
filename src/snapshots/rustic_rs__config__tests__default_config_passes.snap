@@ -52,6 +52,7 @@ RusticConfig {
             warm_up_command: None,
             warm_up_wait_command: None,
             warm_up_wait: None,
+            warm_up_batch: None,
         },
         credential_opts: CredentialOptions {
             key: None,

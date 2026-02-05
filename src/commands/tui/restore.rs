@@ -1,10 +1,7 @@
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::prelude::*;
-use rustic_core::{
-    IndexedFull, LocalDestination, LsOptions, ProgressBars, Repository, RestoreOptions,
-    RestorePlan, repofile::Node,
-};
+use rustic_core::{LocalDestination, LsOptions, RestoreOptions, RestorePlan, repofile::Node};
 
 use crate::{
     commands::tui::widgets::{
@@ -12,6 +9,7 @@ use crate::{
         popup_input, popup_prompt,
     },
     helpers::bytes_size_to_string,
+    repository::IndexedRepo,
 };
 
 use super::widgets::popup_text;
@@ -23,17 +21,17 @@ enum CurrentScreen {
     RestoreDone(PopUpText),
 }
 
-pub(crate) struct Restore<'a, P, S> {
+pub(crate) struct Restore<'a> {
     current_screen: CurrentScreen,
-    repo: &'a Repository<P, S>,
+    repo: &'a IndexedRepo,
     opts: RestoreOptions,
     node: Node,
     source: String,
     dest: String,
 }
 
-impl<'a, P: ProgressBars, S: IndexedFull> Restore<'a, P, S> {
-    pub fn new(repo: &'a Repository<P, S>, node: Node, source: String, path: &str) -> Self {
+impl<'a> Restore<'a> {
+    pub fn new(repo: &'a IndexedRepo, node: Node, source: String, path: &str) -> Self {
         let opts = RestoreOptions::default();
         let title = format!("restore {source} to:");
         let popup = popup_input(title, "enter restore destination", path, 1);

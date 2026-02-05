@@ -7,7 +7,7 @@ use std::net::ToSocketAddrs;
 
 use crate::{
     Application, RUSTIC_APP, RusticConfig,
-    repository::{CliIndexedRepo, get_filtered_snapshots},
+    repository::{IndexedRepo, get_filtered_snapshots},
     status_err,
 };
 use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
@@ -87,7 +87,7 @@ impl WebDavCmd {
     /// be careful about self VS RUSTIC_APP.config() usage
     /// only the RUSTIC_APP.config() involves the TOML and ENV merged configurations
     /// see https://github.com/rustic-rs/rustic/issues/1242
-    fn inner_run(&self, repo: CliIndexedRepo) -> Result<()> {
+    fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         let path_template = config

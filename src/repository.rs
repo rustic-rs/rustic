@@ -15,15 +15,13 @@ use conflate::Merge;
 use dialoguer::Password;
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    CredentialOptions, Credentials, FullIndex, IndexedStatus, Open, OpenStatus, ProgressBars,
-    Repository, RepositoryOptions, SnapshotGroup, SnapshotGroupCriterion, repofile::SnapshotFile,
+    CredentialOptions, Credentials, IndexedFullStatus, IndexedIdsStatus, Open, OpenStatus,
+    ProgressBars, Repository, RepositoryOptions, SnapshotGroup, SnapshotGroupCriterion,
+    repofile::SnapshotFile,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    RUSTIC_APP,
-    config::{hooks::Hooks, progress_options::ProgressOptions},
-};
+use crate::{RUSTIC_APP, config::hooks::Hooks};
 
 pub(super) mod constants {
     pub(super) const MAX_PASSWORD_RETRIES: usize = 5;
@@ -42,7 +40,7 @@ pub struct AllRepositoryOptions {
     #[serde(flatten)]
     pub repo: RepositoryOptions,
 
-    /// Repository options
+    /// Credential options
     #[clap(flatten, next_help_heading = "credential options")]
     #[serde(flatten)]
     pub credential_opts: CredentialOptions,
@@ -52,22 +50,17 @@ pub struct AllRepositoryOptions {
     pub hooks: Hooks,
 }
 
-pub type CliRepo = RusticRepo<ProgressOptions>;
-pub type CliOpenRepo = Repository<ProgressOptions, OpenStatus>;
-pub type RusticIndexedRepo<P> = Repository<P, IndexedStatus<FullIndex, OpenStatus>>;
-pub type CliIndexedRepo = RusticIndexedRepo<ProgressOptions>;
-
 impl AllRepositoryOptions {
-    pub fn repository<P>(&self, po: P) -> Result<RusticRepo<P>> {
+    pub fn repository(&self, po: impl ProgressBars) -> Result<Repo> {
         let backends = self.be.to_backends()?;
         let repo = Repository::new_with_progress(&self.repo, &backends, po)?;
-        Ok(RusticRepo(repo))
+        Ok(Repo(repo))
     }
 
-    pub fn run_with_progress<P: Clone + ProgressBars, T>(
+    pub fn run_with_progress<T>(
         &self,
-        po: P,
-        f: impl FnOnce(RusticRepo<P>) -> Result<T>,
+        po: impl ProgressBars,
+        f: impl FnOnce(Repo) -> Result<T>,
     ) -> Result<T> {
         let hooks = self
             .hooks
@@ -79,51 +72,55 @@ impl AllRepositoryOptions {
         hooks.use_with(|| f(self.repository(po)?))
     }
 
-    pub fn run<T>(&self, f: impl FnOnce(CliRepo) -> Result<T>) -> Result<T> {
+    pub fn run<T>(&self, f: impl FnOnce(Repo) -> Result<T>) -> Result<T> {
         let po = RUSTIC_APP.config().global.progress_options;
         self.run_with_progress(po, f)
     }
 
-    pub fn run_open<T>(&self, f: impl FnOnce(CliOpenRepo) -> Result<T>) -> Result<T> {
+    pub fn run_open<T>(&self, f: impl FnOnce(OpenRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.open(&self.credential_opts)?))
     }
 
     pub fn run_open_or_init_with<T: Clone>(
         &self,
         do_init: bool,
-        init: impl FnOnce(CliRepo) -> Result<CliOpenRepo>,
-        f: impl FnOnce(CliOpenRepo) -> Result<T>,
+        init: impl FnOnce(Repo) -> Result<OpenRepo>,
+        f: impl FnOnce(OpenRepo) -> Result<T>,
     ) -> Result<T> {
         self.run(|repo| {
             f(repo.open_or_init_repository_with(&self.credential_opts, do_init, init)?)
         })
     }
 
-    pub fn run_indexed_with_progress<P: Clone + ProgressBars, T>(
+    pub fn run_indexed_with_progress<T>(
         &self,
-        po: P,
-        f: impl FnOnce(RusticIndexedRepo<P>) -> Result<T>,
+        po: impl ProgressBars,
+        f: impl FnOnce(IndexedRepo) -> Result<T>,
     ) -> Result<T> {
         self.run_with_progress(po, |repo| f(repo.indexed(&self.credential_opts)?))
     }
 
-    pub fn run_indexed<T>(&self, f: impl FnOnce(CliIndexedRepo) -> Result<T>) -> Result<T> {
+    pub fn run_indexed<T>(&self, f: impl FnOnce(IndexedRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.indexed(&self.credential_opts)?))
     }
 }
 
-#[derive(Debug)]
-pub struct RusticRepo<P>(pub Repository<P, ()>);
+pub type OpenRepo = Repository<OpenStatus>;
+pub type IndexedRepo = Repository<IndexedFullStatus>;
+pub type IndexedIdsRepo = Repository<IndexedIdsStatus>;
 
-impl<P> Deref for RusticRepo<P> {
-    type Target = Repository<P, ()>;
+#[derive(Debug)]
+pub struct Repo(pub Repository<()>);
+
+impl Deref for Repo {
+    type Target = Repository<()>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<P: Clone + ProgressBars> RusticRepo<P> {
-    pub fn open(self, credential_opts: &CredentialOptions) -> Result<Repository<P, OpenStatus>> {
+impl Repo {
+    pub fn open(self, credential_opts: &CredentialOptions) -> Result<OpenRepo> {
         match credential_opts.credentials()? {
             // if credentials are given, directly open the repository and don't retry
             Some(credentials) => Ok(self.0.open(&credentials)?),
@@ -152,8 +149,8 @@ impl<P: Clone + ProgressBars> RusticRepo<P> {
         self,
         credential_opts: &CredentialOptions,
         do_init: bool,
-        init: impl FnOnce(Self) -> Result<Repository<P, OpenStatus>>,
-    ) -> Result<Repository<P, OpenStatus>> {
+        init: impl FnOnce(Self) -> Result<OpenRepo>,
+    ) -> Result<OpenRepo> {
         let dry_run = RUSTIC_APP.config().global.check_index;
         // Initialize repository if --init is set and it is not yet initialized
         let repo = if do_init && self.0.config_id()?.is_none() {
@@ -170,10 +167,7 @@ impl<P: Clone + ProgressBars> RusticRepo<P> {
         Ok(repo)
     }
 
-    fn indexed(
-        self,
-        credential_opts: &CredentialOptions,
-    ) -> Result<Repository<P, IndexedStatus<FullIndex, OpenStatus>>> {
+    fn indexed(self, credential_opts: &CredentialOptions) -> Result<IndexedRepo> {
         let open = self.open(credential_opts)?;
         let check_index = RUSTIC_APP.config().global.check_index;
         let repo = if check_index {
@@ -186,8 +180,8 @@ impl<P: Clone + ProgressBars> RusticRepo<P> {
 }
 
 // get snapshots from ids allowing `latest`, if empty use all snapshots respecting the filters.
-pub fn get_snapots_from_ids<P: ProgressBars, S: Open>(
-    repo: &Repository<P, S>,
+pub fn get_snapots_from_ids<S: Open>(
+    repo: &Repository<S>,
     ids: &[String],
 ) -> Result<Vec<SnapshotFile>> {
     let config = RUSTIC_APP.config();
@@ -200,25 +194,23 @@ pub fn get_snapots_from_ids<P: ProgressBars, S: Open>(
 }
 
 // get all snapshots respecting the filters
-pub fn get_filtered_snapshots<P: ProgressBars, S: Open>(
-    repo: &Repository<P, S>,
-) -> Result<Vec<SnapshotFile>> {
+pub fn get_filtered_snapshots<S: Open>(repo: &Repository<S>) -> Result<Vec<SnapshotFile>> {
     let config = RUSTIC_APP.config();
     let mut snapshots = repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?;
     config.snapshot_filter.post_process(&mut snapshots);
     Ok(snapshots)
 }
 
-pub fn get_global_grouped_snapshots<P: ProgressBars, S: Open>(
-    repo: &Repository<P, S>,
+pub fn get_global_grouped_snapshots<S: Open>(
+    repo: &Repository<S>,
     ids: &[String],
 ) -> Result<Vec<(SnapshotGroup, Vec<SnapshotFile>)>> {
     let config = RUSTIC_APP.config();
     get_grouped_snapshots(repo, config.global.group_by.unwrap_or_default(), ids)
 }
 
-pub fn get_grouped_snapshots<P: ProgressBars, S: Open>(
-    repo: &Repository<P, S>,
+pub fn get_grouped_snapshots<S: Open>(
+    repo: &Repository<S>,
     group_by: SnapshotGroupCriterion,
     ids: &[String],
 ) -> Result<Vec<(SnapshotGroup, Vec<SnapshotFile>)>> {

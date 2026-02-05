@@ -139,6 +139,7 @@ All given labels are included with the metrics, if it is configured.
 | warm-up-command      | Command to warm up the repository.                          | Not set                  |                                        |                         | --warm-up-command      |
 | warm-up-wait         | The wait time for warming up the repository.                | Not set                  |                                        |                         | --warm-up-wait         |
 | warm-up-wait-command | Command to run to wait for packs to be warmed-up.           | Not set                  |                                        |                         | --warm-up-wait-command |
+| warm-up-batch        | The batch size for warm-up.                                 | 1                        |                                        |                         | --warm-up-batch        |
 | key                  | The masterkey for the repository.                           | Not set                  | (create one using `rustic key create`) | RUSTIC_KEY              | --key                  |
 | key-file             | Path to a file containing the masterkey for the repository. | Not set                  |                                        | RUSTIC_KEY_FILE         | --key-file             |
 | key-command          | Command to retrieve the masterkey for the repository.       | Not set                  |                                        | RUSTIC_KEY_COMMAND      | --key-command          |

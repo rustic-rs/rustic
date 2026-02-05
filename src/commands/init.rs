@@ -4,11 +4,12 @@ use abscissa_core::{Command, Runnable, Shutdown, status_err};
 use anyhow::{Result, bail};
 use dialoguer::Password;
 
-use crate::{Application, RUSTIC_APP, repository::CliRepo};
-
-use rustic_core::{
-    ConfigOptions, CredentialOptions, Credentials, KeyOptions, OpenStatus, Repository,
+use crate::{
+    Application, RUSTIC_APP,
+    repository::{OpenRepo, Repo},
 };
+
+use rustic_core::{ConfigOptions, CredentialOptions, Credentials, KeyOptions};
 
 /// `init` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -36,7 +37,7 @@ impl Runnable for InitCmd {
 }
 
 impl InitCmd {
-    fn inner_run(&self, repo: CliRepo) -> Result<()> {
+    fn inner_run(&self, repo: Repo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
         // Note: This is again checked in init(), however we want to inform
@@ -54,7 +55,7 @@ impl InitCmd {
         }
 
         let _ = init(
-            repo.0,
+            repo,
             &config.repository.credential_opts,
             &self.key_opts,
             &self.config_opts,
@@ -79,14 +80,14 @@ impl InitCmd {
 /// # Returns
 ///
 /// Returns the initialized repository
-pub(crate) fn init<P, S>(
-    repo: Repository<P, S>,
+pub(crate) fn init(
+    repo: Repo,
     credential_opts: &CredentialOptions,
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
-) -> Result<Repository<P, OpenStatus>> {
+) -> Result<OpenRepo> {
     let pass = init_credentials(credential_opts)?;
-    Ok(repo.init(&pass, key_opts, config_opts)?)
+    Ok(repo.0.init(&pass, key_opts, config_opts)?)
 }
 
 pub(crate) fn init_credentials(credential_opts: &CredentialOptions) -> Result<Credentials> {

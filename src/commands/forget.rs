@@ -9,14 +9,13 @@ use anyhow::Result;
 use conflate::Merge;
 use jiff::Zoned;
 use log::info;
+use rustic_core::repofile::RusticTime;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
 
-use rustic_core::{
-    ForgetGroup, ForgetGroups, ForgetSnapshot, KeepOptions, SnapshotGroup, SnapshotGroupCriterion,
-};
+use rustic_core::{ForgetGroups, ForgetSnapshot, KeepOptions, SnapshotGroupCriterion};
 
 /// `forget` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -26,6 +25,10 @@ pub(super) struct ForgetCmd {
     /// Snapshots can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "ID")]
     ids: Vec<String>,
+
+    /// Set the date/time (e.g. "2021-01-21) to use when evaluating retention rules; can be used to test the rules (default: now)
+    #[clap(long,value_parser = RusticTime::parse_system)]
+    pub forget_time: Option<Zoned>,
 
     /// Show infos in json format
     #[clap(long)]
@@ -111,44 +114,22 @@ impl ForgetCmd {
             .or(config.global.group_by)
             .unwrap_or_default();
 
-        let now = Zoned::now();
+        if let Some(time) = &self.forget_time {
+            info!("using time: {time}");
+        }
+        let now = self.forget_time.clone().unwrap_or_else(Zoned::now);
 
         let groups = if self.ids.is_empty() {
-            ForgetGroups(
-                get_grouped_snapshots(&repo, group_by, &[])?
-                    .into_iter()
-                    .map(|(group, snapshots)| -> Result<_> {
-                        Ok(ForgetGroup {
-                            group,
-                            snapshots: config.forget.keep.apply(snapshots, &now)?,
-                        })
-                    })
-                    .collect::<Result<_>>()?,
-            )
+            ForgetGroups::from_grouped_snapshots_with_retention(
+                get_grouped_snapshots(&repo, group_by, &[])?,
+                &config.forget.keep,
+                &now,
+            )?
         } else {
-            let item = ForgetGroup {
-                group: SnapshotGroup::default(),
-                snapshots: repo
-                    .get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?
-                    .into_iter()
-                    .map(|sn| {
-                        if sn.must_keep(&now) {
-                            ForgetSnapshot {
-                                snapshot: sn,
-                                keep: true,
-                                reasons: vec!["snapshot".to_string()],
-                            }
-                        } else {
-                            ForgetSnapshot {
-                                snapshot: sn,
-                                keep: false,
-                                reasons: vec!["id argument".to_string()],
-                            }
-                        }
-                    })
-                    .collect(),
-            };
-            ForgetGroups(vec![item])
+            ForgetGroups::from_snapshots(
+                repo.get_snapshots_from_strs(&self.ids, |sn| config.snapshot_filter.matches(sn))?,
+                &now,
+            )
         };
 
         if self.json {
@@ -163,7 +144,7 @@ impl ForgetCmd {
         match (forget_snaps.is_empty(), config.global.dry_run, self.json) {
             (true, _, false) => info!("nothing to remove"),
             (false, true, false) => {
-                info!("would have removed the following snapshots:\n {forget_snaps:?}");
+                info!("would have removed {} snapshots.", forget_snaps.len());
             }
             (false, false, _) => {
                 repo.delete_snapshots(&forget_snaps)?;
@@ -188,7 +169,7 @@ impl ForgetCmd {
 /// * `groups` - forget groups to print
 fn print_groups(groups: &ForgetGroups) {
     let config = RUSTIC_APP.config();
-    for ForgetGroup { group, snapshots } in &groups.0 {
+    for group in &groups.0 {
         let mut table = table_with_titles([
             "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
         ]);
@@ -197,7 +178,7 @@ fn print_groups(groups: &ForgetGroups) {
             snapshot: sn,
             keep,
             reasons,
-        } in snapshots
+        } in &group.items
         {
             let time = config.global.format_time(&sn.time).to_string();
             let tags = sn.tags.formatln();
@@ -216,8 +197,8 @@ fn print_groups(groups: &ForgetGroups) {
             ]);
         }
 
-        if !group.is_empty() {
-            info!("snapshots for {group}:\n{table}");
+        if !group.group_key.is_empty() {
+            info!("snapshots for {}:\n{table}", group.group_key);
         } else {
             info!("snapshots:\n{table}");
         }

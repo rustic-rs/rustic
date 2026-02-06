@@ -810,8 +810,11 @@ impl<'a> Snapshots<'a> {
     pub fn reread(&mut self) -> Result<()> {
         let snapshots = mem::take(&mut self.snapshots);
         self.snapshots = self.repo.update_all_snapshots(snapshots)?;
-        self.snapshots
-            .sort_unstable_by(|sn1, sn2| sn1.cmp_group(self.group_by, sn2).then(sn1.cmp(sn2)));
+        self.snapshots.sort_unstable_by(|sn1, sn2| {
+            SnapshotGroup::from_snapshot(sn1, self.group_by)
+                .cmp(&SnapshotGroup::from_snapshot(sn1, self.group_by))
+                .then(sn1.time.cmp(&sn2.time))
+        });
         self.snaps_status = vec![SnapStatus::default(); self.snapshots.len()];
         self.original_snapshots.clone_from(&self.snapshots);
         self.table.widget.select(None);

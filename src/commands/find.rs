@@ -70,20 +70,18 @@ impl Runnable for FindCmd {
 
 impl FindCmd {
     fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
-        let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
-        for (group, mut snapshots) in groups {
-            snapshots.sort_unstable();
-            if !group.is_empty() {
-                println!("\nsearching in snapshots group {group}...");
+        let grouped = get_global_grouped_snapshots(&repo, &self.ids)?;
+        for group in grouped.groups {
+            let mut snaps = group.items;
+            let key = group.group_key;
+            snaps.sort_unstable();
+            if !key.is_empty() {
+                println!("\nsearching in snapshots group {key}...");
             }
-            let ids = snapshots.iter().map(|sn| sn.tree);
+            let ids = snaps.iter().map(|sn| sn.tree);
             if let Some(path) = &self.path {
                 let FindNode { nodes, matches } = repo.find_nodes_from_path(ids, path)?;
-                for (idx, g) in &matches
-                    .iter()
-                    .zip(snapshots.iter())
-                    .chunk_by(|(idx, _)| *idx)
-                {
+                for (idx, g) in &matches.iter().zip(snaps.iter()).chunk_by(|(idx, _)| *idx) {
                     self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
                     if let Some(idx) = idx {
                         print_node(&nodes[*idx], path, self.numeric_id);
@@ -106,11 +104,7 @@ impl FindCmd {
                     nodes,
                     matches,
                 } = repo.find_matching_nodes(ids, &matches)?;
-                for (idx, g) in &matches
-                    .iter()
-                    .zip(snapshots.iter())
-                    .chunk_by(|(idx, _)| *idx)
-                {
+                for (idx, g) in &matches.iter().zip(snaps.iter()).chunk_by(|(idx, _)| *idx) {
                     self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
                     for (path_idx, node_idx) in idx {
                         print_node(&nodes[*node_idx], &paths[*path_idx], self.numeric_id);

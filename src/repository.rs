@@ -15,9 +15,8 @@ use conflate::Merge;
 use dialoguer::Password;
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    CredentialOptions, Credentials, IndexedFullStatus, IndexedIdsStatus, Open, OpenStatus,
-    ProgressBars, Repository, RepositoryOptions, SnapshotGroup, SnapshotGroupCriterion,
-    repofile::SnapshotFile,
+    CredentialOptions, Credentials, Grouped, IndexedFullStatus, IndexedIdsStatus, Open, OpenStatus,
+    ProgressBars, Repository, RepositoryOptions, SnapshotGroupCriterion, repofile::SnapshotFile,
 };
 use serde::{Deserialize, Serialize};
 
@@ -204,7 +203,7 @@ pub fn get_filtered_snapshots<S: Open>(repo: &Repository<S>) -> Result<Vec<Snaps
 pub fn get_global_grouped_snapshots<S: Open>(
     repo: &Repository<S>,
     ids: &[String],
-) -> Result<Vec<(SnapshotGroup, Vec<SnapshotFile>)>> {
+) -> Result<Grouped<SnapshotFile>> {
     let config = RUSTIC_APP.config();
     get_grouped_snapshots(repo, config.global.group_by.unwrap_or_default(), ids)
 }
@@ -213,13 +212,17 @@ pub fn get_grouped_snapshots<S: Open>(
     repo: &Repository<S>,
     group_by: SnapshotGroupCriterion,
     ids: &[String],
-) -> Result<Vec<(SnapshotGroup, Vec<SnapshotFile>)>> {
+) -> Result<Grouped<SnapshotFile>> {
     let config = RUSTIC_APP.config();
-    let mut groups =
-        repo.get_snapshot_group(ids, group_by, |sn| config.snapshot_filter.matches(sn))?;
-
-    for (_, snaps) in &mut groups {
-        config.snapshot_filter.post_process(snaps);
+    let snapshots = if ids.is_empty() {
+        repo.get_matching_snapshots(|sn| config.snapshot_filter.matches(sn))?
+    } else {
+        repo.get_snapshots_from_strs(ids, |sn| config.snapshot_filter.matches(sn))?
+    };
+    let mut group = Grouped::from_items(snapshots, group_by);
+    for group in &mut group.groups {
+        config.snapshot_filter.post_process(&mut group.items);
     }
-    Ok(groups)
+
+    Ok(group)
 }

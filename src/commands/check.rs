@@ -8,7 +8,7 @@ use crate::{
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use rustic_core::CheckOptions;
+use rustic_core::{CheckOptions, repofile::SnapshotFile};
 
 /// `check` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -39,12 +39,8 @@ impl Runnable for CheckCmd {
 
 impl CheckCmd {
     fn inner_run(&self, repo: OpenRepo) -> Result<()> {
-        let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
-        let trees = groups
-            .into_iter()
-            .flat_map(|(_, snaps)| snaps)
-            .map(|snap| snap.tree)
-            .collect();
+        let snaps: Vec<SnapshotFile> = get_global_grouped_snapshots(&repo, &self.ids)?.into();
+        let trees = snaps.into_iter().map(|snap| snap.tree).collect();
         repo.check_with_trees(self.opts, trees)?.is_ok()?;
         Ok(())
     }

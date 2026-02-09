@@ -13,12 +13,12 @@ use comfy_table::Cell;
 use derive_more::From;
 use itertools::Itertools;
 use jiff::SignedDuration;
-use serde::Serialize;
 
 use rustic_core::{
-    ProgressBars, ProgressType, SnapshotGroup,
+    Group, ProgressBars, ProgressType, SnapshotGroup,
     repofile::{DeleteOption, SnapshotFile},
 };
+use serde::Serialize;
 
 #[cfg(feature = "tui")]
 use crate::commands::tui;
@@ -88,32 +88,35 @@ impl SnapshotCmd {
             });
         }
 
-        let groups = get_global_grouped_snapshots(&repo, &self.ids)?;
+        let groups = get_global_grouped_snapshots(&repo, &self.ids)?.groups;
 
         if self.json {
-            #[derive(Serialize, From)]
-            struct SnapshotsGroup {
-                group_key: SnapshotGroup,
-                snapshots: Vec<SnapshotFile>,
-            }
-            let groups: Vec<SnapshotsGroup> = groups.into_iter().map(|g| g.into()).collect();
             let mut stdout = std::io::stdout();
             if groups.len() == 1 && groups[0].group_key.is_empty() {
                 // we don't use grouping, only output snapshots list
-                serde_json::to_writer_pretty(&mut stdout, &groups[0].snapshots)?;
+                serde_json::to_writer_pretty(&mut stdout, &groups[0].items)?;
             } else {
+                #[derive(Serialize, From)]
+                struct SnapshotsGroup {
+                    group_key: SnapshotGroup,
+                    snapshots: Vec<SnapshotFile>,
+                }
+                let groups: Vec<SnapshotsGroup> = groups
+                    .into_iter()
+                    .map(|g| (g.group_key, g.items).into())
+                    .collect();
                 serde_json::to_writer_pretty(&mut stdout, &groups)?;
             }
             return Ok(());
         }
 
         let mut total_count = 0;
-        for (group_key, snapshots) in groups {
+        for Group { group_key, items } in groups {
             if !group_key.is_empty() {
                 println!("\nsnapshots for {group_key}");
             }
-            total_count += snapshots.len();
-            print_snapshots(snapshots, self.long, self.all);
+            total_count += items.len();
+            print_snapshots(items, self.long, self.all);
         }
         println!();
         println!("total: {total_count} snapshot(s)");

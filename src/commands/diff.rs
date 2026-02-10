@@ -27,11 +27,11 @@ use crate::commands::tui;
 /// `diff` subcommand
 #[derive(clap::Parser, Command, Debug)]
 pub(crate) struct DiffCmd {
-    /// Reference snapshot/path
+    /// Reference snapshot/path (uses latest, if no snapshot is given, then compare with local path)
     ///
     /// Snapshot can be identified the following ways: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT1[:PATH1]")]
-    snap1: String,
+    snap1: Option<String>,
 
     /// New snapshot/path (uses PATH2 = PATH1, if not given; uses local path if no snapshot is given)
     ///
@@ -82,12 +82,16 @@ impl DiffCmd {
     fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
 
-        let (id1, path1) = arg_to_snap_path(&self.snap1);
+        let self_snap1 = self.snap1.as_deref().unwrap_or_default();
+        let self_snap2 = self.snap2.as_deref().unwrap_or_default();
+        let (id1, path1) = self
+            .snap1
+            .as_ref()
+            .map_or((Some("latest"), None), |snap1| arg_to_snap_path(snap1));
         let (id2, path2) = self
             .snap2
             .as_ref()
             .map_or((None, None), |snap2| arg_to_snap_path(snap2));
-        let self_snap2 = self.snap2.as_ref().map_or("", String::as_str);
 
         match (id1, id2) {
             (Some(id1), Some(id2)) => {
@@ -101,8 +105,8 @@ impl DiffCmd {
                 let path1 = path1.unwrap_or("");
                 let path2 = path2.unwrap_or(path1);
                 info!(
-                    "comparing {}:{path1} ({}) with {}:{path2} ({self_snap2})",
-                    snap1.id, self.snap1, snap2.id,
+                    "comparing {}:{path1} ({self_snap1}) with {}:{path2} ({self_snap2})",
+                    snap1.id, snap2.id,
                 );
 
                 #[cfg(feature = "tui")]
@@ -162,8 +166,8 @@ impl DiffCmd {
                     }
                 };
                 info!(
-                    "comparing {}:{path1} ({}) with local dir {path2} ({self_snap2})",
-                    snap1.id, self.snap1
+                    "comparing {}:{path1} ({self_snap1}) with local dir {path2} ({self_snap2})",
+                    snap1.id
                 );
 
                 let node1 = repo.node_from_snapshot_and_path(&snap1, path1)?;

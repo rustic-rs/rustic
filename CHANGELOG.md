@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0](https://github.com/rustic-rs/rustic/compare/v0.10.3...v0.11.0) - 2026-02-11
+
+### Added
+
+- [**breaking**] extend LocalSourceSaveOptions ([#461](https://github.com/rustic-rs/rustic_core/pull/461))
+- [**breaking**] Add support for multiple parents ([#427](https://github.com/rustic-rs/rustic_core/pull/427))
+- [**breaking**] Add log-level-logfile, -dryrun and -dependencies options; remove quiet options ([#1565](https://github.com/rustic-rs/rustic/pull/1565))
+- [**breaking**] Allow to rewrite trees ([#1644](https://github.com/rustic-rs/rustic/pull/1644),[#462](https://github.com/rustic-rs/rustic_core/pull/462),[#1651](https://github.com/rustic-rs/rustic/pull/1651),[#465](https://github.com/rustic-rs/rustic_core/pull/465))
+- Allow to use masterkey instead of password/keyfile ([#1654](https://github.com/rustic-rs/rustic/pull/1654),[#468](https://github.com/rustic-rs/rustic_core/pull/468))
+- Add support for batch warmup ([#438](https://github.com/rustic-rs/rustic_core/pull/438))
+- *(commands)* allow to identify snapshots with "latest" or "latest~N" (N >= 0) ([#1563](https://github.com/rustic-rs/rustic/pull/1563))
+- Allow ls to list local files (using excludes) ([#1645](https://github.com/rustic-rs/rustic/pull/1645))
+- Add default behavior for diff without arguments ([#1673](https://github.com/rustic-rs/rustic/pull/1673))
+- Add option `--forget-time` to forget ([#1670](https://github.com/rustic-rs/rustic/pull/1670))
+- Update copy and add --force ([#1653](https://github.com/rustic-rs/rustic/pull/1653),[#464](https://github.com/rustic-rs/rustic_core/pull/464))
+- improve restore algorithm ([#453](https://github.com/rustic-rs/rustic_core/pull/453))
+- Optimize prune rewrite ([#448](https://github.com/rustic-rs/rustic_core/pull/448))
+
+### Fixed
+
+- update clap help ([#1663](https://github.com/rustic-rs/rustic/pull/1663))
+- handle all arg combinations for `diff` command ([#1639](https://github.com/rustic-rs/rustic/pull/1639))
+- use filtered snapshots for repair command ([#1636](https://github.com/rustic-rs/rustic/pull/1636))
+- fix rewrite file count ([#466](https://github.com/rustic-rs/rustic_core/pull/466))
+- Return error if too few snapshots for latest~N ([#459](https://github.com/rustic-rs/rustic_core/pull/459))
+- Use early-delete-index only if instant-delete is selected ([#457](https://github.com/rustic-rs/rustic_core/pull/457))
+- improve error handling for missing UID/GID name ([#454](https://github.com/rustic-rs/rustic_core/pull/454))
+- FreeBSD build ([#440](https://github.com/rustic-rs/rustic_core/pull/440))
+
+### Other
+
+- [**breaking**] Use jiff instead of chrono ([#1625](https://github.com/rustic-rs/rustic/pull/1625),[#452](https://github.com/rustic-rs/rustic_core/pull/452))
+- Update MSRV to 1.88.0 ([#1664](https://github.com/rustic-rs/rustic/pull/1664))
+- Document OPENDAL* env variables ([#1646](https://github.com/rustic-rs/rustic/pull/1646))
+- Add root directory to sftp_hetzner_sbox.toml ([#1628](https://github.com/rustic-rs/rustic/pull/1628))
+- update dependencies ([#1635](https://github.com/rustic-rs/rustic/pull/1635),[#1637](https://github.com/rustic-rs/rustic/pull/1637),[#1667](https://github.com/rustic-rs/rustic/pull/1667),[#1674](https://github.com/rustic-rs/rustic/pull/1674))
+
 ## [0.10.3](https://github.com/rustic-rs/rustic/compare/v0.10.2...v0.10.3) - 2025-12-23
 
 ### Added

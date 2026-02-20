@@ -812,7 +812,7 @@ impl<'a> Snapshots<'a> {
         self.snapshots = self.repo.update_all_snapshots(snapshots)?;
         self.snapshots.sort_unstable_by(|sn1, sn2| {
             SnapshotGroup::from_snapshot(sn1, self.group_by)
-                .cmp(&SnapshotGroup::from_snapshot(sn1, self.group_by))
+                .cmp(&SnapshotGroup::from_snapshot(sn2, self.group_by))
                 .then(sn1.time.cmp(&sn2.time))
         });
         self.snaps_status = vec![SnapStatus::default(); self.snapshots.len()];

@@ -4418,7 +4418,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.10.0 (git+https://github.com/rustic-rs/rustic_core)",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -4440,8 +4440,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1917f7cd00c30c334dfbb31e1905b436306cad313d19b832411fcd2ebbf4ac86"
+source = "git+https://github.com/rustic-rs/rustic_core#0f441bef9d0bfcaafb84f7d996ee9c5d07f4f46e"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4459,7 +4458,7 @@ dependencies = [
  "rand 0.9.2",
  "rayon",
  "reqwest 0.12.28",
- "rustic_core",
+ "rustic_core 0.10.0 (git+https://github.com/rustic-rs/rustic_core)",
  "semver",
  "serde",
  "strum 0.27.2",
@@ -4482,6 +4481,58 @@ name = "rustic_core"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bb32e32fc89610b35f02b11c4216d4951ad38ce1757f2361cb478df1f83f758"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "crossbeam-channel",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "ecow",
+ "enum-map",
+ "enum-map-derive",
+ "enumset",
+ "filetime",
+ "gethostname",
+ "hex",
+ "ignore",
+ "integer-sqrt",
+ "itertools 0.14.0",
+ "jiff",
+ "log",
+ "nix 0.31.1",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand 0.9.2",
+ "rayon",
+ "runtime-format",
+ "rustic_cdc",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "shell-words",
+ "strum 0.27.2",
+ "thiserror 2.0.18",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
+name = "rustic_core"
+version = "0.10.0"
+source = "git+https://github.com/rustic-rs/rustic_core#0f441bef9d0bfcaafb84f7d996ee9c5d07f4f46e"
 dependencies = [
  "aes256ctr_poly1305aes",
  "binrw",
@@ -4542,7 +4593,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "enum-map",
- "rustic_core",
+ "rustic_core 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
 ]
 

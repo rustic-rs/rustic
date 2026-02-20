@@ -16,7 +16,8 @@ use dialoguer::Password;
 use rustic_backend::BackendOptions;
 use rustic_core::{
     CredentialOptions, Credentials, Grouped, IndexedFullStatus, IndexedIdsStatus, Open, OpenStatus,
-    ProgressBars, Repository, RepositoryOptions, SnapshotGroupCriterion, repofile::SnapshotFile,
+    ProgressBars, Repository, RepositoryOptions, RusticResult, SnapshotGroupCriterion,
+    repofile::SnapshotFile,
 };
 use serde::{Deserialize, Serialize};
 
@@ -119,21 +120,21 @@ impl Deref for Repo {
 }
 
 impl Repo {
-    pub fn open(self, credential_opts: &CredentialOptions) -> Result<OpenRepo> {
+    pub fn open_with(
+        self,
+        credential_opts: &CredentialOptions,
+        open: impl Fn(Repository<()>, &Credentials) -> RusticResult<OpenRepo>,
+    ) -> Result<OpenRepo> {
         match credential_opts.credentials()? {
             // if credentials are given, directly open the repository and don't retry
-            Some(credentials) => Ok(self.0.open(&credentials)?),
+            Some(credentials) => Ok(open(self.0, &credentials)?),
             None => {
                 for _ in 0..constants::MAX_PASSWORD_RETRIES {
                     let pass = Password::new()
                         .with_prompt("enter repository password")
                         .allow_empty_password(true)
                         .interact()?;
-                    match self
-                        .0
-                        .clone() // needed; else we move repo in a loop
-                        .open(&Credentials::Password(pass))
-                    {
+                    match open(self.0.clone(), &Credentials::Password(pass)) {
                         Ok(repo) => return Ok(repo),
                         Err(err) if err.is_incorrect_password() => continue,
                         Err(err) => return Err(err.into()),
@@ -142,6 +143,9 @@ impl Repo {
                 Err(anyhow!("incorrect password"))
             }
         }
+    }
+    pub fn open(self, credential_opts: &CredentialOptions) -> Result<OpenRepo> {
+        self.open_with(credential_opts, |repo, credentials| repo.open(credentials))
     }
 
     fn open_or_init_repository_with(

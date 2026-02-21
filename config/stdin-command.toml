@@ -1,0 +1,15 @@
+# rustic config file to backup from a command
+#
+# backup usage: "rustic -P stdin-command backup --name stdin-example
+#
+[repository]
+repository = "/tmp/rustic"
+password = "secret"
+no-cache = true # no cache needed for local repository
+
+[[backup.snapshots]]
+name = "stdin-example"
+# this will produce a snapshot containing a single file "example-filename" with the content "test-output"
+sources = ["-"]
+stdin-command = "echo test-output"
+as-path = "example-filename"

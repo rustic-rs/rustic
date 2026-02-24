@@ -13,6 +13,7 @@ use anyhow::{Result, bail};
 use clap::Parser;
 use conflate::{Merge, MergeFrom};
 use fuse_mt::{FuseMT, mount};
+use log::info;
 use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
 use std::{ffi::OsStr, path::PathBuf};
 
@@ -35,7 +36,7 @@ pub struct MountCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     time_template: Option<String>,
 
-    /// Don't allow other users to access the mount point
+    /// Don't allow other users to access the mount point (else options allow_other,default_permissions are set)
     #[clap(short, long)]
     #[merge(strategy=conflate::bool::overwrite_false)]
     exclusive: bool,
@@ -106,7 +107,7 @@ impl MountCmd {
         Self {
             path_template: Some(String::from("[{hostname}]/[{label}]/{time}")),
             time_template: Some(String::from("%Y-%m-%d_%H-%M-%S")),
-            options: vec![String::from("kernel_cache")],
+            options: Vec::new(),
             ..Default::default()
         }
     }
@@ -174,8 +175,12 @@ impl MountCmd {
         // join options into a single comma-delimited string and prepent "-o "
         // this should be parsed just fine by fuser, here
         // https://github.com/cberner/fuser/blob/9f6ced73a36f1d99846e28be9c5e4903939ee9d5/src/mnt/mount_options.rs#L157
-        let opt_string = format!("-o {}", mount_options.join(","));
+        let opt_string = format!("-o{}", mount_options.join(","));
 
+        info!(
+            "mounting {}, press Ctrl-C to cancel...",
+            mount_point.display()
+        );
         mount(fs, mount_point, &[OsStr::new(&opt_string)])?;
 
         Ok(())

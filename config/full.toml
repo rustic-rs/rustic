@@ -132,6 +132,7 @@ parents = ["123abc"] # Default: not set
 force = false
 ignore-ctime = false
 ignore-inode = false
+stdin-command = "echo test" # Default: empty
 stdin-filename = "stdin" # Only for stdin source
 as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
 set-atime = "mtime" # Allowed: "yes", "no", "mtime"

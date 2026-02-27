@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1](https://github.com/rustic-rs/rustic/compare/v0.11.0...v0.11.1) - 2026-02-27
+
+### Added
+
+- Add init --hot-only option ([#1224](https://github.com/rustic-rs/rustic/pull/1224))
+
+### Fixed
+
+- if profile ends with .toml, don't append it once more ([#1687](https://github.com/rustic-rs/rustic/pull/1687))
+- correct mount options ([#1685](https://github.com/rustic-rs/rustic/pull/1685))
+- Fix grouping for interactive snapshots view ([#1682](https://github.com/rustic-rs/rustic/pull/1682))
+
+### Other
+
+- Document stdin-command ([#1684](https://github.com/rustic-rs/rustic/pull/1684))
+
 ## [0.11.0](https://github.com/rustic-rs/rustic/compare/v0.10.3...v0.11.0) - 2026-02-11
 
 ### Added

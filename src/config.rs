@@ -117,7 +117,11 @@ impl RusticConfig {
         merge_logs: &mut Vec<(Level, String)>,
         level_missing: Level,
     ) -> Result<(), FrameworkError> {
-        let profile_filename = profile.to_string() + ".toml";
+        let profile_filename = if profile.ends_with(".toml") {
+            profile.to_string()
+        } else {
+            profile.to_string() + ".toml"
+        };
         let paths = get_config_paths(&profile_filename);
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {

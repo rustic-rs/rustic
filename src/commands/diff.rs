@@ -237,7 +237,7 @@ pub fn arg_to_snap_path(arg: &str) -> (Option<&str>, Option<&str>) {
         None => {
             if arg == "local" {
                 (None, None)
-            } else if arg.contains('/') {
+            } else if arg.contains('/') || arg.contains('\\') || arg.contains('.') {
                 (None, Some(arg))
             } else {
                 (Some(arg), None)

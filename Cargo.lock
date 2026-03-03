@@ -4363,7 +4363,6 @@ name = "rustic-rs"
 version = "0.11.0"
 dependencies = [
  "abscissa_core",
- "aho-corasick",
  "anyhow",
  "assert_cmd",
  "base64 0.22.1",

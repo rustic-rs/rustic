@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1](https://github.com/rustic-rs/rustic/compare/v0.11.0...v0.11.1) - 2026-03-05
+
+### Added
+
+- Add init --hot-only option ([#1224](https://github.com/rustic-rs/rustic/pull/1224),[#255](https://github.com/rustic-rs/rustic_core/pull/255))
+- Also identify strings without `:` containing `\` or `.` as local path ([#1692](https://github.com/rustic-rs/rustic/pull/1692))
+
+### Fixed
+
+- if profile ends with .toml, don't append it once more ([#1687](https://github.com/rustic-rs/rustic/pull/1687))
+- correct mount options ([#1685](https://github.com/rustic-rs/rustic/pull/1685))
+- Fix grouping for interactive snapshots view ([#1682](https://github.com/rustic-rs/rustic/pull/1682))
+- use rclone url as-is for rclone command ([#485](https://github.com/rustic-rs/rustic_core/pull/485))
+- Add information about to_delete to check errors ([#484](https://github.com/rustic-rs/rustic_core/pull/484))
+- race condition in warmup tests ([#481](https://github.com/rustic-rs/rustic_core/pull/481))
+- only call warm-up/wait if #ids > 0 ([#483](https://github.com/rustic-rs/rustic_core/pull/483))
+- show type/id for crypto errors ([#482](https://github.com/rustic-rs/rustic_core/pull/482))
+- ignore non-id files when listing ([#479](https://github.com/rustic-rs/rustic_core/pull/479))
+- sort blobs before repacking ([#478](https://github.com/rustic-rs/rustic_core/pull/478))
+- tag options in rewrite don't conflict with each other ([#476](https://github.com/rustic-rs/rustic_core/pull/476))
+
+### Other
+
+- Document stdin-command ([#1684](https://github.com/rustic-rs/rustic/pull/1684))
+- update dependencies ([#1693](https://github.com/rustic-rs/rustic/pull/1693),[#486](https://github.com/rustic-rs/rustic_core/pull/486))
+
 ## [0.11.0](https://github.com/rustic-rs/rustic/compare/v0.10.3...v0.11.0) - 2026-02-11
 
 ### Added

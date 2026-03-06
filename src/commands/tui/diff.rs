@@ -1,4 +1,4 @@
-use std::{ffi::OsString, path::PathBuf};
+use std::{borrow::Cow, ffi::OsStr, path::PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
@@ -80,7 +80,7 @@ impl DiffNode {
         }
     }
 
-    fn name(&self) -> OsString {
+    fn name(&self) -> Cow<'_, OsStr> {
         self.0.as_ref().reduce(|l, _| l).name()
     }
 

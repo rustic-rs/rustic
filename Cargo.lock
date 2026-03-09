@@ -2141,7 +2141,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.2",
+ "socket2 0.6.3",
  "tokio",
  "tower-service",
  "tracing",
@@ -2635,9 +2635,9 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
 name = "libc"
-version = "0.2.182"
+version = "0.2.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
+checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 
 [[package]]
 name = "libm"
@@ -3845,7 +3845,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.37",
- "socket2 0.6.2",
+ "socket2 0.6.3",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -3882,7 +3882,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.2",
+ "socket2 0.6.3",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -4444,7 +4444,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core",
+ "rustic_core 0.10.1 (git+https://github.com/rustic-rs/rustic_core)",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -4457,7 +4457,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
- "toml 1.0.3+spec-1.1.0",
+ "toml 1.0.6+spec-1.1.0",
  "tui-textarea",
  "warp",
  "zip",
@@ -4466,8 +4466,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02bd2f9c5b02e692175d8a7d7131ee39f6f89a60c43de3d0acdbe24093e722d3"
+source = "git+https://github.com/rustic-rs/rustic_core#00b93d9ea898eee5edb90bebf375d0d414cbcbb5"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4484,7 +4483,7 @@ dependencies = [
  "rand 0.10.0",
  "rayon",
  "reqwest 0.12.28",
- "rustic_core",
+ "rustic_core 0.10.1 (git+https://github.com/rustic-rs/rustic_core)",
  "semver",
  "serde",
  "strum 0.28.0",
@@ -4506,6 +4505,58 @@ name = "rustic_core"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a41f013fff085b1cd68ce9389eed23190008914501e4212ed42043e5fc262d03"
+dependencies = [
+ "aes256ctr_poly1305aes",
+ "backon",
+ "binrw",
+ "bytes",
+ "bytesize",
+ "cached",
+ "cachedir",
+ "crossbeam-channel",
+ "derive_more",
+ "derive_setters",
+ "dirs",
+ "displaydoc",
+ "dunce",
+ "ecow",
+ "enum-map",
+ "enumset",
+ "filetime",
+ "gethostname",
+ "hex",
+ "ignore",
+ "integer-sqrt",
+ "itertools 0.14.0",
+ "jiff",
+ "log",
+ "nix 0.31.2",
+ "pariter",
+ "path-dedot",
+ "quick_cache",
+ "rand 0.10.0",
+ "rayon",
+ "runtime-format",
+ "rustic_cdc",
+ "scrypt",
+ "serde",
+ "serde-aux",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "shell-words",
+ "strum 0.28.0",
+ "thiserror 2.0.18",
+ "walkdir",
+ "xattr",
+ "zstd",
+]
+
+[[package]]
+name = "rustic_core"
+version = "0.10.1"
+source = "git+https://github.com/rustic-rs/rustic_core#00b93d9ea898eee5edb90bebf375d0d414cbcbb5"
 dependencies = [
  "aes256ctr_poly1305aes",
  "backon",
@@ -4565,7 +4616,7 @@ dependencies = [
  "aho-corasick",
  "bytes",
  "enum-map",
- "rustic_core",
+ "rustic_core 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
 ]
 
@@ -5126,12 +5177,12 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86f4aa3ad99f2088c990dfa82d367e19cb29268ed67c574d10d0a4bfe71f07e0"
+checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5543,7 +5594,7 @@ dependencies = [
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
- "socket2 0.6.2",
+ "socket2 0.6.3",
  "tokio-macros",
  "windows-sys 0.61.2",
 ]
@@ -5641,9 +5692,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "1.0.3+spec-1.1.0"
+version = "1.0.6+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7614eaf19ad818347db24addfa201729cf2a9b6fdfd9eb0ab870fcacc606c0c"
+checksum = "399b1124a3c9e16766831c6bba21e50192572cdd98706ea114f9502509686ffc"
 dependencies = [
  "indexmap 2.13.0",
  "serde_core",
@@ -5674,9 +5725,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.25.3+spec-1.1.0"
+version = "0.25.4+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0a07913e63758bc95142d9863a5a45173b71515e68b690cad70cf99c3255ce1"
+checksum = "7193cbd0ce53dc966037f54351dbbcf0d5a642c7f0038c382ef9e677ce8c13f2"
 dependencies = [
  "indexmap 2.13.0",
  "toml_datetime 1.0.0+spec-1.1.0",
@@ -6016,9 +6067,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.21.0"
+version = "1.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b672338555252d43fd2240c714dc444b8c6fb0a5c5335e65a07bba7742735ddb"
+checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
@@ -6682,9 +6733,9 @@ checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
 
 [[package]]
 name = "winnow"
-version = "0.7.14"
+version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a5364e9d77fcdeeaa6062ced926ee3381faa2ee02d3eb83a5c27a8825540829"
+checksum = "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
 dependencies = [
  "memchr",
 ]
@@ -6858,18 +6909,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.40"
+version = "0.8.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a789c6e490b576db9f7e6b6d661bcc9799f7c0ac8352f56ea20193b2681532e5"
+checksum = "96e13bc581734df6250836c59a5f44f3c57db9f9acb9dc8e3eaabdaf6170254d"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.40"
+version = "0.8.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f65c489a7071a749c849713807783f70672b28094011623e200cb86dcb835953"
+checksum = "3545ea9e86d12ab9bba9fcd99b54c1556fd3199007def5a03c375623d05fac1c"
 dependencies = [
  "proc-macro2",
  "quote",

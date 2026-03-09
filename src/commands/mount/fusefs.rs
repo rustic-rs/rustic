@@ -187,7 +187,7 @@ impl FilesystemMT for FuseFS {
         let result = nodes
             .into_iter()
             .map(|node| DirectoryEntry {
-                name: node.name(),
+                name: node.name().to_os_string(),
                 kind: node_to_filetype(&node),
             })
             .collect();

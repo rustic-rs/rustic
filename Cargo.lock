@@ -2159,7 +2159,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.62.2",
+ "windows-core",
 ]
 
 [[package]]
@@ -4444,7 +4444,7 @@ dependencies = [
  "rhai",
  "rstest",
  "rustic_backend",
- "rustic_core 0.10.1 (git+https://github.com/rustic-rs/rustic_core)",
+ "rustic_core",
  "rustic_testing",
  "scopeguard",
  "self_update",
@@ -4466,7 +4466,7 @@ dependencies = [
 [[package]]
 name = "rustic_backend"
 version = "0.6.1"
-source = "git+https://github.com/rustic-rs/rustic_core#00b93d9ea898eee5edb90bebf375d0d414cbcbb5"
+source = "git+https://github.com/rustic-rs/rustic_core#a8861e719df3290715430990a8ec372cd272cedd"
 dependencies = [
  "aho-corasick",
  "backon",
@@ -4483,7 +4483,7 @@ dependencies = [
  "rand 0.10.0",
  "rayon",
  "reqwest 0.12.28",
- "rustic_core 0.10.1 (git+https://github.com/rustic-rs/rustic_core)",
+ "rustic_core",
  "semver",
  "serde",
  "strum 0.28.0",
@@ -4503,60 +4503,7 @@ checksum = "fbcebf2228827bc4b61cb54dfd84cf43aacf06ca2dfe4c014b136a0e32b876e2"
 [[package]]
 name = "rustic_core"
 version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a41f013fff085b1cd68ce9389eed23190008914501e4212ed42043e5fc262d03"
-dependencies = [
- "aes256ctr_poly1305aes",
- "backon",
- "binrw",
- "bytes",
- "bytesize",
- "cached",
- "cachedir",
- "crossbeam-channel",
- "derive_more",
- "derive_setters",
- "dirs",
- "displaydoc",
- "dunce",
- "ecow",
- "enum-map",
- "enumset",
- "filetime",
- "gethostname",
- "hex",
- "ignore",
- "integer-sqrt",
- "itertools 0.14.0",
- "jiff",
- "log",
- "nix 0.31.2",
- "pariter",
- "path-dedot",
- "quick_cache",
- "rand 0.10.0",
- "rayon",
- "runtime-format",
- "rustic_cdc",
- "scrypt",
- "serde",
- "serde-aux",
- "serde_derive",
- "serde_json",
- "serde_with",
- "sha2",
- "shell-words",
- "strum 0.28.0",
- "thiserror 2.0.18",
- "walkdir",
- "xattr",
- "zstd",
-]
-
-[[package]]
-name = "rustic_core"
-version = "0.10.1"
-source = "git+https://github.com/rustic-rs/rustic_core#00b93d9ea898eee5edb90bebf375d0d414cbcbb5"
+source = "git+https://github.com/rustic-rs/rustic_core#a8861e719df3290715430990a8ec372cd272cedd"
 dependencies = [
  "aes256ctr_poly1305aes",
  "backon",
@@ -4610,13 +4557,12 @@ dependencies = [
 [[package]]
 name = "rustic_testing"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "133ce67d12ce325b4c61eba80d0f489d6166d5632b20b5806bbfdf4dc4a7533f"
+source = "git+https://github.com/rustic-rs/rustic_core#a8861e719df3290715430990a8ec372cd272cedd"
 dependencies = [
  "aho-corasick",
  "bytes",
  "enum-map",
- "rustic_core 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustic_core",
  "tempfile",
 ]
 
@@ -6359,7 +6305,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9babd3a767a4c1aef6900409f85f5d53ce2544ccdfaa86dad48c91782c6d6893"
 dependencies = [
  "windows-collections",
- "windows-core 0.61.2",
+ "windows-core",
  "windows-future",
  "windows-link 0.1.3",
  "windows-numerics",
@@ -6371,7 +6317,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3beeceb5e5cfd9eb1d76b381630e82c4241ccd0d27f1a39ed41b2760b255c5e8"
 dependencies = [
- "windows-core 0.61.2",
+ "windows-core",
 ]
 
 [[package]]
@@ -6383,21 +6329,8 @@ dependencies = [
  "windows-implement",
  "windows-interface",
  "windows-link 0.1.3",
- "windows-result 0.3.4",
- "windows-strings 0.4.2",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.62.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
-dependencies = [
- "windows-implement",
- "windows-interface",
- "windows-link 0.2.1",
- "windows-result 0.4.1",
- "windows-strings 0.5.1",
+ "windows-result",
+ "windows-strings",
 ]
 
 [[package]]
@@ -6406,7 +6339,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc6a41e98427b19fe4b73c550f060b59fa592d7d686537eebf9385621bfbad8e"
 dependencies = [
- "windows-core 0.61.2",
+ "windows-core",
  "windows-link 0.1.3",
  "windows-threading",
 ]
@@ -6451,7 +6384,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9150af68066c4c5c07ddc0ce30421554771e528bde427614c61038bc2c92c2b1"
 dependencies = [
- "windows-core 0.61.2",
+ "windows-core",
  "windows-link 0.1.3",
 ]
 
@@ -6465,30 +6398,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "windows-result"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
-dependencies = [
- "windows-link 0.2.1",
-]
-
-[[package]]
 name = "windows-strings"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56e6c93f3a0c3b36176cb1327a4958a0353d5d166c2a35cb268ace15e91d3b57"
 dependencies = [
  "windows-link 0.1.3",
-]
-
-[[package]]
-name = "windows-strings"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7837d08f69c77cf6b07689544538e017c1bfcf57e34b4c0ff58e6c2cd3b37091"
-dependencies = [
- "windows-link 0.2.1",
 ]
 
 [[package]]

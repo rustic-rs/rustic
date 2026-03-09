@@ -239,12 +239,7 @@ impl DavDirEntry for DavFsDirEntry {
 
     #[cfg(windows)]
     fn name(&self) -> Vec<u8> {
-        self.0
-            .name()
-            .as_os_str()
-            .to_string_lossy()
-            .to_string()
-            .into_bytes()
+        self.0.name().to_string_lossy().to_string().into_bytes()
     }
 }
 

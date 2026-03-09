@@ -118,11 +118,8 @@ impl TreeSummary {
         let mut tree_without_meta = Tree::default();
         p.inc(1);
         for node in &tree.nodes {
-            let mut node_without_meta = Node::new_node(
-                node.name().as_os_str(),
-                node.node_type.clone(),
-                Metadata::default(),
-            );
+            let mut node_without_meta =
+                Node::new_node(&node.name(), node.node_type.clone(), Metadata::default());
             node_without_meta.content = node.content.clone();
             summary.update_from_node(node);
             if let Some(id) = node.subtree {

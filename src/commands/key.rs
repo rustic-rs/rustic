@@ -204,7 +204,7 @@ impl RemoveCmd {
         }
 
         let keys = repo
-            .stream_files_list(&ids)?
+            .stream_files_list(ids)?
             .inspect(|f| {
                 if let Err(err) = f {
                     warn!("{err:?}");

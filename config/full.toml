@@ -214,6 +214,7 @@ keep-ids = [
 ] # Keep all snapshots whose ID starts with any of these strings, default: not set
 keep-last = 0
 keep-minutely = 10
+keep-hourly = 5
 keep-daily = 3
 keep-weekly = 0
 keep-monthly = 0
@@ -222,6 +223,7 @@ keep-half-yearly = 0
 keep-yearly = 10
 keep-within = "0s"
 keep-within-minutely = "2 hours"
+keep-within-hourly = "3 days"
 keep-within-daily = "0 seconds"
 keep-within-weekly = "2 months"
 keep-within-monthly = "1 year"

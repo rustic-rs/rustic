@@ -147,6 +147,9 @@ iglob-files = []
 git-ignore = false
 no-require-git = false
 exclude-if-present = [".nobackup", "CACHEDIR.TAG"] # Default: not set
+exclude-if-xattr = [
+  "com.apple.metadata:com_apple_backup_excludeItem",
+] # Default: not set
 custom-ignorefiles = [".rusticignore", ".backupignore"] # Default: not set
 one-file-system = false
 exclude-larger-than = "100MB" # Default: not set

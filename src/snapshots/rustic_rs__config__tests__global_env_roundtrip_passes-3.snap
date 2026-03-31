@@ -133,6 +133,7 @@ RusticConfig {
             no_require_git: false,
             custom_ignorefiles: [],
             exclude_if_present: [],
+            exclude_if_xattr: [],
             one_file_system: false,
             exclude_larger_than: None,
         },

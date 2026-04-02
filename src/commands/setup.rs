@@ -97,15 +97,23 @@ impl SetupCmd {
         println!();
 
         // Ask for profile name
-        let profile: String = Input::with_theme(&theme)
-            .with_prompt("Profile name (leave empty for default)")
-            .default(self.profile.clone())
-            .allow_empty(false)
-            .interact_text()?;
-        let profile = if profile.trim().is_empty() {
-            "rustic".to_string()
-        } else {
-            profile.trim().to_string()
+        let profile = loop {
+            let input: String = Input::with_theme(&theme)
+                .with_prompt("Profile name (leave empty for default)")
+                .default(self.profile.clone())
+                .allow_empty(true)
+                .interact_text()?;
+            let p = if input.trim().is_empty() {
+                "rustic".to_string()
+            } else {
+                input.trim().to_string()
+            };
+
+            if p.contains('/') || p.contains('\\') || p.contains("..") {
+                println!("⚠  Invalid profile name. Please avoid slashes and path traversals.");
+            } else {
+                break p;
+            }
         };
         println!();
 
@@ -611,7 +619,23 @@ impl SetupCmd {
 
         if save {
             fs::create_dir_all(&config_dir)?;
-            fs::write(&config_file, &config)?;
+            
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .mode(0o600)
+                    .open(&config_file)?;
+                std::io::Write::write_all(&mut file, config.as_bytes())?;
+            }
+            #[cfg(not(unix))]
+            {
+                fs::write(&config_file, &config)?;
+            }
+
             println!();
             println!("✓ Configuration saved to: {}", config_file.display());
         } else {
@@ -680,17 +704,32 @@ impl SetupCmd {
 
 /// Escape a string for TOML (handle backslashes and quotes)
 fn escape_toml_string(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('"', "\\\"")
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\x08' => out.push_str("\\b"),
+            '\x0c' => out.push_str("\\f"),
+            c if c.is_control() => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
-/// Truncate a string to a max length, adding "..." if truncated
+/// Truncate a string to a max length (by characters), adding "..." if truncated
 fn truncate_str(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
+    let char_count = s.chars().count();
+    if char_count <= max_len {
         s.to_string()
     } else if max_len > 3 {
-        format!("{}...", &s[..max_len - 3])
+        format!("{}...", s.chars().take(max_len - 3).collect::<String>())
     } else {
-        s[..max_len].to_string()
+        s.chars().take(max_len).collect::<String>()
     }
 }
 

@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{IndexedRepo, OpenRepo, get_snapots_from_ids},
+    repository::{IndexedRepo, OpenRepo, get_snapshots_from_ids},
     status_err,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -85,7 +85,7 @@ impl Runnable for SnapSubCmd {
 impl SnapSubCmd {
     fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
-        let snaps = get_snapots_from_ids(&repo, &self.ids)?;
+        let snaps = get_snapshots_from_ids(&repo, &self.ids)?;
         repo.repair_snapshots(&self.opts, snaps, config.global.dry_run)?;
         Ok(())
     }

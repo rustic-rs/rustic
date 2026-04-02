@@ -128,7 +128,7 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
             .arg(&restore_dir)
             .assert()
             .success()
-            .stdout(predicate::str::contains("restore done"));
+            .stdout(predicate::str::contains("Restore completed in"));
     }
 
     // Compare the backup and the restored directory

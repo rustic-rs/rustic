@@ -133,7 +133,23 @@ impl InteractiveProgress {
         match kind {
             ProgressType::Spinner => Self::initial_style(kind),
             ProgressType::Counter => ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10}")
+                .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| {
+                    let _ = match (s.pos(), s.len()) {
+                        (pos, Some(len)) if pos != 0 && len > pos => {
+                            let eta_secs = s.elapsed().as_secs() * (len - pos) / pos;
+                            write!(w, "{:#}", HumanDuration(Duration::from_secs(eta_secs)))
+                        }
+                        _ => write!(w, "-"),
+                    };
+                })
+                .with_key("my_per_sec", |s: &ProgressState, w: &mut dyn Write| {
+                    let _ = if s.elapsed().as_secs() > 0 {
+                        write!(w, "{}/s", s.pos() / s.elapsed().as_secs())
+                    } else {
+                        write!(w, "-")
+                    };
+                })
+                .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {pos:>10}/{len:10} {percent:>3}% {my_per_sec:>10} (ETA {my_eta})")
                 .unwrap(),
             ProgressType::Bytes => ProgressStyle::default_bar()
                 .with_key("my_eta", |s: &ProgressState, w: &mut dyn Write| {
@@ -145,7 +161,7 @@ impl InteractiveProgress {
                         _ => write!(w, "-"),
                     };
                 })
-                .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {bytes_per_sec:12} (ETA {my_eta})")
+                .template("[{elapsed_precise}] {prefix:30} {bar:40.cyan/blue} {bytes:>10}/{total_bytes:10} {percent:>3}% {bytes_per_sec:12} (ETA {my_eta})")
                 .unwrap(),
         }
     }

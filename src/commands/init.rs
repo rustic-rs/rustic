@@ -3,6 +3,7 @@
 use abscissa_core::{Command, Runnable, Shutdown, status_err};
 use anyhow::{Result, bail};
 use dialoguer::Password;
+use log::{info, warn};
 
 use crate::{
     Application, RUSTIC_APP,
@@ -79,6 +80,17 @@ impl InitCmd {
             &self.key_opts,
             &self.config_opts,
         )?;
+
+        // Post-init summary
+        info!("Repository successfully initialized.");
+        if let Some(repo_path) = &config.repository.be.repository {
+            info!("  Repository: {}", repo_path);
+        }
+        if let Some(hot_path) = &config.repository.be.repo_hot {
+            info!("  Hot repository: {}", hot_path);
+        }
+        info!("You can now start backing up with 'rustic backup <source>' or configure a profile.");
+
         Ok(())
     }
 }
@@ -117,7 +129,16 @@ pub(crate) fn init_credentials(credential_opts: &CredentialOptions) -> Result<Cr
             .with_confirmation("confirm password", "passwords do not match")
             .interact()
         {
-            Ok(pass) => Credentials::Password(pass),
+            Ok(pass) => {
+                // Password strength feedback
+                if pass.is_empty() {
+                    warn!("Warning: Empty password. The repository data will still be encrypted,");
+                    warn!("  but anyone with access to the repository can decrypt it.");
+                } else if pass.len() < 8 {
+                    warn!("Warning: Short password ({} characters). Consider using a longer password for better security.", pass.len());
+                }
+                Credentials::Password(pass)
+            }
             Err(err) => {
                 status_err!("{}", err);
                 RUSTIC_APP.shutdown(Shutdown::Crash);

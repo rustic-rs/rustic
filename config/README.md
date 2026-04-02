@@ -225,6 +225,7 @@ can be overwritten in the source-specific configuration, see below.
 | delete-never       | If true, never delete the snapshot.                                                                            | false                    |               | --delete-never          |
 | delete-after       | Time duration after which the snapshot be deleted.                                                             | Not set                  |               | --delete-after          |
 | exclude-if-present | Array of filenames which will exclude its parent directory from the backup if they are present.                | []                       |               | --exclude-if-present    |
+| exclude-if-xattr   | Array of xattr names. Files/directories having any of these extended attributes set will be excluded.          | []                       |               | --exclude-if-xattr      |
 | force              | If true, forces the backup even if no changes are detected.                                                    | false                    |               | --force                 |
 | git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory.                        | false                    |               | --git-ignore            |
 | globs              | Array of globs specifying what to include/exclude in the backup.                                               | []                       |               | --glob                  |

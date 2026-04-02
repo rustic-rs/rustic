@@ -10,16 +10,23 @@ use crate::{
     repository::{IndexedRepo, get_filtered_snapshots},
     status_err,
 };
+use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
+
 use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
 use anyhow::{Result, anyhow};
+use axum::{
+    Router,
+    extract::{Request, State},
+    response::IntoResponse,
+    routing::any,
+};
 use conflate::Merge;
-use dav_server::{DavHandler, warp::dav_handler};
+use dav_server::DavHandler;
+use log::info;
 use serde::{Deserialize, Serialize};
 
-use rustic_core::vfs::{FilePolicy, IdenticalSnapshot, Latest, Vfs};
-use webdavfs::WebDavFS;
-
 mod webdavfs;
+use webdavfs::WebDavFS;
 
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
@@ -140,13 +147,23 @@ impl WebDavCmd {
             .filesystem(Box::new(webdavfs))
             .build_handler();
 
+        let app = Router::new()
+            .route("/", any(handle_dav))
+            .route("/{*path}", any(handle_dav))
+            .with_state(dav_server);
+
+        info!("serving webdav on {addr}");
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?
             .block_on(async {
-                warp::serve(dav_handler(dav_server)).run(addr).await;
-            });
+                axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await
+            })?;
 
         Ok(())
     }
+}
+
+async fn handle_dav(State(dav): State<DavHandler>, req: Request) -> impl IntoResponse {
+    dav.handle(req).await
 }

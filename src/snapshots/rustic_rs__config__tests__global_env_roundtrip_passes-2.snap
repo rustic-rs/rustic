@@ -74,6 +74,7 @@ git-ignore = false
 no-require-git = false
 custom-ignorefiles = []
 exclude-if-present = []
+exclude-if-xattr = []
 one-file-system = false
 tags = []
 delete-never = false

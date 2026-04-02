@@ -280,7 +280,7 @@ hooks when backing up the defined sources into a snapshot.
 
 ### Forget Options `[forget]`
 
-**Note**: At lest on of the `keep-*` options must be given. Use
+**Note**: At least one of the `keep-*` options must be given. Use
 `keep-none = true` if you want to remove all snapshots.
 
 | Attribute                  | Description                                                             | Default Value            | Example Value          | CLI Option                   |

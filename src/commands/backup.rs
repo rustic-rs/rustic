@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 use std::{collections::BTreeMap, env};
 
 use crate::repository::IndexedIdsRepo;
@@ -328,28 +327,23 @@ impl BackupCmd {
         let config = RUSTIC_APP.config();
         let snapshot_opts = &config.backup.snapshots;
 
+        let validate_paths = |paths: &[String]| {
+            for path_str in paths {
+                if *path_str != "-" {
+                    let path = Path::new(path_str);
+                    if !path.exists() {
+                        warn!("source path does not exist: {}", path_str);
+                    } else if !path.is_dir() && !path.is_file() {
+                        warn!("source path is not a regular file or directory: {}", path_str);
+                    }
+                }
+            }
+        };
+
         // Pre-flight validation: check that source paths exist
         // We check the raw string representations before sanitize/merge
-        for path_str in &self.cli_sources {
-            if *path_str != "-" {
-                let path = Path::new(path_str);
-                if !path.exists() {
-                    warn!("source path does not exist: {}", path_str);
-                } else if !path.is_dir() && !path.is_file() {
-                    warn!("source path is not a regular file or directory: {}", path_str);
-                }
-            }
-        }
-        for path_str in &self.sources {
-            if *path_str != "-" {
-                let path = Path::new(path_str);
-                if !path.exists() {
-                    warn!("source path does not exist: {}", path_str);
-                } else if !path.is_dir() && !path.is_file() {
-                    warn!("source path is not a regular file or directory: {}", path_str);
-                }
-            }
-        }
+        validate_paths(&self.cli_sources);
+        validate_paths(&self.sources);
 
         if let Some(path) = &self.as_path {
             // as_path only works in combination with a single target
@@ -390,8 +384,6 @@ impl BackupCmd {
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);
 
-        let backup_start = Instant::now();
-
         let snap = hooks.use_with(|| -> Result<_> {
             let source = source
                 .clone()
@@ -401,7 +393,7 @@ impl BackupCmd {
             Ok(repo.backup(&backup_opts, &source, self.snap_opts.to_snapshot()?)?)
         })?;
 
-        let backup_elapsed = backup_start.elapsed();
+
 
         if self.json {
             let mut stdout = std::io::stdout();
@@ -441,17 +433,12 @@ impl BackupCmd {
             info!("snapshot {} successfully saved.", snap.id);
         }
 
-        // Report elapsed time
-        let secs = backup_elapsed.as_secs();
-        let (hours, remainder) = (secs / 3600, secs % 3600);
-        let (minutes, seconds) = (remainder / 60, remainder % 60);
-        if hours > 0 {
-            info!("backup of {source} done in {}h {}m {}s.", hours, minutes, seconds);
-        } else if minutes > 0 {
-            info!("backup of {source} done in {}m {}s.", minutes, seconds);
-        } else {
-            info!("backup of {source} done in {:.1}s.", backup_elapsed.as_secs_f64());
-        }
+        // Report elapsed time using snapshot metadata and jiff's native duration rendering
+        let summary = snap.summary.as_ref().unwrap();
+        let backup_elapsed = jiff::SignedDuration::from_secs_f64(summary.backup_duration);
+        let elapsed_str = jiff::fmt::friendly::SpanPrinter::new()
+            .span_to_string(&jiff::Span::try_from(backup_elapsed).unwrap_or_default());
+        info!("backup of {source} done in {elapsed_str}.");
 
         if config.global.is_metrics_configured() {
             // Merge global metrics labels

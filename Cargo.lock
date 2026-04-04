@@ -3393,6 +3393,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "password-strength"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "928bc33cd32cf9d77af191f8d81471321b21c6a58dc03b37d00584d1ea2c5f99"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4431,6 +4440,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "password-strength",
  "predicates",
  "pretty_assertions",
  "prometheus",

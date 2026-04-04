@@ -134,8 +134,12 @@ pub(crate) fn init_credentials(credential_opts: &CredentialOptions) -> Result<Cr
                 if pass.is_empty() {
                     warn!("Warning: Empty password. The repository data will still be encrypted,");
                     warn!("  but anyone with access to the repository can decrypt it.");
-                } else if pass.len() < 8 {
-                    warn!("Warning: Short password ({} characters). Consider using a longer password for better security.", pass.len());
+                } else {
+                    let strength = password_strength::estimate_strength(&pass);
+                    if strength < 0.7 {
+                        warn!("Warning: Your password is rated as weak ({:.2}/1.0).", strength);
+                        warn!("  Consider using a stronger password for better security.");
+                    }
                 }
                 Credentials::Password(pass)
             }

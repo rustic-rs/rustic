@@ -122,7 +122,7 @@ open = "5.3.3"
 prometheus = { version = "0.14.0", optional = true }
 qrcode = { version = "0.14.1", default-features = false, features = ["svg"] }
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "blocking"] }
-self_update = { version = "=0.39.0", default-features = false, optional = true, features = ["rustls", "archive-tar", "compression-flate2"] } # FIXME: Downgraded to 0.39.0 due to https://github.com/jaemk/self_update/issues/136
+self_update = { version = "0.43.1", default-features = false, optional = true, features = ["rustls", "reqwest", "archive-tar", "compression-flate2"] }
 tar = "0.4.44"
 toml = "1.0.3"
 zip = { version = "8.0.0", default-features = false, features = ["deflate", "jiff-02"] }

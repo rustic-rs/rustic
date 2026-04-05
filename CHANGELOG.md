@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.2](https://github.com/rustic-rs/rustic/compare/v0.11.1...v0.11.2) - 2026-04-05
+
+### Added
+
+- preserve hardlinks on restore ([#492](https://github.com/rustic-rs/rustic_core/pull/492), [#495](https://github.com/rustic-rs/rustic_core/pull/495))
+- add exclude-if-xattr option ([#1718](https://github.com/rustic-rs/rustic/pull/1718), [#491](https://github.com/rustic-rs/rustic_core/pull/491))
+
+### Fixed
+
+- Fix gitignore-handling ([#494](https://github.com/rustic-rs/rustic_core/pull/494))
+- Add keep-{within-}hourly to config/full.toml ([#1704](https://github.com/rustic-rs/rustic/pull/1704))
+- fix some typos ([#1710](https://github.com/rustic-rs/rustic/pull/1710))
+
+### Other
+
+- Performance optimizations ([#487](https://github.com/rustic-rs/rustic_core/pull/487), [#489](https://github.com/rustic-rs/rustic_core/pull/489))
+- move to axum for webdav command ([#1720](https://github.com/rustic-rs/rustic/pull/1720))
+- update dependencies ([#1698](https://github.com/rustic-rs/rustic/pull/1698), [#1723](https://github.com/rustic-rs/rustic/pull/1723), [#1721](https://github.com/rustic-rs/rustic/pull/1721))
+- *(deps)* unpin and update self_update ([#1699](https://github.com/rustic-rs/rustic/pull/1699))
+- *(deps)* bump quinn-proto from 0.11.13 to 0.11.14 ([#1703](https://github.com/rustic-rs/rustic/pull/1703))
+
 ## [0.11.1](https://github.com/rustic-rs/rustic/compare/v0.11.0...v0.11.1) - 2026-03-05
 
 ### Added

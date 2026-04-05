@@ -62,8 +62,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.9.0", default-features = false, features = ["application"] }
-rustic_backend = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"] }
-rustic_core = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"] }
+rustic_backend = { version = "0.6.1", features = ["cli"] }
+rustic_core = { version = "0.11.0", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -101,7 +101,7 @@ semver = { version = "1", optional = true }
 base64 = { version = "0.22.1", optional = true }
 bytes = { version = "1.11.1", optional = true }
 bytesize = "2"
-cached = "0.56.0"
+cached = "0.59.0"
 clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 clap_complete = "4"
 conflate = "0.3.3"
@@ -149,7 +149,7 @@ pretty_assertions = "1.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 rstest = "0.26"
-rustic_testing = { git = "https://github.com/rustic-rs/rustic_core" }
+rustic_testing = { version = "0.4.1" }
 tar = "0.4.44"
 tempfile = "3.25"
 

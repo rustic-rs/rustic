@@ -23,6 +23,8 @@ pub(crate) mod repair;
 pub(crate) mod repoinfo;
 pub(crate) mod restore;
 pub(crate) mod rewrite;
+#[cfg(feature = "serve")]
+pub(crate) mod serve;
 pub(crate) mod self_update;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
@@ -38,6 +40,8 @@ use std::sync::mpsc::channel;
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
+#[cfg(feature = "serve")]
+use crate::commands::serve::ServeCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 use crate::{
@@ -142,6 +146,10 @@ enum RusticCmd {
 
     /// Rewrite existing snapshot(s)
     Rewrite(Box<RewriteCmd>),
+
+    /// Start the rustic HTTP API server
+    #[cfg(feature = "serve")]
+    Serve(Box<ServeCmd>),
 
     /// Repair a snapshot or the repository index
     Repair(Box<RepairCmd>),
@@ -289,6 +297,8 @@ impl Configurable<RusticConfig> for EntryPoint {
             RusticCmd::Webdav(cmd) => cmd.override_config(config),
             #[cfg(feature = "mount")]
             RusticCmd::Mount(cmd) => cmd.override_config(config),
+            #[cfg(feature = "serve")]
+            RusticCmd::Serve(cmd) => cmd.override_config(config),
 
             // subcommands that don't need special overrides use a catch all
             _ => Ok(config),

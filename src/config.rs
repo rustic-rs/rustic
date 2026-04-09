@@ -26,11 +26,13 @@ use reqwest::Url;
 use rustic_core::SnapshotGroupCriterion;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
-#[cfg(not(all(feature = "mount", feature = "webdav")))]
+#[cfg(not(all(feature = "mount", feature = "serve", feature = "webdav")))]
 use toml::Value;
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
+#[cfg(feature = "serve")]
+use crate::commands::serve::ServeCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 
@@ -82,6 +84,15 @@ pub struct RusticConfig {
     #[clap(skip)]
     #[merge(skip)]
     pub mount: Option<Value>,
+
+    /// serve options
+    #[cfg(feature = "serve")]
+    #[clap(skip)]
+    pub serve: ServeCmd,
+    #[cfg(not(feature = "serve"))]
+    #[clap(skip)]
+    #[merge(skip)]
+    pub serve: Option<Value>,
 
     /// webdav options
     #[cfg(feature = "webdav")]

@@ -157,91 +157,17 @@ async fn start_backup(
 	State(state): State<ApiState>,
 	Json(req): Json<BackupStartRequest>,
 ) -> Result<(StatusCode, Json<BackupStartResponse>), (StatusCode, Json<ApiErrorResponse>)> {
-	if req.config_toml.trim().is_empty() {
-		return Err(api_error(
-			StatusCode::BAD_REQUEST,
-			"config-toml must not be empty",
-		));
-	}
 
-	match spawn_backup_job(&state, req) {
-		Ok(response) => Ok((StatusCode::ACCEPTED, Json(response))),
-		Err(err) => Err(api_error(
-			StatusCode::INTERNAL_SERVER_ERROR,
-			&format!("failed to start backup: {err:#}"),
-		)),
-	}
-}
+    let config = RUSTIC_APP.config();
+    if let Err(err) = config.backup.validate() {
+        status_err!("{}", err);
+        RUSTIC_APP.shutdown(Shutdown::Crash);
+    }
 
-fn spawn_backup_job(state: &ApiState, req: BackupStartRequest) -> Result<BackupStartResponse> {
-	let job_id = new_job_id();
-	let job_dir = state.jobs_root.join(&job_id);
-	fs::create_dir_all(&job_dir)
-		.with_context(|| format!("creating job dir {}", job_dir.display()))?;
-
-	let profile_filename = sanitize_profile_filename(req.profile_filename.as_deref())?;
-	let profile_path = job_dir.join(profile_filename);
-
-	fs::write(&profile_path, req.config_toml)
-		.with_context(|| format!("writing profile {}", profile_path.display()))?;
-
-	let working_dir = req
-		.working_directory
-		.as_deref()
-		.map(PathBuf::from)
-		.unwrap_or_else(|| job_dir.clone());
-
-	let current_exe = env::current_exe().context("resolving current executable")?;
-	let mut args = vec![
-		"--use-profile".to_string(),
-		profile_path
-			.file_name()
-			.map(|f| f.to_string_lossy().into_owned())
-			.context("resolving generated profile filename")?,
-		"backup".to_string(),
-	];
-	args.extend(req.extra_cli_args);
-
-	let child = Command::new(&current_exe)
-		.args(&args)
-		.current_dir(&working_dir)
-		.stdout(Stdio::null())
-		.stderr(Stdio::null())
-		.spawn()
-		.with_context(|| {
-			format!(
-				"spawning backup command in {}",
-				working_dir.as_path().display()
-			)
-		})?;
-
-	Ok(BackupStartResponse {
-		job_id,
-		pid: child.id(),
-		command: std::iter::once(current_exe.display().to_string())
-			.chain(args)
-			.collect(),
-		working_directory: working_dir.display().to_string(),
-		profile_file: profile_path.display().to_string(),
-	})
-}
-
-fn sanitize_profile_filename(profile_filename: Option<&str>) -> Result<String> {
-	let filename = profile_filename.unwrap_or("api-profile.toml");
-	let candidate = Path::new(filename);
-
-	if candidate
-		.components()
-		.any(|comp| !matches!(comp, std::path::Component::Normal(_)))
-	{
-		bail!("profile-filename must be a plain file name");
-	}
-
-	if !filename.ends_with(".toml") {
-		bail!("profile-filename must end with .toml");
-	}
-
-	Ok(filename.to_string())
+    if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
+        status_err!("{}", err);
+        RUSTIC_APP.shutdown(Shutdown::Crash);
+    };
 }
 
 fn api_error(status: StatusCode, message: &str) -> (StatusCode, Json<ApiErrorResponse>) {

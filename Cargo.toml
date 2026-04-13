@@ -34,12 +34,9 @@ opentelemetry = [
   "dep:opentelemetry_sdk",
 ]
 self-update = ["dep:self_update", "dep:semver"]
-serve = ["dep:axum", "dep:tokio", "dep:utoipa"]
 tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = [
   "dep:dav-server",
-  "dep:axum",
-  "dep:tokio",
   "dep:bytes",
   "dep:futures",
 ]
@@ -71,10 +68,10 @@ jemallocator-global = { version = "0.3.2", optional = true }
 mimalloc = { version = "0.1.48", default-features = false, optional = true }
 
 # webdav
-axum = { version = "0.8.8", optional = true }
+axum = { version = "0.8.8" }
 dav-server = { version = "0.11.0", default-features = false, optional = true }
-tokio = { version = "1", optional = true }
-utoipa = { version = "5", optional = true }
+tokio = { version = "1" }
+utoipa = { version = "5" }
 
 # tui
 crossterm = { version = "0.28", optional = true }

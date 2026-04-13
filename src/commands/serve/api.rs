@@ -158,7 +158,11 @@ async fn start_backup(
 	Json(req): Json<BackupStartRequest>,
 ) -> Result<(StatusCode, Json<BackupStartResponse>), (StatusCode, Json<ApiErrorResponse>)> {
 
-    let config = RUSTIC_APP.config();
+
+    // FIXME: this below is the code of "backup" command
+    // we need to refactor it so we can run it within an HTTP server:
+
+    /*let config = RUSTIC_APP.config();
     if let Err(err) = config.backup.validate() {
         status_err!("{}", err);
         RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -167,7 +171,29 @@ async fn start_backup(
     if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
         status_err!("{}", err);
         RUSTIC_APP.shutdown(Shutdown::Crash);
-    };
+    };*/
+
+
+    /*
+
+        FIXME: test with:
+
+        curl -i -X POST http://localhost:8080/v1/backup -H "Content-Type: application/json" -d @tests/http-server/backup-request.json
+
+     */
+
+    let _ = (state, req);
+
+	Ok((
+		StatusCode::ACCEPTED,
+		Json(BackupStartResponse {
+			job_id: "dummy-job".to_string(),
+			pid: 0,
+			command: vec!["rustic".to_string(), "backup".to_string()],
+			working_directory: "/tmp".to_string(),
+			profile_file: "/tmp/api-profile.toml".to_string(),
+		}),
+	))
 }
 
 fn api_error(status: StatusCode, message: &str) -> (StatusCode, Json<ApiErrorResponse>) {

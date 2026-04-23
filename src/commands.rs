@@ -29,9 +29,9 @@ pub(crate) mod snapshots;
 pub(crate) mod tag;
 #[cfg(feature = "tui")]
 pub(crate) mod tui;
+pub(crate) mod version;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
-pub(crate) mod version;
 
 use std::fmt::Debug;
 use std::path::PathBuf;

@@ -5,34 +5,46 @@
 //! configuration are also supported through the API.
 
 use std::{
-	env,
+	collections::HashMap,
 	fs,
 	net::SocketAddr,
-	path::{Path, PathBuf},
-	process::{Command, Stdio},
-	time::{SystemTime, UNIX_EPOCH},
+	sync::{Arc, Mutex},
 };
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use axum::{
 	Json, Router,
-	extract::State,
+	extract::{Path as AxumPath, State},
 	http::StatusCode,
 	routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
+use uuid::Uuid;
+
+/// Status of a backup job.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum JobStatus {
+	/// The job is currently running.
+	Running,
+	/// The job completed successfully.
+	Completed,
+	/// The job terminated with an error.
+	Failed,
+}
 
 /// Shared state for API handlers.
 #[derive(Clone, Debug)]
 pub struct ApiState {
-	pub jobs_root: PathBuf,
+	/// In-memory map of job_id -> status for all submitted backup jobs.
+	pub jobs: Arc<Mutex<HashMap<String, JobStatus>>>,
 }
 
 impl Default for ApiState {
 	fn default() -> Self {
 		Self {
-			jobs_root: env::temp_dir().join("rustic-api-jobs"),
+			jobs: Arc::new(Mutex::new(HashMap::new())),
 		}
 	}
 }
@@ -41,20 +53,11 @@ impl Default for ApiState {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct BackupStartResponse {
-	/// Unique identifier for the spawned backup job.
+	/// Unique identifier for the backup job.
+    /// Please note that at this time rustic can only run one backup job at a time, 
+    /// so that there will be at most one active job_id. 
+    /// This parameter allows the API to be extended in the future to support multiple concurrent jobs if needed.
 	pub job_id: String,
-
-	/// Process identifier of the spawned rustic process.
-	pub pid: u32,
-
-	/// Effective command started by this API endpoint.
-	pub command: Vec<String>,
-
-	/// Working directory used for command execution.
-	pub working_directory: String,
-
-	/// Profile file path generated for this execution.
-	pub profile_file: String,
 }
 
 /// API error payload.
@@ -65,56 +68,56 @@ pub struct ApiErrorResponse {
 }
 
 /// Request payload for creating a backup job.
-///
-/// `config_toml` is written to a temporary profile file and executed with
-/// `rustic --use-profile <generated-file.toml> backup`, so every TOML option
-/// supported by rustic config files can be used unchanged.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct BackupStartRequest {
-	/// Complete rustic profile as TOML text.
-	///
-	/// Example:
-	///
-	/// [repository]
-	/// repository = "/backups/repo"
-	/// password = "secret"
-	///
-	/// [backup]
-	/// no-scan = true
-	/// [[backup.snapshots]]
-	/// sources = ["/home/user/data"]
-	pub config_toml: String,
+	/// Optional profile name to define which sources to backup
+    /// Equivalent to the --name CLI option of "backup" command.
+	pub profile_name: Option<String>,
+}
 
-	/// Optional profile filename to use inside the temporary jobs directory.
-	/// If omitted, defaults to `api-profile.toml`.
-	pub profile_filename: Option<String>,
-
-	/// Optional extra CLI args appended after `backup`.
-	/// This can be useful for quick flags like `--dry-run`.
-	#[serde(default)]
-	pub extra_cli_args: Vec<String>,
-
-	/// Optional working directory for the spawned process.
-	/// Defaults to the per-job temp directory.
-	pub working_directory: Option<String>,
+/// Response body for GET /backup/{job_id}.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct BackupJobStatusResponse {
+	/// The job identifier.
+	pub job_id: String,
+	/// Current status of the job.
+	pub status: JobStatus,
 }
 
 #[derive(OpenApi)]
 #[openapi(
-	paths(health, start_backup),
-	components(schemas(BackupStartRequest, BackupStartResponse, ApiErrorResponse)),
+	paths(health, start_backup, get_backup_status),
+	components(schemas(BackupStartRequest, BackupStartResponse, BackupJobStatusResponse, JobStatus, ApiErrorResponse)),
 	tags(
 		(name = "rustic-api", description = "Rustic HTTP API skeleton")
 	)
 )]
 pub struct ApiDoc;
 
+/// Write the generated OpenAPI schema to the given file path.
+pub fn write_openapi_schema(path: &std::path::Path) -> Result<()> {
+	let schema = ApiDoc::openapi();
+	let json = serde_json::to_string_pretty(&schema).context("serializing OpenAPI schema")?;
+
+	if let Some(parent) = path.parent() {
+		fs::create_dir_all(parent)
+			.with_context(|| format!("creating schema output directory {}", parent.display()))?;
+	}
+
+	fs::write(path, json)
+		.with_context(|| format!("writing OpenAPI schema to {}", path.display()))?;
+
+	Ok(())
+}
+
 /// Build the HTTP router for the serve API.
 pub fn router(state: ApiState) -> Router {
 	Router::new()
 		.route("/health", get(health))
-		.route("/v1/backup", post(start_backup))
+		.route("/backup", post(start_backup))
+		.route("/backup/{job_id}", get(get_backup_status))
 		.with_state(state)
 }
 
@@ -130,6 +133,16 @@ pub async fn serve(addr: SocketAddr, state: ApiState) -> Result<()> {
 	Ok(())
 }
 
+
+/// Respond to /health endpoint, used for health checks and testing connectivity to the API.
+/// 
+/// Development note: test this with:
+/// 
+/// curl -i -X GET http://localhost:8080/health
+///
+/// # Returns
+///
+/// Returns "ok" if the API is running.
 #[utoipa::path(
 	get,
 	path = "/health",
@@ -142,9 +155,18 @@ async fn health() -> &'static str {
 	"ok"
 }
 
+/// Respond to /backup endpoint, used for starting backup jobs.
+/// 
+/// Development note: test this with:
+/// 
+/// curl -i -X POST http://localhost:8080/backup -H "Content-Type: application/json" -d @tests/http-server/backup-request.json
+///
+/// # Returns
+///
+/// Returns BackupStartResponse in case of success
 #[utoipa::path(
 	post,
-	path = "/v1/backup",
+	path = "/backup",
 	tag = "rustic-api",
 	request_body = BackupStartRequest,
 	responses(
@@ -159,41 +181,59 @@ async fn start_backup(
 ) -> Result<(StatusCode, Json<BackupStartResponse>), (StatusCode, Json<ApiErrorResponse>)> {
 
 
-    // FIXME: this below is the code of "backup" command
-    // we need to refactor it so we can run it within an HTTP server:
+    // TODO: kick off a new backup job here.
+    // Note that we just need to start the backup job asynchronously and return
+    // a job_id immediately, without waiting for the backup to complete.
+    let _ = req;
 
-    /*let config = RUSTIC_APP.config();
-    if let Err(err) = config.backup.validate() {
-        status_err!("{}", err);
-        RUSTIC_APP.shutdown(Shutdown::Crash);
-    }
-
-    if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
-        status_err!("{}", err);
-        RUSTIC_APP.shutdown(Shutdown::Crash);
-    };*/
-
-
-    /*
-
-        FIXME: test with:
-
-        curl -i -X POST http://localhost:8080/v1/backup -H "Content-Type: application/json" -d @tests/http-server/backup-request.json
-
-     */
-
-    let _ = (state, req);
+    let job_id = Uuid::new_v4().to_string();
+    state
+        .jobs
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(job_id.clone(), JobStatus::Running);
 
 	Ok((
 		StatusCode::ACCEPTED,
-		Json(BackupStartResponse {
-			job_id: "dummy-job".to_string(),
-			pid: 0,
-			command: vec!["rustic".to_string(), "backup".to_string()],
-			working_directory: "/tmp".to_string(),
-			profile_file: "/tmp/api-profile.toml".to_string(),
-		}),
+		Json(BackupStartResponse { job_id }),
 	))
+}
+
+/// Get the status of a backup job.
+///
+/// Development note: test this with:
+///
+/// curl -i -X GET http://localhost:8080/backup/<job_id>
+#[utoipa::path(
+	get,
+	path = "/backup/{job_id}",
+	tag = "rustic-api",
+	params(
+		("job_id" = String, Path, description = "Job identifier returned by POST /backup")
+	),
+	responses(
+		(status = 200, description = "Job status", body = BackupJobStatusResponse),
+		(status = 404, description = "Job not found", body = ApiErrorResponse)
+	)
+)]
+async fn get_backup_status(
+	State(state): State<ApiState>,
+	AxumPath(job_id): AxumPath<String>,
+) -> Result<Json<BackupJobStatusResponse>, (StatusCode, Json<ApiErrorResponse>)> {
+	let jobs = state
+		.jobs
+		.lock()
+		.unwrap_or_else(|e| e.into_inner());
+	match jobs.get(&job_id) {
+		Some(status) => Ok(Json(BackupJobStatusResponse {
+			job_id,
+			status: status.clone(),
+		})),
+		None => Err(api_error(
+			StatusCode::NOT_FOUND,
+			&format!("job '{job_id}' not found"),
+		)),
+	}
 }
 
 fn api_error(status: StatusCode, message: &str) -> (StatusCode, Json<ApiErrorResponse>) {
@@ -203,11 +243,4 @@ fn api_error(status: StatusCode, message: &str) -> (StatusCode, Json<ApiErrorRes
 			message: message.to_string(),
 		}),
 	)
-}
-
-fn new_job_id() -> String {
-	let nanos = SystemTime::now()
-		.duration_since(UNIX_EPOCH)
-		.map_or(0, |d| d.as_nanos());
-	format!("job-{nanos}")
 }

@@ -2,7 +2,7 @@
 
 pub(crate) mod api;
 
-use std::net::ToSocketAddrs;
+use std::{net::ToSocketAddrs, path::PathBuf};
 
 use crate::{Application, RUSTIC_APP, RusticConfig, status_err};
 
@@ -19,6 +19,11 @@ pub struct ServeCmd {
     #[clap(long, value_name = "ADDRESS")]
     #[merge(strategy=conflate::option::overwrite_none)]
     address: Option<String>,
+
+    /// Generate OpenAPI schema to this file and exit, e.g. docs/openapi.json.
+    #[clap(long, value_name = "PATH")]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    openapi_output: Option<PathBuf>,
 }
 
 impl Override<RusticConfig> for ServeCmd {
@@ -41,6 +46,12 @@ impl Runnable for ServeCmd {
 
 impl ServeCmd {
     fn inner_run(&self) -> Result<()> {
+        if let Some(path) = &self.openapi_output {
+            api::write_openapi_schema(path)?;
+            info!("OpenAPI schema written to {}", path.display());
+            return Ok(());
+        }
+
         let config = RUSTIC_APP.config();
 
         let addr = config

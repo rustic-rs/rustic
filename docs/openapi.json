@@ -1,0 +1,209 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "rustic-rs",
+    "description": "rustic - fast, encrypted, deduplicated backups powered by Rust\n",
+    "contact": {
+      "name": "the rustic-rs team"
+    },
+    "license": {
+      "name": "Apache-2.0 OR MIT",
+      "identifier": "Apache-2.0 OR MIT"
+    },
+    "version": "0.11.2"
+  },
+  "paths": {
+    "/backup": {
+      "post": {
+        "tags": [
+          "rustic-api"
+        ],
+        "summary": "Respond to /backup endpoint, used for starting backup jobs.",
+        "description": "Development note: test this with:\n\ncurl -i -X POST http://localhost:8080/backup -H \"Content-Type: application/json\" -d @tests/http-server/backup-request.json\n\n# Returns\n\nReturns BackupStartResponse in case of success",
+        "operationId": "start_backup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Backup job accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupStartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backup/{job_id}": {
+      "get": {
+        "tags": [
+          "rustic-api"
+        ],
+        "summary": "Get the status of a backup job.",
+        "description": "Development note: test this with:\n\ncurl -i -X GET http://localhost:8080/backup/<job_id>",
+        "operationId": "get_backup_status",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "description": "Job identifier returned by POST /backup",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupJobStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "rustic-api"
+        ],
+        "summary": "Respond to /health endpoint, used for health checks and testing connectivity to the API.",
+        "description": "Development note: test this with:\n\ncurl -i -X GET http://localhost:8080/health\n\n# Returns\n\nReturns \"ok\" if the API is running.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "API is running",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiErrorResponse": {
+        "type": "object",
+        "description": "API error payload.",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "BackupJobStatusResponse": {
+        "type": "object",
+        "description": "Response body for GET /backup/{job_id}.",
+        "required": [
+          "job-id",
+          "status"
+        ],
+        "properties": {
+          "job-id": {
+            "type": "string",
+            "description": "The job identifier."
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus",
+            "description": "Current status of the job."
+          }
+        }
+      },
+      "BackupStartRequest": {
+        "type": "object",
+        "description": "Request payload for creating a backup job.",
+        "properties": {
+          "profile-name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional profile name to define which sources to backup\nEquivalent to the --name CLI option of \"backup\" command."
+          }
+        }
+      },
+      "BackupStartResponse": {
+        "type": "object",
+        "description": "API response returned when a backup job has been accepted.",
+        "required": [
+          "job-id"
+        ],
+        "properties": {
+          "job-id": {
+            "type": "string",
+            "description": "Unique identifier for the backup job.\nPlease note that at this time rustic can only run one backup job at a time,\nso that there will be at most one active job_id.\nThis parameter allows the API to be extended in the future to support multiple concurrent jobs if needed."
+          }
+        }
+      },
+      "JobStatus": {
+        "type": "string",
+        "description": "Status of a backup job.",
+        "enum": [
+          "running",
+          "completed",
+          "failed"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "rustic-api",
+      "description": "Rustic HTTP API skeleton"
+    }
+  ]
+}

@@ -172,6 +172,7 @@ async fn health() -> &'static str {
 	responses(
 		(status = 202, description = "Backup job accepted", body = BackupStartResponse),
 		(status = 400, description = "Invalid request", body = ApiErrorResponse),
+		(status = 409, description = "A backup job is already running", body = ApiErrorResponse),
 		(status = 500, description = "Internal error", body = ApiErrorResponse)
 	)
 )]
@@ -179,19 +180,29 @@ async fn start_backup(
 	State(state): State<ApiState>,
 	Json(req): Json<BackupStartRequest>,
 ) -> Result<(StatusCode, Json<BackupStartResponse>), (StatusCode, Json<ApiErrorResponse>)> {
-
-
     // TODO: kick off a new backup job here.
     // Note that we just need to start the backup job asynchronously and return
     // a job_id immediately, without waiting for the backup to complete.
     let _ = req;
 
-    let job_id = Uuid::new_v4().to_string();
-    state
+    let mut jobs = state
         .jobs
         .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .insert(job_id.clone(), JobStatus::Running);
+        .unwrap_or_else(|e| e.into_inner());
+
+    // Enforce single-job constraint: reject if any job is still Running.
+    if let Some(active_id) = jobs
+        .iter()
+        .find_map(|(id, s)| (*s == JobStatus::Running).then(|| id.clone()))
+    {
+        return Err(api_error(
+            StatusCode::CONFLICT,
+            &format!("backup job '{active_id}' is already running"),
+        ));
+    }
+
+    let job_id = Uuid::new_v4().to_string();
+    let _ = jobs.insert(job_id.clone(), JobStatus::Running);
 
 	Ok((
 		StatusCode::ACCEPTED,

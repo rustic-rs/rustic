@@ -29,6 +29,7 @@ pub(crate) mod snapshots;
 pub(crate) mod tag;
 #[cfg(feature = "tui")]
 pub(crate) mod tui;
+pub(crate) mod version;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
 
@@ -155,6 +156,9 @@ enum RusticCmd {
     /// Start a webdav server which allows to access the repository
     #[cfg(feature = "webdav")]
     Webdav(Box<WebDavCmd>),
+
+    /// Print version information
+    Version(Box<version::VersionCmd>),
 }
 
 fn styles() -> Styles {
@@ -265,21 +269,24 @@ impl Configurable<RusticConfig> for EntryPoint {
             }
         }
 
-        // start logger
-        config
-            .global
-            .logging_options
-            .start_logger(config.global.dry_run)
-            .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
+        // start logger also check if version command was supplied by the user
+        // if so skip logging for version
+        if !matches!(self.commands, RusticCmd::Version(_)) {
+            config
+                .global
+                .logging_options
+                .start_logger(config.global.dry_run)
+                .map_err(|e| FrameworkErrorKind::ConfigError.context(e))?;
 
-        if config.global.logging_options.log_file.is_some() {
-            info!("rustic {}", version());
-            info!("command: {:?}", std::env::args_os().collect::<Vec<_>>());
-        }
+            if config.global.logging_options.log_file.is_some() {
+                info!("rustic {}", version());
+                info!("command: {:?}", std::env::args_os().collect::<Vec<_>>());
+            }
 
-        // display logs from merging
-        for (level, merge_log) in merge_logs {
-            log!(level, "{merge_log}");
+            // display logs from merging
+            for (level, merge_log) in merge_logs {
+                log!(level, "{merge_log}");
+            }
         }
 
         match &self.commands {

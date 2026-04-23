@@ -270,7 +270,7 @@ impl Configurable<RusticConfig> for EntryPoint {
         }
 
         // start logger also check if version command was supplied by the user
-        // if so skip logging for verison
+        // if so skip logging for version
         if !matches!(self.commands, RusticCmd::Version(_)) {
             config
                 .global

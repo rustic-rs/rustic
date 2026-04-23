@@ -52,6 +52,16 @@
               }
             }
           },
+          "409": {
+            "description": "A backup job is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal error",
             "content": {

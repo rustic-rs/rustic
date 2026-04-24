@@ -213,9 +213,12 @@ impl Runnable for BackupCmd {
 impl BackupCmd {
     fn inner_run(&self, repo: Repo) -> Result<()> {
         let config = RUSTIC_APP.config();
+        let snapshots = self.get_snapshots_to_backup()?;
 
-        // Initialize repository if --init is set and it is not yet initialized
-        let repo = if self.init && repo.config_id()?.is_none() {
+        // Initialize repository if init is set and it is not yet initialized
+        let do_init =
+            self.init || config.backup.init || snapshots.iter().any(|(opts, _)| opts.init);
+        let repo = if do_init && repo.config_id()?.is_none() {
             if config.global.dry_run {
                 bail!(
                     "cannot initialize repository {} in dry-run mode!",
@@ -241,7 +244,7 @@ impl BackupCmd {
 
         hooks.use_with(|| -> Result<_> {
             let mut is_err = false;
-            for (opts, sources) in self.get_snapshots_to_backup()? {
+            for (opts, sources) in snapshots {
                 if let Err(err) = opts.backup_snapshot(sources.clone(), &repo) {
                     error!("error backing up {sources}: {err}");
                     is_err = true;

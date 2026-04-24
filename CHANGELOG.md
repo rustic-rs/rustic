@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.3](https://github.com/rustic-rs/rustic/compare/v0.11.2...v0.11.3) - 2026-04-24
+
+### Added
+
+- Add warning about profile-substitute without profiles ([#1743](https://github.com/rustic-rs/rustic/pull/1743))
+- *(commands)* Add version command ([#1738](https://github.com/rustic-rs/rustic/pull/1738))
+
+### Fixed
+
+- respect config-supplied backup(.snapshot).init ([#1742](https://github.com/rustic-rs/rustic/pull/1742))
+
+### Other
+
+- *(deps)* bump thin-vec from 0.2.14 to 0.2.16 ([#1732](https://github.com/rustic-rs/rustic/pull/1732))
+- *(deps)* bump rustls-webpki from 0.103.10 to 0.103.13 ([#1745](https://github.com/rustic-rs/rustic/pull/1745))
+
 ## [0.11.2](https://github.com/rustic-rs/rustic/compare/v0.11.1...v0.11.2) - 2026-04-05
 
 ### Added

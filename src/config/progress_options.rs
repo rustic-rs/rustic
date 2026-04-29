@@ -3,11 +3,11 @@
 use std::{fmt::Write, time::Duration};
 
 use std::io::IsTerminal;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use bytesize::ByteSize;
-use indicatif::{HumanDuration, ProgressBar, ProgressState, ProgressStyle};
+use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressState, ProgressStyle};
 
 use clap::Parser;
 use conflate::Merge;
@@ -18,6 +18,19 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
 use rustic_core::{Progress, ProgressBars, ProgressType, RusticProgress};
+
+/// Returns the global `MultiProgress` instance used by all interactive progress bars.
+///
+/// Must be shared with `indicatif_log_bridge::LogWrapper` so that log output
+/// suspends progress bars before printing.
+pub fn multi_progress() -> &'static MultiProgress {
+    static MP: OnceLock<MultiProgress> = OnceLock::new();
+    MP.get_or_init(|| {
+        let mp = MultiProgress::new();
+        mp.set_move_cursor(true);
+        mp
+    })
+}
 
 mod constants {
     use std::time::Duration;
@@ -110,7 +123,7 @@ pub struct InteractiveProgress {
 impl InteractiveProgress {
     fn new(prefix: &str, kind: ProgressType, tick_interval: Duration) -> Self {
         let style = Self::initial_style(kind);
-        let bar = ProgressBar::new(0).with_style(style);
+        let bar = multi_progress().add(ProgressBar::new(0).with_style(style));
         bar.set_prefix(prefix.to_string());
         bar.enable_steady_tick(tick_interval);
         Self { bar, kind }

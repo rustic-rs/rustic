@@ -116,6 +116,7 @@ futures = { version = "0.3.31", optional = true }
 globset = "0.4.18"
 human-panic = "2"
 indicatif = "0.18"
+indicatif-log-bridge = "0.2.3"
 itertools = "0.14"
 jiff = "0.2.19"
 open = "5.3.3"

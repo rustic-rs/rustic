@@ -3,6 +3,7 @@ use std::{path::PathBuf, sync::OnceLock};
 use anyhow::Result;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
+use indicatif_log_bridge::LogWrapper;
 use log::LevelFilter;
 use log4rs::{
     Handle,
@@ -16,6 +17,8 @@ use log4rs::{
 };
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
+
+use crate::config::progress_options::multi_progress;
 
 /// Logging Config
 #[serde_as]
@@ -113,9 +116,22 @@ impl LoggingOptions {
         if let Some(handle) = HANDLE.get() {
             handle.set_config(config);
         } else {
-            let handle = log4rs::init_config(config)?;
+            let handle = init_log4rs_config(config)?;
             _ = HANDLE.set(handle);
         }
         Ok(())
     }
+}
+
+fn init_log4rs_config(config: Config) -> Result<Handle> {
+    let logger = log4rs::Logger::new(config);
+    let handle = logger.handle();
+
+    // LogWrapper will set the max log level so we need to save it before
+    // initializing LogWrapper and restore it afterwards.
+    let max_level = logger.max_log_level();
+    LogWrapper::new(multi_progress().clone(), logger).try_init()?;
+    log::set_max_level(max_level);
+
+    Ok(handle)
 }

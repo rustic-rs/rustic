@@ -3,7 +3,6 @@ use std::{path::PathBuf, sync::OnceLock};
 use anyhow::Result;
 use clap::{Parser, ValueHint};
 use conflate::Merge;
-use indicatif_log_bridge::LogWrapper;
 use log::LevelFilter;
 use log4rs::{
     Handle,
@@ -92,6 +91,7 @@ impl LoggingOptions {
             let file_appender = FileAppender::builder()
                 .encoder(Box::new(PatternEncoder::new("{d} [{l}] - {m}{n}")))
                 .build(file)?;
+            let file_appender = PbPauseAppender(file_appender);
             root_builder = root_builder.appender("logfile");
             config_builder = config_builder.appender(
                 Appender::builder()
@@ -116,22 +116,30 @@ impl LoggingOptions {
         if let Some(handle) = HANDLE.get() {
             handle.set_config(config);
         } else {
-            let handle = init_log4rs_config(config)?;
+            let handle = log4rs::init_config(config)?;
             _ = HANDLE.set(handle);
         }
         Ok(())
     }
 }
 
-fn init_log4rs_config(config: Config) -> Result<Handle> {
-    let logger = log4rs::Logger::new(config);
-    let handle = logger.handle();
+/// A wrapper around [`FileAppender`] that suspends the progress bar when writing logs.
+#[derive(Debug)]
+struct PbPauseAppender(FileAppender);
 
-    // LogWrapper will set the max log level so we need to save it before
-    // initializing LogWrapper and restore it afterwards.
-    let max_level = logger.max_log_level();
-    LogWrapper::new(multi_progress().clone(), logger).try_init()?;
-    log::set_max_level(max_level);
+impl log4rs::append::Append for PbPauseAppender {
+    fn append(&self, record: &log::Record<'_>) -> Result<()> {
+        multi_progress().suspend(|| {
+            self.0.append(record)
+        })
+    }
 
-    Ok(handle)
+    fn flush(&self) {
+        // as of log4rs 1.4.0, <FileAppender as Append>::flush does nothing,
+        // so we do not need to pause the progress bar here. In the future,
+        // if log4rs changes this behavior, we might need to add a suspend here.
+        // But that's not necessary right now, so we just call flush directly
+        // to avoid unnecessary suspends.
+        self.0.flush()
+    }
 }

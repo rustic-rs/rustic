@@ -79,6 +79,7 @@ impl LoggingOptions {
             .target(Target::Stderr)
             .encoder(Box::new(PatternEncoder::new("{h([{l}])} {m}{n}")))
             .build();
+        let stdout = PbPauseAppender(stdout);
 
         let mut root_builder = Root::builder().appender("stdout");
         let mut config_builder = Config::builder().appender(
@@ -91,7 +92,6 @@ impl LoggingOptions {
             let file_appender = FileAppender::builder()
                 .encoder(Box::new(PatternEncoder::new("{d} [{l}] - {m}{n}")))
                 .build(file)?;
-            let file_appender = PbPauseAppender(file_appender);
             root_builder = root_builder.appender("logfile");
             config_builder = config_builder.appender(
                 Appender::builder()
@@ -123,9 +123,9 @@ impl LoggingOptions {
     }
 }
 
-/// A wrapper around [`FileAppender`] that suspends the progress bar when writing logs.
+/// A wrapper around [`ConsoleAppender`] that suspends the progress bar when writing logs.
 #[derive(Debug)]
-struct PbPauseAppender(FileAppender);
+struct PbPauseAppender(ConsoleAppender);
 
 impl log4rs::append::Append for PbPauseAppender {
     fn append(&self, record: &log::Record<'_>) -> Result<()> {
@@ -135,7 +135,7 @@ impl log4rs::append::Append for PbPauseAppender {
     }
 
     fn flush(&self) {
-        // as of log4rs 1.4.0, <FileAppender as Append>::flush does nothing,
+        // as of log4rs 1.4.0, <ConsoleAppender as Append>::flush does nothing,
         // so we do not need to pause the progress bar here. In the future,
         // if log4rs changes this behavior, we might need to add a suspend here.
         // But that's not necessary right now, so we just call flush directly

@@ -27,7 +27,8 @@ use serde_with::serde_as;
 
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalSourceFilterOptions,
-    LocalSourceSaveOptions, ParentOptions, PathList, SnapshotOptions, repofile::SnapshotFile,
+    LocalSourceSaveOptions, ParentOptions, PathList, SnapshotOptions,
+    repofile::{SnapshotFile, SnapshotId, SnapshotSummary},
 };
 
 /// `backup` subcommand
@@ -377,7 +378,9 @@ impl BackupCmd {
             Ok(repo.backup(&backup_opts, &source, self.snap_opts.to_snapshot()?)?)
         })?;
 
-        if self.json {
+        if config.global.progress_options.json_progress {
+            write_json_progress_summary(&snap)?;
+        } else if self.json {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &snap)?;
         } else if self.long {
@@ -429,6 +432,56 @@ impl BackupCmd {
         info!("backup of {source} done.");
         Ok(())
     }
+}
+
+#[derive(Serialize)]
+struct JsonProgressSummary<'a> {
+    message_type: &'static str,
+    files_new: u64,
+    files_changed: u64,
+    files_unmodified: u64,
+    dirs_new: u64,
+    dirs_changed: u64,
+    dirs_unmodified: u64,
+    data_blobs: u64,
+    tree_blobs: u64,
+    data_added: u64,
+    data_added_packed: u64,
+    total_files_processed: u64,
+    total_bytes_processed: u64,
+    total_duration: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    snapshot_id: Option<&'a SnapshotId>,
+}
+
+impl<'a> JsonProgressSummary<'a> {
+    fn new(summary: &'a SnapshotSummary, snapshot_id: &'a SnapshotId) -> Self {
+        Self {
+            message_type: "summary",
+            files_new: summary.files_new,
+            files_changed: summary.files_changed,
+            files_unmodified: summary.files_unmodified,
+            dirs_new: summary.dirs_new,
+            dirs_changed: summary.dirs_changed,
+            dirs_unmodified: summary.dirs_unmodified,
+            data_blobs: summary.data_blobs,
+            tree_blobs: summary.tree_blobs,
+            data_added: summary.data_added,
+            data_added_packed: summary.data_added_packed,
+            total_files_processed: summary.total_files_processed,
+            total_bytes_processed: summary.total_bytes_processed,
+            total_duration: summary.total_duration,
+            snapshot_id: (*snapshot_id != SnapshotId::default()).then_some(snapshot_id),
+        }
+    }
+}
+
+fn write_json_progress_summary(snap: &SnapshotFile) -> Result<()> {
+    let summary = snap.summary.as_ref().unwrap();
+    let mut stdout = std::io::stdout();
+    serde_json::to_writer(&mut stdout, &JsonProgressSummary::new(summary, &snap.id))?;
+    println!();
+    Ok(())
 }
 
 #[cfg(not(any(feature = "prometheus", feature = "opentelemetry")))]

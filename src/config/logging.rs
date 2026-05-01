@@ -129,9 +129,7 @@ struct PbPauseAppender(ConsoleAppender);
 
 impl log4rs::append::Append for PbPauseAppender {
     fn append(&self, record: &log::Record<'_>) -> Result<()> {
-        multi_progress().suspend(|| {
-            self.0.append(record)
-        })
+        multi_progress().suspend(|| self.0.append(record))
     }
 
     fn flush(&self) {
@@ -140,6 +138,6 @@ impl log4rs::append::Append for PbPauseAppender {
         // if log4rs changes this behavior, we might need to add a suspend here.
         // But that's not necessary right now, so we just call flush directly
         // to avoid unnecessary suspends.
-        self.0.flush()
+        self.0.flush();
     }
 }

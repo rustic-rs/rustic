@@ -158,6 +158,8 @@ Moreover, for opendal parameters (which need to be in lower snake case), you can
 use upper snake case and prefix with "OPENDAL_" as env variable, e.g.
 `application_key = "my-key"` becomes `OPENDAL_APPLICATION_KEY=my-key`.
 
+Note that all values under this table must be strings, regardless of their logical type. For example `use-password = true` needs to be `use-password = "true"`.
+
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
 | post-create-command | Command to execute after creating a snapshot in the local backend. | Not set       | "par2create -qq -n1 -r5 %file" |

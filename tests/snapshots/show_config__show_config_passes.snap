@@ -9,6 +9,7 @@ dry-run = false
 dry-run-warmup = false
 check-index = false
 no-progress = false
+json-progress = false
 show-time-offset = false
 
 [global.hooks]

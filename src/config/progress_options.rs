@@ -1,6 +1,6 @@
 //! Progress Bar Config
 
-use std::{fmt::Write, time::Duration};
+use std::{fmt::Write, io::Write as _, time::Duration};
 
 use std::io::IsTerminal;
 use std::sync::{Arc, Mutex};
@@ -35,6 +35,16 @@ pub struct ProgressOptions {
     #[clap(long, global = true, env = "RUSTIC_NO_PROGRESS")]
     #[merge(strategy=conflate::bool::overwrite_false)]
     pub no_progress: bool,
+
+    /// Write progress as newline-delimited JSON
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_JSON_PROGRESS",
+        conflicts_with = "no_progress"
+    )]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub json_progress: bool,
 
     /// Interval to update progress bars (default: 100ms)
     #[clap(
@@ -76,6 +86,15 @@ impl ProgressOptions {
             return Progress::hidden();
         }
 
+        let interval = self.log_interval();
+        if self.json_progress {
+            return if interval > Duration::ZERO && matches!(kind, ProgressType::Bytes) {
+                Progress::new(JsonProgress::new(prefix, interval, kind))
+            } else {
+                Progress::hidden()
+            };
+        }
+
         if std::io::stderr().is_terminal() {
             Progress::new(InteractiveProgress::new(
                 prefix,
@@ -83,7 +102,6 @@ impl ProgressOptions {
                 self.interactive_interval(),
             ))
         } else {
-            let interval = self.log_interval();
             if interval > Duration::ZERO {
                 Progress::new(NonInteractiveProgress::new(prefix, interval, kind))
             } else {
@@ -187,6 +205,28 @@ struct NonInteractiveState {
     last_log: Instant,
 }
 
+impl NonInteractiveState {
+    fn progress_text(&self, kind: ProgressType) -> String {
+        let format_value = |value| match kind {
+            ProgressType::Bytes => ByteSize(value).to_string(),
+            ProgressType::Counter | ProgressType::Spinner => value.to_string(),
+        };
+
+        self.length.map_or_else(
+            || format_value(self.position),
+            |len| format!("{} / {}", format_value(self.position), format_value(len)),
+        )
+    }
+
+    fn should_log(&self, interval: Duration) -> bool {
+        self.last_log.elapsed() >= interval
+    }
+
+    fn mark_logged(&mut self) {
+        self.last_log = Instant::now();
+    }
+}
+
 /// Periodic logger for non-interactive environments (i.e. systemd)
 /// Implemented thread-safe and decouples logging logic from indicatif
 #[derive(Clone, Debug)]
@@ -221,17 +261,7 @@ impl NonInteractiveProgress {
     }
 
     fn log_progress(&self, state: &NonInteractiveState) {
-        let progress = state.length.map_or_else(
-            || self.format_value(state.position),
-            |len| {
-                format!(
-                    "{} / {}",
-                    self.format_value(state.position),
-                    self.format_value(len)
-                )
-            },
-        );
-        info!("{}: {}", state.prefix, progress);
+        info!("{}: {}", state.prefix, state.progress_text(self.kind));
     }
 }
 
@@ -256,9 +286,9 @@ impl RusticProgress for NonInteractiveProgress {
         if let Ok(mut state) = self.state.lock() {
             state.position += inc;
 
-            if state.last_log.elapsed() >= self.interval {
+            if state.should_log(self.interval) {
                 self.log_progress(&state);
-                state.last_log = Instant::now();
+                state.mark_logged();
             }
         }
     }
@@ -274,5 +304,114 @@ impl RusticProgress for NonInteractiveProgress {
             self.format_value(state.position),
             self.start.elapsed()
         );
+    }
+}
+
+// ================ JSON ================
+
+/// Periodic JSON lines progress for machine-readable consumers
+#[derive(Clone, Debug)]
+pub struct JsonProgress {
+    state: Arc<Mutex<NonInteractiveState>>,
+    start: Instant,
+    interval: Duration,
+    kind: ProgressType,
+}
+
+#[derive(Serialize)]
+struct JsonProgressStatus {
+    message_type: &'static str,
+    seconds_elapsed: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    seconds_remaining: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    percent_done: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    total_bytes: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bytes_done: Option<u64>,
+}
+
+impl JsonProgress {
+    fn new(prefix: &str, interval: Duration, kind: ProgressType) -> Self {
+        let now = Instant::now();
+        Self {
+            state: Arc::new(Mutex::new(NonInteractiveState {
+                prefix: prefix.to_string(),
+                position: 0,
+                length: None,
+                last_log: now,
+            })),
+            start: now,
+            interval,
+            kind,
+        }
+    }
+
+    fn log_progress(&self, state: &NonInteractiveState) {
+        let is_bytes = matches!(self.kind, ProgressType::Bytes);
+        let elapsed = self.start.elapsed().as_secs();
+        let percent_done = state
+            .length
+            .filter(|len| *len > 0)
+            .map(|len| (state.position as f64 / len as f64).min(1.0));
+        let seconds_remaining = match (state.position, state.length) {
+            (position, Some(len)) if position > 0 && len > position => {
+                Some(elapsed.saturating_mul(len - position) / position)
+            }
+            _ => None,
+        };
+
+        let status = JsonProgressStatus {
+            message_type: "status",
+            seconds_elapsed: elapsed,
+            seconds_remaining,
+            percent_done,
+            total_bytes: is_bytes.then_some(state.length).flatten(),
+            bytes_done: is_bytes.then_some(state.position),
+        };
+
+        let mut stdout = std::io::stdout().lock();
+        _ = serde_json::to_writer(&mut stdout, &status);
+        _ = writeln!(stdout);
+    }
+}
+
+impl RusticProgress for JsonProgress {
+    fn is_hidden(&self) -> bool {
+        false
+    }
+
+    fn set_length(&self, len: u64) {
+        if let Ok(mut state) = self.state.lock() {
+            state.length = Some(len);
+            self.log_progress(&state);
+            state.mark_logged();
+        }
+    }
+
+    fn set_title(&self, title: &str) {
+        if let Ok(mut state) = self.state.lock() {
+            state.prefix = title.to_string();
+        }
+    }
+
+    fn inc(&self, inc: u64) {
+        if let Ok(mut state) = self.state.lock() {
+            state.position += inc;
+
+            if state.should_log(self.interval) {
+                self.log_progress(&state);
+                state.mark_logged();
+            }
+        }
+    }
+
+    fn finish(&self) {
+        let Ok(state) = self.state.lock() else {
+            return;
+        };
+
+        self.log_progress(&state);
     }
 }

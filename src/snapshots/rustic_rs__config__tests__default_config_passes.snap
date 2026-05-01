@@ -19,6 +19,7 @@ RusticConfig {
         },
         progress_options: ProgressOptions {
             no_progress: false,
+            json_progress: false,
             progress_interval: None,
         },
         hooks: Hooks {

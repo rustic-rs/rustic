@@ -156,7 +156,8 @@ e.g. `use-password = "true"` becomes `RUSTIC_REPO_OPT_USE_PASSWORD=true`.
 
 Moreover, for opendal parameters (which need to be in lower snake case), you can
 use upper snake case and prefix with "OPENDAL_" as env variable, e.g.
-`application_key = "my-key"` becomes `OPENDAL_APPLICATION_KEY=my-key`.
+`application_key = "my-key"` becomes `OPENDAL_APPLICATION_KEY=my-key`. 
+A list of available parameters for a backend can be found in [opendal's documentation](https://opendal.apache.org/docs/rust/opendal/services/index.html) under the respective backend's struct.
 
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |

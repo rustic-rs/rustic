@@ -24,6 +24,7 @@ pub(crate) mod repoinfo;
 pub(crate) mod restore;
 pub(crate) mod rewrite;
 pub(crate) mod self_update;
+pub(crate) mod setup;
 pub(crate) mod show_config;
 pub(crate) mod snapshots;
 pub(crate) mod tag;
@@ -48,8 +49,8 @@ use crate::{
         config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
         forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
         prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
-        rewrite::RewriteCmd, self_update::SelfUpdateCmd, show_config::ShowConfigCmd,
-        snapshots::SnapshotCmd, tag::TagCmd,
+        rewrite::RewriteCmd, self_update::SelfUpdateCmd, setup::SetupCmd,
+        show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
     },
     config::RusticConfig,
 };
@@ -149,6 +150,9 @@ enum RusticCmd {
 
     /// Show general information about the repository
     Repoinfo(Box<RepoInfoCmd>),
+
+    /// Interactive setup wizard for configuring backups
+    Setup(Box<SetupCmd>),
 
     /// Change tags of snapshots
     Tag(Box<TagCmd>),

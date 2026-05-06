@@ -290,7 +290,9 @@ impl BackupCmd {
             .collect();
 
         if config_snapshots.is_empty() {
-            bail!("no backup source given.");
+            bail!(
+                "No backup source given. Specify source paths on the command line (e.g. 'rustic backup /path/to/data') or define [[backup.snapshots]] sections in your config profile. Run 'rustic setup' for guided configuration."
+            );
         }
 
         info!("using backup sources from config file.");

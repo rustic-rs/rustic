@@ -3,6 +3,7 @@
 pub(crate) mod backup;
 pub(crate) mod cat;
 pub(crate) mod check;
+pub(crate) mod check_config;
 pub(crate) mod completions;
 pub(crate) mod config;
 pub(crate) mod copy;
@@ -45,11 +46,11 @@ use crate::commands::webdav::WebDavCmd;
 use crate::{
     Application, RUSTIC_APP,
     commands::{
-        backup::BackupCmd, cat::CatCmd, check::CheckCmd, completions::CompletionsCmd,
-        config::ConfigCmd, copy::CopyCmd, diff::DiffCmd, docs::DocsCmd, dump::DumpCmd,
-        forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd, ls::LsCmd, merge::MergeCmd,
-        prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd, restore::RestoreCmd,
-        rewrite::RewriteCmd, self_update::SelfUpdateCmd, setup::SetupCmd,
+        backup::BackupCmd, cat::CatCmd, check::CheckCmd, check_config::CheckConfigCmd,
+        completions::CompletionsCmd, config::ConfigCmd, copy::CopyCmd, diff::DiffCmd,
+        docs::DocsCmd, dump::DumpCmd, forget::ForgetCmd, init::InitCmd, key::KeyCmd, list::ListCmd,
+        ls::LsCmd, merge::MergeCmd, prune::PruneCmd, repair::RepairCmd, repoinfo::RepoInfoCmd,
+        restore::RestoreCmd, rewrite::RewriteCmd, self_update::SelfUpdateCmd, setup::SetupCmd,
         show_config::ShowConfigCmd, snapshots::SnapshotCmd, tag::TagCmd,
     },
     config::RusticConfig,
@@ -88,6 +89,9 @@ enum RusticCmd {
 
     /// Check the repository
     Check(Box<CheckCmd>),
+
+    /// Validate merged configuration without opening the repository
+    CheckConfig(Box<CheckConfigCmd>),
 
     /// Copy snapshots to other repositories
     Copy(Box<CopyCmd>),

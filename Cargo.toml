@@ -136,6 +136,7 @@ opentelemetry-otlp = { version = "0.31.0", features = ["metrics"], optional = tr
 opentelemetry_sdk = { version = "0.31.0", default-features = false, features = ["metrics"], optional = true }
 rhai = { version = "1", features = ["sync", "serde", "no_optimize", "no_module", "no_custom_syntax", "only_i64"], optional = true }
 subst = "0.3.8"
+password-strength = "1.0.0"
 
 [dev-dependencies]
 abscissa_core = { version = "0.9.0", default-features = false, features = ["testing"] }

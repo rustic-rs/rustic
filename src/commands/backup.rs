@@ -156,7 +156,7 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
-    fn validate(&self) -> Result<(), &str> {
+    pub(crate) fn validate(&self) -> Result<(), &'static str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
             return Err("key \"sources\" is not valid in the [backup] section!");
@@ -290,7 +290,9 @@ impl BackupCmd {
             .collect();
 
         if config_snapshots.is_empty() {
-            bail!("no backup source given.");
+            bail!(
+                "No backup source given. Specify source paths on the command line (e.g. 'rustic backup /path/to/data') or define [[backup.snapshots]] sections in your config profile. Run 'rustic setup' for guided configuration."
+            );
         }
 
         info!("using backup sources from config file.");

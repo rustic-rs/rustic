@@ -138,6 +138,10 @@ impl RusticConfig {
                 config_content
             };
             let mut config = Self::load_toml(config_content)?;
+            config
+                .backup
+                .validate()
+                .map_err(|err| FrameworkErrorKind::ConfigError.context(anyhow!(err)))?;
             // sanity check
             if config.global.profile_substitute_env && config.global.use_profiles.is_empty() {
                 merge_logs.push((Level::Warn, "Option `profile-substitute-env` is given without any profiles to load! Note that this option does NOT apply to the file where it is specified!".to_string()));

@@ -1,7 +1,7 @@
 //! `setup` subcommand - interactive wizard for configuring rustic backups
 
-use std::fs;
 use std::path::{Path, PathBuf};
+use std::{fs, io::Write};
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Result, anyhow, bail};
@@ -22,6 +22,10 @@ pub(crate) struct SetupCmd {
     /// Overwrite existing profile if it exists
     #[clap(long)]
     force: bool,
+
+    /// Print generated TOML instead of writing a config profile
+    #[clap(long)]
+    print: bool,
 }
 
 impl Runnable for SetupCmd {
@@ -38,6 +42,29 @@ impl Runnable for SetupCmd {
 struct ExclusionPreset {
     name: &'static str,
     globs: Vec<&'static str>,
+}
+
+#[derive(Clone, Debug)]
+struct RetentionConfig {
+    keep_daily: u32,
+    keep_weekly: u32,
+    keep_monthly: u32,
+    keep_yearly: u32,
+}
+
+#[derive(Clone, Debug)]
+struct GeneratedConfig {
+    profile: String,
+    repository: String,
+    repository_options: toml::Table,
+    password: Option<String>,
+    password_file: Option<String>,
+    password_command: Option<String>,
+    sources: Vec<Vec<String>>,
+    globs: Vec<String>,
+    exclude_if_present: Vec<String>,
+    use_git_ignore: bool,
+    retention: Option<RetentionConfig>,
 }
 
 fn exclusion_presets() -> Vec<ExclusionPreset> {
@@ -82,12 +109,28 @@ fn exclusion_presets() -> Vec<ExclusionPreset> {
 impl SetupCmd {
     fn inner_run(&self) -> Result<()> {
         let theme = ColorfulTheme::default();
+        macro_rules! wizard_println {
+            () => {
+                if self.print {
+                    eprintln!();
+                } else {
+                    println!();
+                }
+            };
+            ($($arg:tt)*) => {
+                if self.print {
+                    eprintln!($($arg)*);
+                } else {
+                    println!($($arg)*);
+                }
+            };
+        }
 
-        println!();
-        println!("rustic setup");
-        println!("============");
-        println!("This wizard configures a backup source, target, and retention policy.");
-        println!();
+        wizard_println!();
+        wizard_println!("rustic setup");
+        wizard_println!("============");
+        wizard_println!("This wizard configures a backup source, target, and retention policy.");
+        wizard_println!();
 
         // Ask for profile name
         let profile = loop {
@@ -103,17 +146,17 @@ impl SetupCmd {
             };
 
             if let Err(err) = validate_profile_name(&p) {
-                println!("Invalid profile name: {err}");
+                wizard_println!("Invalid profile name: {err}");
             } else {
                 break p;
             }
         };
-        println!();
+        wizard_println!();
 
         // Step 1: Repository target.
 
-        println!("Step 1: Repository (where to store backups)");
-        println!();
+        wizard_println!("Step 1: Repository (where to store backups)");
+        wizard_println!();
 
         let repo_types = vec![
             "Local path",
@@ -142,7 +185,12 @@ impl SetupCmd {
                 let path = expand_tilde(&path);
                 let repo_path = Path::new(&path);
 
-                if !repo_path.exists() {
+                if !repo_path.exists() && self.print {
+                    wizard_println!(
+                        "Directory '{}' doesn't exist; --print will not create it.",
+                        path
+                    );
+                } else if !repo_path.exists() {
                     let create = Confirm::with_theme(&theme)
                         .with_prompt(format!("Directory '{}' doesn't exist. Create it?", path))
                         .default(true)
@@ -254,7 +302,7 @@ impl SetupCmd {
         };
 
         // Password
-        println!();
+        wizard_println!();
         let password_method = Select::with_theme(&theme)
             .with_prompt("How do you want to provide the repository password?")
             .items([
@@ -308,9 +356,9 @@ impl SetupCmd {
 
         // Step 2: Backup sources.
 
-        println!();
-        println!("Step 2: Backup Sources (what to back up)");
-        println!();
+        wizard_println!();
+        wizard_println!("Step 2: Backup Sources (what to back up)");
+        wizard_println!();
 
         let mut sources: Vec<Vec<String>> = Vec::new();
         loop {
@@ -324,7 +372,7 @@ impl SetupCmd {
 
             if source.is_empty() {
                 if sources.is_empty() {
-                    println!("You need at least one backup source.");
+                    wizard_println!("You need at least one backup source.");
                     continue;
                 }
                 break;
@@ -332,7 +380,7 @@ impl SetupCmd {
 
             let expanded = expand_tilde(&source);
             if !Path::new(&expanded).exists() {
-                println!("Warning: '{}' does not exist.", expanded);
+                wizard_println!("Warning: '{}' does not exist.", expanded);
                 let add_anyway = Confirm::with_theme(&theme)
                     .with_prompt("Add it anyway?")
                     .default(false)
@@ -342,11 +390,11 @@ impl SetupCmd {
                 }
             }
             sources.push(vec![expanded]);
-            println!("Added: {}", source);
+            wizard_println!("Added: {}", source);
         }
 
         // Exclusion patterns
-        println!();
+        wizard_println!();
         let use_exclusions = Confirm::with_theme(&theme)
             .with_prompt("Configure exclusion patterns?")
             .default(true)
@@ -408,9 +456,9 @@ impl SetupCmd {
 
         // Step 3: Retention policy.
 
-        println!();
-        println!("Step 3: Retention Policy (how long to keep backups)");
-        println!();
+        wizard_println!();
+        wizard_println!("Step 3: Retention Policy (how long to keep backups)");
+        wizard_println!();
 
         let retention_presets = vec![
             "Conservative (keep-daily=7, keep-weekly=4, keep-monthly=12, keep-yearly=5)",
@@ -425,13 +473,6 @@ impl SetupCmd {
             .items(&retention_presets)
             .default(0)
             .interact()?;
-
-        struct RetentionConfig {
-            keep_daily: u32,
-            keep_weekly: u32,
-            keep_monthly: u32,
-            keep_yearly: u32,
-        }
 
         let retention = match retention_idx {
             0 => Some(RetentionConfig {
@@ -481,9 +522,9 @@ impl SetupCmd {
 
         // Step 4: Performance options.
 
-        println!();
-        println!("Step 4: Performance Options");
-        println!();
+        wizard_println!();
+        wizard_println!("Step 4: Performance Options");
+        wizard_println!();
 
         let compression_idx = Select::with_theme(&theme)
             .with_prompt("Select compression level")
@@ -511,151 +552,70 @@ impl SetupCmd {
 
         // Step 5: Generate config and summary.
 
-        println!();
-        println!("Step 5: Summary & Configuration");
-        println!();
+        wizard_println!();
+        wizard_println!("Step 5: Summary & Configuration");
+        wizard_println!();
 
-        // Build the TOML config string using the toml crate for safety and robustness
-        let mut config_table = toml::Table::new();
-
-        // Repository section
-        let mut repo_table = toml::Table::new();
-        _ = repo_table.insert(
-            "repository".to_string(),
-            toml::Value::String(repository.clone()),
-        );
-        if let Some(pass) = password {
-            _ = repo_table.insert("password".to_string(), toml::Value::String(pass));
-        }
-        if let Some(file) = password_file {
-            _ = repo_table.insert("password-file".to_string(), toml::Value::String(file));
-        }
-        if let Some(cmd) = password_command {
-            _ = repo_table.insert("password-command".to_string(), toml::Value::String(cmd));
-        }
-        if !repo_options.is_empty() {
-            _ = repo_table.insert("options".to_string(), toml::Value::Table(repo_options));
-        }
-        _ = config_table.insert("repository".to_string(), toml::Value::Table(repo_table));
-
-        // Backup section
-        let mut backup_table = toml::Table::new();
-        if use_git_ignore {
-            _ = backup_table.insert("git-ignore".to_string(), toml::Value::Boolean(true));
-        }
-        if !exclude_if_present.is_empty() {
-            _ = backup_table.insert(
-                "exclude-if-present".to_string(),
-                toml::Value::Array(
-                    exclude_if_present
-                        .iter()
-                        .cloned()
-                        .map(toml::Value::String)
-                        .collect(),
-                ),
-            );
-        }
-        if !globs.is_empty() {
-            _ = backup_table.insert(
-                "globs".to_string(),
-                toml::Value::Array(globs.iter().cloned().map(toml::Value::String).collect()),
-            );
-        }
-
-        // Backup sources (via snapshots array of tables)
-        let mut snapshots = toml::value::Array::new();
-        for source_paths in &sources {
-            let mut snap_table = toml::Table::new();
-            _ = snap_table.insert(
-                "sources".to_string(),
-                toml::Value::Array(
-                    source_paths
-                        .iter()
-                        .cloned()
-                        .map(toml::Value::String)
-                        .collect(),
-                ),
-            );
-            snapshots.push(toml::Value::Table(snap_table));
-        }
-        if !snapshots.is_empty() {
-            _ = backup_table.insert("snapshots".to_string(), toml::Value::Array(snapshots));
-        }
-        _ = config_table.insert("backup".to_string(), toml::Value::Table(backup_table));
-
-        // Forget/retention section
-        if let Some(ref ret) = retention {
-            let mut forget_table = toml::Table::new();
-            if ret.keep_daily > 0 {
-                _ = forget_table.insert(
-                    "keep-daily".to_string(),
-                    toml::Value::Integer(i64::from(ret.keep_daily)),
-                );
-            }
-            if ret.keep_weekly > 0 {
-                _ = forget_table.insert(
-                    "keep-weekly".to_string(),
-                    toml::Value::Integer(i64::from(ret.keep_weekly)),
-                );
-            }
-            if ret.keep_monthly > 0 {
-                _ = forget_table.insert(
-                    "keep-monthly".to_string(),
-                    toml::Value::Integer(i64::from(ret.keep_monthly)),
-                );
-            }
-            if ret.keep_yearly > 0 {
-                _ = forget_table.insert(
-                    "keep-yearly".to_string(),
-                    toml::Value::Integer(i64::from(ret.keep_yearly)),
-                );
-            }
-            _ = config_table.insert("forget".to_string(), toml::Value::Table(forget_table));
-        }
-
-        let mut config = format!(
-            "# rustic config profile: {}\n# Generated by 'rustic setup' on {}\n\n",
+        let generated = GeneratedConfig {
             profile,
-            jiff::Zoned::now().strftime("%Y-%m-%d %H:%M:%S")
-        );
-        config.push_str(&toml::to_string_pretty(&config_table).map_err(|e| anyhow!(e))?);
+            repository,
+            repository_options: repo_options,
+            password,
+            password_file,
+            password_command,
+            sources,
+            globs,
+            exclude_if_present,
+            use_git_ignore,
+            retention,
+        };
+        let config = render_config(&generated)?;
+
+        if !self.writes_config() {
+            print!("{config}");
+            std::io::stdout().flush()?;
+            return Ok(());
+        }
 
         // Print summary
-        println!("Configuration summary:");
-        println!("  Profile:    {}", profile);
-        println!("  Repository: {}", truncate_str(&repository, 64));
-        println!(
+        wizard_println!("Configuration summary:");
+        wizard_println!("  Profile:    {}", generated.profile);
+        wizard_println!("  Repository: {}", truncate_str(&generated.repository, 64));
+        wizard_println!(
             "  Sources:    {}",
-            if sources.len() == 1 {
-                truncate_str(&sources[0].join(", "), 64)
+            if generated.sources.len() == 1 {
+                truncate_str(&generated.sources[0].join(", "), 64)
             } else {
-                format!("{} paths configured", sources.len())
+                format!("{} paths configured", generated.sources.len())
             }
         );
-        if !globs.is_empty() {
-            println!("  Exclusions: {} patterns", globs.len());
+        if !generated.globs.is_empty() {
+            wizard_println!("  Exclusions: {} patterns", generated.globs.len());
         }
-        if let Some(ref ret) = retention {
-            println!(
+        if let Some(ref ret) = generated.retention {
+            wizard_println!(
                 "  Retention:  daily={}, weekly={}, monthly={}, yearly={}",
-                ret.keep_daily, ret.keep_weekly, ret.keep_monthly, ret.keep_yearly
+                ret.keep_daily,
+                ret.keep_weekly,
+                ret.keep_monthly,
+                ret.keep_yearly
             );
         }
-        println!();
+        wizard_println!();
 
         // Show generated config
-        println!("Generated configuration:");
-        println!("------------------------");
-        println!("{config}");
-        println!("------------------------");
-        println!();
+        wizard_println!("Generated configuration:");
+        wizard_println!("------------------------");
+        wizard_println!("{config}");
+        wizard_println!("------------------------");
+        wizard_println!();
 
         // Determine config path
         let config_dir = ProjectDirs::from("", "", "rustic")
             .map(|dirs| dirs.config_dir().to_path_buf())
             .unwrap_or_else(|| PathBuf::from("."));
 
-        let config_file = config_dir.join(format!("{}.toml", profile));
+        let config_file = config_dir.join(format!("{}.toml", generated.profile));
 
         // Check for existing config
         if config_file.exists() && !self.force {
@@ -667,7 +627,7 @@ impl SetupCmd {
                 .default(false)
                 .interact()?;
             if !overwrite {
-                println!("Aborted. Use --force to overwrite.");
+                wizard_println!("Aborted. Use --force to overwrite.");
                 return Ok(());
             }
         }
@@ -693,7 +653,7 @@ impl SetupCmd {
                     .truncate(true)
                     .mode(0o600)
                     .open(&config_file)?;
-                std::io::Write::write_all(&mut file, config.as_bytes())?;
+                file.write_all(config.as_bytes())?;
                 fs::set_permissions(&config_file, fs::Permissions::from_mode(0o600))?;
             }
             #[cfg(not(unix))]
@@ -701,25 +661,25 @@ impl SetupCmd {
                 fs::write(&config_file, &config)?;
             }
 
-            println!();
-            println!("Configuration saved to: {}", config_file.display());
+            wizard_println!();
+            wizard_println!("Configuration saved to: {}", config_file.display());
         } else {
-            println!("Configuration not saved.");
+            wizard_println!("Configuration not saved.");
             return Ok(());
         }
 
         // Offer to initialize the repository
-        println!();
+        wizard_println!();
         let init_repo = Confirm::with_theme(&theme)
             .with_prompt("Initialize the repository now?")
             .default(true)
             .interact()?;
 
         if init_repo {
-            let profile_arg = if profile == "rustic" {
+            let profile_arg = if generated.profile == "rustic" {
                 String::new()
             } else {
-                format!(" -P {}", profile)
+                format!(" -P {}", generated.profile)
             };
 
             let mut init_args = String::new();
@@ -734,40 +694,173 @@ impl SetupCmd {
                 ));
             }
 
-            println!();
-            println!("Run the following command to initialize:");
-            println!("  rustic{profile_arg} init{init_args}");
-            println!();
-            println!("Then start your first backup with:");
-            println!("  rustic{profile_arg} backup");
+            wizard_println!();
+            wizard_println!("Run the following command to initialize:");
+            wizard_println!("  rustic{profile_arg} init{init_args}");
+            wizard_println!();
+            wizard_println!("Then start your first backup with:");
+            wizard_println!("  rustic{profile_arg} backup");
         }
 
         // Usage hints
-        println!();
-        println!("Next steps:");
-        println!();
-        if profile != "rustic" {
-            println!(
+        wizard_println!();
+        wizard_println!("Next steps:");
+        wizard_println!();
+        if generated.profile != "rustic" {
+            wizard_println!(
                 "  Use -P {} with all rustic commands to use this profile:",
-                profile
+                generated.profile
             );
-            println!("    rustic -P {} init", profile);
-            println!("    rustic -P {} backup", profile);
-            println!("    rustic -P {} snapshots", profile);
-            println!("    rustic -P {} restore latest /restore/path", profile);
+            wizard_println!("    rustic -P {} init", generated.profile);
+            wizard_println!("    rustic -P {} backup", generated.profile);
+            wizard_println!("    rustic -P {} snapshots", generated.profile);
+            wizard_println!(
+                "    rustic -P {} restore latest /restore/path",
+                generated.profile
+            );
         } else {
-            println!("  This is the default profile. Commands:");
-            println!("    rustic init");
-            println!("    rustic backup");
-            println!("    rustic snapshots");
-            println!("    rustic restore latest /restore/path");
+            wizard_println!("  This is the default profile. Commands:");
+            wizard_println!("    rustic init");
+            wizard_println!("    rustic backup");
+            wizard_println!("    rustic snapshots");
+            wizard_println!("    rustic restore latest /restore/path");
         }
-        println!();
-        println!("  For more information: https://rustic.cli.rs/docs/getting_started.html");
-        println!();
+        wizard_println!();
+        wizard_println!("  For more information: https://rustic.cli.rs/docs/getting_started.html");
+        wizard_println!();
 
         Ok(())
     }
+
+    fn writes_config(&self) -> bool {
+        !self.print
+    }
+}
+
+fn render_config(generated: &GeneratedConfig) -> Result<String> {
+    render_config_with_timestamp(
+        generated,
+        &jiff::Zoned::now().strftime("%Y-%m-%d %H:%M:%S").to_string(),
+    )
+}
+
+fn render_config_with_timestamp(generated: &GeneratedConfig, generated_at: &str) -> Result<String> {
+    let mut config_table = toml::Table::new();
+
+    let mut repo_table = toml::Table::new();
+    _ = repo_table.insert(
+        "repository".to_string(),
+        toml::Value::String(generated.repository.clone()),
+    );
+    if let Some(pass) = &generated.password {
+        _ = repo_table.insert("password".to_string(), toml::Value::String(pass.clone()));
+    }
+    if let Some(file) = &generated.password_file {
+        _ = repo_table.insert(
+            "password-file".to_string(),
+            toml::Value::String(file.clone()),
+        );
+    }
+    if let Some(cmd) = &generated.password_command {
+        _ = repo_table.insert(
+            "password-command".to_string(),
+            toml::Value::String(cmd.clone()),
+        );
+    }
+    if !generated.repository_options.is_empty() {
+        _ = repo_table.insert(
+            "options".to_string(),
+            toml::Value::Table(generated.repository_options.clone()),
+        );
+    }
+    _ = config_table.insert("repository".to_string(), toml::Value::Table(repo_table));
+
+    let mut backup_table = toml::Table::new();
+    if generated.use_git_ignore {
+        _ = backup_table.insert("git-ignore".to_string(), toml::Value::Boolean(true));
+    }
+    if !generated.exclude_if_present.is_empty() {
+        _ = backup_table.insert(
+            "exclude-if-present".to_string(),
+            toml::Value::Array(
+                generated
+                    .exclude_if_present
+                    .iter()
+                    .cloned()
+                    .map(toml::Value::String)
+                    .collect(),
+            ),
+        );
+    }
+    if !generated.globs.is_empty() {
+        _ = backup_table.insert(
+            "globs".to_string(),
+            toml::Value::Array(
+                generated
+                    .globs
+                    .iter()
+                    .cloned()
+                    .map(toml::Value::String)
+                    .collect(),
+            ),
+        );
+    }
+
+    let mut snapshots = toml::value::Array::new();
+    for source_paths in &generated.sources {
+        let mut snap_table = toml::Table::new();
+        _ = snap_table.insert(
+            "sources".to_string(),
+            toml::Value::Array(
+                source_paths
+                    .iter()
+                    .cloned()
+                    .map(toml::Value::String)
+                    .collect(),
+            ),
+        );
+        snapshots.push(toml::Value::Table(snap_table));
+    }
+    if !snapshots.is_empty() {
+        _ = backup_table.insert("snapshots".to_string(), toml::Value::Array(snapshots));
+    }
+    _ = config_table.insert("backup".to_string(), toml::Value::Table(backup_table));
+
+    if let Some(ret) = &generated.retention {
+        let mut forget_table = toml::Table::new();
+        if ret.keep_daily > 0 {
+            _ = forget_table.insert(
+                "keep-daily".to_string(),
+                toml::Value::Integer(i64::from(ret.keep_daily)),
+            );
+        }
+        if ret.keep_weekly > 0 {
+            _ = forget_table.insert(
+                "keep-weekly".to_string(),
+                toml::Value::Integer(i64::from(ret.keep_weekly)),
+            );
+        }
+        if ret.keep_monthly > 0 {
+            _ = forget_table.insert(
+                "keep-monthly".to_string(),
+                toml::Value::Integer(i64::from(ret.keep_monthly)),
+            );
+        }
+        if ret.keep_yearly > 0 {
+            _ = forget_table.insert(
+                "keep-yearly".to_string(),
+                toml::Value::Integer(i64::from(ret.keep_yearly)),
+            );
+        }
+        _ = config_table.insert("forget".to_string(), toml::Value::Table(forget_table));
+    }
+
+    let mut config = format!(
+        "# rustic config profile: {}\n# Generated by 'rustic setup' on {generated_at}\n\n",
+        generated.profile
+    );
+    config.push_str(&toml::to_string_pretty(&config_table).map_err(|e| anyhow!(e))?);
+    Ok(config)
 }
 
 /// Truncate a string to a max length (by characters), adding "..." if truncated
@@ -820,11 +913,47 @@ fn expand_tilde(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{truncate_str, validate_profile_name};
+    use super::{
+        GeneratedConfig, RetentionConfig, SetupCmd, render_config_with_timestamp, truncate_str,
+        validate_profile_name,
+    };
+    use crate::RusticConfig;
+
+    fn base_generated_config() -> GeneratedConfig {
+        GeneratedConfig {
+            profile: "rustic".to_string(),
+            repository: "/backup/rustic".to_string(),
+            repository_options: toml::Table::new(),
+            password: None,
+            password_file: None,
+            password_command: None,
+            sources: vec![vec!["/home".to_string()]],
+            globs: vec!["!**/target/**".to_string()],
+            exclude_if_present: vec![".nobackup".to_string(), "CACHEDIR.TAG".to_string()],
+            use_git_ignore: true,
+            retention: Some(RetentionConfig {
+                keep_daily: 7,
+                keep_weekly: 4,
+                keep_monthly: 12,
+                keep_yearly: 5,
+            }),
+        }
+    }
+
+    fn render_parseable_config(generated: &GeneratedConfig) -> RusticConfig {
+        let rendered = render_config_with_timestamp(generated, "2026-05-06 12:00:00").unwrap();
+        toml::from_str(&rendered).unwrap()
+    }
 
     #[test]
     fn profile_name_validation_accepts_safe_names() {
-        for profile in ["rustic", "daily-backup", "home_1", "prod.eu"] {
+        for profile in [
+            "rustic",
+            "daily-backup",
+            "home_1",
+            "prod.eu",
+            "daily.2026-05-06",
+        ] {
             validate_profile_name(profile).unwrap();
         }
     }
@@ -839,6 +968,8 @@ mod tests {
             "nested/profile",
             "nested\\profile",
             "a.toml",
+            "has space",
+            "ümlaut",
         ] {
             assert!(validate_profile_name(profile).is_err());
         }
@@ -850,5 +981,106 @@ mod tests {
         assert_eq!(truncate_str("abcdef", 4), "a...");
         assert_eq!(truncate_str(sample, 3), "\u{e5}\u{df}\u{2202}");
         assert_eq!(truncate_str(sample, 4), sample);
+    }
+
+    #[test]
+    fn print_mode_renders_parseable_toml_without_writing() {
+        let cmd = SetupCmd {
+            profile: "rustic".to_string(),
+            force: false,
+            print: true,
+        };
+        assert!(!cmd.writes_config());
+
+        let generated = base_generated_config();
+        let rendered = render_config_with_timestamp(&generated, "2026-05-06 12:00:00").unwrap();
+        let parsed: RusticConfig = toml::from_str(&rendered).unwrap();
+
+        assert_eq!(
+            parsed.repository.be.repository.as_deref(),
+            Some("/backup/rustic")
+        );
+        assert!(!rendered.contains("password ="));
+    }
+
+    #[test]
+    fn rendered_s3_options_parse() {
+        let mut generated = base_generated_config();
+        generated.repository = "opendal:s3".to_string();
+        _ = generated.repository_options.insert(
+            "bucket".to_string(),
+            toml::Value::String("example-backups".to_string()),
+        );
+        _ = generated.repository_options.insert(
+            "root".to_string(),
+            toml::Value::String("/rustic".to_string()),
+        );
+        _ = generated.repository_options.insert(
+            "region".to_string(),
+            toml::Value::String("eu-central-1".to_string()),
+        );
+
+        let parsed = render_parseable_config(&generated);
+
+        assert_eq!(
+            parsed.repository.be.repository.as_deref(),
+            Some("opendal:s3")
+        );
+        assert_eq!(
+            parsed
+                .repository
+                .be
+                .options
+                .get("bucket")
+                .map(String::as_str),
+            Some("example-backups")
+        );
+        assert_eq!(
+            parsed
+                .repository
+                .be
+                .options
+                .get("region")
+                .map(String::as_str),
+            Some("eu-central-1")
+        );
+    }
+
+    #[test]
+    fn rendered_sftp_options_parse() {
+        let mut generated = base_generated_config();
+        generated.repository = "opendal:sftp".to_string();
+        _ = generated.repository_options.insert(
+            "endpoint".to_string(),
+            toml::Value::String("backup.example.com:22".to_string()),
+        );
+        _ = generated.repository_options.insert(
+            "user".to_string(),
+            toml::Value::String("backup".to_string()),
+        );
+        _ = generated.repository_options.insert(
+            "root".to_string(),
+            toml::Value::String("/srv/rustic".to_string()),
+        );
+
+        let parsed = render_parseable_config(&generated);
+
+        assert_eq!(
+            parsed.repository.be.repository.as_deref(),
+            Some("opendal:sftp")
+        );
+        assert_eq!(
+            parsed
+                .repository
+                .be
+                .options
+                .get("endpoint")
+                .map(String::as_str),
+            Some("backup.example.com:22")
+        );
+        assert_eq!(
+            parsed.repository.be.options.get("user").map(String::as_str),
+            Some("backup")
+        );
     }
 }

@@ -17,6 +17,8 @@ use log4rs::{
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
+use crate::config::progress_options::multi_progress;
+
 /// Logging Config
 #[serde_as]
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
@@ -77,6 +79,7 @@ impl LoggingOptions {
             .target(Target::Stderr)
             .encoder(Box::new(PatternEncoder::new("{h([{l}])} {m}{n}")))
             .build();
+        let stdout = PbPauseAppender(stdout);
 
         let mut root_builder = Root::builder().appender("stdout");
         let mut config_builder = Config::builder().appender(
@@ -117,5 +120,24 @@ impl LoggingOptions {
             _ = HANDLE.set(handle);
         }
         Ok(())
+    }
+}
+
+/// A wrapper around [`ConsoleAppender`] that suspends the progress bar when writing logs.
+#[derive(Debug)]
+struct PbPauseAppender(ConsoleAppender);
+
+impl log4rs::append::Append for PbPauseAppender {
+    fn append(&self, record: &log::Record<'_>) -> Result<()> {
+        multi_progress().suspend(|| self.0.append(record))
+    }
+
+    fn flush(&self) {
+        // as of log4rs 1.4.0, <ConsoleAppender as Append>::flush does nothing,
+        // so we do not need to pause the progress bar here. In the future,
+        // if log4rs changes this behavior, we might need to add a suspend here.
+        // But that's not necessary right now, so we just call flush directly
+        // to avoid unnecessary suspends.
+        self.0.flush();
     }
 }

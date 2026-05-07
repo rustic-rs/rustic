@@ -183,7 +183,7 @@ impl Repo {
 }
 
 // get snapshots from ids allowing `latest`, if empty use all snapshots respecting the filters.
-pub fn get_snapots_from_ids<S: Open>(
+pub fn get_snapshots_from_ids<S: Open>(
     repo: &Repository<S>,
     ids: &[String],
 ) -> Result<Vec<SnapshotFile>> {

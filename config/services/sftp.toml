@@ -1,13 +1,23 @@
-# rustic config file to use sftp storage
-# Note:
-# - currently sftp only works on unix
-# - Using sftp with password is not supported yet, use key authentication, e.g. use
-#   ssh-copy-id user@host
+# SFTP repository example. Use SSH key authentication or provide credentials
+# through the environment.
+
 [repository]
 repository = "opendal:sftp"
-password = "mypassword"
 
 [repository.options]
-user = "myuser"
-endpoint = "host:port"
-root = "path/to/repo"
+endpoint = "backup.example.com:22"
+user = "backup"
+root = "/srv/rustic"
+
+[backup]
+git-ignore = true
+exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
+
+[[backup.snapshots]]
+sources = ["/home"]
+
+[forget]
+keep-daily = 7
+keep-weekly = 4
+keep-monthly = 12
+keep-yearly = 5

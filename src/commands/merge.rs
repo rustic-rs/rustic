@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    repository::{OpenRepo, get_snapots_from_ids},
+    repository::{OpenRepo, get_snapshots_from_ids},
     status_err,
 };
 use abscissa_core::{Command, Runnable, Shutdown};
@@ -50,7 +50,7 @@ impl MergeCmd {
         let config = RUSTIC_APP.config();
         let repo = repo.to_indexed_ids()?;
 
-        let snapshots = get_snapots_from_ids(&repo, &self.ids)?;
+        let snapshots = get_snapshots_from_ids(&repo, &self.ids)?;
 
         // Handle dry-run mode
         if config.global.dry_run {

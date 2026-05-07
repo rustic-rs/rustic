@@ -1,31 +1,19 @@
-# rustic config file to backup /home, /etc and /root to a local repository
-#
-# backup usage: "rustic -P local backup
-# cleanup:      "rustic -P local forget --prune
-#
+# Local repository example. This follows the output style of `rustic setup`.
+
 [repository]
 repository = "/backup/rustic"
-password-file = "/root/key-rustic"
-no-cache = true # no cache needed for local repository
-
-[forget]
-keep-hourly = 20
-keep-daily = 14
-keep-weekly = 8
-keep-monthly = 24
-keep-yearly = 10
+no-cache = true
 
 [backup]
+git-ignore = true
 exclude-if-present = [".nobackup", "CACHEDIR.TAG"]
-glob-files = ["/root/rustic-local.glob"]
-one-file-system = true
+globs = ["!**/target/**", "!**/node_modules/**"]
 
 [[backup.snapshots]]
 sources = ["/home"]
-git-ignore = true
 
-[[backup.snapshots]]
-sources = ["/etc"]
-
-[[backup.snapshots]]
-sources = ["/root"]
+[forget]
+keep-daily = 7
+keep-weekly = 4
+keep-monthly = 12
+keep-yearly = 5

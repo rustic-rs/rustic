@@ -38,29 +38,29 @@ mod constants {
 use constants::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR};
 
 /// `ls` subcommand
-#[derive(clap::Parser, Command, Debug)]
+#[derive(clap::Parser, Command, Debug, Default)]
 pub(crate) struct LsCmd {
     /// Snapshot:path to list (uses local path if no snapshot is given)
     ///
     /// The snapshot can be an id: "01a2b3c4" or "latest" or "latest~N" (N >= 0)
     #[clap(value_name = "SNAPSHOT[:PATH]|PATH")]
-    snap: String,
+    pub snap: String,
 
     /// show summary
     #[clap(long, short = 's', conflicts_with = "json")]
-    summary: bool,
+    pub summary: bool,
 
     /// show long listing
     #[clap(long, short = 'l', conflicts_with = "json")]
-    long: bool,
+    pub long: bool,
 
     /// show listing in json
     #[clap(long, conflicts_with_all = ["summary", "long"])]
-    json: bool,
+    pub json: bool,
 
     /// show uid/gid instead of user/group
     #[clap(long, long("numeric-uid-gid"))]
-    numeric_id: bool,
+    pub numeric_id: bool,
 
     /// recursively list the dir
     #[clap(long)]
@@ -69,14 +69,14 @@ pub(crate) struct LsCmd {
     #[cfg(feature = "tui")]
     /// Run in interactive UI mode
     #[clap(long, short)]
-    interactive: bool,
+    pub interactive: bool,
 
     #[clap(flatten, next_help_heading = "Exclude options")]
     /// exclude options
     pub excludes: Excludes,
 
     #[clap(flatten, next_help_heading = "Exclude options for local source")]
-    ignore_opts: LocalSourceFilterOptions,
+    pub ignore_opts: LocalSourceFilterOptions,
 }
 
 impl Runnable for LsCmd {
@@ -212,7 +212,7 @@ impl LsCmd {
         Ok(())
     }
 
-    fn inner_run_local(&self, path: Option<&str>) -> Result<()> {
+    pub fn inner_run_local(&self, path: Option<&str>) -> Result<()> {
         #[cfg(feature = "tui")]
         if self.interactive {
             anyhow::bail!("interactive ls with local path is not yet implemented!");
@@ -233,7 +233,7 @@ impl LsCmd {
         Ok(())
     }
 
-    fn display(
+    pub fn display(
         &self,
         tree_streamer: impl Iterator<Item = RusticResult<(PathBuf, Node)>>,
     ) -> Result<()> {

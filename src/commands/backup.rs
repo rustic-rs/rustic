@@ -5,6 +5,7 @@ use std::fmt::Display;
 use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
 
+use crate::commands::ls::LsCmd;
 use crate::repository::IndexedIdsRepo;
 use crate::{
     Application, RUSTIC_APP,
@@ -22,7 +23,7 @@ use comfy_table::Cell;
 use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
 use rustic_backend::OpenDALBackend;
-use rustic_core::{ChildStdoutSource, Excludes, LocalSource, StdinSource, StringList};
+use rustic_core::{ChildStdoutSource, Excludes, LocalSource, ReadSource, StdinSource, StringList};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -55,6 +56,12 @@ pub struct BackupCmd {
     #[merge(skip)]
     #[serde(skip)]
     cli_name: Vec<String>,
+
+    /// Don't run the backup, but only list files which would be backup'ed.
+    #[clap(long)]
+    #[merge(skip)]
+    #[serde(skip)]
+    ls: bool,
 
     #[clap(skip)]
     #[merge(skip)]
@@ -336,10 +343,11 @@ impl BackupCmd {
     fn backup_source(
         source: &PathList,
         options: BTreeMap<String, String>,
+        ls: bool,
         backup_opts: BackupOptions,
-        snap: SnapshotFile,
+        snap: &mut SnapshotFile,
         repo: &IndexedIdsRepo,
-    ) -> Result<SnapshotFile> {
+    ) -> Result<()> {
         let backup_stdin = PathList::from_string("-")?;
         let source = source
             .clone()
@@ -347,23 +355,22 @@ impl BackupCmd {
             .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
             .merge();
 
-        let snap = if source.len() == 1
+        if source.len() == 1
                 // TODO: This check should not be done on PathList, but in the sources list directly
                 && let Some(path) = source[0].to_string_lossy().strip_prefix("opendal:")
         {
             let source = OpenDALBackend::new(path, options)?.as_source()?;
-            repo.archive(&backup_opts, &source, snap, &[PathBuf::new()])?
+            Self::archive(repo, &backup_opts, ls, &source, snap, &[PathBuf::new()])?;
         } else if source == backup_stdin {
             let path = PathBuf::from(&backup_opts.stdin_filename);
             let backup_paths = vec![path.clone()];
             if let Some(command) = &backup_opts.stdin_command {
                 let src = ChildStdoutSource::new(command, path)?;
-                let res = repo.archive(&backup_opts, &src, snap, &backup_paths)?;
+                Self::archive(repo, &backup_opts, ls, &src, snap, &backup_paths)?;
                 src.finish()?;
-                res
             } else {
                 let src = StdinSource::new(path);
-                repo.archive(&backup_opts, &src, snap, &backup_paths)?
+                Self::archive(repo, &backup_opts, ls, &src, snap, &backup_paths)?;
             }
         } else {
             let backup_path = source.paths();
@@ -373,9 +380,36 @@ impl BackupCmd {
                 &backup_opts.ignore_filter_opts,
                 &backup_path,
             )?;
-            repo.archive(&backup_opts, &src, snap, &backup_path)?
+            Self::archive(repo, &backup_opts, ls, &src, snap, &backup_path)?;
         };
-        Ok(snap)
+        Ok(())
+    }
+
+    pub fn archive<R>(
+        repo: &IndexedIdsRepo,
+        opts: &BackupOptions,
+        ls: bool,
+        src: &R,
+        snap: &mut SnapshotFile,
+        backup_paths: &[PathBuf],
+    ) -> Result<()>
+    where
+        R: ReadSource + 'static,
+        <R as ReadSource>::Open: Send,
+        <R as ReadSource>::Iter: Send,
+    {
+        if ls {
+            let lister = LsCmd {
+                long: true,
+                ..Default::default()
+            };
+            lister.display(src.entries().map(|e| Ok(e?.as_tree_entry())))?;
+        } else {
+            let snapshot = std::mem::take(snap);
+            let snapshot = repo.archive(opts, src, snapshot, backup_paths)?;
+            *snap = snapshot;
+        }
+        Ok(())
     }
 
     fn backup_snapshot(mut self, source: PathList, repo: &IndexedIdsRepo) -> Result<()> {
@@ -420,12 +454,14 @@ impl BackupCmd {
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);
 
-        let snap = self.snap_opts.to_snapshot()?;
-        let snap = hooks.use_with(|| -> Result<_> {
-            Self::backup_source(&source, self.options, backup_opts, snap, repo)
+        let mut snap = self.snap_opts.to_snapshot()?;
+        hooks.use_with(|| {
+            Self::backup_source(&source, self.options, self.ls, backup_opts, &mut snap, repo)
         })?;
 
-        if config.global.progress_options.json_progress {
+        if self.ls {
+            // no output here
+        } else if config.global.progress_options.json_progress {
             write_json_progress_summary(&snap)?;
         } else if self.json {
             let mut stdout = std::io::stdout();

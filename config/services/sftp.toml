@@ -9,5 +9,5 @@ password = "mypassword"
 
 [repository.options]
 user = "myuser"
-endpoint = "host:port"
+endpoint = "ssh://host:port"
 root = "path/to/repo"

@@ -1,0 +1,244 @@
+name: Bug report
+description: Create a report to help us improve
+labels: ["S-triage", "C-bug"]
+body:
+      - type: markdown
+        attributes:
+              value: |
+                    ## Thank you for taking the time to report a bug in **rustic**!
+
+                    Please fill out the following template to help us reproduce the issue and fix it as soon as possible.
+
+      - type: markdown
+        attributes:
+              value: |
+                    Please note that this is only for reporting bugs in **rustic** itself. 
+
+                    If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.
+
+      - type: checkboxes
+        id: product-scope
+        attributes:
+              label: Which part(s) of the rustic ecosystem are we talking about?
+              description: You may select more than one.
+              options:
+                    - label: rustic
+                    - label: rustic_beta
+                    - label: rustic_core
+
+      - type: textarea
+        id: current-behavior
+        attributes:
+              label: Current Behavior
+              description: A clear and concise description of what you're experiencing and what the bug is.
+        validations:
+              required: true
+
+      - type: textarea
+        id: reproduction-steps
+        attributes:
+              label: Reproduction steps
+              description: How do you trigger this bug? Please walk us through it step by step.
+              value: |
+                    1.
+                    2.
+                    3.
+                    ...
+              render: bash
+        validations:
+              required: false
+
+      - type: textarea
+        id: bug-prevalence
+        attributes:
+              label: Bug prevalence
+              description: How often do you encounter this bug?
+              placeholder: "Example: Whenever I run `rustic restore` (100% of the time), or sometimes when I run `rustic restore` (50% of the time)"
+        validations:
+              required: true
+
+      - type: textarea
+        id: code-sample
+        attributes:
+              label: If it's a bug in rustic_core or anything code related, please provide a reproducible example for the bug below.
+              description: A short code snippet that can be used to reproduce the bug. Do NOT paste screenshots of code!
+              render: Rust
+        validations:
+              required: false
+
+      - type: textarea
+        id: expected-behavior
+        attributes:
+              label: Expected Behavior
+              description: A clear and concise description of what you expected to happen.
+        validations:
+              required: true
+
+      - type: markdown
+        attributes:
+              value: |
+                    ## Environment
+
+                    Please fill out the following information about your environment.
+
+      - type: dropdown
+        id: install-type
+        attributes:
+              label: Where did you get rustic from?
+              multiple: false
+              options:
+                    - Built from source
+                    - Github Releases
+                    - Binary from Package-management System
+                    - Other (Please specify below)
+              default: 0
+        validations:
+              required: true
+      - type: input
+        id: install-type-other
+        attributes:
+              label: Other install type
+              description: "Where else did you get **rustic** from?"
+              placeholder: "Example: I installed it with `cargo binstall rustic`."
+        validations:
+              required: false
+
+      - type: textarea
+        id: kernel-version
+        attributes:
+              label: Kernel Version/OS Build
+              description: |
+                    Which kernel version/OS build are you running on? Please be as specific as possible.
+
+                        - *nix: run `uname -a` in the terminal
+                        - Windows: press `Win + R`, enter `System` and copy `OS Build` from Windows specifications (on Win11)
+                        - MacOS: run `uname -av` in the terminal
+
+                        examples:
+                        - **Operating System**: Windows 10
+                        - **Kernel Version**: Linux MyPC 5.15.90.1-microsoft-standard-WSL2 #1 SMP Fri Jan 27 02:56:13 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
+                        - **OS build**: Windows 11 Pro 22H2 Build 22621.2134
+              value: |
+                    - **Operating System**:
+                    - **Kernel Version**:
+                    - **OS build**:
+        validations:
+              required: true
+
+      - type: input
+        id: rustic-version
+        attributes:
+              label: "`rustic` version"
+              description: |
+                    Which version of `rustic` are you running? Please be as specific as possible.
+
+                        Please run `rustic --version` and copy the output here.
+
+                        example:
+                        **rustic**: rustic v0.5.4
+              value: |
+                    **rustic**:
+        validations:
+              required: true
+
+      - type: textarea
+        id: additional-context
+        attributes:
+              label: Anything else?
+              description: |
+                    Links? References? Anything that will give us more context about the issue you are encountering!
+
+                    Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
+        validations:
+              required: false
+
+      - type: markdown
+        attributes:
+              value: |
+                    ## Questionnaire
+
+                    Please fill out the following questionnaire to help us improve **rustic**.
+
+      - type: dropdown
+        id: user-friendliness
+        attributes:
+              label: |
+                    How would you rate the ease of use of rustic?
+              description: |
+                    Consider a scale from -2 (Very difficult) to +2 (Very easy).
+              options:
+                    - "-2 - Very Difficult"
+                    - "-1 - Difficult"
+                    - "0 - Neutral"
+                    - "+1 - Easy"
+                    - "+2 - Very Easy"
+              default: 3
+        validations:
+              required: true
+
+      - type: dropdown
+        id: clarity-of-information
+        attributes:
+              label: |
+                    Was the information and feedback provided by rustic clear and understandable?
+              description: |
+                    Consider a scale from -2 (Very unclear) to +2 (Very clear).
+              options:
+                    - "-2 - Very Unclear"
+                    - "-1 - Somewhat Unclear"
+                    - "0 - Neutral"
+                    - "+1 - Clear"
+                    - "+2 - Very Clear"
+              default: 3
+        validations:
+              required: true
+
+      - type: dropdown
+        id: satisfaction
+        attributes:
+              label: |
+                    Overall, how satisfied are you with rustic?
+              description: |
+                    Consider a scale from -2 (I'm mad as hell, and I can't take it anymore) to +2 (I can't go back to any other backup solution anymore).
+              options:
+                    - "-2 - Very Dissatisfied"
+                    - "-1 - Dissatisfied "
+                    - "0 - Neutral"
+                    - "+1 - Satisfied"
+                    - "+2 - Very Satisfied"
+              default: 3
+        validations:
+              required: true
+
+      - type: checkboxes
+        id: checklist-confirmation
+        attributes:
+              label: Checklist
+              description: |
+                    Please check the following:
+              options:
+                    - label: "I have verified that I am using the latest stable version of rustic."
+                      required: true
+                    - label: "I have searched the discussions (see link below) and it wasn't discussed before."
+                      required: true
+                    - label: "I have searched the issue list (see link below) and am not opening a duplicate issue."
+                      required: true
+                    - label: "I have verified the issue still exists in rustic_beta (see link below)."
+                      required: true
+
+      - type: markdown
+        attributes:
+              value: |
+                    Please make sure, you have searched/tried the following resources before submitting this issue:
+
+                    * search our [documentation](https://rustic.cli.rs/docs/)
+                    * search our [discussions](https://github.com/rustic-rs/rustic/discussions)
+                    * search the [issue list (incl. closed issues)](https://github.com/rustic-rs/rustic/issues?q=is%3Aissue)
+                    * verify issue still exists in [rustic_beta (built from the main branch)](https://github.com/rustic-rs/rustic-beta)
+
+      - type: markdown
+        attributes:
+              value: |
+                    ## Thank you for the report!
+
+                    ### We'll look into it as soon as possible.

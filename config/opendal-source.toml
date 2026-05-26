@@ -1,0 +1,16 @@
+# rustic config file to backup a s3 storage to a local repository
+[repository]
+repository = "/path/to/repo"
+password = "password"
+
+[[backup.snapshots]]
+# Here only a single opendal source is allowed, the used service is given here
+sources = ["opendal:s3"]
+host = "s3" # we manually set the hostname, so we can easily distinguish the snapshot(s) created from here
+
+# Other options can be given here - note that opendal also support reading config from env files or AWS config dirs, see the opendal S3 docu
+[backup.snapshots.options]
+access_key_id = "xxx" # this can be omitted, when AWS config is used
+secret_access_key = "xxx" # this can be omitted, when AWS config is used
+bucket = "bucket_name"
+root = "/path/to/repo"

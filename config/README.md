@@ -277,14 +277,21 @@ See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 **Note**: All of the backup options mentioned before can also be used as
 snapshot-specific option and then only apply to this snapshot.
 
-| Attribute | Description                                                            | Default Value | Example Value                                                          |
-| --------- | ---------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
-| name      | Name to identify this snapshot (to be used with the --name CLI option) | ""            | "myid"                                                                 |
-| sources   | Array of source directories or file(s) to back up.                     | []            | ["/dir1", "/dir2"]                                                     |
-| hooks     | Hooks to run before and after backing up the defined sources.          | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
+| Attribute | Description                                                                                                              | Default Value | Example Value                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------- |
+| name      | Name to identify this snapshot (to be used with the --name CLI option)                                                   | ""            | "myid"                                                                 |
+| sources   | Array of source directories or file(s) to back up. Allows "opendal:" for a remote source if only a single source is used | []            | ["/dir1", "/dir2"], ["opendal:s3"]                                     |
+| hooks     | Hooks to run before and after backing up the defined sources.                                                            | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
 
 Source-specific hooks are called additionally to global, repository and backup
 hooks when backing up the defined sources into a snapshot.
+
+### Snapshot Sourcey Options `[backup.snapshots.options]`
+
+Additional source options - depending on the used source. This is currently only
+relevant for an opendal source. These can be only set in the config file.
+
+see [Repository Options](#repository-options-repository)
 
 ### Forget Options `[forget]`
 

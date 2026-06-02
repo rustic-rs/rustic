@@ -1,0 +1,18 @@
+# rustic config file to use Google Drive storage
+# Note that this internally uses opendal Gdrive service, see
+# https://opendal.apache.org/docs/rust/opendal/services/struct.Gdrive.html
+[repository]
+repository = "opendal:gdrive"
+password = "my-backup-password"
+
+# Option 1: short-lived access token
+# [repository.options]
+# access_token = "ya29.xxxxxxxxxxxxxxxxxxxxx"
+# root = "/rustic-backups"
+
+# Option 2: long-lived setup via refresh token (recommended)
+[repository.options]
+refresh_token = "1//xxxxxxxxxxxxxxxxxxxx"
+client_id = "your-google-oauth-client-id.apps.googleusercontent.com"
+client_secret = "your-google-oauth-client-secret"
+root = "/rustic-backups"

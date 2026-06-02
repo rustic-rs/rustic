@@ -161,6 +161,10 @@ available parameters for a backend can be found in
 [opendal's documentation](https://opendal.apache.org/docs/rust/opendal/services/index.html)
 under the respective backend's struct.
 
+Note that all values under this table must be strings, regardless of their
+logical type. For example `use-password = true` needs to be
+`use-password = "true"`.
+
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
 | post-create-command | Command to execute after creating a snapshot in the local backend. | Not set       | "par2create -qq -n1 -r5 %file" |

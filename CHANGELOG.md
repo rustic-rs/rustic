@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.3](https://github.com/rustic-rs/rustic/compare/v0.11.2...v0.11.3) - 2026-06-03
+
+### Added
+
+- Add opendal as backup source ([#1769](https://github.com/rustic-rs/rustic/pull/1769), [#518](https://github.com/rustic-rs/rustic_core/pull/518))
+- Add ls option to backup command ([#1771](https://github.com/rustic-rs/rustic/pull/1771))
+- add JSON progress output option ([#1751](https://github.com/rustic-rs/rustic/pull/1751))
+- enable pcloud backend feature ([#515](https://github.com/rustic-rs/rustic_core/pull/515))
+- Add warning about profile-substitute without profiles ([#1743](https://github.com/rustic-rs/rustic/pull/1743))
+- Add version command ([#1738](https://github.com/rustic-rs/rustic/pull/1738))
+- scope destination scan to snapshot-relevant paths for restore ([#493](https://github.com/rustic-rs/rustic_core/pull/493))
+
+### Fixed
+
+- Throttle configuration example ([#1766](https://github.com/rustic-rs/rustic/pull/1766))
+- add required scheme to sftp endpoint ([#1758](https://github.com/rustic-rs/rustic/pull/1758))
+- use indicatif-log-bridge to avoid breaking progress bar on log ([#1747](https://github.com/rustic-rs/rustic/pull/1747))
+- respect config-supplied backup(.snapshot).init ([#1742](https://github.com/rustic-rs/rustic/pull/1742))
+- local BE - don't leave broken files when writing fails ([#499](https://github.com/rustic-rs/rustic_core/pull/499))
+- include repo root in warmup paths ([#509](https://github.com/rustic-rs/rustic_core/pull/509)) ([#510](https://github.com/rustic-rs/rustic_core/pull/510))
+
+### Other
+
+- dependency updates ([#1772](https://github.com/rustic-rs/rustic/pull/1772), [#1767](https://github.com/rustic-rs/rustic/pull/1767), [#507](https://github.com/rustic-rs/rustic_core/pull/507))
+- config/README.md: mention string requirement for [repository.options] ([#1750](https://github.com/rustic-rs/rustic/pull/1750))
+- Add link/note to opendal's backend documentation ([#1749](https://github.com/rustic-rs/rustic/pull/1749))
+- add gdrive service example ([#1760](https://github.com/rustic-rs/rustic/pull/1760))
+- Use Smallvec ([#514](https://github.com/rustic-rs/rustic_core/pull/514))
+- parallelize blob fetch in dump command ([#501](https://github.com/rustic-rs/rustic_core/pull/501))
+
 ## [0.11.2](https://github.com/rustic-rs/rustic/compare/v0.11.1...v0.11.2) - 2026-04-05
 
 ### Added

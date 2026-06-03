@@ -28,7 +28,7 @@ use serde_with::serde_as;
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalSourceFilterOptions,
     LocalSourceSaveOptions, ParentOptions, PathList, SnapshotOptions,
-    repofile::{SnapshotFile, SnapshotId, SnapshotSummary},
+    repofile::{SnapshotFile, SnapshotId},
 };
 
 /// `backup` subcommand
@@ -435,7 +435,7 @@ impl BackupCmd {
 }
 
 #[derive(Serialize)]
-struct JsonProgressSummary<'a> {
+struct JsonProgressSummary {
     message_type: &'static str,
     files_new: u64,
     files_changed: u64,
@@ -451,12 +451,13 @@ struct JsonProgressSummary<'a> {
     total_bytes_processed: u64,
     total_duration: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    snapshot_id: Option<&'a SnapshotId>,
+    snapshot_id: Option<SnapshotId>,
 }
 
-impl<'a> JsonProgressSummary<'a> {
-    fn new(summary: &'a SnapshotSummary, snapshot_id: &'a SnapshotId) -> Self {
-        Self {
+fn write_json_progress_summary(snap: &SnapshotFile) -> Result<()> {
+    if let Some(summary) = snap.summary.as_ref() {
+        let snapshot_id = (snap.id != SnapshotId::default()).then_some(snap.id);
+        let json_rogress = JsonProgressSummary {
             message_type: "summary",
             files_new: summary.files_new,
             files_changed: summary.files_changed,
@@ -471,16 +472,12 @@ impl<'a> JsonProgressSummary<'a> {
             total_files_processed: summary.total_files_processed,
             total_bytes_processed: summary.total_bytes_processed,
             total_duration: summary.total_duration,
-            snapshot_id: (*snapshot_id != SnapshotId::default()).then_some(snapshot_id),
-        }
+            snapshot_id,
+        };
+        let mut stdout = std::io::stdout();
+        serde_json::to_writer(&mut stdout, &json_rogress)?;
+        println!();
     }
-}
-
-fn write_json_progress_summary(snap: &SnapshotFile) -> Result<()> {
-    let summary = snap.summary.as_ref().unwrap();
-    let mut stdout = std::io::stdout();
-    serde_json::to_writer(&mut stdout, &JsonProgressSummary::new(summary, &snap.id))?;
-    println!();
     Ok(())
 }
 

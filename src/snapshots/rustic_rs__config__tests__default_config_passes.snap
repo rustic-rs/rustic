@@ -171,6 +171,7 @@ RusticConfig {
         },
         snapshots: [],
         sources: [],
+        options: {},
         metrics_job: None,
         metrics_labels: {},
     },

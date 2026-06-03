@@ -172,9 +172,18 @@ label-a = "xxx"
 
 # Backup options for specific sources - all above options are also available here and replace them for the given source
 [[backup.snapshots]]
-sources = ["/path/to/source1"]
+sources = [
+  "opendal:s3",
+] # Note: For opendal, currently only a single source is supported; see next [[backup.snapshots]] section for a local path example
 label = "label" # Default: not set
 # .. and so on. see [backup]
+
+# Additional backup source options - depending on source; currently only relevant for a "opendal:" source.
+# These can be only set in the config file.
+[backup.snapshots.options]
+connections = "20" # Default: Not set
+# Note that an opendal source use several service-dependent options which may be specified here, see
+# https://opendal.apache.org/docs/rust/opendal/services/index.html
 
 # Source-specific hooks: The given commands when backing up the defined source
 [backup.snapshots.hooks]

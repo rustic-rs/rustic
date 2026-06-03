@@ -21,7 +21,8 @@ use clap::ValueHint;
 use comfy_table::Cell;
 use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
-use rustic_core::{Excludes, StringList};
+use rustic_backend::OpenDALBackend;
+use rustic_core::{ChildStdoutSource, Excludes, LocalSource, StdinSource, StringList};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
@@ -144,6 +145,11 @@ pub struct BackupCmd {
     #[clap(skip)]
     #[merge(skip)]
     sources: Vec<String>,
+
+    /// Other options for this source
+    #[clap(skip)]
+    #[merge(strategy = conflate::btreemap::append_or_ignore)]
+    options: BTreeMap<String, String>,
 
     /// Job name for the metrics. Default: rustic-backup
     #[clap(long, value_name = "JOB_NAME", env = "RUSTIC_METRICS_JOB")]
@@ -327,6 +333,51 @@ impl BackupCmd {
         hooks.with_env(&hooks_variables)
     }
 
+    fn backup_source(
+        source: &PathList,
+        options: BTreeMap<String, String>,
+        backup_opts: BackupOptions,
+        snap: SnapshotFile,
+        repo: &IndexedIdsRepo,
+    ) -> Result<SnapshotFile> {
+        let backup_stdin = PathList::from_string("-")?;
+        let source = source
+            .clone()
+            .sanitize()
+            .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
+            .merge();
+
+        let snap = if source.len() == 1
+                // TODO: This check should not be done on PathList, but in the sources list directly
+                && let Some(path) = source[0].to_string_lossy().strip_prefix("opendal:")
+        {
+            let source = OpenDALBackend::new(path, options)?.as_source()?;
+            repo.archive(&backup_opts, &source, snap, &[PathBuf::new()])?
+        } else if source == backup_stdin {
+            let path = PathBuf::from(&backup_opts.stdin_filename);
+            let backup_paths = vec![path.clone()];
+            if let Some(command) = &backup_opts.stdin_command {
+                let src = ChildStdoutSource::new(command, path)?;
+                let res = repo.archive(&backup_opts, &src, snap, &backup_paths)?;
+                src.finish()?;
+                res
+            } else {
+                let src = StdinSource::new(path);
+                repo.archive(&backup_opts, &src, snap, &backup_paths)?
+            }
+        } else {
+            let backup_path = source.paths();
+            let src = LocalSource::new(
+                backup_opts.ignore_save_opts,
+                &backup_opts.excludes,
+                &backup_opts.ignore_filter_opts,
+                &backup_path,
+            )?;
+            repo.archive(&backup_opts, &src, snap, &backup_path)?
+        };
+        Ok(snap)
+    }
+
     fn backup_snapshot(mut self, source: PathList, repo: &IndexedIdsRepo) -> Result<()> {
         let config = RUSTIC_APP.config();
         let snapshot_opts = &config.backup.snapshots;
@@ -369,13 +420,9 @@ impl BackupCmd {
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);
 
+        let snap = self.snap_opts.to_snapshot()?;
         let snap = hooks.use_with(|| -> Result<_> {
-            let source = source
-                .clone()
-                .sanitize()
-                .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
-                .merge();
-            Ok(repo.backup(&backup_opts, &source, self.snap_opts.to_snapshot()?)?)
+            Self::backup_source(&source, self.options, backup_opts, snap, repo)
         })?;
 
         if config.global.progress_options.json_progress {

@@ -88,6 +88,8 @@ run-after = []
 run-failed = []
 run-finally = []
 
+[backup.options]
+
 [backup.metrics-labels]
 
 [copy]

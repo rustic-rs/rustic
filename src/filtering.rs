@@ -19,7 +19,7 @@ use rustic_core::{
     repofile::{RusticTime, SnapshotFile},
 };
 
-use cached::proc_macro::cached;
+use cached::macros::cached;
 use conflate::Merge;
 
 #[cfg(feature = "jq")]

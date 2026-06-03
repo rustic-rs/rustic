@@ -17,6 +17,7 @@ log-level-dryrun = "info" # any of "off", "error", "warn", "info", "debug", "tra
 log-level-dependencies = "warn" # any of "off", "error", "warn", "info", "debug", "trace"; default: "warn"
 log-file = "/path/to/rustic.log" # Default: not set
 no-progress = false
+json-progress = false
 progress-interval = "100ms"
 group-by = "host,label,paths"
 check-index = false

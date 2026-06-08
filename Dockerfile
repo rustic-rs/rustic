@@ -1,7 +1,8 @@
 FROM alpine AS builder
 ARG RUSTIC_VERSION
 ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
+RUN apk add --no-cache ca-certificates && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
         ASSET="rustic-${RUSTIC_VERSION}-x86_64-unknown-linux-musl.tar.gz";\
     elif [ "$TARGETARCH" = "arm64" ]; then \
         ASSET="rustic-${RUSTIC_VERSION}-aarch64-unknown-linux-musl.tar.gz"; \
@@ -15,4 +16,5 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 FROM scratch
 COPY --from=builder /rustic /
 COPY --from=builder /etc_files/ /etc/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["/rustic"]

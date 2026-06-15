@@ -17,18 +17,33 @@
 `rustic` is a backup tool that provides fast, encrypted, deduplicated backups.
 
 It reads and writes the [restic][1] repo format described in the
-[design document][2] and can be used as a *restic* replacement in most cases.
+[design document][2] and can be used as a `restic` replacement in most cases.
 
 It is implemented in [Rust](https://www.rust-lang.org/), a performant,
 memory-efficient, and reliable cross-platform systems programming language.
 
-Hence `rustic` supports all major operating systems (Linux, MacOs, *BSD), with
-Windows support still being experimental.
+Hence `rustic` supports all major operating systems (Linux, MacOs, *BSD,
+Windows).
 
-### Stability
+### Should I use `rustic` or `restic`?
 
-`rustic` currently is in **beta** state and misses regression tests. It is not
-recommended to use it for production backups, yet.
+The `restic` project is older and more mature than `rustic`, slow with new
+developments and conservative with changes. `rustic` was created by a heavy
+restic contributor who was at some point annoyed about that slow speed. So,
+`rustic` is of course very much inspired by `rustic` but is a complete new
+implementation aiming to be the better `restic` with respect to features and
+development speed.
+
+Whether you should use `rustic` or `restic` depends on your use case. The best
+advise is to test both and see which one better fits to your requirements. We
+have collected some differences between `rustic` and `restic`
+[here](https://rustic.cli.rs/docs/comparison-restic.html).
+
+The good news is: You don't have to decide whether to use `restic` or `rustic`
+unless you need some features which are only present in one project. Both
+projects implement the identical repository format and you can access every
+repository with `restic` as well as with `rustic`. For example, you can use
+`restic` to verify your backups made with `rustic` and vice versa.
 
 ## `rustic` Libraries
 
@@ -43,6 +58,7 @@ The `rustic` project is split into multiple crates:
 
 - Backup data is **deduplicated** and **encrypted**.
 - Backup storage can be local or cloud storages, including cold storages.
+- Backup source can be local or cloud storage.
 - Allows multiple clients to **concurrently** access a backup repository using
   lock-free operations.
 - Backups by default are append-only on the repository.
@@ -126,11 +142,6 @@ cargo install --git https://github.com/rustic-rs/rustic.git rustic-rs
 ```bash
 cargo install --locked rustic-rs
 ```
-
-## Differences to `restic`?
-
-We have collected some improvements of `rustic` over `restic`
-[here](https://rustic.cli.rs/docs/comparison-restic.html).
 
 ## Contributing
 

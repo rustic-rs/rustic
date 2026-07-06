@@ -176,7 +176,7 @@ fn dump_tar(
             header.set_uid(uid.into());
         }
         if let Some(gid) = node.meta.gid {
-            header.set_uid(gid.into());
+            header.set_gid(gid.into());
         }
         if let Some(user) = &node.meta.user {
             header.set_username(user)?;

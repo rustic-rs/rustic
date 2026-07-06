@@ -64,7 +64,7 @@ impl Override<RusticConfig> for ForgetCmd {
 /// Forget options
 #[serde_as]
 #[derive(Clone, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ForgetOptions {
     /// Group snapshots by any combination of host,label,paths,tags (default: "host,label,paths")
     #[clap(long, short = 'g', value_name = "CRITERION")]

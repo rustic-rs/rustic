@@ -173,6 +173,10 @@ fn version() -> &'static str {
     option_env!("PROJECT_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))
 }
 
+pub(crate) fn program_version() -> String {
+    format!("rustic {}", version())
+}
+
 /// Entry point for the application. It needs to be a struct to allow using subcommands!
 #[derive(clap::Parser, Command, Debug)]
 #[command(author, about, name="rustic", styles=styles(), version=version())]

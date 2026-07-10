@@ -104,6 +104,29 @@ fn test_backup_and_check_passes() -> TestResult<()> {
 }
 
 #[test]
+fn test_backup_records_cli_version_in_snapshot() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let backup = src_snapshot()?.into_path();
+
+    let version_output = Command::new(env!("CARGO_BIN_EXE_rustic"))
+        .arg("--version")
+        .output()?;
+    assert!(version_output.status.success());
+    let version = String::from_utf8(version_output.stdout)?;
+
+    let backup_output = rustic_runner(&temp_dir)?
+        .args(["backup", "--json"])
+        .arg(backup.path())
+        .output()?;
+    assert!(backup_output.status.success());
+    let snapshot: serde_json::Value = serde_json::from_slice(&backup_output.stdout)?;
+
+    assert_eq!(snapshot["program_version"].as_str(), Some(version.trim()));
+
+    Ok(())
+}
+
+#[test]
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;
     let restore_dir = temp_dir.path().join("restore");

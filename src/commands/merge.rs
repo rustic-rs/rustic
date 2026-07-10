@@ -58,7 +58,8 @@ impl MergeCmd {
             return Ok(());
         }
 
-        let snap = SnapshotFile::from_options(&self.snap_opts)?;
+        let mut snap = SnapshotFile::from_options(&self.snap_opts)?;
+        snap.program_version = super::program_version();
         let snap = repo.merge_snapshots(&snapshots, &last_modified_node, snap)?;
 
         if self.json {

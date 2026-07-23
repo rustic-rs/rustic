@@ -1,0 +1,20 @@
+# rustic config file to use pCloud storage
+# Note that this internally uses opendal pCloud service, see
+# https://opendal.apache.org/docs/rust/opendal/services/struct.Pcloud.html
+
+[repository]
+repository = "opendal:pcloud"
+password = "my-backup-password"
+
+[repository.options]
+# pCloud API endpoint:
+# For European accounts (EU region): https://eapi.pcloud.com
+# For US accounts:                   https://api.pcloud.com
+endpoint = "https://eapi.pcloud.com"
+
+# pCloud login credentials
+username = "example@example.com"
+password = "example-pcloud-password"
+
+# Repository root inside pCloud
+root = "/rustic-backups"

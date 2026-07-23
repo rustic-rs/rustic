@@ -68,9 +68,9 @@ pub struct BackupCmd {
     name: Option<String>,
 
     /// Set filename to be used when backing up from stdin
-    #[clap(long, value_name = "FILENAME", default_value = "stdin", value_hint = ValueHint::FilePath)]
-    #[merge(skip)]
-    stdin_filename: String,
+    #[clap(long, value_name = "FILENAME", value_hint = ValueHint::FilePath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    stdin_filename: Option<String>,
 
     /// Start the given command and use its output as stdin
     #[clap(long, value_name = "COMMAND")]
@@ -444,7 +444,7 @@ impl BackupCmd {
         parent_opts.group_by = parent_opts.group_by.or(config.global.group_by);
 
         let backup_opts = BackupOptions::default()
-            .stdin_filename(self.stdin_filename)
+            .stdin_filename(self.stdin_filename.unwrap_or("stdin".to_string()))
             .stdin_command(self.stdin_command)
             .as_path(self.as_path)
             .parent_opts(parent_opts)

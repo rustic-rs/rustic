@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.4](https://github.com/rustic-rs/rustic/compare/v0.11.3...v0.11.4) - 2026-07-23
+
+### Fixed
+
+- deny unknown forget options in config profile ([#1810](https://github.com/rustic-rs/rustic/pull/1810))
+- set correct UID/GID for dump into tar ([#1801](https://github.com/rustic-rs/rustic/pull/1801))
+
+### Other
+
+- Add pCloud service example config ([#1775](https://github.com/rustic-rs/rustic/pull/1775))
+- restic instead of rustic ([#1785](https://github.com/rustic-rs/rustic/pull/1785))
+- Update README ([#1783](https://github.com/rustic-rs/rustic/pull/1783))
+
 ## [0.11.3](https://github.com/rustic-rs/rustic/compare/v0.11.2...v0.11.3) - 2026-06-03
 
 ### Added

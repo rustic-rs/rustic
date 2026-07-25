@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
 
 use crate::commands::ls::LsCmd;
+use crate::commands::program_version;
 use crate::repository::IndexedIdsRepo;
 use crate::{
     Application, RUSTIC_APP,
@@ -455,7 +456,7 @@ impl BackupCmd {
             .dry_run(config.global.dry_run);
 
         let mut snap = self.snap_opts.to_snapshot()?;
-        snap.program_version = super::program_version();
+        snap.program_version = program_version();
         hooks.use_with(|| {
             Self::backup_source(&source, self.options, self.ls, backup_opts, &mut snap, repo)
         })?;

@@ -359,7 +359,7 @@ impl BackupCmd {
                 // TODO: This check should not be done on PathList, but in the sources list directly
                 && let Some(path) = source[0].to_string_lossy().strip_prefix("opendal:")
         {
-            let source = OpenDALBackend::new(path, options)?.as_source()?;
+            let source = OpenDALBackend::new(path, options)?.as_source(&backup_opts.excludes)?;
             Self::archive(repo, &backup_opts, ls, &source, snap, &[PathBuf::new()])?;
         } else if source == backup_stdin {
             let path = PathBuf::from(&backup_opts.stdin_filename);

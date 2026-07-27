@@ -1,5 +1,6 @@
 //! `merge` subcommand
 
+use crate::commands::program_version;
 use crate::{
     Application, RUSTIC_APP,
     repository::{OpenRepo, get_snapots_from_ids},
@@ -58,7 +59,8 @@ impl MergeCmd {
             return Ok(());
         }
 
-        let snap = SnapshotFile::from_options(&self.snap_opts)?;
+        let mut snap = SnapshotFile::from_options(&self.snap_opts)?;
+        snap.program_version = program_version();
         let snap = repo.merge_snapshots(&snapshots, &last_modified_node, snap)?;
 
         if self.json {

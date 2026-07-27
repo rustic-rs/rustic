@@ -91,7 +91,7 @@ RusticConfig {
         cli_name: [],
         ls: false,
         name: None,
-        stdin_filename: "",
+        stdin_filename: None,
         stdin_command: None,
         as_path: None,
         no_scan: false,

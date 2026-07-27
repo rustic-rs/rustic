@@ -151,10 +151,7 @@ impl RusticConfig {
             let paths_string = paths.iter().map(|path| path.display()).join(", ");
             merge_logs.push((
                 level_missing,
-                format!(
-                    "using no config file, none of these exist: {}",
-                    &paths_string
-                ),
+                format!("using no config file, none of these exist: {paths_string}",),
             ));
         };
         Ok(())

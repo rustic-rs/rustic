@@ -47,7 +47,6 @@ filter-tags = []
 filter-tags-exact = []
 
 [backup]
-stdin-filename = ""
 no-scan = false
 json = false
 long = false

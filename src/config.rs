@@ -31,6 +31,7 @@ use toml::Value;
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
+use crate::commands::serve::ServeCmd;
 #[cfg(feature = "webdav")]
 use crate::commands::webdav::WebDavCmd;
 
@@ -82,6 +83,10 @@ pub struct RusticConfig {
     #[clap(skip)]
     #[merge(skip)]
     pub mount: Option<Value>,
+
+    /// serve options
+    #[clap(skip)]
+    pub serve: ServeCmd,
 
     /// webdav options
     #[cfg(feature = "webdav")]

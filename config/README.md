@@ -102,10 +102,14 @@ If you want to contribute your own configuration, please
 
 ### Global Hooks `[global.hooks]`
 
-These external commands are run before and after each commands, respectively.
+These external commands run once around the top-level `rustic` invocation,
+using the configuration assembled for that invocation. They are not mutually
+exclusive with repository hooks.
 
-**Note**: There are also repository hooks, which should be used for commands
-needed to set up the repository (like mounting the repo dir), see below.
+For `copy`, global hooks from the source (invoking) profile run once. Global
+hooks in a target profile do not run when that profile is loaded to open the
+target repository; use that target profile's repository hooks for target
+repository setup and per-target failure handling.
 
 | Attribute   | Description                                       | Default Value | Example Value | Environment Variable |
 | ----------- | ------------------------------------------------- | ------------- | ------------- | -------------------- |
@@ -193,8 +197,10 @@ see [Repository Options](#repository-options-repository)
 
 ### Repository Hooks `[repository.hooks]`
 
-These external commands are run before and after each repository-accessing
-commands, respectively.
+These external commands run around each repository access. They are additional
+to the global hooks of the invoking profile. For `copy`, the source profile's
+repository hooks run for the source repository, and each target profile's
+repository hooks run for its target repository.
 
 See [Global Hooks](#global-hooks-globalhooks).
 

@@ -103,6 +103,12 @@ impl Display for RusticConfig {
 }
 
 impl RusticConfig {
+    pub(crate) fn merge_with_backup_tags(&mut self, mut other: Self) {
+        let backup = std::mem::take(&mut other.backup);
+        self.merge(other);
+        self.backup.merge_with_tags(backup);
+    }
+
     /// Merge a profile into the current config by reading the corresponding config file.
     /// Also recursively merge all profiles given within this config file.
     ///
@@ -146,7 +152,7 @@ impl RusticConfig {
             for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, merge_logs, Level::Warn)?;
             }
-            self.merge(config);
+            self.merge_with_backup_tags(config);
         } else {
             let paths_string = paths.iter().map(|path| path.display()).join(", ");
             merge_logs.push((

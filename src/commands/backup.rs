@@ -171,6 +171,13 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    pub(crate) fn merge_with_tags(&mut self, other: Self) {
+        let mut tags = std::mem::take(&mut self.snap_opts.tags);
+        tags.extend(other.snap_opts.tags.iter().cloned());
+        self.merge(other);
+        self.snap_opts.tags = tags;
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
@@ -287,7 +294,7 @@ impl BackupCmd {
             // merge Options from config file, if given
             if let Some((config_opts, _)) = config_snapshots.find(|(_, s)| s == &sources) {
                 info!("merging sources={sources} section from config file");
-                opts.merge(config_opts);
+                opts.merge_with_tags(config_opts);
             }
             return Ok(vec![(opts, sources)]);
         }
@@ -301,7 +308,11 @@ impl BackupCmd {
                         .as_ref()
                         .is_some_and(|name| self.cli_name.contains(name))
             })
-            .map(|(opt, sources)| (self.clone().merge_from(opt), sources))
+            .map(|(opt, sources)| {
+                let mut backup = self.clone();
+                backup.merge_with_tags(opt);
+                (backup, sources)
+            })
             .collect();
 
         if config_snapshots.is_empty() {
@@ -428,7 +439,7 @@ impl BackupCmd {
                     .position(|opt| opt.sources == vec![path])
             {
                 info!("merging snapshot=\"{path}\" section from config file");
-                self.merge(snapshot_opts[idx].clone());
+                self.merge_with_tags(snapshot_opts[idx].clone());
             }
         }
 
@@ -436,7 +447,7 @@ impl BackupCmd {
         let hooks = self.hooks.clone();
 
         // merge "backup" section from config file, if given
-        self.merge(config.backup.clone());
+        self.merge_with_tags(config.backup.clone());
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 

@@ -52,11 +52,28 @@ pub(crate) struct SnapshotCmd {
 
 impl Runnable for SnapshotCmd {
     fn run(&self) {
-        if let Err(err) = RUSTIC_APP
+        #[cfg(feature = "tui")]
+        let result = if self.interactive {
+            // Opening and indexing can ask for a password. Do that before entering raw mode
+            // so dialoguer's prompt remains usable on an interactive terminal.
+            RUSTIC_APP
+                .config()
+                .repository
+                .run_indexed(|repo| self.interactive_run(repo))
+        } else {
+            RUSTIC_APP
+                .config()
+                .repository
+                .run_open(|repo| self.inner_run(repo))
+        };
+
+        #[cfg(not(feature = "tui"))]
+        let result = RUSTIC_APP
             .config()
             .repository
-            .run_open(|repo| self.inner_run(repo))
-        {
+            .run_open(|repo| self.inner_run(repo));
+
+        if let Err(err) = result {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
         };
@@ -64,30 +81,26 @@ impl Runnable for SnapshotCmd {
 }
 
 impl SnapshotCmd {
-    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
-        #[cfg(feature = "tui")]
-        if self.interactive {
-            return tui::run(|progress| {
-                let config = RUSTIC_APP.config();
-                config
-                    .repository
-                    .run_indexed_with_progress(progress.clone(), |repo| {
-                        let p = progress.progress(
-                            ProgressType::Spinner,
-                            "starting rustic in interactive mode...",
-                        );
-                        p.finish();
-                        // create app and run it
-                        let snapshots = tui::Snapshots::new(
-                            &repo,
-                            config.snapshot_filter.clone(),
-                            config.global.group_by.unwrap_or_default(),
-                        )?;
-                        tui::run_app(progress.terminal, snapshots)
-                    })
-            });
-        }
+    #[cfg(feature = "tui")]
+    fn interactive_run(&self, repo: crate::repository::IndexedRepo) -> Result<()> {
+        let config = RUSTIC_APP.config();
 
+        tui::run(|progress| {
+            let p = progress.progress(
+                ProgressType::Spinner,
+                "starting rustic in interactive mode...",
+            );
+            let snapshots = tui::Snapshots::new(
+                &repo,
+                config.snapshot_filter.clone(),
+                config.global.group_by.unwrap_or_default(),
+            )?;
+            p.finish();
+            tui::run_app(progress.terminal, snapshots)
+        })
+    }
+
+    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
         let groups = get_global_grouped_snapshots(&repo, &self.ids)?.groups;
 
         if self.json {

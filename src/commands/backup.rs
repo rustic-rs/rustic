@@ -1,6 +1,6 @@
 //! `backup` subcommand
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
@@ -171,6 +171,31 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    fn sanitize_sources(source: PathList, keep_nested_sources: bool) -> Result<PathList> {
+        if !keep_nested_sources {
+            return source
+                .clone()
+                .sanitize()
+                .with_context(|| format!("error sanitizing source=s\"{source:?}\""));
+        }
+
+        // With --one-file-system, an explicitly named child may be a separate
+        // mount point that the parent walk intentionally skips. Keep each
+        // source independent so that child remains eligible for backup.
+        source
+            .paths()
+            .into_iter()
+            .map(|path| {
+                PathList::from_iter([path])
+                    .sanitize()
+                    .map(|paths| paths.paths())
+                    .map_err(Into::into)
+            })
+            .collect::<Result<Vec<_>>>()
+            .map(|paths| paths.into_iter().flatten().collect::<BTreeSet<_>>())
+            .map(|paths| paths.into_iter().collect())
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
@@ -350,11 +375,10 @@ impl BackupCmd {
         repo: &IndexedIdsRepo,
     ) -> Result<()> {
         let backup_stdin = PathList::from_string("-")?;
-        let source = source
-            .clone()
-            .sanitize()
-            .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
-            .merge();
+        let source = Self::sanitize_sources(
+            source.clone(),
+            backup_opts.ignore_filter_opts.one_file_system,
+        )?;
 
         if source.len() == 1
                 // TODO: This check should not be done on PathList, but in the sources list directly

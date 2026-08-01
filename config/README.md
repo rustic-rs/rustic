@@ -260,6 +260,24 @@ can be overwritten in the source-specific configuration, see below.
 | with-devid         | Determines whether to include the device ID in the backup. Allowed values are `always`, `never` or `hardlink`. | "hardlink"               | "always"      | --with-devid            |
 | metrics-job        | jobname used when pushing metrics (if global prometheus or opentelemetry option is set)                        | "rustic-backup"          | "myjob"       | --metrics-job           |
 
+#### Windows glob patterns
+
+When a glob contains a Windows path, prefer forward slashes. They work with
+Windows paths and avoid both TOML and glob escaping:
+
+```toml
+iglobs = ['!C:/Users/limet/AppData']
+```
+
+If a path must use backslashes, escape each one for the glob syntax. With a
+TOML basic string, escape them once more for TOML:
+
+```toml
+iglobs = ['!C:\\Users\\limet\\AppData']
+# or
+iglobs = ["!C:\\\\Users\\\\limet\\\\AppData"]
+```
+
 ### Backup Hooks `[backup.hooks]`
 
 These external commands are run before and after each backup, respectively.

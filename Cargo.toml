@@ -38,6 +38,7 @@ tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = [
   "dep:dav-server",
   "dep:axum",
+  "dep:base64",
   "dep:tokio",
   "dep:bytes",
   "dep:futures",

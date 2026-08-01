@@ -340,7 +340,9 @@ here, see Snapshot-Filter options.
 `rustic` supports mounting snapshots via WebDAV. This is useful if you want to
 access your snapshots via a file manager.
 
-**Note**: `https://` and Authentication are not supported yet.
+**Note**: `https://` is not supported directly. For authentication, rustic
+supports opt-in HTTP Basic Authentication; terminate TLS in a reverse proxy
+when clients connect outside a trusted network.
 
 The following options are available to be used in your configuration file:
 
@@ -351,4 +353,11 @@ The following options are available to be used in your configuration file:
 | time-template | The time template to use to display times in the path template. See <https://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.htmll> for format options. | `%Y-%m-%d_%H-%M-%S`                                                               |               | --time-template |
 | symlinks      | If true, follows symlinks.                                                                                                                                         | false                                                                             |               | --symlinks      |
 | file-access   | How to handle access to files.                                                                                                                                     | "forbidden" for hot/cold repositories, else "read"                                |               | --file-access   |
+| auth-user     | User name required for HTTP Basic Authentication. Must be set together with `auth-password`.                                                                      | Not set                                                                           | "rustic"     | --auth-user     |
+| auth-password | Password required for HTTP Basic Authentication. Must be set together with `auth-user`. Prefer `RUSTIC_WEBDAV_PASSWORD` over the command line.                    | Not set                                                                           | "secret"     | --auth-password |
 | snapshot-path | Specify directly which snapshot/path to serve                                                                                                                      | Not set, this will generate a virtual tree with all snapshots using path-template |               | --snapshot-path |
+
+`auth-user` can also be supplied through `RUSTIC_WEBDAV_USER`, and
+`auth-password` through `RUSTIC_WEBDAV_PASSWORD`. HTTP Basic Authentication
+does not encrypt credentials, so use a TLS-terminating reverse proxy for any
+network you do not fully trust.

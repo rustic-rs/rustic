@@ -247,6 +247,8 @@ RusticConfig {
         time_template: None,
         symlinks: false,
         file_access: None,
+        auth_user: None,
+        auth_password: None,
         snapshot_path: None,
     },
 }

@@ -10,6 +10,7 @@ pub(crate) mod progress_options;
 
 use std::{
     collections::BTreeMap,
+    ffi::OsString,
     fmt::{self, Display, Formatter},
     path::PathBuf,
 };
@@ -310,20 +311,86 @@ impl GlobalOptions {
 ///
 /// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    [
-        ProjectDirs::from("", "", "rustic")
-            .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
-        get_global_config_path(),
-        Some(PathBuf::from(".")),
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        path.map(|mut p| {
-            p.push(filename);
-            p
-        })
-    })
-    .collect()
+    get_environment_config_dirs()
+        .into_iter()
+        .chain(
+            [
+                ProjectDirs::from("", "", "rustic")
+                    .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
+                get_user_config_path(),
+                get_global_config_path(),
+                Some(PathBuf::from(".")),
+            ]
+            .into_iter()
+            .flatten(),
+        )
+        .unique()
+        .map(|path| path.join(filename))
+        .collect()
+}
+
+/// Get profile directories configured through the XDG environment variables.
+///
+/// `XDG_CONFIG_HOME` is checked before the conventional per-user directory,
+/// followed by the directories in `XDG_CONFIG_DIRS`. As required by the XDG
+/// Base Directory Specification, relative paths are ignored.
+fn get_environment_config_dirs() -> Vec<PathBuf> {
+    environment_config_dirs(
+        std::env::var_os("RUSTIC_HOME"),
+        std::env::var_os("XDG_CONFIG_HOME"),
+        std::env::var_os("XDG_CONFIG_DIRS"),
+    )
+}
+
+fn environment_config_dirs(
+    rustic_home: Option<OsString>,
+    config_home: Option<OsString>,
+    config_dirs: Option<OsString>,
+) -> Vec<PathBuf> {
+    let rustic_home = rustic_home
+        .into_iter()
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .map(|path| path.join("config"));
+
+    rustic_home
+        .chain(
+            config_home
+                .into_iter()
+                .map(PathBuf::from)
+                .chain(
+                    config_dirs
+                        .as_deref()
+                        .into_iter()
+                        .flat_map(std::env::split_paths),
+                )
+                .filter(|path| path.is_absolute())
+                .map(|path| path.join("rustic")),
+        )
+        .unique()
+        .collect()
+}
+
+/// Get the user-managed config directory on Windows.
+///
+/// Besides the platform configuration directory returned by [`ProjectDirs`],
+/// also look in the XDG-style location that is commonly used by command-line
+/// tools on Windows.
+#[cfg(target_os = "windows")]
+fn get_user_config_path() -> Option<PathBuf> {
+    std::env::var_os("USERPROFILE").map(user_config_path)
+}
+
+#[cfg(any(test, target_os = "windows"))]
+fn user_config_path(user_profile: impl Into<PathBuf>) -> PathBuf {
+    user_profile.into().join(".config").join("rustic")
+}
+
+/// There is no additional user-managed config directory on non-Windows
+/// platforms: [`ProjectDirs`] already supplies the conventional location.
+#[cfg(not(target_os = "windows"))]
+fn get_user_config_path() -> Option<PathBuf> {
+    None
 }
 
 /// Get the path to the global config directory on Windows.
@@ -367,6 +434,16 @@ mod tests {
     use super::*;
     use insta::{assert_debug_snapshot, assert_snapshot};
 
+    #[cfg(target_os = "windows")]
+    fn absolute_test_path(name: &str) -> PathBuf {
+        PathBuf::from(r"C:\\rustic-tests").join(name)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn absolute_test_path(name: &str) -> PathBuf {
+        PathBuf::from("/rustic-tests").join(name)
+    }
+
     #[test]
     fn test_default_config_passes() {
         let config = RusticConfig::default();
@@ -403,5 +480,70 @@ mod tests {
 
         // Check Debug
         assert_debug_snapshot!(deserialized);
+    }
+
+    #[test]
+    fn windows_user_config_path_uses_dot_config_directory() {
+        assert_eq!(
+            user_config_path(r"C:\\Users\\rustic"),
+            PathBuf::from(r"C:\\Users\\rustic")
+                .join(".config")
+                .join("rustic")
+        );
+    }
+
+    #[test]
+    fn environment_config_dirs_follow_xdg_order() {
+        let config_home = absolute_test_path("home");
+        let first_config_dir = absolute_test_path("first");
+        let second_config_dir = absolute_test_path("second");
+        let config_dirs =
+            std::env::join_paths([first_config_dir.clone(), second_config_dir.clone()]).unwrap();
+
+        assert_eq!(
+            environment_config_dirs(
+                None,
+                Some(config_home.clone().into_os_string()),
+                Some(config_dirs)
+            ),
+            [config_home, first_config_dir, second_config_dir].map(|path| path.join("rustic")),
+        );
+    }
+
+    #[test]
+    fn rustic_home_precedes_xdg_config_directories() {
+        let rustic_home = absolute_test_path("rustic-home");
+        let config_home = absolute_test_path("home");
+        let shared_config_dir = absolute_test_path("shared");
+        let config_dirs = std::env::join_paths([shared_config_dir.clone()]).unwrap();
+
+        assert_eq!(
+            environment_config_dirs(
+                Some(rustic_home.clone().into_os_string()),
+                Some(config_home.clone().into_os_string()),
+                Some(config_dirs),
+            ),
+            [
+                rustic_home.join("config"),
+                config_home.join("rustic"),
+                shared_config_dir.join("rustic"),
+            ],
+        );
+    }
+
+    #[test]
+    fn environment_config_dirs_ignore_relative_entries() {
+        let absolute_config_dir = absolute_test_path("shared");
+        let config_dirs =
+            std::env::join_paths([PathBuf::from("relative"), absolute_config_dir.clone()]).unwrap();
+
+        assert_eq!(
+            environment_config_dirs(
+                Some(PathBuf::from("relative-rustic-home").into_os_string()),
+                Some(PathBuf::from("relative").into_os_string()),
+                Some(config_dirs)
+            ),
+            [absolute_config_dir.join("rustic")],
+        );
     }
 }

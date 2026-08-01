@@ -144,6 +144,11 @@ pub struct BackupCmd {
     #[clap(skip)]
     hooks: Hooks,
 
+    /// Write logs for this backup to a profile-selected file.
+    #[clap(skip)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    log_file: Option<PathBuf>,
+
     /// Backup snapshots to generate
     #[clap(skip)]
     #[merge(strategy = merge_snapshots)]
@@ -171,6 +176,15 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    fn start_snapshot_logger(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+        let mut logging_options = config.global.logging_options.clone();
+        if let Some(log_file) = &self.log_file {
+            logging_options.log_file = Some(log_file.clone());
+        }
+        logging_options.start_logger(config.global.dry_run)
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
@@ -437,6 +451,11 @@ impl BackupCmd {
 
         // merge "backup" section from config file, if given
         self.merge(config.backup.clone());
+
+        self.start_snapshot_logger()?;
+        if let Some(log_file) = &self.log_file {
+            info!("logging backup of {source} to {}", log_file.display());
+        }
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 

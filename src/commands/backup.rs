@@ -1,8 +1,8 @@
 //! `backup` subcommand
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::Display;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{collections::BTreeMap, env};
 
 use crate::commands::ls::LsCmd;
@@ -77,6 +77,11 @@ pub struct BackupCmd {
     #[clap(long, value_name = "COMMAND")]
     #[merge(strategy=conflate::option::overwrite_none)]
     stdin_command: Option<CommandInput>,
+
+    /// Only back up directory trees marked by this filename.
+    #[clap(long, value_name = "FILENAME", value_hint = ValueHint::FilePath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    include_if_present: Option<PathBuf>,
 
     /// Manually set backup path in snapshot
     #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
@@ -171,6 +176,54 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    fn sources_with_marker(source: &PathList, marker: &Path) -> Result<Option<PathList>> {
+        if marker.components().count() != 1 || marker.file_name().is_none() {
+            bail!(
+                "`include-if-present` must be a single filename, not a path: `{}`",
+                marker.display()
+            );
+        }
+
+        let mut marked_sources = BTreeSet::new();
+        for root in source.paths() {
+            let metadata = std::fs::symlink_metadata(&root).with_context(|| {
+                format!(
+                    "failed to inspect source `{}` for include marker `{}`",
+                    root.display(),
+                    marker.display()
+                )
+            })?;
+            if !metadata.file_type().is_dir() {
+                bail!(
+                    "`include-if-present` only supports local directory sources; `{}` is not a directory",
+                    root.display()
+                );
+            }
+            Self::find_marked_sources(&root, marker, &mut marked_sources)?;
+        }
+
+        Ok((!marked_sources.is_empty()).then(|| marked_sources.into_iter().collect()))
+    }
+
+    fn find_marked_sources(
+        directory: &Path,
+        marker: &Path,
+        marked_sources: &mut BTreeSet<PathBuf>,
+    ) -> Result<()> {
+        if directory.join(marker).is_file() {
+            let _ = marked_sources.insert(directory.to_path_buf());
+            return Ok(());
+        }
+
+        for entry in std::fs::read_dir(directory)? {
+            let entry = entry?;
+            if entry.file_type()?.is_dir() {
+                Self::find_marked_sources(&entry.path(), marker, marked_sources)?;
+            }
+        }
+        Ok(())
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
@@ -437,6 +490,24 @@ impl BackupCmd {
 
         // merge "backup" section from config file, if given
         self.merge(config.backup.clone());
+
+        let source = if let Some(marker) = &self.include_if_present {
+            if self.as_path.is_some() {
+                bail!("`include-if-present` cannot be combined with `as-path`");
+            }
+            match Self::sources_with_marker(&source, marker)? {
+                Some(source) => source,
+                None => {
+                    info!(
+                        "skipping backup: no `{}` marker was found below {source}",
+                        marker.display()
+                    );
+                    return Ok(());
+                }
+            }
+        } else {
+            source
+        };
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 

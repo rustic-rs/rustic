@@ -2,8 +2,11 @@
 
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::path::PathBuf;
-use std::{collections::BTreeMap, env};
+use std::path::{Path, PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    env,
+};
 
 use crate::commands::ls::LsCmd;
 use crate::commands::program_version;
@@ -19,9 +22,12 @@ use crate::{
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Context, Result, anyhow, bail};
-use clap::ValueHint;
+use clap::{
+    ValueHint,
+    builder::{OsStringValueParser, TypedValueParser},
+};
 use comfy_table::Cell;
-use conflate::{Merge, MergeFrom};
+use conflate::Merge;
 use log::{debug, error, info, warn};
 use rustic_backend::OpenDALBackend;
 use rustic_core::{ChildStdoutSource, Excludes, LocalSource, ReadSource, StdinSource, StringList};
@@ -78,8 +84,26 @@ pub struct BackupCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     stdin_command: Option<CommandInput>,
 
+    /// Only back up directory trees marked by this filename
+    ///
+    /// Each matching directory becomes a backup source. The marker must be a
+    /// single filename, not a path.
+    #[clap(long, value_name = "FILENAME", value_hint = ValueHint::FilePath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    include_if_present: Option<PathBuf>,
+
+    /// Skip this source when the configured command writes `skip` to stdout
+    #[clap(skip)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    skip_if_command: Option<CommandInput>,
+
     /// Manually set backup path in snapshot
-    #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
+    #[clap(
+        long,
+        value_name = "PATH",
+        value_hint = ValueHint::DirPath,
+        value_parser = OsStringValueParser::new().map(PathBuf::from)
+    )]
     #[merge(strategy=conflate::option::overwrite_none)]
     as_path: Option<PathBuf>,
 
@@ -144,6 +168,12 @@ pub struct BackupCmd {
     #[clap(skip)]
     hooks: Hooks,
 
+    /// Write logs for this backup to the given file. This is only configurable
+    /// from a profile; command-line logging remains a global option.
+    #[clap(skip)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    log_file: Option<PathBuf>,
+
     /// Backup snapshots to generate
     #[clap(skip)]
     #[merge(strategy = merge_snapshots)]
@@ -171,6 +201,154 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    /// Merge backup options while collecting tags from both sources.
+    ///
+    /// Most options use normal precedence, but tags describe independent labels
+    /// that should all be applied to the resulting snapshot.
+    pub(crate) fn merge_with_tags(&mut self, other: Self) {
+        let mut tags = std::mem::take(&mut self.snap_opts.tags);
+        tags.extend(other.snap_opts.tags.iter().cloned());
+
+        self.merge(other);
+        self.snap_opts.tags = tags;
+    }
+
+    pub(crate) fn set_hook_command(&mut self, command: &str) {
+        self.hooks = self.hooks.with_command(command);
+        for snapshot in &mut self.snapshots {
+            snapshot.set_hook_command(command);
+        }
+    }
+
+    /// Reconfigure the process logger for one configured backup source.
+    ///
+    /// `log4rs` keeps a single logger for the process, but its handle supports
+    /// replacing the configuration. Reapply the global configuration for every
+    /// source so a following snapshot without `log-file` cannot inherit the
+    /// preceding snapshot's destination.
+    fn start_snapshot_logger(&self) -> Result<()> {
+        let config = RUSTIC_APP.config();
+        let mut logging_options = config.global.logging_options.clone();
+        if let Some(log_file) = &self.log_file {
+            logging_options.log_file = Some(log_file.clone());
+        }
+        logging_options.start_logger(config.global.dry_run)
+    }
+
+    fn load_glob_files(mut excludes: Excludes) -> Result<Excludes> {
+        for file in std::mem::take(&mut excludes.glob_files) {
+            let patterns = std::fs::read_to_string(&file).with_context(|| {
+                format!(
+                    "failed to read glob file `{file}`; expected a file containing glob patterns"
+                )
+            })?;
+            excludes.globs.extend(patterns.lines().map(str::to_owned));
+        }
+
+        for file in std::mem::take(&mut excludes.iglob_files) {
+            let patterns = std::fs::read_to_string(&file).with_context(|| {
+                format!(
+                    "failed to read case-insensitive glob file `{file}`; expected a file containing glob patterns"
+                )
+            })?;
+            excludes.iglobs.extend(patterns.lines().map(str::to_owned));
+        }
+
+        Ok(excludes)
+    }
+
+    fn sanitize_sources(source: PathList, keep_nested_sources: bool) -> Result<PathList> {
+        if !keep_nested_sources {
+            return source
+                .clone()
+                .sanitize()
+                .with_context(|| format!("error sanitizing source=s\"{source:?}\""));
+        }
+
+        // `PathList::sanitize` normally removes child paths of an earlier
+        // source. With --one-file-system, an explicit child can be a separate
+        // mount point which the parent walk intentionally skips, so retain it.
+        source
+            .paths()
+            .into_iter()
+            .map(|path| {
+                PathList::from_iter([path])
+                    .sanitize()
+                    .map(|paths| paths.paths())
+                    .map_err(Into::into)
+            })
+            .collect::<Result<Vec<_>>>()
+            .map(|paths| paths.into_iter().flatten().collect::<BTreeSet<_>>())
+            .map(|paths| paths.into_iter().collect())
+    }
+
+    /// Find source directories that contain `marker` and use each as a root.
+    ///
+    /// Descendants of an already marked directory are deliberately not scanned:
+    /// that directory's complete tree is included, and keeping only the
+    /// shallowest matching roots avoids redundant snapshot sources.
+    fn sources_with_marker(source: &PathList, marker: &Path) -> Result<Option<PathList>> {
+        if marker.components().count() != 1 || marker.file_name().is_none() {
+            bail!(
+                "`include-if-present` must be a single filename, not a path: `{}`",
+                marker.display()
+            );
+        }
+
+        let mut marked_sources = BTreeSet::new();
+        for root in source.paths() {
+            let metadata = std::fs::symlink_metadata(&root).with_context(|| {
+                format!(
+                    "failed to inspect source `{}` for include marker `{}`",
+                    root.display(),
+                    marker.display()
+                )
+            })?;
+            if !metadata.file_type().is_dir() {
+                bail!(
+                    "`include-if-present` only supports local directory sources; `{}` is not a directory",
+                    root.display()
+                );
+            }
+            Self::find_marked_sources(&root, marker, &mut marked_sources)?;
+        }
+
+        Ok((!marked_sources.is_empty()).then(|| marked_sources.into_iter().collect()))
+    }
+
+    fn find_marked_sources(
+        directory: &Path,
+        marker: &Path,
+        marked_sources: &mut BTreeSet<PathBuf>,
+    ) -> Result<()> {
+        if directory.join(marker).is_file() {
+            let _ = marked_sources.insert(directory.to_path_buf());
+            return Ok(());
+        }
+
+        let entries = std::fs::read_dir(directory).with_context(|| {
+            format!(
+                "failed to inspect directory `{}` for include marker `{}`",
+                directory.display(),
+                marker.display()
+            )
+        })?;
+        for entry in entries {
+            let entry = entry.with_context(|| {
+                format!(
+                    "failed to inspect an entry under `{}` for include marker `{}`",
+                    directory.display(),
+                    marker.display()
+                )
+            })?;
+            if entry.file_type()?.is_dir() {
+                Self::find_marked_sources(&entry.path(), marker, marked_sources)?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
@@ -275,6 +453,8 @@ impl BackupCmd {
 
     fn get_snapshots_to_backup(&self) -> Result<Vec<(Self, PathList)>> {
         let config = RUSTIC_APP.config();
+        let mut shared_tags = StringList::default();
+        shared_tags.add_all(config.backup.snap_opts.tags.clone());
         let mut config_snapshots = config
             .backup
             .snapshots
@@ -287,7 +467,7 @@ impl BackupCmd {
             // merge Options from config file, if given
             if let Some((config_opts, _)) = config_snapshots.find(|(_, s)| s == &sources) {
                 info!("merging sources={sources} section from config file");
-                opts.merge(config_opts);
+                opts.merge_with_tags(config_opts);
             }
             return Ok(vec![(opts, sources)]);
         }
@@ -301,7 +481,19 @@ impl BackupCmd {
                         .as_ref()
                         .is_some_and(|name| self.cli_name.contains(name))
             })
-            .map(|(opt, sources)| (self.clone().merge_from(opt), sources))
+            // Configured backups can be selected with the same path and tag
+            // filters used for snapshots. Include shared backup tags because
+            // they become tags on every generated snapshot.
+            .filter(|(opt, sources)| {
+                let mut tags = shared_tags.clone();
+                tags.add_all(opt.snap_opts.tags.clone());
+                config.snapshot_filter.matches_backup_config(sources, &tags)
+            })
+            .map(|(opt, sources)| {
+                let mut backup = self.clone();
+                backup.merge_with_tags(opt);
+                (backup, sources)
+            })
             .collect();
 
         if config_snapshots.is_empty() {
@@ -341,6 +533,56 @@ impl BackupCmd {
         hooks.with_env(&hooks_variables)
     }
 
+    /// Run the configured source-level skip condition.
+    ///
+    /// A condition deliberately has a small protocol: an empty stdout means to
+    /// continue and `skip` (with an optional line ending) means to omit this
+    /// source. Any other output or a failing command stops the backup rather
+    /// than silently treating an error as a skipped backup.
+    fn should_skip_backup(&self, source: &PathList) -> Result<bool> {
+        let Some(command) = &self.skip_if_command else {
+            return Ok(false);
+        };
+        if !command.is_set() {
+            return Ok(false);
+        }
+
+        let mut condition = std::process::Command::new(command.command());
+        let _ = condition
+            .args(command.args())
+            .env("RUSTIC_COMMAND", "backup")
+            .env("RUSTIC_ACTION", "source-specific-backup")
+            .env("RUSTIC_BACKUP_SOURCES", source.to_string())
+            .stderr(std::process::Stdio::inherit());
+
+        if let Some(label) = &self.snap_opts.label {
+            let _ = condition.env("RUSTIC_BACKUP_LABEL", label);
+        }
+
+        let mut tags = StringList::default();
+        tags.add_all(self.snap_opts.tags.clone());
+        let tags = tags.to_string();
+        if !tags.is_empty() {
+            let _ = condition.env("RUSTIC_BACKUP_TAGS", tags);
+        }
+
+        let output = condition
+            .output()
+            .context("failed to run `skip-if-command`")?;
+        if !output.status.success() {
+            bail!("`skip-if-command` exited with status {}", output.status);
+        }
+
+        let directive = output.stdout.strip_suffix(b"\n").unwrap_or(&output.stdout);
+        let directive = directive.strip_suffix(b"\r").unwrap_or(directive);
+
+        match directive {
+            b"" => Ok(false),
+            b"skip" => Ok(true),
+            _ => bail!("`skip-if-command` must write exactly `skip` or nothing to stdout"),
+        }
+    }
+
     fn backup_source(
         source: &PathList,
         options: BTreeMap<String, String>,
@@ -350,11 +592,10 @@ impl BackupCmd {
         repo: &IndexedIdsRepo,
     ) -> Result<()> {
         let backup_stdin = PathList::from_string("-")?;
-        let source = source
-            .clone()
-            .sanitize()
-            .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
-            .merge();
+        let source = Self::sanitize_sources(
+            source.clone(),
+            backup_opts.ignore_filter_opts.one_file_system,
+        )?;
 
         if source.len() == 1
                 // TODO: This check should not be done on PathList, but in the sources list directly
@@ -428,7 +669,7 @@ impl BackupCmd {
                     .position(|opt| opt.sources == vec![path])
             {
                 info!("merging snapshot=\"{path}\" section from config file");
-                self.merge(snapshot_opts[idx].clone());
+                self.merge_with_tags(snapshot_opts[idx].clone());
             }
         }
 
@@ -436,7 +677,35 @@ impl BackupCmd {
         let hooks = self.hooks.clone();
 
         // merge "backup" section from config file, if given
-        self.merge(config.backup.clone());
+        self.merge_with_tags(config.backup.clone());
+
+        let source = if let Some(marker) = &self.include_if_present {
+            if self.as_path.is_some() {
+                bail!("`include-if-present` cannot be combined with `as-path`");
+            }
+            match Self::sources_with_marker(&source, marker)? {
+                Some(source) => source,
+                None => {
+                    info!(
+                        "skipping backup: no `{}` marker was found below {source}",
+                        marker.display()
+                    );
+                    return Ok(());
+                }
+            }
+        } else {
+            source
+        };
+
+        if self.should_skip_backup(&source)? {
+            info!("skipping backup of {source} at the request of `skip-if-command`");
+            return Ok(());
+        }
+
+        self.start_snapshot_logger()?;
+        if let Some(log_file) = &self.log_file {
+            info!("logging backup of {source} to {}", log_file.display());
+        }
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 
@@ -444,13 +713,14 @@ impl BackupCmd {
         let mut parent_opts = self.parent_opts;
         parent_opts.group_by = parent_opts.group_by.or(config.global.group_by);
 
+        let excludes = Self::load_glob_files(self.excludes)?;
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename.unwrap_or_else(|| "stdin".to_string()))
             .stdin_command(self.stdin_command)
             .as_path(self.as_path)
             .parent_opts(parent_opts)
             .ignore_save_opts(self.ignore_save_opts)
-            .excludes(self.excludes)
+            .excludes(excludes)
             .ignore_filter_opts(self.ignore_filter_opts)
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);
@@ -467,7 +737,7 @@ impl BackupCmd {
             write_json_progress_summary(&snap)?;
         } else if self.json {
             let mut stdout = std::io::stdout();
-            serde_json::to_writer_pretty(&mut stdout, &snap)?;
+            serde_json::to_writer(&mut stdout, &snap)?;
         } else if self.long {
             let mut table = table();
 
@@ -568,9 +838,9 @@ fn write_json_progress_summary(snap: &SnapshotFile) -> Result<()> {
 
 #[cfg(not(any(feature = "prometheus", feature = "opentelemetry")))]
 fn publish_metrics(
-    snap: &SnapshotFile,
-    job_name: Option<String>,
-    mut labels: BTreeMap<String, String>,
+    _snap: &SnapshotFile,
+    _job_name: Option<String>,
+    _labels: BTreeMap<String, String>,
 ) -> Result<()> {
     Err(anyhow!("metrics support is not compiled-in!"))
 }
@@ -582,7 +852,7 @@ fn publish_metrics(
     mut labels: BTreeMap<String, String>,
 ) -> Result<()> {
     use crate::metrics::MetricValue::*;
-    use crate::metrics::{Metric, MetricsExporter};
+    use crate::metrics::Metric;
 
     let summary = snap.summary.as_ref().expect("Reaching the 'push to prometheus' point should only happen for successful backups, which must have a summary set.");
     let metrics = [
@@ -717,49 +987,150 @@ fn publish_metrics(
         .or_insert_with(|| format!("{}", snap.tags));
 
     let job_name = job_name.as_deref().unwrap_or("rustic_backup");
-    let global_config = &RUSTIC_APP.config().global;
+    crate::metrics::push_metrics(
+        &metrics,
+        job_name,
+        &labels,
+        &RUSTIC_APP.config().global.metrics_labels,
+    )
+}
 
-    #[cfg(feature = "prometheus")]
-    if let Some(prometheus_endpoint) = &global_config.prometheus {
-        use crate::metrics::prometheus::PrometheusExporter;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::RusticConfig;
+    use tempfile::tempdir;
 
-        let metrics_exporter = PrometheusExporter {
-            endpoint: prometheus_endpoint.clone(),
-            job_name: job_name.to_string(),
-            grouping: labels.clone(),
-            prometheus_user: global_config.prometheus_user.clone(),
-            prometheus_pass: global_config.prometheus_pass.clone(),
-        };
-
-        metrics_exporter
-            .push_metrics(metrics.as_slice())
-            .context("pushing prometheus metrics")?;
+    fn tags(backup: &BackupCmd) -> Vec<String> {
+        let mut tags = StringList::default();
+        tags.add_all(backup.snap_opts.tags.clone());
+        tags.iter().cloned().collect()
     }
 
-    #[cfg(not(feature = "prometheus"))]
-    if global_config.prometheus.is_some() {
-        bail!("prometheus metrics support is not compiled-in!");
+    #[test]
+    fn backup_tags_append_across_profiles_snapshots_and_cli() {
+        let mut config: RusticConfig = toml::from_str(
+            r#"
+                [backup]
+                tags = ["tag-D", "tag-E"]
+            "#,
+        )
+        .unwrap();
+        let profile_a: RusticConfig = toml::from_str(
+            r#"
+                [backup]
+                tags = ["tag-A"]
+            "#,
+        )
+        .unwrap();
+        let profile_b: RusticConfig = toml::from_str(
+            r#"
+                [backup]
+                tags = ["tag-B"]
+            "#,
+        )
+        .unwrap();
+        let profile_c: RusticConfig = toml::from_str(
+            r#"
+                [[backup.snapshots]]
+                sources = ["/source"]
+                tags = ["tag-C"]
+            "#,
+        )
+        .unwrap();
+
+        config.merge_with_backup_tags(profile_a);
+        config.merge_with_backup_tags(profile_b);
+        config.merge_with_backup_tags(profile_c);
+
+        let mut backup = BackupCmd::default();
+        backup.merge_with_tags(config.backup.snapshots[0].clone());
+        backup.merge_with_tags(config.backup);
+
+        assert_eq!(tags(&backup), ["tag-A", "tag-B", "tag-C", "tag-D", "tag-E"]);
     }
 
-    #[cfg(feature = "opentelemetry")]
-    if let Some(otlp_endpoint) = &global_config.opentelemetry {
-        use crate::metrics::opentelemetry::OpentelemetryExporter;
+    #[test]
+    fn backup_tag_merging_preserves_precedence_for_other_options() {
+        let mut cli: BackupCmd = toml::from_str(
+            r#"
+                label = "from-cli"
+                tags = ["cli"]
+            "#,
+        )
+        .unwrap();
+        let profile: BackupCmd = toml::from_str(
+            r#"
+                label = "from-profile"
+                tags = ["profile"]
+            "#,
+        )
+        .unwrap();
 
-        let metrics_exporter = OpentelemetryExporter {
-            endpoint: otlp_endpoint.clone(),
-            service_name: job_name.to_string(),
-            labels: global_config.metrics_labels.clone(),
-        };
+        cli.merge_with_tags(profile);
 
-        metrics_exporter
-            .push_metrics(metrics.as_slice())
-            .context("pushing opentelemetry metrics")?;
+        assert_eq!(cli.snap_opts.label.as_deref(), Some("from-cli"));
+        assert_eq!(tags(&cli), ["cli", "profile"]);
     }
 
-    #[cfg(not(feature = "opentelemetry"))]
-    if global_config.opentelemetry.is_some() {
-        bail!("opentelemetry metrics support is not compiled-in!");
+    #[test]
+    fn one_file_system_keeps_explicit_nested_sources() -> Result<()> {
+        let temp = tempdir()?;
+        let nested = temp.path().join("separate-mount");
+        std::fs::create_dir(&nested)?;
+
+        let source: PathList = [temp.path().to_path_buf(), nested.clone()]
+            .into_iter()
+            .collect();
+
+        let nested_sources = BackupCmd::sanitize_sources(source.clone(), true)?;
+        assert_eq!(
+            nested_sources.paths(),
+            vec![temp.path().canonicalize()?, nested.canonicalize()?]
+        );
+
+        let merged_sources = BackupCmd::sanitize_sources(source, false)?;
+        assert_eq!(merged_sources.paths(), vec![temp.path().canonicalize()?]);
+
+        Ok(())
     }
 
-    Ok(())
+    #[test]
+    fn include_if_present_selects_only_shallowest_marked_directories() -> Result<()> {
+        let temp = tempdir()?;
+        let root = temp.path().join("source");
+        let marked = root.join("marked");
+        let nested_marked = root.join("nested").join("marked");
+        std::fs::create_dir_all(marked.join("child-with-another-marker"))?;
+        std::fs::create_dir_all(&nested_marked)?;
+        std::fs::write(marked.join(".bckinclude"), "")?;
+        std::fs::write(marked.join("child-with-another-marker/.bckinclude"), "")?;
+        std::fs::write(nested_marked.join(".bckinclude"), "")?;
+
+        let source: PathList = [root.clone()].into_iter().collect();
+        let selected = BackupCmd::sources_with_marker(&source, Path::new(".bckinclude"))?
+            .expect("marked directories should be selected");
+
+        assert_eq!(selected.paths(), vec![marked, nested_marked]);
+        Ok(())
+    }
+
+    #[test]
+    fn include_if_present_rejects_marker_paths() {
+        let source: PathList = [PathBuf::from(".")].into_iter().collect();
+        let error = BackupCmd::sources_with_marker(&source, Path::new("markers/.bckinclude"))
+            .expect_err("marker paths must be rejected");
+
+        assert!(error.to_string().contains("single filename"));
+    }
+
+    #[test]
+    fn as_path_accepts_an_empty_cli_value() {
+        use clap::Parser;
+
+        let backup = BackupCmd::try_parse_from(["backup", "--as-path", ""])
+            .expect("an empty as-path should be accepted");
+
+        assert_eq!(backup.as_path, Some(PathBuf::new()));
+    }
 }

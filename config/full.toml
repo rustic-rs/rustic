@@ -134,8 +134,14 @@ force = false
 ignore-ctime = false
 ignore-inode = false
 stdin-command = "echo test" # Default: empty
+# Only include directory trees containing this marker filename. Each matching
+# directory becomes a backup source; cannot be combined with as-path.
+include-if-present = ".bckinclude" # Default: not set
+# Run before each resolved source. Print exactly "skip" to stdout to omit its
+# snapshot; an empty stdout continues, while any other output or failure aborts.
+skip-if-command = "sh -c 'printf skip'" # Default: not set
 stdin-filename = "stdin" # Only for stdin source
-as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
+as-path = "/my/path" # Default: not set; only works with a single source path. Globs match the original source path before remapping.
 set-atime = "mtime" # Allowed: "yes", "no", "mtime"
 set-ctime = "yes" # Allowed: "yes", "no", "mtime"
 set-devid = "hardlink" # Allowed: "yes", "no", "hardlink"
@@ -159,6 +165,7 @@ init = false
 no-scan = false
 skip-if-unchanged = false
 metrics-job = "my-backup-jobs" # Only used if global prometheus or opentelemetry option is set; default: not set
+log-file = "/path/to/backup.log" # Default: global log-file, if set
 
 # Backup hooks: The given commands are called for the `backup` command
 [backup.hooks]
@@ -176,6 +183,7 @@ sources = [
   "opendal:s3",
 ] # Note: For opendal, currently only a single source is supported; see next [[backup.snapshots]] section for a local path example
 label = "label" # Default: not set
+log-file = "/path/to/source.log" # Overrides [backup].log-file and [global].log-file for this source
 # .. and so on. see [backup]
 
 # Additional backup source options - depending on source; currently only relevant for a "opendal:" source.
@@ -254,6 +262,8 @@ path-template = "[{hostname}]/[{label}]/{time}" # The path template to use for s
 time-template = "%Y-%m-%d_%H-%M-%S" # only relevant if no snapshot-path is given
 symlinks = false
 file-access = "read" # Default: "forbidden" for hot/cold repos, else "read"
+auth-user = "rustic" # Optional HTTP Basic Authentication user. Must be set with auth-password.
+auth-password = "secret" # Optional HTTP Basic Authentication password. Prefer RUSTIC_WEBDAV_PASSWORD over a config file or command line.
 snapshot-path = "latest:/dir" # Default: not set - if not set, generate a virtual tree with all snapshots using path-template
 
 [mount]

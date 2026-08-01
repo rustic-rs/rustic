@@ -90,7 +90,13 @@ impl CopyCmd {
         for target in &config.copy.targets {
             let mut merge_logs = Vec::new();
             let mut target_config = RusticConfig::default();
+            // Target profiles are loaded independently, but their backend
+            // settings still need the invoking profile's opt-in environment
+            // substitution policy. This lets each target use distinct
+            // environment variables without putting credentials in a profile.
+            target_config.global.profile_substitute_env = config.global.profile_substitute_env;
             target_config.merge_profile(target, &mut merge_logs, Level::Error)?;
+            target_config.set_hook_command("copy");
             // display logs from merging
             for (level, merge_log) in merge_logs {
                 log!(level, "{merge_log}");

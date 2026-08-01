@@ -15,7 +15,7 @@ use derive_more::derive::Display;
 use jiff::{Zoned, civil::Time, tz::TimeZone};
 use log::warn;
 use rustic_core::{
-    StringList,
+    PathList, StringList,
     repofile::{RusticTime, SnapshotFile},
 };
 
@@ -285,20 +285,35 @@ impl SnapshotFilter {
             return false;
         }
 
+        self.matches_paths_and_tags(&snapshot.paths, &snapshot.tags)
+            && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
+            && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
+    }
+
+    /// Check whether the path and tag filters select a configured backup source.
+    ///
+    /// A configured source has no historical snapshot time, size, hostname, or label yet,
+    /// so only the path and tag filter families apply before running a backup.
+    #[must_use]
+    pub(crate) fn matches_backup_config(&self, sources: &PathList, tags: &StringList) -> bool {
+        let mut paths = StringList::default();
+        for path in sources.paths() {
+            paths.add(path.to_string_lossy().into_owned());
+        }
+        self.matches_paths_and_tags(&paths, tags)
+    }
+
+    fn matches_paths_and_tags(&self, paths: &StringList, tags: &StringList) -> bool {
         // For the the `Vec`s we have two possibilities:
         // - There exists a suitable matches method on the snapshot item
         //   (this automatically handles empty filter correctly):
-        snapshot.paths.matches(&self.filter_paths)
-            && snapshot.tags.matches(&self.filter_tags)
+        paths.matches(&self.filter_paths)
+            && tags.matches(&self.filter_tags)
         //  - manually check if the snapshot item is contained in the `Vec`
         //    but only if the `Vec` is not empty.
         //    If it is empty, no condition is given.
-            && (self.filter_paths_exact.is_empty()
-                || self.filter_paths_exact.contains(&snapshot.paths))
-            && (self.filter_tags_exact.is_empty()
-                || self.filter_tags_exact.contains(&snapshot.tags))
-            && (self.filter_hosts.is_empty() || self.filter_hosts.contains(&snapshot.hostname))
-            && (self.filter_labels.is_empty() || self.filter_labels.contains(&snapshot.label))
+            && (self.filter_paths_exact.is_empty() || self.filter_paths_exact.contains(paths))
+            && (self.filter_tags_exact.is_empty() || self.filter_tags_exact.contains(tags))
     }
 
     pub fn post_process(&self, snapshots: &mut Vec<SnapshotFile>) {
@@ -414,5 +429,22 @@ mod tests {
     ) {
         assert_eq!(input.from.map(|v| v.0), from);
         assert_eq!(input.to.map(|v| v.0), to);
+    }
+
+    #[test]
+    fn backup_config_filter_matches_only_path_and_tag_conditions() {
+        let filter: SnapshotFilter = toml::from_str(
+            r#"
+                filter-hosts = ["other-host"]
+                filter-labels = ["other-label"]
+                filter-paths = ["/source"]
+                filter-tags = ["local"]
+            "#,
+        )
+        .unwrap();
+        let sources = PathList::from_iter(["/source"]);
+        let tags: StringList = "local,other".parse().unwrap();
+
+        assert!(filter.matches_backup_config(&sources, &tags));
     }
 }

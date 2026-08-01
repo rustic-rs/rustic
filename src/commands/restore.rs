@@ -72,15 +72,29 @@ impl RestoreCmd {
         let restore_infos = repo.prepare_restore(&self.opts, ls, &dest, dry_run)?;
 
         let fs = restore_infos.stats.files;
-        println!(
-            "Files:  {} to restore, {} unchanged, {} verified, {} to modify, {} additional",
-            fs.restore, fs.unchanged, fs.verified, fs.modify, fs.additional
-        );
         let ds = restore_infos.stats.dirs;
-        println!(
-            "Dirs:   {} to restore, {} to modify, {} additional",
-            ds.restore, ds.modify, ds.additional
-        );
+        if config.global.progress_options.json_progress {
+            // `--json-progress` reserves stdout for newline-delimited JSON.
+            // Keep the human-readable plan available through the normal log
+            // stream (stderr) without corrupting a consumer's JSON input.
+            info!(
+                "Files:  {} to restore, {} unchanged, {} verified, {} to modify, {} additional",
+                fs.restore, fs.unchanged, fs.verified, fs.modify, fs.additional
+            );
+            info!(
+                "Dirs:   {} to restore, {} to modify, {} additional",
+                ds.restore, ds.modify, ds.additional
+            );
+        } else {
+            println!(
+                "Files:  {} to restore, {} unchanged, {} verified, {} to modify, {} additional",
+                fs.restore, fs.unchanged, fs.verified, fs.modify, fs.additional
+            );
+            println!(
+                "Dirs:   {} to restore, {} to modify, {} additional",
+                ds.restore, ds.modify, ds.additional
+            );
+        }
 
         info!(
             "total restore size: {}",
@@ -104,7 +118,11 @@ impl RestoreCmd {
 
             let ls = repo.ls(&node, &ls_opts)?;
             repo.restore(restore_infos, &self.opts, ls, &dest)?;
-            println!("restore done.");
+            if config.global.progress_options.json_progress {
+                info!("restore done.");
+            } else {
+                println!("restore done.");
+            }
         } else {
             debug!(
                 "--dry-run is without warmup, --dry-run --dry-run-warmup also issues the warmup script."

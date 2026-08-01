@@ -1,5 +1,6 @@
 ---
 source: src/config.rs
+assertion_line: 460
 expression: config
 ---
 RusticConfig {
@@ -29,6 +30,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         env: {},
         prometheus: None,
@@ -46,6 +48,7 @@ RusticConfig {
             options_hot: {},
             options_cold: {},
         },
+        cacert: None,
         repo: RepositoryOptions {
             no_cache: false,
             cache_dir: None,
@@ -70,6 +73,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
     },
     snapshot_filter: SnapshotFilter {
@@ -93,6 +97,8 @@ RusticConfig {
         name: None,
         stdin_filename: None,
         stdin_command: None,
+        include_if_present: None,
+        skip_if_command: None,
         as_path: None,
         no_scan: false,
         json: false,
@@ -169,7 +175,9 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
+        log_file: None,
         snapshots: [],
         sources: [],
         options: {},
@@ -236,6 +244,8 @@ RusticConfig {
         time_template: None,
         symlinks: false,
         file_access: None,
+        auth_user: None,
+        auth_password: None,
         snapshot_path: None,
     },
 }

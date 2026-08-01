@@ -46,12 +46,22 @@ pub struct Hooks {
     #[serde(skip)]
     #[merge(skip)]
     pub env: HashMap<String, String>,
+
+    #[serde(skip)]
+    #[merge(strategy = conflate::option::overwrite_none)]
+    command: Option<String>,
 }
 
 impl Hooks {
     pub fn with_context(&self, context: &str) -> Self {
         let mut hooks = self.clone();
         hooks.context = context.to_string();
+        hooks
+    }
+
+    pub fn with_command(&self, command: &str) -> Self {
+        let mut hooks = self.clone();
+        hooks.command = Some(command.to_string());
         hooks
     }
 
@@ -69,9 +79,13 @@ impl Hooks {
         context: &str,
         what: &str,
         env: &HashMap<String, String>,
+        command: Option<&str>,
     ) -> Result<()> {
         let mut env = env.clone();
 
+        if let Some(command) = command {
+            _ = env.insert("RUSTIC_COMMAND".to_string(), command.to_string());
+        }
         let _ = env.insert("RUSTIC_HOOK_TYPE".to_string(), what.to_string());
 
         for cmd in cmds {
@@ -82,19 +96,43 @@ impl Hooks {
     }
 
     pub fn run_before(&self) -> Result<()> {
-        Self::run_all(&self.run_before, &self.context, "run-before", &self.env)
+        Self::run_all(
+            &self.run_before,
+            &self.context,
+            "run-before",
+            &self.env,
+            self.command.as_deref(),
+        )
     }
 
     pub fn run_after(&self) -> Result<()> {
-        Self::run_all(&self.run_after, &self.context, "run-after", &self.env)
+        Self::run_all(
+            &self.run_after,
+            &self.context,
+            "run-after",
+            &self.env,
+            self.command.as_deref(),
+        )
     }
 
     pub fn run_failed(&self) -> Result<()> {
-        Self::run_all(&self.run_failed, &self.context, "run-failed", &self.env)
+        Self::run_all(
+            &self.run_failed,
+            &self.context,
+            "run-failed",
+            &self.env,
+            self.command.as_deref(),
+        )
     }
 
     pub fn run_finally(&self) -> Result<()> {
-        Self::run_all(&self.run_finally, &self.context, "run-finally", &self.env)
+        Self::run_all(
+            &self.run_finally,
+            &self.context,
+            "run-finally",
+            &self.env,
+            self.command.as_deref(),
+        )
     }
 
     /// Run the given closure using the specified hooks.

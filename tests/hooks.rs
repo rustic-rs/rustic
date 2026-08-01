@@ -153,6 +153,80 @@ fn test_empty_hooks_do_nothing_passes(toml_fixture_dir: PathBuf) -> TestResult<(
     Ok(())
 }
 
+#[rstest]
+fn test_hooks_receive_top_level_command(
+    toml_fixture_dir: PathBuf,
+    generated_dir: PathBuf,
+) -> TestResult<()> {
+    let temp_dir = setup(BackupAction::WithoutBackup)?;
+    let hooks_config = toml_fixture_dir.join("command_env");
+    let log_path = generated_dir.join("command_env.log");
+
+    rustic_runner(&temp_dir)?
+        .arg("--log-level=error")
+        .args(["-P", hooks_config.to_str().unwrap(), "backup", "src/"])
+        .env("RUSTIC_COMMAND", "caller-value")
+        .assert()
+        .success();
+
+    assert_eq!(
+        std::fs::read_to_string(&log_path)?,
+        "global:backup\nrepository:backup\nbackup:backup\nsource:backup\n"
+    );
+    remove_file(log_path)?;
+
+    Ok(())
+}
+
+#[rstest]
+fn test_copy_target_hooks_receive_top_level_command(generated_dir: PathBuf) -> TestResult<()> {
+    let source = setup(BackupAction::WithoutBackup)?;
+    let target = setup(BackupAction::WithoutBackup)?;
+    let source_profile = source.path().join("source.toml");
+    let target_profile = source.path().join("target.toml");
+    let log_path = generated_dir.join("copy_target_command_env.log");
+
+    std::fs::write(
+        &source_profile,
+        "# keep the test isolated from user profiles\n",
+    )?;
+    std::fs::write(
+        &target_profile,
+        format!(
+            r#"
+                [repository]
+                repository = "{}"
+                password = "test"
+
+                [repository.hooks]
+                run-before = [
+                  "sh -c 'printf \"target:%s\\n\" \"$RUSTIC_COMMAND\" > tests/generated/copy_target_command_env.log'",
+                ]
+            "#,
+            target.path().join("repo").display()
+        ),
+    )?;
+
+    rustic_runner(&source)?
+        .arg("--log-level=error")
+        .args([
+            "-P",
+            source_profile.to_str().unwrap(),
+            "copy",
+            "--target",
+            target_profile.to_str().unwrap(),
+            "--dry-run",
+        ])
+        .env("RUSTIC_COMMAND", "caller-value")
+        .assert()
+        .success();
+
+    assert_eq!(std::fs::read_to_string(&log_path)?, "target:copy\n");
+    remove_file(log_path)?;
+
+    Ok(())
+}
+
 macro_rules! generate_test_hook_function {
     ($name:ident, $fixture:expr, $args:expr, $status:expr) => {
         #[rstest]
@@ -247,7 +321,8 @@ generate_test_hook_function!(
 #[case(vec!["backup", "src/"], "backup", BackupAction::WithoutBackup)]
 #[case(vec!["cat", "tree", "latest"], "cat", BackupAction::WithBackup)]
 #[case(vec!["config"], "config", BackupAction::WithoutBackup)]
-#[case(vec!["completions", "bash"], "completions", BackupAction::WithoutBackup)]
+// Completion generation deliberately does not load profiles, so it does not run
+// profile-defined hooks.
 #[case(vec!["check"], "check", BackupAction::WithBackup)]
 // #[case(vec!["copy"], "copy", BackupAction::WithBackup)]
 // #[case(vec!["diff"], "diff", BackupAction::WithBackup)]

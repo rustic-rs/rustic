@@ -10,11 +10,12 @@ pub(crate) mod progress_options;
 
 use std::{
     collections::BTreeMap,
+    ffi::OsString,
     fmt::{self, Display, Formatter},
     path::PathBuf,
 };
 
-use abscissa_core::{FrameworkError, FrameworkErrorKind, config::Config, path::AbsPathBuf};
+use abscissa_core::{FrameworkError, FrameworkErrorKind, config::Config};
 use anyhow::{Result, anyhow};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
@@ -103,6 +104,23 @@ impl Display for RusticConfig {
 }
 
 impl RusticConfig {
+    /// Add the top-level command name to every configured hook.
+    pub(crate) fn set_hook_command(&mut self, command: &str) {
+        self.global.hooks = self.global.hooks.with_command(command);
+        self.repository.hooks = self.repository.hooks.with_command(command);
+        self.backup.set_hook_command(command);
+    }
+
+    /// Merge a configuration while collecting backup tags from both sources.
+    ///
+    /// Configuration values normally follow precedence, but all backup tags are
+    /// independent labels and are combined instead.
+    pub(crate) fn merge_with_backup_tags(&mut self, mut other: Self) {
+        let backup = std::mem::take(&mut other.backup);
+        self.merge(other);
+        self.backup.merge_with_tags(backup);
+    }
+
     /// Merge a profile into the current config by reading the corresponding config file.
     /// Also recursively merge all profiles given within this config file.
     ///
@@ -126,7 +144,10 @@ impl RusticConfig {
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
-            let config_content = std::fs::read_to_string(AbsPathBuf::canonicalize(path)?)?;
+            // Reading a profile does not require resolving its path first.  In particular,
+            // `canonicalize` can fail for otherwise readable files on mounted filesystems
+            // (such as rclone mounts on Windows).
+            let config_content = std::fs::read_to_string(path)?;
             let config_content = if self.global.profile_substitute_env {
                 subst::substitute(&config_content, &subst::Env).map_err(|e| {
                     abscissa_core::error::context::Context::new(
@@ -146,7 +167,7 @@ impl RusticConfig {
             for profile in &config.global.use_profiles.clone() {
                 config.merge_profile(profile, merge_logs, Level::Warn)?;
             }
-            self.merge(config);
+            self.merge_with_backup_tags(config);
         } else {
             let paths_string = paths.iter().map(|path| path.display()).join(", ");
             merge_logs.push((
@@ -310,20 +331,86 @@ impl GlobalOptions {
 ///
 /// A vector of [`PathBuf`]s to the config files
 fn get_config_paths(filename: &str) -> Vec<PathBuf> {
-    [
-        ProjectDirs::from("", "", "rustic")
-            .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
-        get_global_config_path(),
-        Some(PathBuf::from(".")),
-    ]
-    .into_iter()
-    .filter_map(|path| {
-        path.map(|mut p| {
-            p.push(filename);
-            p
-        })
-    })
-    .collect()
+    get_environment_config_dirs()
+        .into_iter()
+        .chain(
+            [
+                ProjectDirs::from("", "", "rustic")
+                    .map(|project_dirs| project_dirs.config_dir().to_path_buf()),
+                get_user_config_path(),
+                get_global_config_path(),
+                Some(PathBuf::from(".")),
+            ]
+            .into_iter()
+            .flatten(),
+        )
+        .unique()
+        .map(|path| path.join(filename))
+        .collect()
+}
+
+/// Get profile directories configured through the XDG environment variables.
+///
+/// `XDG_CONFIG_HOME` is checked before the conventional per-user directory,
+/// followed by the directories in `XDG_CONFIG_DIRS`. As required by the XDG
+/// Base Directory Specification, relative paths are ignored.
+fn get_environment_config_dirs() -> Vec<PathBuf> {
+    environment_config_dirs(
+        std::env::var_os("RUSTIC_HOME"),
+        std::env::var_os("XDG_CONFIG_HOME"),
+        std::env::var_os("XDG_CONFIG_DIRS"),
+    )
+}
+
+fn environment_config_dirs(
+    rustic_home: Option<OsString>,
+    config_home: Option<OsString>,
+    config_dirs: Option<OsString>,
+) -> Vec<PathBuf> {
+    let rustic_home = rustic_home
+        .into_iter()
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .map(|path| path.join("config"));
+
+    rustic_home
+        .chain(
+            config_home
+                .into_iter()
+                .map(PathBuf::from)
+                .chain(
+                    config_dirs
+                        .as_deref()
+                        .into_iter()
+                        .flat_map(std::env::split_paths),
+                )
+                .filter(|path| path.is_absolute())
+                .map(|path| path.join("rustic")),
+        )
+        .unique()
+        .collect()
+}
+
+/// Get the user-managed config directory on Windows.
+///
+/// Besides the platform configuration directory returned by [`ProjectDirs`],
+/// also look in the XDG-style location that is commonly used by command-line
+/// tools on Windows.
+#[cfg(target_os = "windows")]
+fn get_user_config_path() -> Option<PathBuf> {
+    std::env::var_os("USERPROFILE").map(user_config_path)
+}
+
+#[cfg(any(test, target_os = "windows"))]
+fn user_config_path(user_profile: impl Into<PathBuf>) -> PathBuf {
+    user_profile.into().join(".config").join("rustic")
+}
+
+/// There is no additional user-managed config directory on non-Windows
+/// platforms: [`ProjectDirs`] already supplies the conventional location.
+#[cfg(not(target_os = "windows"))]
+fn get_user_config_path() -> Option<PathBuf> {
+    None
 }
 
 /// Get the path to the global config directory on Windows.
@@ -365,20 +452,67 @@ fn get_global_config_path() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(all(feature = "jq", feature = "webdav"))]
     use insta::{assert_debug_snapshot, assert_snapshot};
+
+    #[cfg(not(all(feature = "jq", feature = "webdav")))]
+    fn assert_feature_disabled_sections_are_omitted(serialized: &str) {
+        #[cfg(not(feature = "jq"))]
+        assert!(
+            !serialized.contains("filter-jq"),
+            "jq configuration must be absent when the jq feature is disabled"
+        );
+        #[cfg(not(feature = "webdav"))]
+        assert!(
+            !serialized.contains("[webdav]"),
+            "WebDAV configuration must be absent when the webdav feature is disabled"
+        );
+    }
+
+    #[cfg(not(all(feature = "jq", feature = "webdav")))]
+    fn assert_feature_reduced_config_roundtrips(config: &RusticConfig) {
+        let serialized = toml::to_string(config).expect("serialize default config");
+        assert_feature_disabled_sections_are_omitted(&serialized);
+
+        let deserialized: RusticConfig = toml::from_str(&serialized).expect("deserialize config");
+        assert_eq!(
+            toml::to_string(&deserialized).expect("serialize round-tripped config"),
+            serialized
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    fn absolute_test_path(name: &str) -> PathBuf {
+        PathBuf::from(r"C:\\rustic-tests").join(name)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn absolute_test_path(name: &str) -> PathBuf {
+        PathBuf::from("/rustic-tests").join(name)
+    }
 
     #[test]
     fn test_default_config_passes() {
         let config = RusticConfig::default();
 
+        #[cfg(all(feature = "jq", feature = "webdav"))]
         assert_debug_snapshot!(config);
+        #[cfg(not(all(feature = "jq", feature = "webdav")))]
+        assert_feature_reduced_config_roundtrips(&config);
     }
 
     #[test]
     fn test_default_config_display_passes() {
         let config = RusticConfig::default();
 
+        #[cfg(all(feature = "jq", feature = "webdav"))]
         assert_snapshot!(config);
+        #[cfg(not(all(feature = "jq", feature = "webdav")))]
+        {
+            let display = config.to_string();
+            assert_feature_disabled_sections_are_omitted(&display);
+            let _: RusticConfig = toml::from_str(&display).expect("deserialize displayed config");
+        }
     }
 
     #[test]
@@ -395,13 +529,89 @@ mod tests {
         let serialized = toml::to_string(&config).unwrap();
 
         // Check Serialization
+        #[cfg(all(feature = "jq", feature = "webdav"))]
         assert_snapshot!(serialized);
+        #[cfg(not(all(feature = "jq", feature = "webdav")))]
+        assert_feature_disabled_sections_are_omitted(&serialized);
 
         let deserialized: RusticConfig = toml::from_str(&serialized).unwrap();
         // Check Deserialization and Display
+        #[cfg(all(feature = "jq", feature = "webdav"))]
         assert_snapshot!(deserialized);
+        #[cfg(not(all(feature = "jq", feature = "webdav")))]
+        {
+            let display = deserialized.to_string();
+            assert_feature_disabled_sections_are_omitted(&display);
+            assert_eq!(toml::to_string(&deserialized).unwrap(), serialized);
+        }
 
         // Check Debug
+        #[cfg(all(feature = "jq", feature = "webdav"))]
         assert_debug_snapshot!(deserialized);
+    }
+
+    #[test]
+    fn windows_user_config_path_uses_dot_config_directory() {
+        assert_eq!(
+            user_config_path(r"C:\\Users\\rustic"),
+            PathBuf::from(r"C:\\Users\\rustic")
+                .join(".config")
+                .join("rustic")
+        );
+    }
+
+    #[test]
+    fn environment_config_dirs_follow_xdg_order() {
+        let config_home = absolute_test_path("home");
+        let first_config_dir = absolute_test_path("first");
+        let second_config_dir = absolute_test_path("second");
+        let config_dirs =
+            std::env::join_paths([first_config_dir.clone(), second_config_dir.clone()]).unwrap();
+
+        assert_eq!(
+            environment_config_dirs(
+                None,
+                Some(config_home.clone().into_os_string()),
+                Some(config_dirs)
+            ),
+            [config_home, first_config_dir, second_config_dir].map(|path| path.join("rustic")),
+        );
+    }
+
+    #[test]
+    fn rustic_home_precedes_xdg_config_directories() {
+        let rustic_home = absolute_test_path("rustic-home");
+        let config_home = absolute_test_path("home");
+        let shared_config_dir = absolute_test_path("shared");
+        let config_dirs = std::env::join_paths([shared_config_dir.clone()]).unwrap();
+
+        assert_eq!(
+            environment_config_dirs(
+                Some(rustic_home.clone().into_os_string()),
+                Some(config_home.clone().into_os_string()),
+                Some(config_dirs),
+            ),
+            [
+                rustic_home.join("config"),
+                config_home.join("rustic"),
+                shared_config_dir.join("rustic"),
+            ],
+        );
+    }
+
+    #[test]
+    fn environment_config_dirs_ignore_relative_entries() {
+        let absolute_config_dir = absolute_test_path("shared");
+        let config_dirs =
+            std::env::join_paths([PathBuf::from("relative"), absolute_config_dir.clone()]).unwrap();
+
+        assert_eq!(
+            environment_config_dirs(
+                Some(PathBuf::from("relative-rustic-home").into_os_string()),
+                Some(PathBuf::from("relative").into_os_string()),
+                Some(config_dirs)
+            ),
+            [absolute_config_dir.join("rustic")],
+        );
     }
 }

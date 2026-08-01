@@ -62,6 +62,14 @@ specify the profile name, e.g. `rustic -P myconfig`. env variables can be
 substituted in config files using the `profile-substitute-env` option. This
 allows extra customization possibilities.
 
+To use a portable profile location without passing a path on every invocation,
+set `XDG_CONFIG_HOME` to an absolute base directory. Rustic checks
+`$XDG_CONFIG_HOME/rustic/` first. `XDG_CONFIG_DIRS` can contain additional
+absolute base directories; its entries are checked in order after
+`XDG_CONFIG_HOME`, before the platform-specific and current-directory
+locations. Separate entries with `:` on Unix-like platforms or `;` on Windows.
+Relative values are ignored.
+
 Examples for different configuration files can be found here in the
 [/config/](/config) directory.
 
@@ -90,7 +98,7 @@ If you want to contribute your own configuration, please
 | log-level-dependencies | Logging level for dependencies. Possible values: "off", "error", "warn", "info", "debug", "trace". | "warn"             |                          | RUSTIC_LOG_LEVEL_DEPENDENCIES                    | --log-level-dependencies |
 | log-file               | Path to the log file.                                                                              | No log file        | "/log/rustic.log"        | RUSTIC_LOG_FILE                                  | --log-file               |
 | no-progress            | If true, disables progress indicators.                                                             | false              |                          | RUSTIC_NO_PROGRESS                               | --no-progress            |
-| json-progress          | If true, writes progress as newline-delimited JSON.                                                | false              |                          | RUSTIC_JSON_PROGRESS                             | --json-progress          |
+| json-progress          | If true, writes byte progress as newline-delimited JSON to stdout.                                | false              |                          | RUSTIC_JSON_PROGRESS                             | --json-progress          |
 | progress-interval      | The interval at which progress indicators are shown.                                               | "100ms"            | "1m"                     | RUSTIC_PROGRESS_INTERVAL                         | --progress-interval      |
 | group-by               | Group snapshots by any combination of host,label,paths,tags e.g. for "latest"                      | "host,label,paths" |                          | RUSTIC_GROUP_BY                                  | --group-by, -g           |
 | check-index            | If true, check the index and read pack headers if index information is missing.                    | false              |                          | RUSTIC_CHECK_INDEX                               | --check-index            |
@@ -100,12 +108,24 @@ If you want to contribute your own configuration, please
 | prometheus-pass        | Password to authenticate to the Prometheus Push Gateway                                            | Not set            | "secret"                 | RUSTIC_PROMETHEUS_PASS                           | --prometheus-pass        |
 | opentelemetry          | OpenTelemetry metrics endpoint (HTTP Protobuf)                                                     | Not set            | "http://otel/v1/metrics" | RUSTIC_OTEL, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | --opentelemetry          |
 
+With `--json-progress`, `restore` keeps stdout exclusively for those JSON
+lines. Its human-readable restore plan and completion message are written to
+the log stream instead, so a caller can parse stdout line by line.
+
 ### Global Hooks `[global.hooks]`
 
-These external commands are run before and after each commands, respectively.
+These external commands run once around the top-level `rustic` invocation,
+using the configuration assembled for that invocation. They are not mutually
+exclusive with repository hooks.
 
-**Note**: There are also repository hooks, which should be used for commands
-needed to set up the repository (like mounting the repo dir), see below.
+For `copy`, global hooks from the source (invoking) profile run once. Global
+hooks in a target profile do not run when that profile is loaded to open the
+target repository; use that target profile's repository hooks for target
+repository setup and per-target failure handling.
+
+Every hook command receives `RUSTIC_COMMAND`, the top-level subcommand being
+run (for example `backup` or `prune`), and `RUSTIC_HOOK_TYPE`, one of
+`run-before`, `run-after`, `run-failed`, or `run-finally`.
 
 | Attribute   | Description                                       | Default Value | Example Value | Environment Variable |
 | ----------- | ------------------------------------------------- | ------------- | ------------- | -------------------- |
@@ -127,6 +147,23 @@ could possibly shadow other values that you have already set.
 ### Global Metrics labels `[global.metrics-labels]`
 
 All given labels are included with the metrics, if it is configured.
+
+### Forget metrics
+
+With a global metrics exporter configured, a successful non-dry-run `forget`
+publishes command and forget-phase timings, total/removed/remaining snapshot
+counts, and one retained-snapshot gauge per retention reason. `forget --prune`
+also publishes prune timing, selected pack counts, removed data/tree blob counts,
+and the packed-byte gauges.
+
+The packed-byte gauges describe compressed and encrypted blob bytes removed from
+the active index by the completed prune plan. They exclude pack headers and do
+not claim physical backend space has been freed: normal prune marks packs for
+later deletion. Rustic currently does not emit the raw
+`rustic_forget_data_removed`, `rustic_forget_data_removed_files`, or
+`rustic_forget_data_removed_trees` gauges because the core prune API does not
+expose exact uncompressed lengths for the selected blobs. JSON and dry-run
+forget operations do not publish removal metrics.
 
 ### Repository Options `[repository]`
 
@@ -166,6 +203,13 @@ Note that all values under this table must be strings, regardless of their
 logical type. For example `use-password = true` needs to be
 `use-password = "true"`.
 
+For a `rest:` repository, rustic also recognizes restic-compatible
+`RESTIC_REST_USERNAME` and `RESTIC_REST_PASSWORD` environment variables. If
+either variable is set, rustic uses them for REST Basic Authentication unless
+the repository URL already contains a username or password; explicit URL
+credentials take precedence. These environment values are applied only while
+opening the backend, so they are not written into `show-config` output.
+
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
 | post-create-command | Command to execute after creating a snapshot in the local backend. | Not set       | "par2create -qq -n1 -r5 %file" |
@@ -193,8 +237,10 @@ see [Repository Options](#repository-options-repository)
 
 ### Repository Hooks `[repository.hooks]`
 
-These external commands are run before and after each repository-accessing
-commands, respectively.
+These external commands run around each repository access. They are additional
+to the global hooks of the invoking profile. For `copy`, the source profile's
+repository hooks run for the source repository, and each target profile's
+repository hooks run for its target repository.
 
 See [Global Hooks](#global-hooks-globalhooks).
 
@@ -218,14 +264,25 @@ See [Global Hooks](#global-hooks-globalhooks).
 | filter-jq          | Custom filter jq function for snapshots. Should return bool                    | Not set       | ".summary.files_added > 1" | --filter-jq          |
 | filter-last        | Only use the last N snapshots. When using groups, this applies for each group. | Not set       | "15"                       | --filter-last        |
 
+When `backup` has no explicit source, `filter-paths`, `filter-paths-exact`,
+`filter-tags`, and `filter-tags-exact` also select entries from
+`[[backup.snapshots]]`. Tags inherited from `[backup]` take part in that
+selection; the other snapshot filters continue to apply only to snapshots that
+already exist in the repository.
+
 ### Backup Options `[backup]`
 
 **Note**: If set here, the backup options apply for all sources, although they
-can be overwritten in the source-specific configuration, see below.
+can be overwritten in the source-specific configuration, see below. A
+snapshot-specific value replaces the corresponding `[backup]` value, except
+that `tags` are combined across profiles, snapshots and `--tag` options. Other
+list options such as `globs` are not combined. To use shared and
+snapshot-specific glob rules together, put the shared rules in a distinct
+option such as `glob-files` and use `globs` in the snapshot.
 
 | Attribute          | Description                                                                                                    | Default Value            | Example Value | CLI Option              |
 | ------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- | ----------------------- |
-| as-path            | Specifies the path for the backup when the source contains a single path.                                      | Not set                  |               | --as-path               |
+| as-path            | Specifies the path for the backup when the source contains a single path. Include/exclude globs are matched against the original source path before this remapping. | Not set | | --as-path |
 | command            | Set the command saved in the snapshot.                                                                         | The full command used    |               | --command               |
 | custom-ignorefiles | Array of names of custom ignorefiles which will be used to exclude files.                                      | []                       |               | --custom-ignorefile     |
 | description        | Description for the snapshot.                                                                                  | Not set                  |               | --description           |
@@ -233,6 +290,7 @@ can be overwritten in the source-specific configuration, see below.
 | delete-never       | If true, never delete the snapshot.                                                                            | false                    |               | --delete-never          |
 | delete-after       | Time duration after which the snapshot be deleted.                                                             | Not set                  |               | --delete-after          |
 | exclude-if-present | Array of filenames which will exclude its parent directory from the backup if they are present.                | []                       |               | --exclude-if-present    |
+| include-if-present | Only include directory trees containing this filename. Each matching directory becomes a source; marker names may not contain a path and this cannot be used with `as-path`. | Not set | ".bckinclude" | --include-if-present |
 | exclude-if-xattr   | Array of xattr names. Files/directories having any of these extended attributes set will be excluded.          | []                       |               | --exclude-if-xattr      |
 | force              | If true, forces the backup even if no changes are detected.                                                    | false                    |               | --force                 |
 | git-ignore         | If true, use .gitignore rules to exclude files from the backup in the source directory.                        | false                    |               | --git-ignore            |
@@ -247,11 +305,13 @@ can be overwritten in the source-specific configuration, see below.
 | init               | If true, initialize repository if it doesn't exist, yet.                                                       | false                    |               | --init                  |
 | json               | If true, returns output of the command as json.                                                                | false                    |               | --json                  |
 | label              | Set label for the snapshot.                                                                                    | Not set                  |               | --label                 |
+| log-file           | Write logs for this backup to a file. A snapshot value selects a file only while that source is backed up.    | Global log-file           | "/log/home.log" |                         |
 | no-require-git     | (with git-ignore:) Apply .git-ignore files even if they are not in a git repository.                           | false                    |               | --no-require-git        |
 | no-scan            | Don't scan the backup source for its size (disables ETA).                                                      | false                    |               | --no-scan               |
 | one-file-system    | If true, only backs up files from the same filesystem as the source.                                           | false                    |               | --one-file-system       |
 | parents            | Parent snapshot(s) for the backup.                                                                             | Not set                  |               | --parent                |
 | skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                                  | false                    |               | --skip-identical-parent |
+| skip-if-command    | Run a condition before each resolved source. Exact stdout `skip` omits that source; empty stdout continues. Any other output or failure aborts the backup. | Not set | "sh -c 'test -f /tmp/no-backup &amp;&amp; printf skip'" | |
 | stdin-command      | Call this command and use it's stdout as stdin to backup.                                                      | Not set                  |               | --stdin-command         |
 | stdin-filename     | File name to be used when reading from stdin.                                                                  | Not set                  |               | --stdin-filename        |
 | tags               | Array of tags for the backup.                                                                                  | []                       |               | --tag                   |
@@ -259,6 +319,38 @@ can be overwritten in the source-specific configuration, see below.
 | with-atime         | If true, includes file access time (atime) in the backup.                                                      | false                    |               | --with-atime            |
 | with-devid         | Determines whether to include the device ID in the backup. Allowed values are `always`, `never` or `hardlink`. | "hardlink"               | "always"      | --with-devid            |
 | metrics-job        | jobname used when pushing metrics (if global prometheus or opentelemetry option is set)                        | "rustic-backup"          | "myjob"       | --metrics-job           |
+
+#### Windows glob patterns
+
+When a glob contains a Windows path, prefer forward slashes. They work with
+Windows paths and avoid both TOML and glob escaping:
+
+```toml
+iglobs = ['!C:/Users/limet/AppData']
+```
+
+If a path must use backslashes, escape each one for the glob syntax. With a
+TOML basic string, escape them once more for TOML:
+
+```toml
+iglobs = ['!C:\\Users\\limet\\AppData']
+# or
+iglobs = ["!C:\\\\Users\\\\limet\\\\AppData"]
+```
+
+#### Conditionally skipping a backup source
+
+`skip-if-command` is evaluated after profile and source-specific backup options
+have been resolved, before rustic starts that source's backup. A successful
+command must write exactly `skip` (optionally followed by one line ending) to
+stdout to omit the source without creating a snapshot. Empty stdout continues
+with the backup. A non-zero exit status, unreadable command, or any other
+stdout is an error: rustic never mistakes a failed condition for a skip.
+
+The command receives `RUSTIC_COMMAND=backup`,
+`RUSTIC_ACTION=source-specific-backup`, `RUSTIC_BACKUP_SOURCES`, and, when
+configured, `RUSTIC_BACKUP_LABEL` and `RUSTIC_BACKUP_TAGS`. The setting is
+profile-only, so it does not add an implicit command-line exit-code convention.
 
 ### Backup Hooks `[backup.hooks]`
 
@@ -275,13 +367,17 @@ See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 ### Backup Snapshots `[[backup.snapshots]]`
 
 **Note**: All of the backup options mentioned before can also be used as
-snapshot-specific option and then only apply to this snapshot.
+snapshot-specific option and then only apply to this snapshot. When a
+snapshot-specific option is set, it replaces the same `[backup]` option rather
+than merging it, except for `tags`, which are added to the shared and CLI tags.
+For example, a snapshot `globs` list replaces `[backup].globs`.
 
 | Attribute | Description                                                                                                              | Default Value | Example Value                                                          |
 | --------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------- |
 | name      | Name to identify this snapshot (to be used with the --name CLI option)                                                   | ""            | "myid"                                                                 |
 | sources   | Array of source directories or file(s) to back up. Allows "opendal:" for a remote source if only a single source is used | []            | ["/dir1", "/dir2"], ["opendal:s3"]                                     |
 | hooks     | Hooks to run before and after backing up the defined sources.                                                            | Not set       | { run-before = [], run-after = [], run-failed = [], run-finally = [] } |
+| log-file  | Log file used while backing up these sources. Falls back to `[backup].log-file`, then `[global].log-file`.              | No log file   | "/log/home.log"                                                        |
 
 Source-specific hooks are called additionally to global, repository and backup
 hooks when backing up the defined sources into a snapshot.
@@ -329,7 +425,31 @@ here, see Snapshot-Filter options.
 
 ### Copy Targets `[copy]`
 
-**Note**: Copy-targets must be defined in their own config profile files.
+**Note**: Copy-targets must be defined in their own config profile files. To
+keep per-target backend credentials out of those files, set
+`profile-substitute-env = true` in the invoking profile and use environment
+placeholders in each target profile's repository options. The setting applies
+while rustic loads target profiles, so different targets can use different
+environment variable names.
+
+```toml
+# invoking profile
+[global]
+profile-substitute-env = true
+
+[copy]
+targets = ["archive"]
+```
+
+```toml
+# archive.toml
+[repository]
+repository = "opendal:s3"
+
+[repository.options]
+access_key_id = "${ARCHIVE_ACCESS_KEY_ID}"
+secret_access_key = "${ARCHIVE_SECRET_ACCESS_KEY}"
+```
 
 | Attribute | Description        | Default Value | Example Value            | CLI Option |
 | --------- | ------------------ | ------------- | ------------------------ | ---------- |
@@ -340,7 +460,9 @@ here, see Snapshot-Filter options.
 `rustic` supports mounting snapshots via WebDAV. This is useful if you want to
 access your snapshots via a file manager.
 
-**Note**: `https://` and Authentication are not supported yet.
+**Note**: `https://` is not supported directly. For authentication, rustic
+supports opt-in HTTP Basic Authentication; terminate TLS in a reverse proxy
+when clients connect outside a trusted network.
 
 The following options are available to be used in your configuration file:
 
@@ -351,4 +473,11 @@ The following options are available to be used in your configuration file:
 | time-template | The time template to use to display times in the path template. See <https://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.htmll> for format options. | `%Y-%m-%d_%H-%M-%S`                                                               |               | --time-template |
 | symlinks      | If true, follows symlinks.                                                                                                                                         | false                                                                             |               | --symlinks      |
 | file-access   | How to handle access to files.                                                                                                                                     | "forbidden" for hot/cold repositories, else "read"                                |               | --file-access   |
+| auth-user     | User name required for HTTP Basic Authentication. Must be set together with `auth-password`.                                                                      | Not set                                                                           | "rustic"     | --auth-user     |
+| auth-password | Password required for HTTP Basic Authentication. Must be set together with `auth-user`. Prefer `RUSTIC_WEBDAV_PASSWORD` over the command line.                    | Not set                                                                           | "secret"     | --auth-password |
 | snapshot-path | Specify directly which snapshot/path to serve                                                                                                                      | Not set, this will generate a virtual tree with all snapshots using path-template |               | --snapshot-path |
+
+`auth-user` can also be supplied through `RUSTIC_WEBDAV_USER`, and
+`auth-password` through `RUSTIC_WEBDAV_PASSWORD`. HTTP Basic Authentication
+does not encrypt credentials, so use a TLS-terminating reverse proxy for any
+network you do not fully trust.

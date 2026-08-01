@@ -533,6 +533,9 @@ fn diff(
             Ok(match n1.node_type {
                 NodeType::File => no_content || file_identical(&path, n1, n2)?,
                 NodeType::Dir => true,
+                // The target of symlinks is compared by `NodeDiff::try_from` before this
+                // closure is called.
+                NodeType::Symlink { .. } => true,
                 _ => false,
             })
         })?;

@@ -1,41 +1,31 @@
 //! Config profile test: runs the application as a subprocess and asserts its
 //! output for the `show-config` command
 
-use std::{io::Read, sync::LazyLock};
-
-use abscissa_core::testing::prelude::*;
+use assert_cmd::Command;
 use insta::assert_snapshot;
 use rustic_testing::TestResult;
-
-// Storing this value as a [`Lazy`] static ensures that all instances of
-// the runner acquire a mutex when executing commands and inspecting
-// exit statuses, serializing what would otherwise be multithreaded
-// invocations as `cargo test` executes tests in parallel by default.
-pub static LAZY_RUNNER: LazyLock<CmdRunner> = LazyLock::new(|| {
-    let mut runner = CmdRunner::new(env!("CARGO_BIN_EXE_rustic"));
-    runner.exclusive().capture_stdout();
-    runner
-});
-
-fn cmd_runner() -> CmdRunner {
-    LAZY_RUNNER.clone()
-}
+use tempfile::tempdir;
 
 #[test]
 fn test_show_config_passes() -> TestResult<()> {
-    {
-        let mut runner = cmd_runner();
+    let config_root = tempdir()?;
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rustic"));
+    let output = command
+        .arg("show-config")
+        .env("HOME", config_root.path())
+        .env("RUSTIC_HOME", config_root.path().join("rustic-home"))
+        .env("XDG_CONFIG_HOME", config_root.path().join("xdg-home"))
+        .env("XDG_CONFIG_DIRS", config_root.path().join("xdg-dirs"))
+        .env_remove("RUSTIC_USE_PROFILE")
+        .output()?;
 
-        let mut cmd = runner.args(["show-config"]).run();
+    assert!(
+        output.status.success(),
+        "show-config failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
-        let mut output = String::new();
-
-        cmd.stdout().read_to_string(&mut output)?;
-
-        assert_snapshot!(output);
-
-        cmd.wait()?.expect_success();
-    }
+    assert_snapshot!(String::from_utf8(output.stdout)?);
 
     Ok(())
 }

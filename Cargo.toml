@@ -38,6 +38,7 @@ tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
 webdav = [
   "dep:dav-server",
   "dep:axum",
+  "dep:base64",
   "dep:tokio",
   "dep:bytes",
   "dep:futures",
@@ -76,8 +77,8 @@ tokio = { version = "1", optional = true }
 
 # tui
 crossterm = { version = "0.28", optional = true }
-ratatui = { version = "0.29.0", optional = true }
-tui-textarea = { version = "0.7.0", optional = true }
+ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_28"], optional = true }
+tui-textarea = { package = "tui-textarea-2", version = "0.12.1", default-features = false, features = ["crossterm_0_28"], optional = true }
 
 # logging
 log = "0.4"

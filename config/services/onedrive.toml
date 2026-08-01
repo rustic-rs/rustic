@@ -1,0 +1,33 @@
+# rustic config file to use Microsoft OneDrive storage via Apache OpenDAL
+#
+# The authoritative OpenDAL setup guide is at:
+# https://opendal.apache.org/docs/rust/opendal/services/struct.Onedrive.html
+#
+# For long-lived access (recommended):
+#
+# 1. Register a Microsoft Entra application for both organizational and
+#    personal Microsoft accounts. Follow a delegated OAuth 2.0
+#    authorization-code flow with the `Files.ReadWrite` and `offline_access`
+#    scopes; client-credentials authentication cannot access `/me/drive`.
+# 2. Supply the resulting refresh token and the application's client ID via
+#    environment variables. For a confidential Web application, also supply
+#    its client secret. Public/native applications must not use a client secret.
+#
+# Rustic maps the `OPENDAL_` variables below to the corresponding
+# `[repository.options]` names:
+# export OPENDAL_REFRESH_TOKEN="your-refresh-token"
+# export OPENDAL_CLIENT_ID="your-application-client-id"
+# export OPENDAL_CLIENT_SECRET="your-client-secret" # Web/confidential apps only
+# export RUSTIC_PASSWORD="your-repository-password"
+#
+# An `access_token` alone is short-lived. With `refresh_token` and `client_id`,
+# OpenDAL obtains and refreshes access tokens automatically. This example does
+# not acquire OAuth credentials; create them through the linked Microsoft/OpenDAL
+# flow before using it.
+
+[repository]
+repository = "opendal:onedrive"
+
+[repository.options]
+# Folder within OneDrive that contains the rustic repository.
+root = "/rustic-backups"

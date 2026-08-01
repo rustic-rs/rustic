@@ -1,0 +1,21 @@
+[global.env]
+RUSTIC_COMMAND = "configured-value"
+
+[global.hooks]
+run-before = [
+  "sh -c 'printf \"global:%s\\n\" \"$RUSTIC_COMMAND\" > tests/generated/command_env.log'",
+]
+
+[repository.hooks]
+run-before = [
+  "sh -c 'printf \"repository:%s\\n\" \"$RUSTIC_COMMAND\" >> tests/generated/command_env.log'",
+]
+
+[backup.hooks]
+run-before = [
+  "sh -c 'printf \"backup:%s\\n\" \"$RUSTIC_COMMAND\" >> tests/generated/command_env.log'",
+]
+
+[[backup.snapshots]]
+sources = ["src/"]
+hooks = { run-before = ["sh -c 'printf \"source:%s\\n\" \"$RUSTIC_COMMAND\" >> tests/generated/command_env.log'"] }

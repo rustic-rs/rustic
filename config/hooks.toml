@@ -5,6 +5,9 @@
 # The hooks are run in the order they are defined in the configuration file.
 # The hooks are divided into 4 categories: global, repository, backup,
 # and specific backup sources.
+# Global hooks run once for the invoking profile. When using `copy`, hooks in a
+# target profile's [global.hooks] section do not run; use that profile's
+# [repository.hooks] section for setup and per-target failure handling.
 #
 # You can also read a more detailed explanation of the hooks in the documentation:
 # https://rustic.cli.rs/docs/commands/misc/hooks.html

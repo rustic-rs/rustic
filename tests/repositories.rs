@@ -149,6 +149,66 @@ fn test_restic_repo_with_rustic_passes(restic_repo: Result<TestSource>) -> TestR
 }
 
 #[rstest]
+fn cat_config_shows_effective_defaults(rustic_repo: Result<TestSource>) -> TestResult<()> {
+    let rustic_repo = rustic_repo?;
+    let repo_path = rustic_repo.into_path();
+
+    let output = rustic_runner(repo_path.path(), "rustic")?
+        .args(["cat", "config"])
+        .output()?;
+
+    assert!(
+        output.status.success(),
+        "cat config failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let config: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    let defaults = &config["_effective_defaults"];
+
+    assert_eq!(config["version"], 2);
+    assert!(config.get("chunk_size").is_none());
+    assert_eq!(defaults["chunk_size"], 1024 * 1024);
+    assert_eq!(defaults["chunk_min_size"], 512 * 1024);
+    assert_eq!(defaults["chunk_max_size"], 8 * 1024 * 1024);
+    assert_eq!(defaults["treepack_size"], 4 * 1024 * 1024);
+    assert_eq!(defaults["datapack_size"], 32 * 1024 * 1024);
+    assert_eq!(defaults["compression"], "zstd-default");
+    assert_eq!(defaults["extra_verify"], true);
+
+    Ok(())
+}
+
+#[rstest]
+fn cat_config_keeps_explicit_values_out_of_effective_defaults(
+    rustic_repo: Result<TestSource>,
+) -> TestResult<()> {
+    let rustic_repo = rustic_repo?;
+    let repo_path = rustic_repo.into_path();
+
+    rustic_runner(repo_path.path(), "rustic")?
+        .args(["config", "--set-chunk-size", "2MiB"])
+        .assert()
+        .success();
+
+    let output = rustic_runner(repo_path.path(), "rustic")?
+        .args(["cat", "config"])
+        .output()?;
+
+    assert!(
+        output.status.success(),
+        "cat config failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let config: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(config["chunk_size"], 2 * 1024 * 1024);
+    assert!(config["_effective_defaults"].get("chunk_size").is_none());
+
+    Ok(())
+}
+
+#[rstest]
 #[ignore = "requires live fixture, run manually in CI"]
 fn test_restic_latest_repo_with_rustic_passes() -> TestResult<()> {
     let path = "tests/repository-fixtures/";

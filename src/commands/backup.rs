@@ -19,7 +19,10 @@ use crate::{
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Context, Result, anyhow, bail};
-use clap::ValueHint;
+use clap::{
+    ValueHint,
+    builder::{OsStringValueParser, TypedValueParser},
+};
 use comfy_table::Cell;
 use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
@@ -79,7 +82,12 @@ pub struct BackupCmd {
     stdin_command: Option<CommandInput>,
 
     /// Manually set backup path in snapshot
-    #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
+    #[clap(
+        long,
+        value_name = "PATH",
+        value_hint = ValueHint::DirPath,
+        value_parser = OsStringValueParser::new().map(PathBuf::from)
+    )]
     #[merge(strategy=conflate::option::overwrite_none)]
     as_path: Option<PathBuf>,
 
@@ -573,6 +581,21 @@ fn publish_metrics(
     mut labels: BTreeMap<String, String>,
 ) -> Result<()> {
     Err(anyhow!("metrics support is not compiled-in!"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn as_path_accepts_an_empty_cli_value() {
+        use clap::Parser;
+
+        let backup = BackupCmd::try_parse_from(["backup", "--as-path", ""])
+            .expect("an empty as-path should be accepted");
+
+        assert_eq!(backup.as_path, Some(PathBuf::new()));
+    }
 }
 
 #[cfg(any(feature = "prometheus", feature = "opentelemetry"))]

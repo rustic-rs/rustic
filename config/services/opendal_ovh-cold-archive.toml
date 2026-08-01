@@ -1,0 +1,41 @@
+# Template for an OVH Object Storage repository with a hot and Deep Archive
+# cold copy. Copy this file to your rustic configuration directory, replace all
+# placeholder values, and ensure that s3cmd is configured with credentials that
+# can restore objects from the cold bucket.
+#
+# Backup:  rustic -P /path/to/ovh-cold-archive.toml backup /path/to/data
+# Restore: rustic -P /path/to/ovh-cold-archive.toml restore latest /restore/to
+
+[repository]
+# `repository` is the cold copy; `repo-hot` is used for normal reads.
+repository = "opendal:s3"
+repo-hot = "opendal:s3"
+password-file = "/path/to/rustic-password"
+
+# Ask OVH to restore each cold pack before it is needed. `%path` expands to
+# the pack path relative to the cold repository root.
+warm-up-command = "s3cmd restore --restore-days=3 -dv s3://YOUR-COLD-BUCKET/YOUR-COLD-ROOT/%path"
+
+# OVH Deep Archive retrieval can take more than 48 hours. Uncomment and tune
+# one of these settings for the archive tier and restore workflow in use.
+# warm-up-wait = "72h"
+# warm-up-wait-command = "/path/to/wait-until-ovh-objects-are-restored"
+
+# Options shared by both S3 backends.
+[repository.options]
+endpoint = "https://s3.YOUR-REGION.io.cloud.ovh.net"
+region = "YOUR-REGION"
+access_key_id = "YOUR-ACCESS-KEY"
+secret_access_key = "YOUR-SECRET-KEY"
+
+[repository.options-hot]
+bucket = "YOUR-HOT-BUCKET"
+root = "/YOUR-HOT-ROOT"
+
+[repository.options-cold]
+bucket = "YOUR-COLD-BUCKET"
+root = "/YOUR-COLD-ROOT"
+default_storage_class = "DEEP_ARCHIVE"
+
+[[backup.snapshots]]
+sources = ["/path/to/backup"]

@@ -166,6 +166,13 @@ Note that all values under this table must be strings, regardless of their
 logical type. For example `use-password = true` needs to be
 `use-password = "true"`.
 
+For a `rest:` repository, rustic also recognizes restic-compatible
+`RESTIC_REST_USERNAME` and `RESTIC_REST_PASSWORD` environment variables. If
+either variable is set, rustic uses them for REST Basic Authentication unless
+the repository URL already contains a username or password; explicit URL
+credentials take precedence. These environment values are applied only while
+opening the backend, so they are not written into `show-config` output.
+
 | Attribute           | Description                                                        | Default Value | Example Value                  |
 | ------------------- | ------------------------------------------------------------------ | ------------- | ------------------------------ |
 | post-create-command | Command to execute after creating a snapshot in the local backend. | Not set       | "par2create -qq -n1 -r5 %file" |

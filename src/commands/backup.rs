@@ -189,6 +189,28 @@ impl BackupCmd {
         }
         Ok(())
     }
+
+    fn load_glob_files(mut excludes: Excludes) -> Result<Excludes> {
+        for file in std::mem::take(&mut excludes.glob_files) {
+            let patterns = std::fs::read_to_string(&file).with_context(|| {
+                format!(
+                    "failed to read glob file `{file}`; expected a file containing glob patterns"
+                )
+            })?;
+            excludes.globs.extend(patterns.lines().map(str::to_owned));
+        }
+
+        for file in std::mem::take(&mut excludes.iglob_files) {
+            let patterns = std::fs::read_to_string(&file).with_context(|| {
+                format!(
+                    "failed to read case-insensitive glob file `{file}`; expected a file containing glob patterns"
+                )
+            })?;
+            excludes.iglobs.extend(patterns.lines().map(str::to_owned));
+        }
+
+        Ok(excludes)
+    }
 }
 
 /// Merge backup snapshots to generate
@@ -444,13 +466,14 @@ impl BackupCmd {
         let mut parent_opts = self.parent_opts;
         parent_opts.group_by = parent_opts.group_by.or(config.global.group_by);
 
+        let excludes = Self::load_glob_files(self.excludes)?;
         let backup_opts = BackupOptions::default()
             .stdin_filename(self.stdin_filename.unwrap_or_else(|| "stdin".to_string()))
             .stdin_command(self.stdin_command)
             .as_path(self.as_path)
             .parent_opts(parent_opts)
             .ignore_save_opts(self.ignore_save_opts)
-            .excludes(self.excludes)
+            .excludes(excludes)
             .ignore_filter_opts(self.ignore_filter_opts)
             .no_scan(self.no_scan)
             .dry_run(config.global.dry_run);

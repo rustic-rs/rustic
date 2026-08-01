@@ -15,6 +15,12 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
+// jemallocator-global registers the #[global_allocator] from within the crate, so it has
+// to be referenced here: an unused dependency is not linked into the binary and the
+// allocator would silently stay the default one.
+#[cfg(feature = "jemallocator")]
+use jemallocator_global as _;
+
 use rustic_rs::application::RUSTIC_APP;
 
 /// Boot Rustic

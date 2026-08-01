@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Copy this file to ~/Library/LaunchAgents/ and replace every
+    REPLACE_WITH_* value. See README.md in this directory for installation
+    and testing instructions.
+  -->
+  <key>Label</key>
+  <string>org.rustic.backup.example</string>
+
+  <!-- Use an absolute path: launchd does not inherit your shell PATH. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>REPLACE_WITH_ABSOLUTE_PATH_TO_RUSTIC</string>
+    <string>--use-profile</string>
+    <string>REPLACE_WITH_PROFILE_NAME</string>
+    <string>backup</string>
+  </array>
+
+  <!-- Run every day at 03:00 local time. Adjust as needed. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- Use absolute paths; create the parent directory before loading. -->
+  <key>StandardOutPath</key>
+  <string>REPLACE_WITH_ABSOLUTE_PATH_TO_LOG_DIRECTORY/rustic-backup.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>REPLACE_WITH_ABSOLUTE_PATH_TO_LOG_DIRECTORY/rustic-backup.err.log</string>
+</dict>
+</plist>

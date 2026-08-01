@@ -161,6 +161,43 @@ enum RusticCmd {
     Version(Box<version::VersionCmd>),
 }
 
+impl RusticCmd {
+    fn hook_command(&self) -> &'static str {
+        match self {
+            Self::Backup(_) => "backup",
+            Self::Cat(_) => "cat",
+            Self::Config(_) => "config",
+            Self::Completions(_) => "completions",
+            Self::Check(_) => "check",
+            Self::Copy(_) => "copy",
+            Self::Diff(_) => "diff",
+            Self::Docs(_) => "docs",
+            Self::Dump(_) => "dump",
+            Self::Find(_) => "find",
+            Self::Forget(_) => "forget",
+            Self::Init(_) => "init",
+            Self::Key(_) => "key",
+            Self::List(_) => "list",
+            #[cfg(feature = "mount")]
+            Self::Mount(_) => "mount",
+            Self::Ls(_) => "ls",
+            Self::Merge(_) => "merge",
+            Self::Snapshots(_) => "snapshots",
+            Self::ShowConfig(_) => "show-config",
+            Self::SelfUpdate(_) => "self-update",
+            Self::Prune(_) => "prune",
+            Self::Restore(_) => "restore",
+            Self::Rewrite(_) => "rewrite",
+            Self::Repair(_) => "repair",
+            Self::Repoinfo(_) => "repoinfo",
+            Self::Tag(_) => "tag",
+            #[cfg(feature = "webdav")]
+            Self::Webdav(_) => "webdav",
+            Self::Version(_) => "version",
+        }
+    }
+}
+
 fn styles() -> Styles {
     Styles::styled()
         .header(AnsiColor::Red.on_default() | Effects::BOLD)
@@ -293,17 +330,19 @@ impl Configurable<RusticConfig> for EntryPoint {
             }
         }
 
-        match &self.commands {
-            RusticCmd::Forget(cmd) => cmd.override_config(config),
-            RusticCmd::Copy(cmd) => cmd.override_config(config),
+        let mut config = match &self.commands {
+            RusticCmd::Forget(cmd) => cmd.override_config(config)?,
+            RusticCmd::Copy(cmd) => cmd.override_config(config)?,
             #[cfg(feature = "webdav")]
-            RusticCmd::Webdav(cmd) => cmd.override_config(config),
+            RusticCmd::Webdav(cmd) => cmd.override_config(config)?,
             #[cfg(feature = "mount")]
-            RusticCmd::Mount(cmd) => cmd.override_config(config),
+            RusticCmd::Mount(cmd) => cmd.override_config(config)?,
 
             // subcommands that don't need special overrides use a catch all
-            _ => Ok(config),
-        }
+            _ => config,
+        };
+        config.set_hook_command(self.commands.hook_command());
+        Ok(config)
     }
 }
 

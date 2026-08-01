@@ -28,7 +28,7 @@ pub(super) mod constants {
 }
 
 #[derive(Clone, Default, Debug, Parser, Serialize, Deserialize, Merge)]
-#[serde(default, rename_all = "kebab-case")]
+#[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct AllRepositoryOptions {
     /// Backend options
     #[clap(flatten)]
@@ -102,6 +102,44 @@ impl AllRepositoryOptions {
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(IndexedRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.indexed(&self.credential_opts)?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::RusticConfig;
+
+    #[test]
+    fn rejects_unknown_repository_config_keys() {
+        let error = toml::from_str::<RusticConfig>(
+            r#"
+[repository]
+repository = "/tmp/repo"
+skip-identical-parent = true
+"#,
+        )
+        .unwrap_err();
+
+        assert!(
+            error.to_string().contains("skip-identical-parent"),
+            "unexpected config error: {error}"
+        );
+    }
+
+    #[test]
+    fn parses_known_repository_config_keys() {
+        let config: RusticConfig = toml::from_str(
+            r#"
+[repository]
+repository = "/tmp/repo"
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            config.repository.be.repository.as_deref(),
+            Some("/tmp/repo")
+        );
     }
 }
 

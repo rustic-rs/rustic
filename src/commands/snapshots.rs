@@ -2,14 +2,14 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
+    helpers::{bold_cell, bytes_size_to_string, table, table_with_titles},
     repository::{OpenRepo, get_global_grouped_snapshots},
     status_err,
 };
 
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
-use comfy_table::Cell;
+use comfy_table::{Cell, CellAlignment};
 use derive_more::From;
 use itertools::Itertools;
 use jiff::SignedDuration;
@@ -19,6 +19,65 @@ use rustic_core::{
     repofile::{DeleteOption, SnapshotFile},
 };
 use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+enum SnapshotColumn {
+    Id,
+    Time,
+    Host,
+    Label,
+    Tags,
+    Paths,
+    Files,
+    Dirs,
+    Size,
+}
+
+const DEFAULT_SNAPSHOT_COLUMNS: [SnapshotColumn; 9] = [
+    SnapshotColumn::Id,
+    SnapshotColumn::Time,
+    SnapshotColumn::Host,
+    SnapshotColumn::Label,
+    SnapshotColumn::Tags,
+    SnapshotColumn::Paths,
+    SnapshotColumn::Files,
+    SnapshotColumn::Dirs,
+    SnapshotColumn::Size,
+];
+
+impl SnapshotColumn {
+    const fn index(self) -> usize {
+        match self {
+            Self::Id => 0,
+            Self::Time => 1,
+            Self::Host => 2,
+            Self::Label => 3,
+            Self::Tags => 4,
+            Self::Paths => 5,
+            Self::Files => 6,
+            Self::Dirs => 7,
+            Self::Size => 8,
+        }
+    }
+
+    const fn title(self) -> &'static str {
+        match self {
+            Self::Id => "ID",
+            Self::Time => "Time",
+            Self::Host => "Host",
+            Self::Label => "Label",
+            Self::Tags => "Tags",
+            Self::Paths => "Paths",
+            Self::Files => "Files",
+            Self::Dirs => "Dirs",
+            Self::Size => "Size",
+        }
+    }
+
+    const fn is_numeric(self) -> bool {
+        matches!(self, Self::Files | Self::Dirs | Self::Size)
+    }
+}
 
 #[cfg(feature = "tui")]
 use crate::commands::tui;
@@ -43,6 +102,16 @@ pub(crate) struct SnapshotCmd {
     /// Show all snapshots instead of summarizing identical follow-up snapshots
     #[clap(long, conflicts_with_all = &["long", "json"])]
     all: bool,
+
+    /// Comma-separated columns to show in tabular output.
+    #[clap(
+        long,
+        value_enum,
+        value_delimiter = ',',
+        value_name = "COLUMN",
+        conflicts_with_all = &["long", "json"]
+    )]
+    columns: Vec<SnapshotColumn>,
 
     #[cfg(feature = "tui")]
     /// Run in interactive UI mode
@@ -116,7 +185,7 @@ impl SnapshotCmd {
                 println!("\nsnapshots for {group_key}");
             }
             total_count += items.len();
-            print_snapshots(items, self.long, self.all);
+            print_snapshots_with_columns(items, self.long, self.all, &self.columns);
         }
         println!();
         println!("total: {total_count} snapshot(s)");
@@ -126,6 +195,15 @@ impl SnapshotCmd {
 }
 
 pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
+    print_snapshots_with_columns(snapshots, long, all, &[]);
+}
+
+fn print_snapshots_with_columns(
+    snapshots: Vec<SnapshotFile>,
+    long: bool,
+    all: bool,
+    columns: &[SnapshotColumn],
+) {
     let count = snapshots.len();
     if long {
         for snap in snapshots {
@@ -140,16 +218,27 @@ pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
             println!();
         }
     } else {
-        let mut table = table_right_from(
-            6,
-            [
-                "ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
-            ],
-        );
+        let columns = if columns.is_empty() {
+            &DEFAULT_SNAPSHOT_COLUMNS
+        } else {
+            columns
+        };
+        let mut table = table_with_titles(columns.iter().map(|column| column.title()));
+        for (index, column) in columns.iter().enumerate() {
+            if column.is_numeric()
+                && let Some(table_column) = table.column_iter_mut().nth(index)
+            {
+                table_column.set_cell_alignment(CellAlignment::Right);
+            }
+        }
 
         if all {
             // Add all snapshots to output table
-            _ = table.add_rows(snapshots.into_iter().map(|sn| snap_to_table(&sn, 0)));
+            _ = table.add_rows(
+                snapshots
+                    .into_iter()
+                    .map(|sn| snap_to_table_columns(&sn, 0, columns)),
+            );
         } else {
             // Group snapshts by treeid and output into table
             _ = table.add_rows(
@@ -157,12 +246,26 @@ pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
                     .into_iter()
                     .chunk_by(|sn| sn.tree)
                     .into_iter()
-                    .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count())),
+                    .map(|(_, mut g)| {
+                        snap_to_table_columns(&g.next().unwrap(), g.count(), columns)
+                    }),
             );
         }
         println!("{table}");
     }
     println!("{count} snapshot(s)");
+}
+
+fn snap_to_table_columns(
+    sn: &SnapshotFile,
+    count: usize,
+    columns: &[SnapshotColumn],
+) -> Vec<String> {
+    let values = snap_to_table(sn, count);
+    columns
+        .iter()
+        .map(|column| values[column.index()].clone())
+        .collect()
 }
 
 pub fn snap_to_table(sn: &SnapshotFile, count: usize) -> [String; 9] {

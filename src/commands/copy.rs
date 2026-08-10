@@ -96,7 +96,6 @@ impl CopyCmd {
             // environment variables without putting credentials in a profile.
             target_config.global.profile_substitute_env = config.global.profile_substitute_env;
             target_config.merge_profile(target, &mut merge_logs, Level::Error)?;
-            target_config.set_hook_command("copy");
             // display logs from merging
             for (level, merge_log) in merge_logs {
                 log!(level, "{merge_log}");

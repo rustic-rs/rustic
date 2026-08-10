@@ -104,6 +104,7 @@ RusticConfig {
         name: None,
         stdin_filename: None,
         stdin_command: None,
+        include_if_present: None,
         as_path: None,
         no_scan: false,
         json: false,

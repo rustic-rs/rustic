@@ -421,7 +421,8 @@ fn publish_forget_metrics(
     forget: &ForgetRunMetrics,
     labels: &BTreeMap<String, String>,
 ) -> Result<()> {
-    use crate::metrics::Metric;
+    use anyhow::Context;
+    use crate::metrics::{Metric, MetricsExporter};
     use crate::metrics::MetricValue::*;
 
     let mut metrics = vec![
@@ -544,7 +545,51 @@ fn publish_forget_metrics(
         ]);
     }
 
-    crate::metrics::push_metrics(&metrics, "rustic_forget", labels, labels)
+    let global_config = &RUSTIC_APP.config().global;
+
+    #[cfg(feature = "prometheus")]
+    if let Some(prometheus_endpoint) = &global_config.prometheus {
+        use crate::metrics::prometheus::PrometheusExporter;
+
+        let metrics_exporter = PrometheusExporter {
+            endpoint: prometheus_endpoint.clone(),
+            job_name: "rustic_forget".to_string(),
+            grouping: labels.clone(),
+            prometheus_user: global_config.prometheus_user.clone(),
+            prometheus_pass: global_config.prometheus_pass.clone(),
+        };
+
+        metrics_exporter
+            .push_metrics(metrics.as_slice())
+            .context("pushing prometheus metrics")?;
+    }
+
+    #[cfg(not(feature = "prometheus"))]
+    if global_config.prometheus.is_some() {
+        anyhow::bail!("prometheus metrics support is not compiled-in!");
+    }
+
+    #[cfg(feature = "opentelemetry")]
+    if let Some(otlp_endpoint) = &global_config.opentelemetry {
+        use crate::metrics::opentelemetry::OpentelemetryExporter;
+
+        let metrics_exporter = OpentelemetryExporter {
+            endpoint: otlp_endpoint.clone(),
+            service_name: "rustic_forget".to_string(),
+            labels: global_config.metrics_labels.clone(),
+        };
+
+        metrics_exporter
+            .push_metrics(metrics.as_slice())
+            .context("pushing opentelemetry metrics")?;
+    }
+
+    #[cfg(not(feature = "opentelemetry"))]
+    if global_config.opentelemetry.is_some() {
+        anyhow::bail!("opentelemetry metrics support is not compiled-in!");
+    }
+
+    Ok(())
 }
 
 /// Print groups to stdout

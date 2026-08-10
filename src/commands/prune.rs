@@ -10,6 +10,33 @@ use anyhow::Result;
 
 use rustic_core::{PruneOptions, PruneStats};
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct PruneMetrics {
+    pub data_removed_packed: u64,
+    pub tree_removed_packed: u64,
+    pub data_blobs_removed: u64,
+    pub tree_blobs_removed: u64,
+    pub packs_unreferenced: u64,
+    pub packs_rewritten: u64,
+    pub packs_kept: u64,
+}
+
+impl PruneMetrics {
+    pub(crate) fn from_stats(stats: &PruneStats) -> Self {
+        let size_stat = stats.size_sum();
+        let blob_stat = stats.blobs_sum();
+        Self {
+            data_removed_packed: size_stat.repackrm + size_stat.remove,
+            tree_removed_packed: 0,
+            data_blobs_removed: blob_stat.repackrm + blob_stat.remove,
+            tree_blobs_removed: 0,
+            packs_unreferenced: stats.packs.unused,
+            packs_rewritten: stats.packs.repack,
+            packs_kept: stats.packs.keep,
+        }
+    }
+}
+
 /// `prune` subcommand
 #[allow(clippy::struct_excessive_bools)]
 #[derive(clap::Parser, Command, Debug, Clone)]
@@ -24,7 +51,7 @@ impl Runnable for PruneCmd {
         if let Err(err) = RUSTIC_APP
             .config()
             .repository
-            .run_open(|repo| self.inner_run(repo))
+            .run_open(|repo| self.inner_run(&repo).map(|_| ()))
         {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -33,12 +60,13 @@ impl Runnable for PruneCmd {
 }
 
 impl PruneCmd {
-    fn inner_run(&self, repo: OpenRepo) -> Result<()> {
+    pub(crate) fn inner_run(&self, repo: &OpenRepo) -> Result<PruneMetrics> {
         let config = RUSTIC_APP.config();
 
         let prune_plan = repo.prune_plan(&self.opts)?;
 
         print_stats(&prune_plan.stats);
+        let metrics = PruneMetrics::from_stats(&prune_plan.stats);
 
         let dry_run = config.global.dry_run;
         if dry_run && config.global.dry_run_warmup {
@@ -50,7 +78,7 @@ impl PruneCmd {
             repo.prune(&self.opts, prune_plan)?;
         }
 
-        Ok(())
+        Ok(metrics)
     }
 }
 

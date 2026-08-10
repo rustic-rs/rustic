@@ -170,6 +170,7 @@ RusticConfig {
             context: "",
             env: {},
         },
+        log_file: None,
         snapshots: [],
         sources: [],
         options: {},

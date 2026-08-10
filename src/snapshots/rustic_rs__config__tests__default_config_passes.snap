@@ -29,6 +29,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         env: {},
         prometheus: None,
@@ -70,6 +71,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
     },
     snapshot_filter: SnapshotFilter {
@@ -169,6 +171,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         snapshots: [],
         sources: [],

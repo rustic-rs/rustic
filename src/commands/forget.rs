@@ -421,9 +421,9 @@ fn publish_forget_metrics(
     forget: &ForgetRunMetrics,
     labels: &BTreeMap<String, String>,
 ) -> Result<()> {
-    use anyhow::Context;
-    use crate::metrics::{Metric, MetricsExporter};
     use crate::metrics::MetricValue::*;
+    use crate::metrics::{Metric, MetricsExporter};
+    use anyhow::Context;
 
     let mut metrics = vec![
         Metric {
@@ -680,10 +680,9 @@ mod tests {
             Some(&1)
         );
         assert!(
-            metrics
+            !metrics
                 .kept_by_reason
-                .get("rustic_forget_snapshots_kept_unchanged")
-                .is_none()
+                .contains_key("rustic_forget_snapshots_kept_unchanged")
         );
     }
 

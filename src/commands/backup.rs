@@ -21,7 +21,7 @@ use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Context, Result, anyhow, bail};
 use clap::ValueHint;
 use comfy_table::Cell;
-use conflate::{Merge, MergeFrom};
+use conflate::Merge;
 use log::{debug, error, info, warn};
 use rustic_backend::OpenDALBackend;
 use rustic_core::{ChildStdoutSource, Excludes, LocalSource, ReadSource, StdinSource, StringList};

@@ -4,7 +4,7 @@ use std::fs;
 
 use assert_cmd::Command;
 use rustic_testing::TestResult;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     let repo_dir = temp_dir.path().join("repo");

@@ -244,6 +244,7 @@ can be overwritten in the source-specific configuration, see below.
 | iglob-files        | Like glob-file, but apply case-insensitive                                                                     | []                       |               | --iglob-file            |
 | ignore-ctime       | If true, ignore file change time (ctime).                                                                      | false                    |               | --ignore-ctime          |
 | ignore-inode       | If true, ignore file inode for the backup.                                                                     | false                    |               | --ignore-inode          |
+| include-if-present | Back up only local directory trees containing this marker filename.                                            | Not set                  | ".rustic-include" | --include-if-present    |
 | init               | If true, initialize repository if it doesn't exist, yet.                                                       | false                    |               | --init                  |
 | json               | If true, returns output of the command as json.                                                                | false                    |               | --json                  |
 | label              | Set label for the snapshot.                                                                                    | Not set                  |               | --label                 |

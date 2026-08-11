@@ -834,3 +834,43 @@ fn publish_metrics(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod include_if_present_tests {
+    use super::*;
+
+    #[test]
+    fn marker_selects_only_marked_directory_trees() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let marked = temp.path().join("marked");
+        let unmarked = temp.path().join("unmarked");
+        std::fs::create_dir_all(&marked)?;
+        std::fs::create_dir_all(&unmarked)?;
+        std::fs::write(marked.join(".rustic-include"), "")?;
+
+        let sources = PathList::from_iter([temp.path()]);
+        let selected = BackupCmd::sources_with_marker(&sources, Path::new(".rustic-include"))?
+            .expect("marker should select a source");
+
+        assert_eq!(selected.paths(), vec![marked]);
+        Ok(())
+    }
+
+    #[test]
+    fn missing_marker_skips_the_source() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let sources = PathList::from_iter([temp.path()]);
+
+        assert!(BackupCmd::sources_with_marker(&sources, Path::new(".rustic-include"))?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn marker_must_be_a_filename() {
+        let sources = PathList::default();
+        let error = BackupCmd::sources_with_marker(&sources, Path::new("nested/marker"))
+            .expect_err("paths must be rejected");
+
+        assert!(error.to_string().contains("must be a single filename"));
+    }
+}

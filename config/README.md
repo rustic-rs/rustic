@@ -252,6 +252,7 @@ can be overwritten in the source-specific configuration, see below.
 | one-file-system    | If true, only backs up files from the same filesystem as the source.                                           | false                    |               | --one-file-system       |
 | parents            | Parent snapshot(s) for the backup.                                                                             | Not set                  |               | --parent                |
 | skip-if-unchanged  | Skip saving of the snapshot if it is identical to the parent.                                                  | false                    |               | --skip-identical-parent |
+| skip-if-command    | Run a config-only command; skip when it writes exactly "skip", continue when it writes nothing.                | Not set                  | "test -f /mnt/ready && printf skip" | |
 | stdin-command      | Call this command and use it's stdout as stdin to backup.                                                      | Not set                  |               | --stdin-command         |
 | stdin-filename     | File name to be used when reading from stdin.                                                                  | Not set                  |               | --stdin-filename        |
 | tags               | Array of tags for the backup.                                                                                  | []                       |               | --tag                   |

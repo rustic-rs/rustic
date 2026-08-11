@@ -802,3 +802,61 @@ fn publish_metrics(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod skip_if_command_tests {
+    use super::*;
+
+    #[cfg(unix)]
+    fn command(output: &str, status: i32) -> CommandInput {
+        CommandInput::from(vec![
+            "sh".to_string(),
+            "-c".to_string(),
+            format!("printf %s {output}; exit {status}"),
+        ])
+    }
+
+    #[cfg(windows)]
+    fn command(output: &str, status: i32) -> CommandInput {
+        CommandInput::from(vec![
+            "cmd".to_string(),
+            "/C".to_string(),
+            format!("<nul set /p ={output} & exit /b {status}"),
+        ])
+    }
+
+    fn backup_with(command: CommandInput) -> BackupCmd {
+        BackupCmd {
+            skip_if_command: Some(command),
+            ..BackupCmd::default()
+        }
+    }
+
+    #[test]
+    fn skip_directive_skips_source() -> Result<()> {
+        assert!(backup_with(command("skip", 0)).should_skip_backup(&PathList::default())?);
+        Ok(())
+    }
+
+    #[test]
+    fn empty_output_continues_backup() -> Result<()> {
+        assert!(!backup_with(command("", 0)).should_skip_backup(&PathList::default())?);
+        Ok(())
+    }
+
+    #[test]
+    fn unexpected_output_is_rejected() {
+        let error = backup_with(command("maybe", 0))
+            .should_skip_backup(&PathList::default())
+            .expect_err("unexpected output must fail");
+        assert!(error.to_string().contains("exactly `skip` or nothing"));
+    }
+
+    #[test]
+    fn command_failure_is_rejected() {
+        let error = backup_with(command("", 7))
+            .should_skip_backup(&PathList::default())
+            .expect_err("command failure must fail");
+        assert!(error.to_string().contains("exited with status"));
+    }
+}

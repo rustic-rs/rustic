@@ -25,6 +25,7 @@ impl TextInput {
         _ = textarea.insert_str(initial);
         if !changeable {
             textarea.move_cursor(CursorMove::Top);
+            textarea.move_cursor(CursorMove::Head);
         }
         Self {
             textarea,
@@ -77,7 +78,15 @@ impl ProcessEvent for TextInput {
                     (KeyCode::End, _) => {
                         self.textarea.move_cursor(CursorMove::Bottom);
                     }
-                    (KeyCode::PageDown | KeyCode::PageUp | KeyCode::Up | KeyCode::Down, _) => {
+                    (
+                        KeyCode::PageDown
+                        | KeyCode::PageUp
+                        | KeyCode::Up
+                        | KeyCode::Down
+                        | KeyCode::Left
+                        | KeyCode::Right,
+                        _,
+                    ) => {
                         _ = self.textarea.input(key);
                     }
                     _ => {}
@@ -85,5 +94,30 @@ impl ProcessEvent for TextInput {
             }
         }
         TextInputResult::None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::{KeyEvent, KeyModifiers};
+
+    use super::*;
+
+    fn key(code: KeyCode) -> Event {
+        Event::Key(KeyEvent::new(code, KeyModifiers::NONE))
+    }
+
+    #[test]
+    fn read_only_text_can_be_scrolled_horizontally() {
+        let mut input = TextInput::new(None, "a long line", 1, false);
+
+        assert_eq!(input.textarea.cursor(), (0, 0));
+
+        _ = input.input(key(KeyCode::Right));
+        _ = input.input(key(KeyCode::Right));
+        assert_eq!(input.textarea.cursor(), (0, 2));
+
+        _ = input.input(key(KeyCode::Left));
+        assert_eq!(input.textarea.cursor(), (0, 1));
     }
 }

@@ -127,6 +127,28 @@ fn test_backup_records_cli_version_in_snapshot() -> TestResult<()> {
 }
 
 #[test]
+fn test_forget_json_is_compact() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let backup = src_snapshot()?.into_path();
+
+    rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(backup.path())
+        .assert()
+        .success();
+
+    let output = rustic_runner(&temp_dir)?
+        .args(["forget", "--json", "--keep-last", "1"])
+        .output()?;
+
+    assert!(output.status.success());
+    assert!(!output.stdout.contains(&b'\n'));
+    let _: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+
+    Ok(())
+}
+
+#[test]
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;
     let restore_dir = temp_dir.path().join("restore");

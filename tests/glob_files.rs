@@ -3,7 +3,7 @@
 use assert_cmd::Command;
 use predicates::prelude::{PredicateBooleanExt, predicate};
 use rustic_testing::TestResult;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     let repo_dir = temp_dir.path().join("repo");
@@ -75,7 +75,10 @@ fn glob_file_patterns_are_applied() -> TestResult<()> {
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8(output.stdout)?;
-    assert!(stdout.contains("included.txt"), "unexpected output: {stdout}");
+    assert!(
+        stdout.contains("included.txt"),
+        "unexpected output: {stdout}"
+    );
     assert!(
         !stdout.contains("excluded.txt"),
         "glob-file exclusion was ignored: {stdout}"

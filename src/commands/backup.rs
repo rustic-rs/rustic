@@ -583,21 +583,6 @@ fn publish_metrics(
     Err(anyhow!("metrics support is not compiled-in!"))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn as_path_accepts_an_empty_cli_value() {
-        use clap::Parser;
-
-        let backup = BackupCmd::try_parse_from(["backup", "--as-path", ""])
-            .expect("an empty as-path should be accepted");
-
-        assert_eq!(backup.as_path, Some(PathBuf::new()));
-    }
-}
-
 #[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
 fn publish_metrics(
     snap: &SnapshotFile,
@@ -785,4 +770,19 @@ fn publish_metrics(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn as_path_accepts_an_empty_cli_value() {
+        use clap::Parser;
+
+        let backup = BackupCmd::try_parse_from(["backup", "--as-path", ""])
+            .expect("an empty as-path should be accepted");
+
+        assert_eq!(backup.as_path, Some(PathBuf::new()));
+    }
 }

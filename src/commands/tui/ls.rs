@@ -47,7 +47,7 @@ const INFO_TEXT: &str = "(Esc) quit | (Enter) enter dir | (Backspace) return to 
 const HELP_TEXT: &str = r"
 Ls Commands:
 
-          v : view file contents (text files only, up to 1MiB)
+          v : view file contents (text files only, up to 1MiB; use arrow keys to scroll)
           r : restore selected item
           n : toggle numeric IDs
           s : compute information for (sub-)dirs and show summary

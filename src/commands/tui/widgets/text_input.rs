@@ -1,7 +1,7 @@
 use super::{Draw, Event, Frame, KeyCode, KeyEvent, ProcessEvent, Rect, SizedWidget, Style};
 
 use crossterm::event::KeyModifiers;
-use tui_textarea::{CursorMove, TextArea};
+use ratatui_textarea::{CursorMove, TextArea};
 
 pub struct TextInput {
     textarea: TextArea<'static>,

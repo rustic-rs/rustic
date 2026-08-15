@@ -9,7 +9,6 @@ mod with_block;
 
 pub use popup::*;
 pub use prompt::*;
-use ratatui::widgets::block::Title;
 pub use select_table::*;
 pub use sized_gauge::*;
 pub use sized_paragraph::*;
@@ -46,7 +45,7 @@ pub trait Draw {
 // the widgets we are using and convenience builders
 pub type PopUpInput = PopUp<WithBlock<TextInput>>;
 pub fn popup_input(
-    title: impl Into<Title<'static>>,
+    title: impl Into<Line<'static>>,
     text: &str,
     initial: &str,
     lines: u16,
@@ -58,7 +57,7 @@ pub fn popup_input(
 }
 
 pub fn popup_scrollable_text(
-    title: impl Into<Title<'static>>,
+    title: impl Into<Line<'static>>,
     text: &str,
     lines: u16,
 ) -> PopUpInput {
@@ -69,7 +68,7 @@ pub fn popup_scrollable_text(
 }
 
 pub type PopUpText = PopUp<WithBlock<SizedParagraph>>;
-pub fn popup_text(title: impl Into<Title<'static>>, text: Text<'static>) -> PopUpText {
+pub fn popup_text(title: impl Into<Line<'static>>, text: Text<'static>) -> PopUpText {
     PopUp(WithBlock::new(
         SizedParagraph::new(text),
         Block::bordered().title(title),
@@ -78,7 +77,7 @@ pub fn popup_text(title: impl Into<Title<'static>>, text: Text<'static>) -> PopU
 
 pub type PopUpTable = PopUp<WithBlock<SizedTable>>;
 pub fn popup_table(
-    title: impl Into<Title<'static>>,
+    title: impl Into<Line<'static>>,
     content: Vec<Vec<Text<'static>>>,
 ) -> PopUpTable {
     PopUp(WithBlock::new(
@@ -93,11 +92,7 @@ pub fn popup_prompt(title: &'static str, text: Text<'static>) -> PopUpPrompt {
 }
 
 pub type PopUpGauge = PopUp<WithBlock<SizedGauge>>;
-pub fn popup_gauge(
-    title: impl Into<Title<'static>>,
-    text: Span<'static>,
-    ratio: f64,
-) -> PopUpGauge {
+pub fn popup_gauge(title: impl Into<Line<'static>>, text: Span<'static>, ratio: f64) -> PopUpGauge {
     PopUp(WithBlock::new(
         SizedGauge::new(text, ratio),
         Block::bordered().title(title),

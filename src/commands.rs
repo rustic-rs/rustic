@@ -229,6 +229,12 @@ impl Configurable<RusticConfig> for EntryPoint {
         // That's why it says `_config`, because it's not read at all and therefore not needed.
         let mut config = self.config.clone();
 
+        // Completion generation only needs the command definition. In particular, it must not
+        // try to read a profile which may be inaccessible to the user generating completions.
+        if matches!(self.commands, RusticCmd::Completions(_)) {
+            return Ok(config);
+        }
+
         // collect "RUSTIC_REPO_OPT*" and "OPENDAL*" env variables.
         // also add the standardized OTEL variables manually
         // since clap does not support multiple variables for a single arg

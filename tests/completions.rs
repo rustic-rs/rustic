@@ -10,7 +10,7 @@
 //     unused_qualifications
 // )]
 
-use std::{io::Read, sync::LazyLock};
+use std::{io::Read, process::Command, sync::LazyLock};
 
 use abscissa_core::testing::prelude::*;
 use insta::assert_snapshot;
@@ -64,6 +64,26 @@ fn test_completions_passes(#[case] shell: &str) -> TestResult<()> {
     assert_snapshot!(name, output);
 
     cmd.wait()?.expect_success();
+
+    Ok(())
+}
+
+#[test]
+fn completions_do_not_load_profiles() -> TestResult<()> {
+    let profile = tempfile::Builder::new().suffix(".toml").tempfile()?;
+    std::fs::write(profile.path(), "this is not valid TOML")?;
+
+    let output = Command::new(env!("CARGO_BIN_EXE_rustic"))
+        .env("RUSTIC_USE_PROFILE", profile.path())
+        .args(["completions", "bash"])
+        .output()?;
+
+    assert!(
+        output.status.success(),
+        "completion command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!output.stdout.is_empty());
 
     Ok(())
 }

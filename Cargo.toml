@@ -12,7 +12,7 @@ license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/rustic-rs/rustic"
 resolver = "3"
-rust-version = "1.88.0"
+rust-version = "1.91.0"
 description = """
 rustic - fast, encrypted, deduplicated backups powered by Rust
 """
@@ -34,7 +34,7 @@ opentelemetry = [
   "dep:opentelemetry_sdk",
 ]
 self-update = ["dep:self_update", "dep:semver"]
-tui = ["dep:ratatui", "dep:crossterm", "dep:tui-textarea"]
+tui = ["dep:ratatui", "dep:crossterm", "dep:ratatui-textarea"]
 webdav = [
   "dep:dav-server",
   "dep:axum",
@@ -62,8 +62,8 @@ rustdoc-args = ["--document-private-items", "--generate-link-to-definition"]
 
 [dependencies]
 abscissa_core = { version = "0.9.0", default-features = false, features = ["application"] }
-rustic_backend = { version = "0.6.2", features = ["cli"] }
-rustic_core = { version = "0.12.0", features = ["cli"] }
+rustic_backend = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"] }
+rustic_core = { git = "https://github.com/rustic-rs/rustic_core", features = ["cli"] }
 
 # allocators
 jemallocator-global = { version = "0.3.2", optional = true }
@@ -75,9 +75,9 @@ dav-server = { version = "0.11.0", default-features = false, optional = true }
 tokio = { version = "1", optional = true }
 
 # tui
-crossterm = { version = "0.28", optional = true }
-ratatui = { version = "0.29.0", optional = true }
-tui-textarea = { version = "0.7.0", optional = true }
+crossterm = { version = "0.29", optional = true }
+ratatui = { version = "0.30.2", optional = true }
+ratatui-textarea = { version = "0.9.2", optional = true }
 
 # logging
 log = "0.4"

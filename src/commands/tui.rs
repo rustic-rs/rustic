@@ -76,10 +76,12 @@ fn reset_terminal() -> Result<()> {
     Ok(())
 }
 
-pub fn run_app<T: TuiResult, A: Draw + ProcessEvent<Result = Result<T>>, B: Backend>(
-    terminal: Arc<RwLock<Terminal<B>>>,
-    mut app: A,
-) -> Result<()> {
+pub fn run_app<B: Backend, A, T>(terminal: Arc<RwLock<Terminal<B>>>, mut app: A) -> Result<()>
+where
+    A: Draw + ProcessEvent<Result = Result<T>>,
+    T: TuiResult,
+    B::Error: Send + Sync + 'static,
+{
     loop {
         _ = terminal.write().unwrap().draw(|f| ui(f, &mut app))?;
         let event = event::read()?;

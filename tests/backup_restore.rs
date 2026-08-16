@@ -7,6 +7,9 @@
 //! You can run them with 'nextest':
 //! `cargo nextest run -E 'test(backup)'`.
 
+#[cfg(unix)]
+use std::os::unix::fs::symlink;
+
 use dircmp::Comparison;
 use tempfile::{TempDir, tempdir};
 
@@ -99,6 +102,51 @@ fn test_backup_and_check_passes() -> TestResult<()> {
             .stderr(predicate::str::contains("WARN").not())
             .stderr(predicate::str::contains("ERROR").not());
     }
+
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn diff_reports_unchanged_symlinks_as_identical() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let source = temp_dir.path().join("source");
+    std::fs::create_dir(&source)?;
+    std::fs::write(source.join("target.txt"), "target")?;
+    symlink("target.txt", source.join("link.txt"))?;
+
+    rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(&source)
+        .assert()
+        .success();
+
+    std::fs::write(source.join("added.txt"), "added")?;
+
+    rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(&source)
+        .assert()
+        .success();
+
+    let output = rustic_runner(&temp_dir)?
+        .args(["diff", "latest~1", "latest"])
+        .output()?;
+
+    assert!(
+        output.status.success(),
+        "diff command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout)?;
+    assert!(
+        stdout.contains("Symlinks: 1 =, 0 +, 0 -, 0 M, 0 U"),
+        "unexpected diff output: {stdout}"
+    );
+    assert!(
+        !stdout.contains("link.txt"),
+        "unchanged symlink was reported as changed: {stdout}"
+    );
 
     Ok(())
 }

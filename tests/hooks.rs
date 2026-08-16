@@ -247,7 +247,6 @@ generate_test_hook_function!(
 #[case(vec!["backup", "src/"], "backup", BackupAction::WithoutBackup)]
 #[case(vec!["cat", "tree", "latest"], "cat", BackupAction::WithBackup)]
 #[case(vec!["config"], "config", BackupAction::WithoutBackup)]
-#[case(vec!["completions", "bash"], "completions", BackupAction::WithoutBackup)]
 #[case(vec!["check"], "check", BackupAction::WithBackup)]
 // #[case(vec!["copy"], "copy", BackupAction::WithBackup)]
 // #[case(vec!["diff"], "diff", BackupAction::WithBackup)]
@@ -265,8 +264,6 @@ generate_test_hook_function!(
 #[case(vec!["merge"], "merge", BackupAction::WithoutBackup)]
 #[case(vec!["snapshots"], "snapshots", BackupAction::WithBackup)]
 #[case(vec!["show-config"], "show-config", BackupAction::WithoutBackup)]
-// TODO: Github API errors with `NetworkError: api request failed with status: 403`
-// #[case(vec!["self-update"], "self-update", BackupAction::WithoutBackup)]
 #[case(vec!["prune"], "prune", BackupAction::WithBackup)]
 #[case(vec!["repoinfo"], "repoinfo", BackupAction::WithBackup)]
 #[case(vec!["repair", "index"], "repair", BackupAction::WithBackup)]

@@ -14,7 +14,7 @@ pub fn bold_cell<T: ToString>(s: T) -> Cell {
 pub fn table() -> Table {
     let mut table = Table::new();
     _ = table
-        .load_preset(ASCII_MARKDOWN)
+        .load_style(ASCII_MARKDOWN)
         .set_content_arrangement(ContentArrangement::Dynamic);
     table
 }

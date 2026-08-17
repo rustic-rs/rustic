@@ -275,6 +275,8 @@ impl BackupCmd {
 
     fn get_snapshots_to_backup(&self) -> Result<Vec<(Self, PathList)>> {
         let config = RUSTIC_APP.config();
+        let mut shared_tags = StringList::default();
+        shared_tags.add_all(config.backup.snap_opts.tags.clone());
         let mut config_snapshots = config
             .backup
             .snapshots
@@ -300,6 +302,11 @@ impl BackupCmd {
                         .name
                         .as_ref()
                         .is_some_and(|name| self.cli_name.contains(name))
+            })
+            .filter(|(opt, sources)| {
+                let mut tags = shared_tags.clone();
+                tags.add_all(opt.snap_opts.tags.clone());
+                config.snapshot_filter.matches_backup_config(sources, &tags)
             })
             .map(|(opt, sources)| (self.clone().merge_from(opt), sources))
             .collect();

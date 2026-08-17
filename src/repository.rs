@@ -52,9 +52,24 @@ pub struct AllRepositoryOptions {
 
 impl AllRepositoryOptions {
     pub fn repository(&self, po: impl ProgressBars) -> Result<Repo> {
-        let backends = self.be.to_backends()?;
+        let backends = self.backend_options().to_backends()?;
         let repo = Repository::new_with_progress(&self.repo, &backends, po)?;
         Ok(Repo(repo))
+    }
+
+    fn backend_options(&self) -> BackendOptions {
+        #[cfg(not(windows))]
+        {
+            self.be.clone()
+        }
+
+        #[cfg(windows)]
+        {
+            let mut options = self.be.clone();
+            normalize_windows_absolute_drive_path(&mut options.repository);
+            normalize_windows_absolute_drive_path(&mut options.repo_hot);
+            options
+        }
     }
 
     pub fn run_with_progress<T>(
@@ -102,6 +117,73 @@ impl AllRepositoryOptions {
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(IndexedRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.indexed(&self.credential_opts)?))
+    }
+}
+
+/// Returns whether `repository` is an absolute Windows drive path written with
+/// forward slashes, such as `D:/Backup`.
+///
+/// This is deliberately platform-independent so the compatibility case can be
+/// tested on every supported development platform.
+#[cfg(any(windows, test))]
+fn is_windows_forward_slash_absolute_drive_path(repository: &str) -> bool {
+    let bytes = repository.as_bytes();
+    bytes.len() >= 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && bytes[2] == b'/'
+}
+
+#[cfg(any(windows, test))]
+fn windows_forward_slash_drive_backend_location(repository: &str) -> Option<String> {
+    is_windows_forward_slash_absolute_drive_path(repository).then(|| format!("local:{repository}"))
+}
+
+#[cfg(windows)]
+fn normalize_windows_absolute_drive_path(repository: &mut Option<String>) {
+    if let Some(path) = repository
+        .as_deref()
+        .and_then(windows_forward_slash_drive_backend_location)
+    {
+        *repository = Some(path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        is_windows_forward_slash_absolute_drive_path, windows_forward_slash_drive_backend_location,
+    };
+
+    #[test]
+    fn recognizes_only_absolute_windows_drive_paths_with_forward_slashes() {
+        for repository in ["C:/", "D:/Backup", "z:/backups/rustic"] {
+            assert!(
+                is_windows_forward_slash_absolute_drive_path(repository),
+                "expected {repository:?} to be an absolute Windows drive path"
+            );
+            assert_eq!(
+                windows_forward_slash_drive_backend_location(repository),
+                Some(format!("local:{repository}"))
+            );
+        }
+
+        for repository in [
+            "C:\\Backup",
+            "C:Backup",
+            "local:C:/Backup",
+            "rest:https://example.invalid/repository",
+            "opendal:fs",
+            "/tmp/repository",
+            "1:/Backup",
+            "",
+        ] {
+            assert!(
+                !is_windows_forward_slash_absolute_drive_path(repository),
+                "expected {repository:?} not to be an absolute Windows drive path"
+            );
+            assert_eq!(
+                windows_forward_slash_drive_backend_location(repository),
+                None
+            );
+        }
     }
 }
 

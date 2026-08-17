@@ -13,6 +13,7 @@ use anyhow::{Result, anyhow, bail};
 use clap::Parser;
 use conflate::Merge;
 use dialoguer::Password;
+use reqwest::Url;
 use rustic_backend::BackendOptions;
 use rustic_core::{
     CredentialOptions, Credentials, Grouped, IndexedFullStatus, IndexedIdsStatus, Open, OpenStatus,
@@ -52,9 +53,28 @@ pub struct AllRepositoryOptions {
 
 impl AllRepositoryOptions {
     pub fn repository(&self, po: impl ProgressBars) -> Result<Repo> {
-        let backends = self.be.to_backends()?;
+        let backends = self.backend_options().to_backends()?;
         let repo = Repository::new_with_progress(&self.repo, &backends, po)?;
         Ok(Repo(repo))
+    }
+
+    fn backend_options(&self) -> BackendOptions {
+        let mut options = self.be.clone();
+
+        let rest_username = std::env::var("RESTIC_REST_USERNAME").ok();
+        let rest_password = std::env::var("RESTIC_REST_PASSWORD").ok();
+        apply_rest_environment_credentials(
+            &mut options.repository,
+            rest_username.as_deref(),
+            rest_password.as_deref(),
+        );
+        apply_rest_environment_credentials(
+            &mut options.repo_hot,
+            rest_username.as_deref(),
+            rest_password.as_deref(),
+        );
+
+        options
     }
 
     pub fn run_with_progress<T>(
@@ -102,6 +122,114 @@ impl AllRepositoryOptions {
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(IndexedRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.indexed(&self.credential_opts)?))
+    }
+}
+
+/// Apply restic-compatible REST credentials without storing them in the config.
+///
+/// Like restic, credentials embedded in a repository URL take precedence over
+/// environment variables. A value is only injected when at least one of the
+/// two environment variables is set; an omitted counterpart is treated as an
+/// empty string.
+fn apply_rest_environment_credentials(
+    repository: &mut Option<String>,
+    username: Option<&str>,
+    password: Option<&str>,
+) {
+    let Some(rest_url) = repository
+        .as_deref()
+        .and_then(|repository| repository.strip_prefix("rest:"))
+    else {
+        return;
+    };
+
+    let Ok(mut url) = Url::parse(rest_url) else {
+        // Let the backend report invalid repository URLs using its usual
+        // diagnostics instead of replacing that error with environment handling.
+        return;
+    };
+
+    // Match restic's precedence: an explicit username or password in the URL
+    // takes precedence over RESTIC_REST_USERNAME and RESTIC_REST_PASSWORD.
+    if !url.username().is_empty()
+        || url.password().is_some()
+        || (username.is_none() && password.is_none())
+    {
+        return;
+    }
+
+    if url.set_username(username.unwrap_or_default()).is_ok()
+        && url.set_password(Some(password.unwrap_or_default())).is_ok()
+    {
+        *repository = Some(format!("rest:{url}"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use reqwest::Url;
+
+    use super::apply_rest_environment_credentials;
+
+    fn url_from_repository(repository: &Option<String>) -> Url {
+        Url::parse(
+            repository
+                .as_deref()
+                .unwrap()
+                .strip_prefix("rest:")
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn adds_restic_environment_credentials_to_a_rest_url_without_userinfo() {
+        let mut repository = Some("rest:https://example.invalid/repository".to_string());
+
+        apply_rest_environment_credentials(
+            &mut repository,
+            Some("restic user"),
+            Some("password:@/ with spaces"),
+        );
+
+        let url = url_from_repository(&repository);
+        assert_eq!(url.username(), "restic%20user");
+        assert_eq!(url.password(), Some("password%3A%40%2F%20with%20spaces"));
+        assert_eq!(url.host_str(), Some("example.invalid"));
+        assert_eq!(url.path(), "/repository");
+    }
+
+    #[test]
+    fn rest_url_credentials_take_precedence_over_environment_credentials() {
+        let mut repository =
+            Some("rest:https://url-user:url-password@example.invalid/repository".to_string());
+
+        apply_rest_environment_credentials(&mut repository, Some("env-user"), Some("env-pass"));
+
+        let url = url_from_repository(&repository);
+        assert_eq!(url.username(), "url-user");
+        assert_eq!(url.password(), Some("url-password"));
+    }
+
+    #[test]
+    fn partial_rest_url_credentials_take_precedence_over_environment_credentials() {
+        let mut repository = Some("rest:https://url-user@example.invalid/repository".to_string());
+
+        apply_rest_environment_credentials(&mut repository, Some("env-user"), Some("env-pass"));
+
+        let url = url_from_repository(&repository);
+        assert_eq!(url.username(), "url-user");
+        assert_eq!(url.password(), None);
+    }
+
+    #[test]
+    fn leaves_rest_url_unchanged_when_no_environment_credentials_are_set() {
+        let original = "rest:https://example.invalid/repository".to_string();
+        let mut repository = Some(original.clone());
+
+        apply_rest_environment_credentials(&mut repository, None, None);
+
+        assert_eq!(repository, Some(original));
     }
 }
 

@@ -14,7 +14,7 @@ use std::{
     path::PathBuf,
 };
 
-use abscissa_core::{FrameworkError, FrameworkErrorKind, config::Config, path::AbsPathBuf};
+use abscissa_core::{FrameworkError, FrameworkErrorKind, config::Config};
 use anyhow::{Result, anyhow};
 use clap::{Parser, ValueHint};
 use conflate::Merge;
@@ -126,7 +126,10 @@ impl RusticConfig {
 
         if let Some(path) = paths.iter().find(|path| path.exists()) {
             merge_logs.push((Level::Info, format!("using config {}", path.display())));
-            let config_content = std::fs::read_to_string(AbsPathBuf::canonicalize(path)?)?;
+            // Reading a profile does not require resolving its path first. In particular,
+            // `canonicalize` can fail for otherwise readable files on mounted filesystems
+            // (such as rclone mounts on Windows).
+            let config_content = std::fs::read_to_string(path)?;
             let config_content = if self.global.profile_substitute_env {
                 subst::substitute(&config_content, &subst::Env).map_err(|e| {
                     abscissa_core::error::context::Context::new(

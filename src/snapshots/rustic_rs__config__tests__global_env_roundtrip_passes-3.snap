@@ -57,6 +57,7 @@ RusticConfig {
             options_hot: {},
             options_cold: {},
         },
+        cacert: None,
         repo: RepositoryOptions {
             no_cache: false,
             cache_dir: None,

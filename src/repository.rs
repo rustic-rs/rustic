@@ -10,7 +10,7 @@ use std::ops::Deref;
 
 use abscissa_core::Application;
 use anyhow::{Result, anyhow, bail};
-use clap::Parser;
+use clap::{Parser, ValueHint};
 use conflate::Merge;
 use dialoguer::Password;
 use rustic_backend::BackendOptions;
@@ -35,6 +35,17 @@ pub struct AllRepositoryOptions {
     #[serde(flatten)]
     pub be: BackendOptions,
 
+    /// Certificate authority certificate file for TLS REST repositories
+    #[clap(
+        long,
+        global = true,
+        env = "RUSTIC_CACERT",
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath
+    )]
+    #[merge(strategy = conflate::option::overwrite_none)]
+    pub cacert: Option<String>,
+
     /// Repository options
     #[clap(flatten)]
     #[serde(flatten)]
@@ -52,9 +63,17 @@ pub struct AllRepositoryOptions {
 
 impl AllRepositoryOptions {
     pub fn repository(&self, po: impl ProgressBars) -> Result<Repo> {
-        let backends = self.be.to_backends()?;
+        let backends = self.backend_options().to_backends()?;
         let repo = Repository::new_with_progress(&self.repo, &backends, po)?;
         Ok(Repo(repo))
+    }
+
+    fn backend_options(&self) -> BackendOptions {
+        let mut options = self.be.clone();
+        if let Some(cacert) = &self.cacert {
+            _ = options.options.insert("cacert".to_string(), cacert.clone());
+        }
+        options
     }
 
     pub fn run_with_progress<T>(
@@ -102,6 +121,57 @@ impl AllRepositoryOptions {
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(IndexedRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.indexed(&self.credential_opts)?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::AllRepositoryOptions;
+    use crate::{RusticConfig, commands::EntryPoint};
+
+    #[test]
+    fn parses_cacert_from_cli_and_forwards_it_to_backend_options() {
+        let entrypoint =
+            EntryPoint::try_parse_from(["rustic", "snapshots", "--cacert", "/tmp/rustic-ca.pem"])
+                .unwrap();
+
+        let options = entrypoint.config.repository;
+        assert_eq!(options.cacert.as_deref(), Some("/tmp/rustic-ca.pem"));
+        assert_eq!(
+            options
+                .backend_options()
+                .options
+                .get("cacert")
+                .map(String::as_str),
+            Some("/tmp/rustic-ca.pem")
+        );
+    }
+
+    #[test]
+    fn parses_cacert_from_config_and_overrides_the_generic_backend_option() {
+        let config: RusticConfig = toml::from_str(
+            r#"
+[repository]
+cacert = "/tmp/rustic-ca.pem"
+
+[repository.options]
+cacert = "/tmp/other-ca.pem"
+"#,
+        )
+        .unwrap();
+
+        let options: AllRepositoryOptions = config.repository;
+        assert_eq!(options.cacert.as_deref(), Some("/tmp/rustic-ca.pem"));
+        assert_eq!(
+            options
+                .backend_options()
+                .options
+                .get("cacert")
+                .map(String::as_str),
+            Some("/tmp/rustic-ca.pem")
+        );
     }
 }
 

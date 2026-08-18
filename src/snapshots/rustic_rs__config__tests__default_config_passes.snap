@@ -93,6 +93,7 @@ RusticConfig {
         name: None,
         stdin_filename: None,
         stdin_command: None,
+        skip_if_command: None,
         as_path: None,
         no_scan: false,
         json: false,

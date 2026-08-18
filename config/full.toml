@@ -134,6 +134,7 @@ force = false
 ignore-ctime = false
 ignore-inode = false
 stdin-command = "echo test" # Default: empty
+skip-if-command = "test -f /mnt/ready && printf skip" # Default: not set; config only
 stdin-filename = "stdin" # Only for stdin source
 as-path = "/my/path" # Default: not set; Note: This only works if source contains of a single path.
 set-atime = "mtime" # Allowed: "yes", "no", "mtime"

@@ -78,6 +78,11 @@ pub struct BackupCmd {
     #[merge(strategy=conflate::option::overwrite_none)]
     stdin_command: Option<CommandInput>,
 
+    /// Skip this source when the configured command writes `skip` to stdout.
+    #[clap(skip)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    skip_if_command: Option<CommandInput>,
+
     /// Manually set backup path in snapshot
     #[clap(long, value_name = "PATH", value_hint = ValueHint::DirPath)]
     #[merge(strategy=conflate::option::overwrite_none)]
@@ -171,6 +176,35 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    fn should_skip_backup(&self, source: &PathList) -> Result<bool> {
+        let Some(command) = &self.skip_if_command else {
+            return Ok(false);
+        };
+        if !command.is_set() {
+            return Ok(false);
+        }
+
+        let output = std::process::Command::new(command.command())
+            .args(command.args())
+            .env("RUSTIC_COMMAND", "backup")
+            .env("RUSTIC_ACTION", "source-specific-backup")
+            .env("RUSTIC_BACKUP_SOURCES", source.to_string())
+            .stderr(std::process::Stdio::inherit())
+            .output()
+            .context("failed to run `skip-if-command`")?;
+        if !output.status.success() {
+            bail!("`skip-if-command` exited with status {}", output.status);
+        }
+
+        let directive = output.stdout.strip_suffix(b"\n").unwrap_or(&output.stdout);
+        let directive = directive.strip_suffix(b"\r").unwrap_or(directive);
+        match directive {
+            b"" => Ok(false),
+            b"skip" => Ok(true),
+            _ => bail!("`skip-if-command` must write exactly `skip` or nothing to stdout"),
+        }
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {
@@ -437,6 +471,11 @@ impl BackupCmd {
 
         // merge "backup" section from config file, if given
         self.merge(config.backup.clone());
+
+        if self.should_skip_backup(&source)? {
+            info!("skipping backup of {source} at the request of `skip-if-command`");
+            return Ok(());
+        }
 
         let hooks = self.hooks(&hooks, "source-specific-backup", &source);
 
@@ -762,4 +801,62 @@ fn publish_metrics(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod skip_if_command_tests {
+    use super::*;
+
+    #[cfg(unix)]
+    fn command(output: &str, status: i32) -> CommandInput {
+        CommandInput::from(vec![
+            "sh".to_string(),
+            "-c".to_string(),
+            format!("printf %s {output}; exit {status}"),
+        ])
+    }
+
+    #[cfg(windows)]
+    fn command(output: &str, status: i32) -> CommandInput {
+        CommandInput::from(vec![
+            "cmd".to_string(),
+            "/C".to_string(),
+            format!("<nul set /p ={output} & exit /b {status}"),
+        ])
+    }
+
+    fn backup_with(command: CommandInput) -> BackupCmd {
+        BackupCmd {
+            skip_if_command: Some(command),
+            ..BackupCmd::default()
+        }
+    }
+
+    #[test]
+    fn skip_directive_skips_source() -> Result<()> {
+        assert!(backup_with(command("skip", 0)).should_skip_backup(&PathList::default())?);
+        Ok(())
+    }
+
+    #[test]
+    fn empty_output_continues_backup() -> Result<()> {
+        assert!(!backup_with(command("", 0)).should_skip_backup(&PathList::default())?);
+        Ok(())
+    }
+
+    #[test]
+    fn unexpected_output_is_rejected() {
+        let error = backup_with(command("maybe", 0))
+            .should_skip_backup(&PathList::default())
+            .expect_err("unexpected output must fail");
+        assert!(error.to_string().contains("exactly `skip` or nothing"));
+    }
+
+    #[test]
+    fn command_failure_is_rejected() {
+        let error = backup_with(command("", 7))
+            .should_skip_backup(&PathList::default())
+            .expect_err("command failure must fail");
+        assert!(error.to_string().contains("exited with status"));
+    }
 }

@@ -108,6 +108,9 @@ cargo binstall rustic-rs
 scoop install rustic
 ```
 
+For files that Windows keeps exclusively locked, see the
+[VSS backup wrapper example](util/windows/README.md).
+
 #### macOS
 
 ##### [Homebrew](https://brew.sh/)

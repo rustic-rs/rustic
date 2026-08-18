@@ -152,6 +152,23 @@ fn diff_reports_unchanged_symlinks_as_identical() -> TestResult<()> {
 }
 
 #[test]
+fn backup_accepts_an_empty_as_path() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let source = temp_dir.path().join("source");
+    std::fs::create_dir(&source)?;
+    std::fs::write(source.join("payload.txt"), "payload")?;
+
+    rustic_runner(&temp_dir)?
+        .args(["backup", "--as-path", ""])
+        .arg(&source)
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("successfully saved."));
+
+    Ok(())
+}
+
+#[test]
 fn test_backup_records_cli_version_in_snapshot() -> TestResult<()> {
     let temp_dir = setup()?;
     let backup = src_snapshot()?.into_path();

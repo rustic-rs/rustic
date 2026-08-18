@@ -225,7 +225,7 @@ can be overwritten in the source-specific configuration, see below.
 
 | Attribute          | Description                                                                                                    | Default Value            | Example Value | CLI Option              |
 | ------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------- | ----------------------- |
-| as-path            | Specifies the path for the backup when the source contains a single path.                                      | Not set                  |               | --as-path               |
+| as-path            | Specifies the path for the backup when the source contains a single path. Include/exclude globs are matched against the original source path before this remapping. | Not set | | --as-path |
 | command            | Set the command saved in the snapshot.                                                                         | The full command used    |               | --command               |
 | custom-ignorefiles | Array of names of custom ignorefiles which will be used to exclude files.                                      | []                       |               | --custom-ignorefile     |
 | description        | Description for the snapshot.                                                                                  | Not set                  |               | --description           |

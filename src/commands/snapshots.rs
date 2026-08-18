@@ -276,6 +276,10 @@ pub fn fill_table(snap: &SnapshotFile, mut add_entry: impl FnMut(&str, String)) 
         add_entry("Duration", duration);
     }
     if let Some(ref description) = snap.description {
-        add_entry("Description", description.clone());
+        add_entry("Description", normalize_line_endings(description));
     }
+}
+
+fn normalize_line_endings(value: &str) -> String {
+    value.replace("\r\n", "\n").replace('\r', "\n")
 }

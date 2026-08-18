@@ -38,23 +38,21 @@ impl Runnable for DocsCmd {
 
 impl DocsCmd {
     fn inner_run(&self) -> Result<()> {
-        let user_string = match self.cmd {
+        match self.cmd {
             // Default to user docs if no subcommand is provided
             Some(DocsTypeSubcommand::User) | None => {
+                println!("Opening the user documentation at {RUSTIC_DOCS_URL}");
                 open::that(RUSTIC_DOCS_URL)?;
-                format!("Opening the user documentation at {RUSTIC_DOCS_URL}")
             }
             Some(DocsTypeSubcommand::Dev) => {
+                println!("Opening the development documentation at {RUSTIC_DEV_DOCS_URL}");
                 open::that(RUSTIC_DEV_DOCS_URL)?;
-                format!("Opening the development documentation at {RUSTIC_DEV_DOCS_URL}")
             }
             Some(DocsTypeSubcommand::Config) => {
+                println!("Opening the configuration documentation at {RUSTIC_CONFIG_DOCS_URL}");
                 open::that(RUSTIC_CONFIG_DOCS_URL)?;
-                format!("Opening the configuration documentation at {RUSTIC_CONFIG_DOCS_URL}")
             }
-        };
-
-        println!("{user_string}");
+        }
 
         Ok(())
     }

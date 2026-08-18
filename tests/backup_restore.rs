@@ -37,6 +37,23 @@ pub fn rustic_runner(temp_dir: &TempDir) -> TestResult<Command> {
     Ok(runner)
 }
 
+fn rustic_runner_with_json_progress(temp_dir: &TempDir) -> TestResult<Command> {
+    let password = "test";
+    let repo_dir = temp_dir.path().join("repo");
+
+    let mut runner = Command::new(env!("CARGO_BIN_EXE_rustic"));
+
+    runner
+        .arg("-r")
+        .arg(repo_dir)
+        .arg("--password")
+        .arg(password)
+        .arg("--json-progress")
+        .args(["--progress-interval", "1ms"]);
+
+    Ok(runner)
+}
+
 fn setup() -> TestResult<TempDir> {
     let temp_dir = tempdir()?;
     rustic_runner(&temp_dir)?
@@ -170,6 +187,49 @@ fn test_backup_records_cli_version_in_snapshot() -> TestResult<()> {
     let snapshot: serde_json::Value = serde_json::from_slice(&backup_output.stdout)?;
 
     assert_eq!(snapshot["program_version"].as_str(), Some(version.trim()));
+
+    Ok(())
+}
+
+#[test]
+fn restore_json_progress_writes_only_newline_delimited_json_to_stdout() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let source = temp_dir.path().join("source");
+    std::fs::create_dir(&source)?;
+    std::fs::write(source.join("payload.bin"), vec![0_u8; 256 * 1024])?;
+
+    rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(&source)
+        .assert()
+        .success();
+
+    let output = rustic_runner_with_json_progress(&temp_dir)?
+        .args(["restore", "latest"])
+        .arg(temp_dir.path().join("restore"))
+        .output()?;
+
+    assert!(
+        output.status.success(),
+        "restore command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8(output.stdout)?;
+    let events = stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(serde_json::from_str::<serde_json::Value>)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    assert!(
+        !events.is_empty(),
+        "restore --json-progress did not produce progress events"
+    );
+    assert!(
+        events.iter().all(|event| event["message_type"] == "status"),
+        "unexpected restore JSON progress output: {stdout}"
+    );
 
     Ok(())
 }

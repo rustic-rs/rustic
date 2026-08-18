@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.4](https://github.com/rustic-rs/rustic/compare/v0.11.3...v0.11.4) - 2026-08-17
+
+### Added
+
+- Add sparse file support for restore ([#530](https://github.com/rustic-rs/rustic_core/pull/530))
+- support exclusion on the opendal source ([#1812](https://github.com/rustic-rs/rustic/pull/1812), [#535](https://github.com/rustic-rs/rustic_core/pull/535))
+- stdio protocol between warmup program and rustic ([#1782](https://github.com/rustic-rs/rustic_core/pull/1782), [#524](https://github.com/rustic-rs/rustic_core/pull/524))
+
+### Fixed
+
+- read full packs from cold backend in hot/cold case ([#542](https://github.com/rustic-rs/rustic_core/pull/542), [#1868](https://github.com/rustic-rs/rustic/pull/1868))
+- use no parent for stdin source ([#536](https://github.com/rustic-rs/rustic_core/pull/536))
+- link jemallocator-global so the jemallocator feature applies ([#1821](https://github.com/rustic-rs/rustic/pull/1821))
+- treat unchanged symlinks as identical in diff ([#1829](https://github.com/rustic-rs/rustic/pull/1829))
+- keep completions independent from profiles ([#1830](https://github.com/rustic-rs/rustic/pull/1830))
+- allow scrolling long read-only TUI text ([#1851](https://github.com/rustic-rs/rustic/pull/1851))
+- record CLI version in snapshot metadata ([#1803](https://github.com/rustic-rs/rustic/pull/1803))
+- read stdin-filename from config file ([#1813](https://github.com/rustic-rs/rustic/pull/1813))
+- deny unknown forget options in config profile ([#1810](https://github.com/rustic-rs/rustic/pull/1810))
+- set correct UID/GID for dump into tar ([#1801](https://github.com/rustic-rs/rustic/pull/1801))
+
+### Other
+
+- refactor packer and optimize memory allocations ([#533](https://github.com/rustic-rs/rustic_core/pull/533))
+- reduce memory usage for index ([#537](https://github.com/rustic-rs/rustic_core/pull/537))
+- Add pCloud service example config ([#1775](https://github.com/rustic-rs/rustic/pull/1775))
+- Update README ([#1783](https://github.com/rustic-rs/rustic/pull/1783), [#1785](https://github.com/rustic-rs/rustic/pull/1785))
+- update dependencies ([#1882](https://github.com/rustic-rs/rustic/pull/1882), [#1854](https://github.com/rustic-rs/rustic/pull/1854), [#541](https://github.com/rustic-rs/rustic_core/pull/541), [#539](https://github.com/rustic-rs/rustic_core/pull/539))
+
 ## [0.11.3](https://github.com/rustic-rs/rustic/compare/v0.11.2...v0.11.3) - 2026-06-03
 
 ### Added

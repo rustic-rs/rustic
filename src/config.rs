@@ -103,6 +103,12 @@ impl Display for RusticConfig {
 }
 
 impl RusticConfig {
+    pub(crate) fn set_hook_command(&mut self, command: &str) {
+        self.global.hooks = self.global.hooks.with_command(command);
+        self.repository.hooks = self.repository.hooks.with_command(command);
+        self.backup.set_hook_command(command);
+    }
+
     /// Merge a profile into the current config by reading the corresponding config file.
     /// Also recursively merge all profiles given within this config file.
     ///

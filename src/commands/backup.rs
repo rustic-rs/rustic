@@ -106,7 +106,7 @@ pub struct BackupCmd {
     /// Node save options
     #[clap(flatten, next_help_heading = "Node modification options")]
     #[serde(flatten)]
-    ignore_save_opts: LocalSourceSaveOptions,
+    pub ignore_save_opts: LocalSourceSaveOptions,
 
     /// Parent processing options
     #[clap(flatten, next_help_heading = "Options for parent processing")]

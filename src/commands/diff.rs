@@ -16,7 +16,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 
 use rustic_core::{
-    Excludes, LocalDestination, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions,
+    Excludes, LocalDestination, LocalSource, LocalSourceFilterOptions,
     LsOptions, ProgressBars, ProgressType, ReadSource, ReadSourceEntry, RusticResult,
     repofile::{Node, NodeType},
 };
@@ -178,7 +178,7 @@ impl DiffCmd {
                     .with_context(|| format!("Error accessing {path2:?}"))?
                     .is_dir();
                 let src = LocalSource::new(
-                    LocalSourceSaveOptions::default(),
+                    config.backup.ignore_save_opts.clone(),
                     &self.excludes,
                     &self.ignore_opts,
                     &[&path2],

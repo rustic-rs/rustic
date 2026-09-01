@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.5](https://github.com/rustic-rs/rustic/compare/v0.11.4...v0.11.5) - 2026-09-01
+
+### Added
+
+- add [init] to config profile ([#1907](https://github.com/rustic-rs/rustic/pull/1907))
+
+### Fixed
+
+- Print url first in docs command ([#1898](https://github.com/rustic-rs/rustic/pull/1898))
+
 ## [0.11.4](https://github.com/rustic-rs/rustic/compare/v0.11.3...v0.11.4) - 2026-08-17
 
 ### Added

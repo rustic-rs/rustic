@@ -2,6 +2,7 @@
 
 use abscissa_core::{Command, Runnable, Shutdown, status_err};
 use anyhow::{Result, bail};
+use conflate::MergeFrom;
 use dialoguer::Password;
 
 use crate::{
@@ -105,8 +106,10 @@ pub(crate) fn init(
     key_opts: &KeyOptions,
     config_opts: &ConfigOptions,
 ) -> Result<OpenRepo> {
+    let config = RUSTIC_APP.config();
+    let config_opts = config_opts.merge_from(config.init);
     let pass = init_credentials(credential_opts)?;
-    Ok(repo.0.init(&pass, key_opts, config_opts)?)
+    Ok(repo.0.init(&pass, key_opts, &config_opts)?)
 }
 
 pub(crate) fn init_credentials(credential_opts: &CredentialOptions) -> Result<Credentials> {

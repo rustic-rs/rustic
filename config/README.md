@@ -27,6 +27,7 @@ attributes according to their needs.
   - [Repository Options for cold repo (Additional) `[repository.options-cold]`](#repository-options-for-cold-repo-additional-repositoryoptions-cold)
   - [Repository Options for hot repo (Additional) `[repository.options-hot]`](#repository-options-for-hot-repo-additional-repositoryoptions-hot)
   - [Repository Hooks `[repository.hooks]`](#repository-hooks-repositoryhooks)
+  - [Init Options `[init]`](#init-options-init)
   - [Snapshot-Filter Options `[snapshot-filter]`](#snapshot-filter-options-snapshot-filter)
   - [Backup Options `[backup]`](#backup-options-backup)
   - [Backup Hooks `[backup.hooks]`](#backup-hooks-backuphooks)
@@ -197,6 +198,36 @@ These external commands are run before and after each repository-accessing
 commands, respectively.
 
 See [Global Hooks](#global-hooks-globalhooks).
+
+### Init `[init]`
+
+Options for setting in-repo configuration when initializing a repository.
+
+These options are only taken into account when creating a repository and then
+stored in the in-repo config.
+
+Note: If you change them in the config profile, they won't apply for an existing
+repository. Instead you have to use `rustic config` in order to apply those
+options to an existing repository.
+
+| Attribute                         | Description                                                                                                                                                                                                                  | Default Value | Example Value | CLI Option                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------- | ----------------------------------- |
+| set-version                       | Set repository version. Allowed versions: 1,2                                                                                                                                                                                | 2             | 1             | --set-version                       |
+| set-chunker                       | Set chunker to use. Allowed chunkers: `rabin`, `fixed_size`                                                                                                                                                                  | "rabin"       | "fixed_size"  | --set-chunker                       |
+| set-chunk-size                    | Set the chunk size. For the rabin chunker this is the average chunk size.                                                                                                                                                    | "1 MiB"       | "8MiB"        | --set-chunk-size                    |
+| set-chunk-min-size                | Set the minimum chunk size. Only used for the rabin chunker.                                                                                                                                                                 | "512 kiB"     |               | --set-chunk-min-size                |
+| set-chunk-max-size                | Set the maximum chunk size. Only used for the rabin chunker                                                                                                                                                                  | "8 MiB"       |               | --set-chunk-max-size                |
+| set-compression                   | Set compression level. Allowed levels are 1 to 22 and -1 to -7, see <https://facebook.github.io/zstd/>. 0 equals no compression                                                                                              |               | 5             | --set-compression                   |
+| set-append-only                   | Set append-only mode. Note that only append-only commands work once this is set. `forget`, `prune` or `config` won't work any longer.                                                                                        | false         | true          | --set-append-only                   |
+| set-datapack-size                 | Set default packsize for data packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor.                                                       | "32 MiB"      |               | --set-datapack-size                 |
+| set-datapack-size-limit           | Set upper limit for default packsize for data packs. Note that packs actually can get a bit larger.                                                                                                                          | "4 GiB"       |               | --set-datapack-size-limit           |
+| set-datapack-growfactor           | Set grow factor for data packs. The default packsize grows by the square root of the total size of all data packs multiplied with this factor. This means 32 kiB times this factor per square root of total datasize in GiB. | 32            | 0             | --set-datapack-growfactor           |
+| set-treepack-size                 | Set default packsize for tree packs. rustic tries to always produce packs greater than this value. Note that for large repos, this value is grown by the grown factor.                                                       | "4 MiB"       |               | --set-treepack-size                 |
+| set-treepack-size-limit           | Set upper limit for default packsize for tree packs. Note that packs actually can get a bit larger.                                                                                                                          | "4 GiB"       |               | --set-treepack-size-limit           |
+| set-treepack-growfactor           | Set grow factor for tree packs. The default packsize grows by the square root of the total size of all tree packs multiplied with this factor. This means 32 kiB times this factor per square root of total treesize in GiB. | 32            | 0             | --set-treepack-growfactor           |
+| set-min-packsize-tolerate-percent | Set minimum tolerated packsize in percent of the targeted packsize.                                                                                                                                                          | 30            | 80            | --set-min-packsize-tolerate-percent |
+| set-max-packsize-tolerate-percent | Set maximum tolerated packsize in percent of the targeted packsize. A value of `0` means packs larger than the targeted packsize are always tolerated.                                                                       | 0             | 150           | --set-max-packsize-tolerate-percent |
+| set-extra-verify                  | Do an extra verification by decompressing/decrypting all data before uploading to the repository.                                                                                                                            | true          | false         | --set-extra-verify                  |
 
 ### Snapshot-Filter Options `[snapshot-filter]`
 

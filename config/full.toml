@@ -103,6 +103,25 @@ run-after = ["echo after"] # Run after if successful, default: []
 run-failed = ["echo failed"] # Default: []
 run-finally = ["echo finally"] # Always run after, default: []
 
+# init options only apply when initializing a repo and set the in-repo configuration. Those can be changed using the `config` command
+[init]
+set-version = 2 # sets repository version
+set-chunker = "rabin" # currently, "rabin" and "fixed_size" is supported
+set-chunk-size = "1 MiB"
+set-chunk-min-size = "512 kiB"
+set-chunk-max-size = "8 MiB"
+set-compression = 5
+set-append-only = false
+set-datapack-size = "32 MiB"
+set-datapack-size-limit = "4 GiB"
+set-datapack-growfactor = 32
+set-treepack-size = "4 MiB"
+set-treepack-size-limit = "4 GiB"
+set-treepack-growfactor = 32
+set-min-packsize-tolerate-percent = 30
+set-max-packsize-tolerate-percent = 0
+set-extra-verify = true
+
 # Snapshot-filter options: These options apply to all commands that use snapshot filters
 [snapshot-filter]
 filter-hosts = ["host1", "host2"] # Default: []

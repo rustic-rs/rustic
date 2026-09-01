@@ -38,6 +38,8 @@ run-after = []
 run-failed = []
 run-finally = []
 
+[init]
+
 [snapshot-filter]
 filter-hosts = []
 filter-labels = []

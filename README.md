@@ -12,6 +12,16 @@
 <a href="https://github.com/rustic-rs/rustic/actions/workflows/release-image.yml"><img src="https://github.com/rustic-rs/rustic/actions/workflows/release-image.yml/badge.svg" /></a>
 <p>
 
+<p align="center">
+Most backends featured by<br />
+<a href="https://opendal.apache.org/">
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/apache/opendal/main/website/static/img/logo_dark.svg">
+<img src="https://raw.githubusercontent.com/apache/opendal/main/website/static/img/logo.svg" alt="Powered by Apache OpenDAL" height="64" />
+</picture>
+</a>
+</p>
+
 ## About
 
 `rustic` is a backup tool that provides fast, encrypted, deduplicated backups.

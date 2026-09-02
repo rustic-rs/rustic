@@ -116,6 +116,14 @@ scoop install rustic
 brew install rustic
 ```
 
+#### Debian
+
+rustic is available from the [pkg.haus](https://pkg.haus) APT archive for Debian stable, testing and unstable (amd64 and arm64), built from source at release tags. Set up the archive per the instructions on [pkg.haus](https://pkg.haus), then run:
+
+```bash
+sudo apt install rustic
+```
+
 Or you can check out the
 [releases](https://github.com/rustic-rs/rustic/releases).
 

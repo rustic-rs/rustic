@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    helpers::{bold_cell, bytes_size_to_string, table, table_right_from},
+    helpers::{bold_cell, bytes_size_to_string, is_broken_pipe, table, table_right_from},
     repository::{OpenRepo, get_global_grouped_snapshots},
     status_err,
 };
@@ -13,6 +13,7 @@ use comfy_table::Cell;
 use derive_more::From;
 use itertools::Itertools;
 use jiff::SignedDuration;
+use std::io::Write;
 
 use rustic_core::{
     Group, ProgressBars, ProgressType, SnapshotGroup,
@@ -56,6 +57,7 @@ impl Runnable for SnapshotCmd {
             .config()
             .repository
             .run_open(|repo| self.inner_run(repo))
+            && !is_broken_pipe(&err)
         {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -89,9 +91,10 @@ impl SnapshotCmd {
         }
 
         let groups = get_global_grouped_snapshots(&repo, &self.ids)?.groups;
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
 
         if self.json {
-            let mut stdout = std::io::stdout();
             if groups.len() == 1 && groups[0].group_key.is_empty() {
                 // we don't use grouping, only output snapshots list
                 serde_json::to_writer_pretty(&mut stdout, &groups[0].items)?;
@@ -113,19 +116,24 @@ impl SnapshotCmd {
         let mut total_count = 0;
         for Group { group_key, items } in groups {
             if !group_key.is_empty() {
-                println!("\nsnapshots for {group_key}");
+                writeln!(stdout, "\nsnapshots for {group_key}")?;
             }
             total_count += items.len();
-            print_snapshots(items, self.long, self.all);
+            print_snapshots(items, self.long, self.all, &mut stdout)?;
         }
-        println!();
-        println!("total: {total_count} snapshot(s)");
+        writeln!(stdout)?;
+        writeln!(stdout, "total: {total_count} snapshot(s)")?;
 
         Ok(())
     }
 }
 
-pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
+pub(crate) fn print_snapshots(
+    snapshots: Vec<SnapshotFile>,
+    long: bool,
+    all: bool,
+    stdout: &mut impl Write,
+) -> std::io::Result<()> {
     let count = snapshots.len();
     if long {
         for snap in snapshots {
@@ -136,8 +144,8 @@ pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
             };
             fill_table(&snap, add_entry);
 
-            println!("{table}");
-            println!();
+            writeln!(stdout, "{table}")?;
+            writeln!(stdout)?;
         }
     } else {
         let mut table = table_right_from(
@@ -160,9 +168,11 @@ pub fn print_snapshots(snapshots: Vec<SnapshotFile>, long: bool, all: bool) {
                     .map(|(_, mut g)| snap_to_table(&g.next().unwrap(), g.count())),
             );
         }
-        println!("{table}");
+        writeln!(stdout, "{table}")?;
     }
-    println!("{count} snapshot(s)");
+    writeln!(stdout, "{count} snapshot(s)")?;
+
+    Ok(())
 }
 
 pub fn snap_to_table(sn: &SnapshotFile, count: usize) -> [String; 9] {
@@ -277,5 +287,30 @@ pub fn fill_table(snap: &SnapshotFile, mut add_entry: impl FnMut(&str, String)) 
     }
     if let Some(ref description) = snap.description {
         add_entry("Description", description.clone());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::print_snapshots;
+    use std::io::{self, Write};
+
+    struct BrokenPipe;
+
+    impl Write for BrokenPipe {
+        fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+            Err(io::Error::from(io::ErrorKind::BrokenPipe))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn snapshot_output_propagates_broken_pipe() {
+        let error = print_snapshots(Vec::new(), false, true, &mut BrokenPipe).unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::BrokenPipe);
     }
 }

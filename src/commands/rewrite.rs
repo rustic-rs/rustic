@@ -3,6 +3,7 @@
 use crate::{
     Application, RUSTIC_APP,
     commands::snapshots::print_snapshots,
+    helpers::is_broken_pipe,
     repository::{IndexedRepo, OpenRepo, get_snapots_from_ids},
     status_err,
 };
@@ -10,6 +11,7 @@ use crate::{
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::Result;
 use log::info;
+use std::io::Write;
 
 use rustic_core::{
     Excludes, NodeModification, RewriteOptions, RewriteTreesOptions, StringList,
@@ -51,12 +53,15 @@ impl Runnable for RewriteCmd {
     fn run(&self) {
         let repo = &RUSTIC_APP.config().repository;
 
-        if let Err(err) =
+        let result =
             if self.excludes.is_empty() && self.node_modification.is_empty() && !self.all_trees {
                 repo.run_open(|repo| self.inner_run_open(repo))
             } else {
                 repo.run_indexed(|repo| self.inner_run_indexed(repo))
-            }
+            };
+
+        if let Err(err) = result
+            && !is_broken_pipe(&err)
         {
             status_err!("{}", err);
             RUSTIC_APP.shutdown(Shutdown::Crash);
@@ -79,7 +84,7 @@ impl RewriteCmd {
 
         let snaps = repo.rewrite_snapshots(snapshots, &self.opts())?;
 
-        self.output(snaps);
+        self.output(snaps)?;
 
         Ok(())
     }
@@ -93,18 +98,22 @@ impl RewriteCmd {
 
         let snaps = repo.rewrite_snapshots_and_trees(snapshots, &self.opts(), &tree_opts)?;
 
-        self.output(snaps);
+        self.output(snaps)?;
 
         Ok(())
     }
 
-    fn output(&self, snaps: Vec<SnapshotFile>) {
+    fn output(&self, snaps: Vec<SnapshotFile>) -> Result<()> {
         let config = RUSTIC_APP.config();
         if config.global.dry_run {
-            println!("Would have rewritten the following snapshots:");
-            print_snapshots(snaps, false, true);
+            let stdout = std::io::stdout();
+            let mut stdout = stdout.lock();
+            writeln!(stdout, "Would have rewritten the following snapshots:")?;
+            print_snapshots(snaps, false, true, &mut stdout)?;
         } else {
             info!("{} snapshots have been rewritten", snaps.len());
         }
+
+        Ok(())
     }
 }

@@ -216,6 +216,7 @@ struct NonInteractiveState {
     position: u64,
     length: Option<u64>,
     last_log: Instant,
+    error_count: u64,
 }
 
 impl NonInteractiveState {
@@ -259,6 +260,7 @@ impl NonInteractiveProgress {
                 position: 0,
                 length: None,
                 last_log: now,
+                error_count: 0,
             })),
             start: now,
             interval,
@@ -343,6 +345,20 @@ struct JsonProgressStatus {
     total_bytes: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     bytes_done: Option<u64>,
+    error_count: u64,
+}
+
+#[derive(Serialize)]
+struct JsonErrorMessage {
+    message: String,
+}
+
+#[derive(Serialize)]
+struct JsonError {
+    message_type: &'static str,
+    error: JsonErrorMessage,
+    during: String,
+    item: String,
 }
 
 impl JsonProgress {
@@ -354,6 +370,7 @@ impl JsonProgress {
                 position: 0,
                 length: None,
                 last_log: now,
+                error_count: 0,
             })),
             start: now,
             interval,
@@ -382,6 +399,7 @@ impl JsonProgress {
             percent_done,
             total_bytes: is_bytes.then_some(state.length).flatten(),
             bytes_done: is_bytes.then_some(state.position),
+            error_count: state.error_count,
         };
 
         let mut stdout = std::io::stdout().lock();
@@ -426,5 +444,24 @@ impl RusticProgress for JsonProgress {
         };
 
         self.log_progress(&state);
+    }
+
+    fn error(&self, item: &str, during: &str, message: &str) {
+        if let Ok(mut state) = self.state.lock() {
+            state.error_count += 1;
+        }
+
+        let error = JsonError {
+            message_type: "error",
+            error: JsonErrorMessage {
+                message: message.to_string(),
+            },
+            during: during.to_string(),
+            item: item.to_string(),
+        };
+
+        let mut stderr = std::io::stderr().lock();
+        _ = serde_json::to_writer(&mut stderr, &error);
+        _ = writeln!(stderr);
     }
 }

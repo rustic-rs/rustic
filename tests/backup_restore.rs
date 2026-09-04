@@ -174,6 +174,125 @@ fn test_backup_records_cli_version_in_snapshot() -> TestResult<()> {
     Ok(())
 }
 
+#[cfg(unix)]
+fn unreadable_backup_source() -> TestResult<Option<(TempDir, std::path::PathBuf)>> {
+    use std::fs::{self, File, Permissions};
+    use std::os::unix::fs::PermissionsExt;
+
+    let src = tempdir()?;
+    fs::write(src.path().join("ok.txt"), "ok")?;
+    let secret = src.path().join("secret.txt");
+    fs::write(&secret, "secret")?;
+    fs::set_permissions(&secret, Permissions::from_mode(0o000))?;
+
+    if File::open(&secret).is_ok() {
+        fs::set_permissions(&secret, Permissions::from_mode(0o644))?;
+        return Ok(None);
+    }
+
+    Ok(Some((src, secret)))
+}
+
+#[cfg(unix)]
+#[test]
+fn test_backup_unreadable_file_exits_3() -> TestResult<()> {
+    use std::fs::{self, Permissions};
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp_dir = setup()?;
+    let Some((src, secret)) = unreadable_backup_source()? else {
+        return Ok(());
+    };
+
+    let result = rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(src.path())
+        .output()?;
+
+    // Restore permissions so TempDir cleanup succeeds
+    fs::set_permissions(&secret, Permissions::from_mode(0o644))?;
+
+    assert_eq!(
+        result.status.code(),
+        Some(3),
+        "stderr: {}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(
+        stderr.contains("at least one source file could not be read"),
+        "stderr: {stderr}"
+    );
+
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn test_backup_unreadable_file_json_exit_error() -> TestResult<()> {
+    use std::fs::{self, Permissions};
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp_dir = setup()?;
+    let Some((src, secret)) = unreadable_backup_source()? else {
+        return Ok(());
+    };
+
+    let password = "test";
+    let repo_dir = temp_dir.path().join("repo");
+    let result = Command::new(env!("CARGO_BIN_EXE_rustic"))
+        .arg("-r")
+        .arg(&repo_dir)
+        .arg("--password")
+        .arg(password)
+        .arg("--json-progress")
+        .arg("backup")
+        .arg(src.path())
+        .output()?;
+
+    fs::set_permissions(&secret, Permissions::from_mode(0o644))?;
+
+    assert_eq!(
+        result.status.code(),
+        Some(3),
+        "stderr: {}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    let json_msgs: Vec<serde_json::Value> = stderr
+        .lines()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect();
+
+    assert!(
+        json_msgs.iter().any(|v| v["message_type"] == "error"),
+        "expected JSON error message in stderr: {stderr}"
+    );
+    let exit_error = json_msgs
+        .iter()
+        .find(|v| v["message_type"] == "exit_error")
+        .expect("expected JSON exit_error in stderr");
+    assert_eq!(exit_error["code"], 3);
+    assert!(
+        exit_error["message"]
+            .as_str()
+            .is_some_and(|m| m.contains("at least one source file could not be read"))
+    );
+
+    let stdout = String::from_utf8_lossy(&result.stdout);
+    let stdout_msgs: Vec<serde_json::Value> = stdout
+        .lines()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect();
+    assert!(
+        stdout_msgs.iter().any(|v| v["message_type"] == "summary"),
+        "expected JSON summary on stdout: {stdout}"
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_backup_and_restore_passes() -> TestResult<()> {
     let temp_dir = setup()?;

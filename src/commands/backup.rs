@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::io::Write;
 use std::path::PathBuf;
 use std::{collections::BTreeMap, env};
 
@@ -34,10 +35,18 @@ use rustic_core::{
     repofile::{SnapshotFile, SnapshotId},
 };
 
+/// restic-compatible exit code: some source data could not be read
+const EXIT_INVALID_SOURCE_DATA: i32 = 3;
+
+const UNREADABLE_SOURCE_WARNING: &str = "Warning: at least one source file could not be read";
+
 /// `backup` subcommand
 #[serde_as]
 #[derive(Clone, Command, Default, Debug, clap::Parser, Serialize, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
+#[command(
+    after_help = "Exit status:\n  0  backup was successful\n  1  fatal error (no snapshot created)\n  3  some source files could not be read (incomplete snapshot created)"
+)]
 // Note: using cli_sources, sources and snapshots within this struct is a hack to support serde(deny_unknown_fields)
 // for deserializing the backup options from TOML
 // Unfortunately we cannot work with nested flattened structures, see
@@ -218,15 +227,28 @@ impl Runnable for BackupCmd {
             RUSTIC_APP.shutdown(Shutdown::Crash);
         }
 
-        if let Err(err) = config.repository.run(|repo| self.inner_run(repo)) {
-            status_err!("{}", err);
-            RUSTIC_APP.shutdown(Shutdown::Crash);
-        };
+        match config.repository.run(|repo| self.inner_run(repo)) {
+            Ok(0) => {}
+            Ok(_) => {
+                let json_output =
+                    config.global.progress_options.json_progress || self.json || config.backup.json;
+                if json_output {
+                    write_json_exit_error(EXIT_INVALID_SOURCE_DATA, UNREADABLE_SOURCE_WARNING);
+                } else {
+                    warn!("{UNREADABLE_SOURCE_WARNING}");
+                }
+                RUSTIC_APP.shutdown_with_exitcode(Shutdown::Graceful, EXIT_INVALID_SOURCE_DATA);
+            }
+            Err(err) => {
+                status_err!("{}", err);
+                RUSTIC_APP.shutdown(Shutdown::Crash);
+            }
+        }
     }
 }
 
 impl BackupCmd {
-    fn inner_run(&self, repo: Repo) -> Result<()> {
+    fn inner_run(&self, repo: Repo) -> Result<u64> {
         let config = RUSTIC_APP.config();
         let snapshots = self.get_snapshots_to_backup()?;
 
@@ -259,16 +281,20 @@ impl BackupCmd {
 
         hooks.use_with(|| -> Result<_> {
             let mut is_err = false;
+            let mut source_errors = 0;
             for (opts, sources) in snapshots {
-                if let Err(err) = opts.backup_snapshot(sources.clone(), &repo) {
-                    error!("error backing up {sources}: {err}");
-                    is_err = true;
+                match opts.backup_snapshot(sources.clone(), &repo) {
+                    Ok(n) => source_errors += n,
+                    Err(err) => {
+                        error!("error backing up {sources}: {err}");
+                        is_err = true;
+                    }
                 }
             }
             if is_err {
                 Err(anyhow!("Not all snapshots were generated successfully!"))
             } else {
-                Ok(())
+                Ok(source_errors)
             }
         })
     }
@@ -413,7 +439,7 @@ impl BackupCmd {
         Ok(())
     }
 
-    fn backup_snapshot(mut self, source: PathList, repo: &IndexedIdsRepo) -> Result<()> {
+    fn backup_snapshot(mut self, source: PathList, repo: &IndexedIdsRepo) -> Result<u64> {
         let config = RUSTIC_APP.config();
         let snapshot_opts = &config.backup.snapshots;
         if let Some(path) = &self.as_path {
@@ -515,7 +541,7 @@ impl BackupCmd {
         }
 
         info!("backup of {source} done.");
-        Ok(())
+        Ok(snap.summary.as_ref().map_or(0, |s| s.error_count))
     }
 }
 
@@ -537,6 +563,24 @@ struct JsonProgressSummary {
     total_duration: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     snapshot_id: Option<SnapshotId>,
+}
+
+#[derive(Serialize)]
+struct JsonExitError {
+    message_type: &'static str,
+    code: i32,
+    message: &'static str,
+}
+
+fn write_json_exit_error(code: i32, message: &'static str) {
+    let err = JsonExitError {
+        message_type: "exit_error",
+        code,
+        message,
+    };
+    let mut stderr = std::io::stderr().lock();
+    _ = serde_json::to_writer(&mut stderr, &err);
+    _ = writeln!(stderr);
 }
 
 fn write_json_progress_summary(snap: &SnapshotFile) -> Result<()> {

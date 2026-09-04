@@ -446,7 +446,7 @@ impl RusticProgress for JsonProgress {
         self.log_progress(&state);
     }
 
-    fn error(&self, item: &str, during: &str, message: &str) {
+    fn error(&self, item: Option<&str>, during: &str, message: &str) {
         if let Ok(mut state) = self.state.lock() {
             state.error_count += 1;
         }
@@ -457,7 +457,7 @@ impl RusticProgress for JsonProgress {
                 message: message.to_string(),
             },
             during: during.to_string(),
-            item: item.to_string(),
+            item: item.unwrap_or_default().to_string(),
         };
 
         let mut stderr = std::io::stderr().lock();

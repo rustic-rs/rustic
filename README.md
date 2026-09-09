@@ -137,6 +137,25 @@ unstable.
 cargo install --git https://github.com/rustic-rs/rustic.git rustic-rs
 ```
 
+### Building a checkout
+
+Use Cargo for a normal local build:
+
+```bash
+cargo build --release
+```
+
+`./build.sh` is an optional convenience wrapper for that command. It sets
+`PROJECT_VERSION` with `git describe --tags`, which makes `rustic version`
+report the Git-derived version instead of only the crate version.
+
+`maskfile.md` contains optional local development tasks for
+[mask](https://github.com/jacobdeichert/mask); CI invokes Cargo directly.
+`build-dependencies.just` lists platform-specific system dependencies for
+cross-target builds and optional features. Neither tool is required for a normal
+Cargo build. The release-image workflow uses `Dockerfile` to package the release
+artifacts.
+
 ### crates.io
 
 ```bash

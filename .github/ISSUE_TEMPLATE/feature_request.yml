@@ -1,0 +1,164 @@
+name: Feature request
+description: |
+  Create a feature requests to let us know what you wish us to improve. Please search for existing issues first. Also see our CONTRIBUTING.md.
+labels: ["S-triage", "C-enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for taking the time to propose a new feature to **rustic**!
+
+        Please fill out the following template to help us understanding why you think this feature is needed for rustic.
+
+  - type: markdown
+    attributes:
+      value: |
+        Please note that this is only for proposing new features to **rustic** itself. 
+
+        If you have a question about how to use **rustic**, please use the [discussions](https://github.com/rustic-rs/rustic/discussions) instead.
+
+  - type: checkboxes
+    id: product-scope
+    attributes:
+      label: Which part(s) of the rustic ecosystem are we talking about?
+      description: You may select more than one.
+      options:
+        - label: rustic
+        - label: rustic_beta
+        - label: rustic_core
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: A clear and concise description of what you're experiencing and what you are missing out on.
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem-to-be-solved
+    attributes:
+      label: Problem to be solved
+      description: |
+        Please present a concise description of the problem to be addressed by this feature request.
+
+        Please be clear what parts of the problem are considered to be in-scope and out-of-scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-stories
+    attributes:
+      label: User stories
+      description: |
+        Can you provide us with at least one user story? 
+
+        A user story is a description of a particular use case of the feature. 
+        It describes the type of user (you), what they want and why.
+
+        A simple template is: 
+
+        "As a < type of user >, I want to < some goal > so that I (can) < some reason >."
+      value: |
+        As a < type of user >, I want to < some goal > so that I (can) < some reason >.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Solution
+
+  - type: textarea
+    id: user-solution
+    attributes:
+      label: Suggest a solution
+      description: |
+        A concise description of your preferred solution.
+
+        Things to address include:
+
+        * Details of the technical implementation
+        * Tradeoffs made in design decisions
+        * Caveats and considerations for the future
+
+        If there are multiple solutions, please present each one separately.
+        Save comparisons for the very end.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Anything else?
+      description: |
+        Links? References? Anything that will give us more context about the proposal you are making!
+
+        Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Questionnaire
+
+        Please fill out the following questionnaire to help us improve **rustic**.
+
+  - type: dropdown
+    id: user-friendliness
+    attributes:
+      label: |
+        How would you rate the ease of use of rustic?
+      description: |
+        Consider a scale from -2 (Very difficult) to +2 (Very easy).
+      options:
+        - "-2 - Very Difficult"
+        - "-1 - Difficult"
+        - "0 - Neutral"
+        - "+1 - Easy"
+        - "+2 - Very Easy"
+      default: 3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: clarity-of-information
+    attributes:
+      label: |
+        Was the information and feedback provided by rustic clear and understandable?
+      description: |
+        Consider a scale from -2 (Very unclear) to +2 (Very clear).
+      options:
+        - "-2 - Very Unclear"
+        - "-1 - Somewhat Unclear"
+        - "0 - Neutral"
+        - "+1 - Clear"
+        - "+2 - Very Clear"
+      default: 3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: satisfaction
+    attributes:
+      label: |
+        Overall, how satisfied are you with rustic?
+      description: |
+        Consider a scale from -2 (I'm mad as hell, and I can't take it anymore) to +2 (I can't go back to any other backup solution anymore).
+      options:
+        - "-2 - Very Dissatisfied"
+        - "-1 - Dissatisfied "
+        - "0 - Neutral"
+        - "+1 - Satisfied"
+        - "+2 - Very Satisfied"
+      default: 3
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for the feature request!
+
+        ### We'll look into this as soon as possible.

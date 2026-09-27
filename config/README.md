@@ -306,7 +306,11 @@ See [Global Metrics labels](#global-metrics-labels-globalmetrics-labels).
 ### Backup Snapshots `[[backup.snapshots]]`
 
 **Note**: All of the backup options mentioned before can also be used as
-snapshot-specific option and then only apply to this snapshot.
+snapshot-specific options. A snapshot-specific list replaces the corresponding
+list in `[backup]`; for example, `[[backup.snapshots]].globs` replaces
+`[backup].globs` rather than adding to it. To keep shared glob patterns and add
+snapshot-specific ones, put the shared patterns in a file listed under
+`[backup].glob-files` and put the additional patterns in the snapshot's `globs`.
 
 | Attribute | Description                                                                                                              | Default Value | Example Value                                                          |
 | --------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------- |

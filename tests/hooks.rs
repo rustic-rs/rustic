@@ -209,6 +209,14 @@ generate_test_hook_function!(
     RunnerStatus::Success
 );
 
+// Scenario: Every hook level receives the top-level command, including snapshot hooks.
+generate_test_hook_function!(
+    test_hooks_receive_top_level_command_passes,
+    "hooks_command_success",
+    &["backup", "src/"],
+    RunnerStatus::Success
+);
+
 // Scenario: Check do not run backup hooks
 generate_test_hook_function!(
     test_check_do_not_run_backup_hooks_passes,

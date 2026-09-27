@@ -1,0 +1,46 @@
+[global.hooks]
+run-before = [
+  "sh -c 'echo global:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION > tests/generated/hooks_command_success.log'",
+]
+run-after = [
+  "sh -c 'echo global:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-finally = [
+  "sh -c 'echo global:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+
+[repository.hooks]
+run-before = [
+  "sh -c 'echo repository:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-after = [
+  "sh -c 'echo repository:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-finally = [
+  "sh -c 'echo repository:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+
+[backup.hooks]
+run-before = [
+  "sh -c 'echo backup:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-after = [
+  "sh -c 'echo backup:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-finally = [
+  "sh -c 'echo backup:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+
+[[backup.snapshots]]
+sources = ["src/"]
+
+[backup.snapshots.hooks]
+run-before = [
+  "sh -c 'echo snapshot:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-after = [
+  "sh -c 'echo snapshot:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]
+run-finally = [
+  "sh -c 'echo snapshot:$RUSTIC_COMMAND:$RUSTIC_HOOK_TYPE:$RUSTIC_ACTION >> tests/generated/hooks_command_success.log'",
+]

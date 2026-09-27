@@ -1,0 +1,5 @@
+---
+source: tests/hooks.rs
+expression: log_live
+---
+"global:backup:run-before:\nrepository:backup:run-before:repository\nbackup:backup:run-before:backup\nsnapshot:backup:run-before:source-specific-backup\nsnapshot:backup:run-after:source-specific-backup\nsnapshot:backup:run-finally:source-specific-backup\nbackup:backup:run-after:backup\nbackup:backup:run-finally:backup\nrepository:backup:run-after:repository\nrepository:backup:run-finally:repository\nglobal:backup:run-after:\nglobal:backup:run-finally:\n"

@@ -33,9 +33,13 @@ pub(crate) mod version;
 #[cfg(feature = "webdav")]
 pub(crate) mod webdav;
 
-use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
+use std::{
+    any::Any,
+    fmt::Debug,
+    panic::{self, AssertUnwindSafe},
+};
 
 #[cfg(feature = "mount")]
 use crate::commands::mount::MountCmd;
@@ -192,6 +196,7 @@ impl Runnable for EntryPoint {
     fn run(&self) {
         // Set up panic hook for better error messages and logs
         setup_panic!();
+        suppress_broken_pipe_panic_reports();
 
         // Set up Ctrl-C handler
         let (tx, rx) = channel();
@@ -206,10 +211,35 @@ impl Runnable for EntryPoint {
             RUSTIC_APP.shutdown(Shutdown::Graceful)
         });
 
-        // Run the subcommand
-        self.commands.run();
+        // Run the subcommand. `print!` and `println!` panic when stdout has been closed by a
+        // downstream process such as `head`. Treat that one expected panic as a successful exit.
+        if let Err(payload) = panic::catch_unwind(AssertUnwindSafe(|| self.commands.run())) {
+            if !is_broken_pipe_panic(payload.as_ref()) {
+                panic::resume_unwind(payload);
+            }
+        }
         RUSTIC_APP.shutdown(Shutdown::Graceful)
     }
+}
+
+fn suppress_broken_pipe_panic_reports() {
+    let panic_hook = panic::take_hook();
+    panic::set_hook(Box::new(move |info| {
+        if !is_broken_pipe_panic(info.payload()) {
+            panic_hook(info);
+        }
+    }));
+}
+
+fn is_broken_pipe_panic(payload: &(dyn Any + Send)) -> bool {
+    let message = payload
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| payload.downcast_ref::<&str>().copied());
+
+    message.is_some_and(|message| {
+        message.starts_with("failed printing to stdout:") && message.contains("Broken pipe")
+    })
 }
 
 /// This trait allows you to define how application configuration is loaded.

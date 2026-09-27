@@ -70,7 +70,8 @@ impl RepoInfoCmd {
 
         if self.json {
             let mut stdout = std::io::stdout();
-            serde_json::to_writer_pretty(&mut stdout, &infos)?;
+            serde_json::to_writer(&mut stdout, &infos)?;
+            println!();
             return Ok(());
         }
 

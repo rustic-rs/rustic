@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily launchd example for a rustic backup profile.
+
+  1. Replace /opt/homebrew/bin/rustic if `command -v rustic` prints another
+     absolute path.  launchd does not use your interactive shell PATH.
+  2. Replace "default" with the profile passed to `rustic -P`.
+  3. Replace YOUR_USERNAME in the two log paths. Create ~/Library/Logs, copy
+     this file to ~/Library/LaunchAgents/org.rustic.backup.plist, then
+     load it with:
+       launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/org.rustic.backup.plist
+     Inspect its output with:
+       launchctl print "gui/$(id -u)/org.rustic.backup"
+     To apply later edits, first run:
+       launchctl bootout "gui/$(id -u)" ~/Library/LaunchAgents/org.rustic.backup.plist
+  This is a per-user LaunchAgent, so it backs up files readable by that user.
+  Keep repository passwords and backend credentials out of this plist: it is
+  normally readable as part of the user's LaunchAgents directory.  Put secrets
+  in a separate owner-readable file and refer to that file with password-file
+  or key-file in the rustic profile instead.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>org.rustic.backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/rustic</string>
+    <string>--use-profile</string>
+    <string>default</string>
+    <string>backup</string>
+  </array>
+
+  <!-- Run every day at 03:00 local time. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- Avoid running a queued backup immediately after login. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!-- Lower the scheduling priority while the backup is running. -->
+  <key>Nice</key>
+  <integer>19</integer>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/rustic-backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/rustic-backup-error.log</string>
+</dict>
+</plist>

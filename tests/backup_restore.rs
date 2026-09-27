@@ -106,6 +106,62 @@ fn test_backup_and_check_passes() -> TestResult<()> {
     Ok(())
 }
 
+#[test]
+fn backup_fails_if_an_explicit_profile_is_missing() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let source = temp_dir.path().join("source");
+    std::fs::create_dir(&source)?;
+    std::fs::write(source.join("file.txt"), "backup data")?;
+
+    let profile = temp_dir.path().join("backup-profile.toml");
+    let source = serde_json::to_string(&source.to_string_lossy())?;
+    std::fs::write(
+        &profile,
+        format!("[[backup.snapshots]]\nsources = [{source}]\n"),
+    )?;
+
+    rustic_runner(&temp_dir)?
+        .arg("-P")
+        .arg(&profile)
+        .arg("-P")
+        .arg(temp_dir.path().join("missing-profile"))
+        .arg("backup")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("missing-profile"));
+
+    rustic_runner(&temp_dir)?
+        .arg("snapshots")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("total: 0 snapshot(s)"));
+
+    Ok(())
+}
+
+#[test]
+fn backup_fails_if_configured_source_is_missing() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let profile = temp_dir.path().join("backup-profile.toml");
+    let source = serde_json::to_string(&temp_dir.path().join("missing-source").to_string_lossy())?;
+    std::fs::write(
+        &profile,
+        format!("[[backup.snapshots]]\nsources = [{source}]\n"),
+    )?;
+
+    rustic_runner(&temp_dir)?
+        .arg("-P")
+        .arg(&profile)
+        .arg("backup")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "Not all snapshots were generated successfully",
+        ));
+
+    Ok(())
+}
+
 #[cfg(unix)]
 #[test]
 fn diff_reports_unchanged_symlinks_as_identical() -> TestResult<()> {

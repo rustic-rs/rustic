@@ -149,6 +149,11 @@ All given labels are included with the metrics, if it is configured.
 | password-file        | Path to a file containing the password for the repository.  | Not set                  |                                        | RUSTIC_PASSWORD_FILE    | --password-file, -p    |
 | password-command     | Command to retrieve the password for the repository.        | Not set                  |                                        | RUSTIC_PASSWORD_COMMAND | --password-command     |
 
+For a `rest:` repository URL without embedded credentials, set
+`RESTIC_REST_USERNAME` and `RESTIC_REST_PASSWORD` to supply HTTP credentials.
+Credentials in the URL take precedence. These variables also apply to a REST
+hot repository.
+
 ### Repository Options (Additional) `[repository.options]`
 
 Additional repository options - depending on backend. These can be only set in

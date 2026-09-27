@@ -5,6 +5,7 @@
 //! for specifying it.
 
 use std::collections::HashMap;
+use std::env;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -52,7 +53,13 @@ pub struct AllRepositoryOptions {
 
 impl AllRepositoryOptions {
     pub fn repository(&self, po: impl ProgressBars) -> Result<Repo> {
-        let backends = self.be.to_backends()?;
+        let mut backend_options = self.be.clone();
+        apply_rest_environment_credentials(
+            &mut backend_options,
+            env::var("RESTIC_REST_USERNAME").ok(),
+            env::var("RESTIC_REST_PASSWORD").ok(),
+        );
+        let backends = backend_options.to_backends()?;
         let repo = Repository::new_with_progress(&self.repo, &backends, po)?;
         Ok(Repo(repo))
     }
@@ -102,6 +109,136 @@ impl AllRepositoryOptions {
 
     pub fn run_indexed<T>(&self, f: impl FnOnce(IndexedRepo) -> Result<T>) -> Result<T> {
         self.run(|repo| f(repo.indexed(&self.credential_opts)?))
+    }
+}
+
+fn apply_rest_environment_credentials(
+    backend_options: &mut BackendOptions,
+    username: Option<String>,
+    password: Option<String>,
+) {
+    if username.is_none() && password.is_none() {
+        return;
+    }
+
+    let username = username.unwrap_or_default();
+    let password = password.unwrap_or_default();
+    for repository in [
+        &mut backend_options.repository,
+        &mut backend_options.repo_hot,
+    ] {
+        if let Some(repository) = repository {
+            *repository = rest_url_with_credentials(repository, &username, &password);
+        }
+    }
+}
+
+fn rest_url_with_credentials(repository: &str, username: &str, password: &str) -> String {
+    let Some(url) = repository.strip_prefix("rest:") else {
+        return repository.to_owned();
+    };
+    let Some(scheme_end) = url.find("://") else {
+        return repository.to_owned();
+    };
+
+    let authority_start = scheme_end + 3;
+    let authority_end = url[authority_start..]
+        .find(['/', '?', '#'])
+        .map_or(url.len(), |index| authority_start + index);
+    let authority = &url[authority_start..authority_end];
+
+    // Match restic's precedence: any explicit username or password in the URL
+    // prevents environment credentials from being applied.
+    if authority.is_empty() || authority.contains('@') {
+        return repository.to_owned();
+    }
+
+    let credentials = format!(
+        "{}:{}@",
+        percent_encode_userinfo(username),
+        percent_encode_userinfo(password)
+    );
+    let mut configured = String::with_capacity(repository.len() + credentials.len());
+    configured.push_str(&repository[.."rest:".len() + authority_start]);
+    configured.push_str(&credentials);
+    configured.push_str(&repository["rest:".len() + authority_start..]);
+    configured
+}
+
+fn percent_encode_userinfo(value: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            encoded.push(char::from(byte));
+        } else {
+            encoded.push('%');
+            encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+            encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+        }
+    }
+    encoded
+}
+
+#[cfg(test)]
+mod rest_environment_tests {
+    use super::*;
+
+    #[test]
+    fn applies_environment_credentials_to_primary_and_hot_rest_repositories() {
+        let mut backend_options = BackendOptions::default();
+        backend_options.repository = Some("rest:https://primary.example/repository".into());
+        backend_options.repo_hot = Some("rest:https://hot.example/repository".into());
+
+        apply_rest_environment_credentials(
+            &mut backend_options,
+            Some("user@example".into()),
+            Some("pass:word".into()),
+        );
+
+        assert_eq!(
+            backend_options.repository.as_deref(),
+            Some("rest:https://user%40example:pass%3Aword@primary.example/repository")
+        );
+        assert_eq!(
+            backend_options.repo_hot.as_deref(),
+            Some("rest:https://user%40example:pass%3Aword@hot.example/repository")
+        );
+    }
+
+    #[test]
+    fn explicit_rest_url_credentials_take_precedence_over_environment() {
+        let mut backend_options = BackendOptions::default();
+        backend_options.repository = Some("rest:https://url-user:url-password@example/repo".into());
+
+        apply_rest_environment_credentials(
+            &mut backend_options,
+            Some("environment-user".into()),
+            Some("environment-password".into()),
+        );
+
+        assert_eq!(
+            backend_options.repository.as_deref(),
+            Some("rest:https://url-user:url-password@example/repo")
+        );
+    }
+
+    #[test]
+    fn leaves_non_rest_repositories_unchanged() {
+        let mut backend_options = BackendOptions::default();
+        backend_options.repository = Some("opendal:https://example/repository".into());
+
+        apply_rest_environment_credentials(
+            &mut backend_options,
+            Some("user".into()),
+            Some("password".into()),
+        );
+
+        assert_eq!(
+            backend_options.repository.as_deref(),
+            Some("opendal:https://example/repository")
+        );
     }
 }
 

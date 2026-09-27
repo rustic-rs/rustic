@@ -467,7 +467,8 @@ impl BackupCmd {
             write_json_progress_summary(&snap)?;
         } else if self.json {
             let mut stdout = std::io::stdout();
-            serde_json::to_writer_pretty(&mut stdout, &snap)?;
+            serde_json::to_writer(&mut stdout, &snap)?;
+            println!();
         } else if self.long {
             let mut table = table();
 

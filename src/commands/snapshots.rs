@@ -94,7 +94,7 @@ impl SnapshotCmd {
             let mut stdout = std::io::stdout();
             if groups.len() == 1 && groups[0].group_key.is_empty() {
                 // we don't use grouping, only output snapshots list
-                serde_json::to_writer_pretty(&mut stdout, &groups[0].items)?;
+                serde_json::to_writer(&mut stdout, &groups[0].items)?;
             } else {
                 #[derive(Serialize, From)]
                 struct SnapshotsGroup {
@@ -105,8 +105,9 @@ impl SnapshotCmd {
                     .into_iter()
                     .map(|g| (g.group_key, g.items).into())
                     .collect();
-                serde_json::to_writer_pretty(&mut stdout, &groups)?;
+                serde_json::to_writer(&mut stdout, &groups)?;
             }
+            println!();
             return Ok(());
         }
 

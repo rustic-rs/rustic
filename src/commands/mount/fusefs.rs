@@ -17,7 +17,6 @@ use fuse_mt::{
     CallbackResult, DirectoryEntry, FileAttr, FileType, FilesystemMT, RequestInfo, ResultData,
     ResultEmpty, ResultEntry, ResultOpen, ResultReaddir, ResultSlice, ResultXattr, Xattr,
 };
-use itertools::Itertools;
 
 use crate::repository::IndexedRepo;
 
@@ -72,7 +71,7 @@ fn node_type_to_rdev(tpe: &NodeType) -> u32 {
         NodeType::Dev { device } | NodeType::Chardev { device } => *device,
         _ => 0,
     })
-    .unwrap()
+    .unwrap_or_default()
 }
 
 fn node_to_linktarget(node: &Node) -> Option<&OsStr> {
@@ -167,10 +166,11 @@ impl FilesystemMT for FuseFS {
         size: u32,
         callback: impl FnOnce(ResultSlice<'_>) -> CallbackResult,
     ) -> CallbackResult {
-        if let Some(open_file) = self.open_files.read().unwrap().get(&fh)
-            && let Ok(data) =
-                self.repo
-                    .read_file_at(open_file, offset.try_into().unwrap(), size as usize)
+        if let Ok(offset_usize) = usize::try_from(offset)
+            && let Some(open_file) = self.open_files.read().unwrap().get(&fh)
+            && let Ok(data) = self
+                .repo
+                .read_file_at(open_file, offset_usize, size as usize)
         {
             return callback(Ok(&data));
         }
@@ -205,11 +205,13 @@ impl FilesystemMT for FuseFS {
             .extended_attributes
             .into_iter()
             // convert into null-terminated [u8]
-            .map(|a| CString::new(a.name).unwrap().into_bytes_with_nul())
-            .concat();
+            .filter_map(|a| CString::new(a.name).ok())
+            .flat_map(|c| c.into_bytes_with_nul())
+            .collect::<Vec<u8>>();
 
         if size == 0 {
-            Ok(Xattr::Size(u32::try_from(xattrs.len()).unwrap()))
+            let len = u32::try_from(xattrs.len()).unwrap_or(u32::MAX);
+            Ok(Xattr::Size(len))
         } else {
             Ok(Xattr::Data(xattrs))
         }
@@ -227,11 +229,59 @@ impl FilesystemMT for FuseFS {
             Some(attr) => {
                 let value = attr.value.unwrap_or_default();
                 if size == 0 {
-                    Ok(Xattr::Size(u32::try_from(value.len()).unwrap()))
+                    let len = u32::try_from(value.len()).unwrap_or(u32::MAX);
+                    Ok(Xattr::Size(len))
                 } else {
                     Ok(Xattr::Data(value))
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rustic_core::repofile::Metadata;
+
+    #[test]
+    fn test_node_type_to_rdev() {
+        assert_eq!(node_type_to_rdev(&NodeType::File), 0);
+        assert_eq!(node_type_to_rdev(&NodeType::Dir), 0);
+        assert_eq!(node_type_to_rdev(&NodeType::Dev { device: 42 }), 42);
+        assert_eq!(node_type_to_rdev(&NodeType::Chardev { device: 100 }), 100);
+
+        // Values exceeding u32::MAX should not panic and return 0
+        assert_eq!(node_type_to_rdev(&NodeType::Dev { device: u64::MAX }), 0);
+        assert_eq!(
+            node_type_to_rdev(&NodeType::Chardev {
+                device: u64::from(u32::MAX) + 1
+            }),
+            0
+        );
+    }
+
+    #[test]
+    fn test_node_to_file_attr_overflow_rdev() {
+        let node = Node::new_node(
+            OsStr::new("test_dev"),
+            NodeType::Dev { device: u64::MAX },
+            Metadata::default(),
+        );
+        let attr = node_to_file_attr(&node, SystemTime::now());
+        assert_eq!(attr.rdev, 0);
+    }
+
+    #[test]
+    fn test_xattr_conversion_with_malformed_name() {
+        let attr_names = vec!["user.valid".to_string(), "user.corrupt\0name".to_string()];
+
+        let xattrs = attr_names
+            .into_iter()
+            .filter_map(|name| CString::new(name).ok())
+            .flat_map(|c| c.into_bytes_with_nul())
+            .collect::<Vec<u8>>();
+
+        assert_eq!(xattrs, b"user.valid\0");
     }
 }

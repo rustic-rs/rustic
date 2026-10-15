@@ -223,3 +223,35 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_copy_to_failing_target_fails() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let backup = src_snapshot()?.into_path();
+
+    rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(backup.path())
+        .assert()
+        .success();
+
+    // a target profile whose repository doesn't exist
+    let target = temp_dir.path().join("target");
+    std::fs::write(
+        target.with_extension("toml"),
+        format!(
+            "[repository]\nrepository = {:?}\npassword = \"test\"\n",
+            temp_dir.path().join("nowhere")
+        ),
+    )?;
+
+    rustic_runner(&temp_dir)?
+        .arg("copy")
+        .arg("--target")
+        .arg(&target)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("error copying to target"));
+
+    Ok(())
+}

@@ -38,8 +38,12 @@ impl SelfUpdateCmd {
             .build()?;
 
         let latest_release = release.get_latest_release()?;
+        let Some(latest_release) = latest_release.latest() else {
+            println!("no version available");
+            return Ok(());
+        };
 
-        let upstream_version = semver::Version::parse(&latest_release.version)?;
+        let upstream_version = semver::Version::parse(latest_release.version())?;
 
         match current_version.cmp(&upstream_version) {
             std::cmp::Ordering::Greater => {
@@ -53,7 +57,7 @@ impl SelfUpdateCmd {
             std::cmp::Ordering::Less => {
                 let status = release.update()?;
 
-                if let self_update::Status::Updated(str) = status {
+                if let self_update::VersionStatus::Updated(str) = status {
                     println!("rustic version has been updated to: {str}");
                 }
             }

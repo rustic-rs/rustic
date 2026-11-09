@@ -18,8 +18,9 @@ use derive_more::Add;
 use rustic_core::{
     Excludes, LocalSource, LocalSourceFilterOptions, LocalSourceSaveOptions, LsOptions,
     ProgressType, ReadSource, ReadSourceEntry, RusticResult,
-    repofile::{Node, NodeType},
+    repofile::{Metadata, Node, NodeType},
 };
+use serde::Serialize;
 
 mod constants {
     // constants from man page inode(7)
@@ -51,11 +52,11 @@ pub(crate) struct LsCmd {
     pub summary: bool,
 
     /// show long listing
-    #[clap(long, short = 'l', conflicts_with = "json")]
+    #[clap(long, short = 'l')]
     pub long: bool,
 
-    /// show listing in json
-    #[clap(long, conflicts_with_all = ["summary", "long"])]
+    /// show listing in json (with --long: including type and metadata)
+    #[clap(long, conflicts_with = "summary")]
     pub json: bool,
 
     /// show uid/gid instead of user/group
@@ -251,7 +252,16 @@ impl LsCmd {
                 if !first_item {
                     print!(",");
                 }
-                print!("{}", serde_json::to_string(&path)?);
+                if self.long {
+                    let entry = JsonEntry {
+                        path: &path,
+                        node_type: &node.node_type,
+                        meta: &node.meta,
+                    };
+                    print!("{}", serde_json::to_string(&entry)?);
+                } else {
+                    print!("{}", serde_json::to_string(&path)?);
+                }
             } else if self.long {
                 print_node(&node, &path, self.numeric_id);
             } else {
@@ -272,6 +282,16 @@ impl LsCmd {
         }
         Ok(())
     }
+}
+
+/// Entry of `ls --json --long`: the path, the node type and the metadata of a node
+#[derive(Serialize)]
+struct JsonEntry<'a> {
+    path: &'a Path,
+    #[serde(flatten)]
+    node_type: &'a NodeType,
+    #[serde(flatten)]
+    meta: &'a Metadata,
 }
 
 /// Print node in format similar to unix `ls`

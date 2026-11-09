@@ -121,6 +121,17 @@ impl RusticConfig {
         merge_logs: &mut Vec<(Level, String)>,
         level_missing: Level,
     ) -> Result<(), FrameworkError> {
+        self.merge_profile_with_missing(profile, merge_logs, level_missing)
+            .map(|_| ())
+    }
+
+    /// Merge a profile and report missing files, including referenced profiles.
+    pub(crate) fn merge_profile_with_missing(
+        &mut self,
+        profile: &str,
+        merge_logs: &mut Vec<(Level, String)>,
+        level_missing: Level,
+    ) -> Result<Vec<String>, FrameworkError> {
         let profile_filename = if profile.ends_with(".toml") {
             profile.to_string()
         } else {
@@ -147,18 +158,24 @@ impl RusticConfig {
                 merge_logs.push((Level::Warn, "Option `profile-substitute-env` is given without any profiles to load! Note that this option does NOT apply to the file where it is specified!".to_string()));
             }
             // if "use_profile" is defined in config file, merge the referenced profiles first
+            let mut missing_profiles = Vec::new();
             for profile in &config.global.use_profiles.clone() {
-                config.merge_profile(profile, merge_logs, Level::Warn)?;
+                missing_profiles.extend(config.merge_profile_with_missing(
+                    profile,
+                    merge_logs,
+                    Level::Warn,
+                )?);
             }
             self.merge(config);
+            Ok(missing_profiles)
         } else {
             let paths_string = paths.iter().map(|path| path.display()).join(", ");
             merge_logs.push((
                 level_missing,
                 format!("using no config file, none of these exist: {paths_string}",),
             ));
-        };
-        Ok(())
+            Ok(vec![profile.to_owned()])
+        }
     }
 }
 

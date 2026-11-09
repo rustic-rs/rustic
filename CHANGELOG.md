@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.5](https://github.com/rustic-rs/rustic/compare/v0.11.4...v0.11.5) - 2026-11-09
+
+### Added
+
+- *(ls)* list entries with type and metadata with ([#1952](https://github.com/rustic-rs/rustic/pull/1952))
+- add [init] to config profile ([#1907](https://github.com/rustic-rs/rustic/pull/1907))
+
+### Fixed
+
+- *(tui)* handle directory nodes without subtree in ls view to prevent panics ([#1937](https://github.com/rustic-rs/rustic/pull/1937))
+- use literal binary name in cargo-binstall pkg-url ([#1963](https://github.com/rustic-rs/rustic/pull/1963))
+- Print url first in docs command ([#1898](https://github.com/rustic-rs/rustic/pull/1898))
+
+### Other
+
+- update dependencies ([#1990](https://github.com/rustic-rs/rustic/pull/1990))
+
 ## [0.11.4](https://github.com/rustic-rs/rustic/compare/v0.11.3...v0.11.4) - 2026-08-17
 
 ### Added

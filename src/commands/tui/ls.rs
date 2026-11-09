@@ -171,8 +171,9 @@ impl<'a> Ls<'a> {
         for node in &self.tree.nodes {
             let mut node = node.clone();
             if node.is_dir() {
-                let id = node.subtree.unwrap();
-                if let Some(sum) = self.summary_map.get(&id) {
+                if let Some(id) = node.subtree
+                    && let Some(sum) = self.summary_map.get(&id)
+                {
                     summary += sum.summary;
                     node.meta.size = sum.summary.size;
                 } else {
@@ -209,11 +210,13 @@ impl<'a> Ls<'a> {
     pub fn enter(&mut self) -> Result<()> {
         if let Some(idx) = self.table.widget.selected() {
             let node = &self.tree.nodes[idx];
-            if node.is_dir() {
+            if node.is_dir()
+                && let Some(subtree_id) = node.subtree
+            {
                 self.path.push(node.name());
                 let tree = self.tree.clone();
                 let tree_id = self.tree_id;
-                self.tree_id = node.subtree.unwrap();
+                self.tree_id = subtree_id;
                 self.tree = self.repo.get_tree(&self.tree_id)?;
                 self.trees.push((tree, tree_id, idx));
             }
@@ -439,5 +442,112 @@ impl<'a> Draw for Ls<'a> {
             }
             CurrentScreen::ShowFile(popup) => popup.draw(area, f),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flate2::read::GzDecoder;
+    use rustic_backend::BackendOptions;
+    use rustic_core::{
+        Credentials, NoProgressBars, Repository, RepositoryOptions,
+        repofile::{Metadata, NodeType},
+    };
+    use std::ffi::OsStr;
+    use std::fs::File;
+    use tar::Archive;
+    use tempfile::tempdir;
+
+    fn get_test_repo() -> (tempfile::TempDir, IndexedRepo) {
+        let dir = tempdir().unwrap();
+        let path = Path::new("tests/repository-fixtures/rustic-repo.tar.gz")
+            .canonicalize()
+            .unwrap();
+        let tar_gz = File::open(path).unwrap();
+        let tar = GzDecoder::new(tar_gz);
+        let mut archive = Archive::new(tar);
+        archive.unpack(&dir).unwrap();
+
+        let repo_dir = dir.path().join("repo");
+        let mut be = BackendOptions::default();
+        be.repository = Some(repo_dir.to_str().unwrap().to_string());
+        let backends = be.to_backends().unwrap();
+        let repo =
+            Repository::new_with_progress(&RepositoryOptions::default(), &backends, NoProgressBars)
+                .unwrap();
+        let open = repo
+            .open(&Credentials::Password("rustic".to_string()))
+            .unwrap();
+        let indexed = open.to_indexed().unwrap();
+        (dir, indexed)
+    }
+
+    #[test]
+    fn test_update_table_dir_without_subtree_does_not_panic() {
+        let (_dir, repo) = get_test_repo();
+        let header = ["Name", "Size", "Mode", "User", "Group", "Time"]
+            .into_iter()
+            .map(Text::from)
+            .collect();
+        let dir_node_without_subtree = Node::new_node(
+            OsStr::new("corrupt_dir"),
+            NodeType::Dir,
+            Metadata::default(),
+        );
+        assert!(dir_node_without_subtree.is_dir());
+        assert!(dir_node_without_subtree.subtree.is_none());
+
+        let mut app = Ls {
+            current_screen: CurrentScreen::Ls,
+            numeric: false,
+            table: WithBlock::new(SelectTable::new(header), Block::new()),
+            repo: &repo,
+            snapshot: SnapshotFile::default(),
+            path: PathBuf::from("/"),
+            trees: Vec::new(),
+            tree: Tree {
+                nodes: vec![dir_node_without_subtree],
+            },
+            tree_id: TreeId::default(),
+            summary_map: SummaryMap::default(),
+        };
+
+        app.update_table();
+    }
+
+    #[test]
+    fn test_enter_dir_without_subtree_does_not_panic() {
+        let (_dir, repo) = get_test_repo();
+        let header = ["Name", "Size", "Mode", "User", "Group", "Time"]
+            .into_iter()
+            .map(Text::from)
+            .collect();
+        let dir_node_without_subtree = Node::new_node(
+            OsStr::new("corrupt_dir"),
+            NodeType::Dir,
+            Metadata::default(),
+        );
+        assert!(dir_node_without_subtree.is_dir());
+        assert!(dir_node_without_subtree.subtree.is_none());
+
+        let mut app = Ls {
+            current_screen: CurrentScreen::Ls,
+            numeric: false,
+            table: WithBlock::new(SelectTable::new(header), Block::new()),
+            repo: &repo,
+            snapshot: SnapshotFile::default(),
+            path: PathBuf::from("/"),
+            trees: Vec::new(),
+            tree: Tree {
+                nodes: vec![dir_node_without_subtree],
+            },
+            tree_id: TreeId::default(),
+            summary_map: SummaryMap::default(),
+        };
+
+        app.table.widget.select(Some(0));
+        let result = app.enter();
+        assert!(result.is_ok());
     }
 }

@@ -13,6 +13,7 @@ use anyhow::Result;
 use clap::ValueHint;
 use globset::{Glob, GlobBuilder, GlobSetBuilder};
 use itertools::Itertools;
+use serde::Serialize;
 
 use rustic_core::{
     FindMatches, FindNode,
@@ -43,7 +44,7 @@ pub(crate) struct FindCmd {
     ids: Vec<String>,
 
     /// Show all snapshots instead of summarizing snapshots with identical search results
-    #[clap(long)]
+    #[clap(long, conflicts_with = "json")]
     all: bool,
 
     /// Also show snapshots which don't contain a search result.
@@ -51,8 +52,25 @@ pub(crate) struct FindCmd {
     show_misses: bool,
 
     /// Show uid/gid instead of user/group
-    #[clap(long, long("numeric-uid-gid"))]
+    #[clap(long, long("numeric-uid-gid"), conflicts_with = "json")]
     numeric_id: bool,
+
+    /// Show search results in json
+    #[clap(long)]
+    json: bool,
+}
+
+#[derive(Serialize)]
+struct FindJsonResult {
+    snapshot: String,
+    matches: Vec<FindJsonMatch>,
+}
+
+#[derive(Serialize)]
+struct FindJsonMatch {
+    path: PathBuf,
+    #[serde(flatten)]
+    node: Node,
 }
 
 impl Runnable for FindCmd {
@@ -71,20 +89,37 @@ impl Runnable for FindCmd {
 impl FindCmd {
     fn inner_run(&self, repo: IndexedRepo) -> Result<()> {
         let grouped = get_global_grouped_snapshots(&repo, &self.ids)?;
+        let mut json_results = Vec::new();
         for group in grouped.groups {
             let mut snaps = group.items;
             let key = group.group_key;
             snaps.sort_unstable();
-            if !key.is_empty() {
+            if !self.json && !key.is_empty() {
                 println!("\nsearching in snapshots group {key}...");
             }
             let ids = snaps.iter().map(|sn| sn.tree);
             if let Some(path) = &self.path {
                 let FindNode { nodes, matches } = repo.find_nodes_from_path(ids, path)?;
-                for (idx, g) in &matches.iter().zip(snaps.iter()).chunk_by(|(idx, _)| *idx) {
-                    self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
-                    if let Some(idx) = idx {
-                        print_node(&nodes[*idx], path, self.numeric_id);
+                if self.json {
+                    for (idx, snapshot) in matches.iter().zip(snaps.iter()) {
+                        if self.show_misses || idx.is_some() {
+                            json_results.push(FindJsonResult {
+                                snapshot: snapshot.id.to_hex().to_string(),
+                                matches: idx.map_or_else(Vec::new, |idx| {
+                                    vec![FindJsonMatch {
+                                        path: path.clone(),
+                                        node: nodes[idx].clone(),
+                                    }]
+                                }),
+                            });
+                        }
+                    }
+                } else {
+                    for (idx, g) in &matches.iter().zip(snaps.iter()).chunk_by(|(idx, _)| *idx) {
+                        self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
+                        if let Some(idx) = idx {
+                            print_node(&nodes[*idx], path, self.numeric_id);
+                        }
                     }
                 }
             } else {
@@ -104,13 +139,35 @@ impl FindCmd {
                     nodes,
                     matches,
                 } = repo.find_matching_nodes(ids, &matches)?;
-                for (idx, g) in &matches.iter().zip(snaps.iter()).chunk_by(|(idx, _)| *idx) {
-                    self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
-                    for (path_idx, node_idx) in idx {
-                        print_node(&nodes[*node_idx], &paths[*path_idx], self.numeric_id);
+                if self.json {
+                    for (idx, snapshot) in matches.iter().zip(snaps.iter()) {
+                        if self.show_misses || !idx.is_empty() {
+                            let matches = idx
+                                .iter()
+                                .map(|(path_idx, node_idx)| FindJsonMatch {
+                                    path: paths[*path_idx].clone(),
+                                    node: nodes[*node_idx].clone(),
+                                })
+                                .collect();
+                            json_results.push(FindJsonResult {
+                                snapshot: snapshot.id.to_hex().to_string(),
+                                matches,
+                            });
+                        }
+                    }
+                } else {
+                    for (idx, g) in &matches.iter().zip(snaps.iter()).chunk_by(|(idx, _)| *idx) {
+                        self.print_identical_snapshots(idx.iter(), g.into_iter().map(|(_, sn)| sn));
+                        for (path_idx, node_idx) in idx {
+                            print_node(&nodes[*node_idx], &paths[*path_idx], self.numeric_id);
+                        }
                     }
                 }
             }
+        }
+        if self.json {
+            serde_json::to_writer(std::io::stdout(), &json_results)?;
+            println!();
         }
         Ok(())
     }

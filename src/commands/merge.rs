@@ -65,7 +65,8 @@ impl MergeCmd {
 
         if self.json {
             let mut stdout = std::io::stdout();
-            serde_json::to_writer_pretty(&mut stdout, &snap)?;
+            serde_json::to_writer(&mut stdout, &snap)?;
+            println!();
         }
         info!("saved new snapshot as {}.", snap.id);
 

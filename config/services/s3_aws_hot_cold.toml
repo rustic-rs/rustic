@@ -1,0 +1,35 @@
+# rustic config file to backup to a hot/cold repository:
+# - hot repository: regular AWS S3 bucket
+# - cold repository: low-cost AWS S3 Glacier Deep Archive
+#
+# Cloud infrastructure deployed with:
+# https://github.com/rustic-rs/rustic-aws/blob/main/glacier-cold-storage-cdk/README.md
+#
+# Docs: https://rustic.cli.rs/docs/commands/init/cold_storage.html
+
+[repository]
+repository = "opendal:s3"
+repo-hot = "opendal:s3"
+
+# See: https://gitlab.com/philipmw/warmup-s3-archives#restoring-your-backup-from-cold-storage
+warm-up-command = "warmup-s3-archives %paths"
+warm-up-batch = 1000
+
+# Options shared by both the cold and hot repositories.
+# Other options can be given here - note that opendal also support reading config from env files or AWS config dirs, see the opendal S3 docu
+[repository.options]
+endpoint = "https://s3.dualstack.<your_aws_region>.amazonaws.com"
+region = "<your_aws_region>"
+root = "/"
+access_key_id = "<your_access_key_id>" # this can be omitted, when AWS config is used
+secret_access_key = "<your_secret_access_key>" # this can be omitted, when AWS config is used
+
+# Options for the hot (metadata) repository only
+[repository.options-hot]
+bucket = "<your_hot_bucket_name>"
+default_storage_class = "STANDARD"
+
+# Options for the cold (data) repository only
+[repository.options-cold]
+bucket = "<your_cold_bucket_name>"
+default_storage_class = "DEEP_ARCHIVE"

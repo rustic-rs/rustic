@@ -19,7 +19,7 @@ rustic - fast, encrypted, deduplicated backups powered by Rust
 
 [features]
 default = ["jq", "prometheus", "opentelemetry", "tui", "webdav"]
-release = ["default", "self-update"]
+release = ["default", "self-update", "mimalloc"]
 
 # Allocators
 mimalloc = ["dep:mimalloc"]

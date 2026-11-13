@@ -2,3 +2,13 @@
 rustdocflags = ["--document-private-items"]
 # rustflags = "-C target-cpu=native -D warnings"
 # incremental = true
+
+# aes-gcm on aarch64: ARMv8 AES / PMULL instead of software AES-GCM.
+[target.aarch64-apple-darwin]
+rustflags = ["--cfg", "aes_armv8", "--cfg", "polyval_armv8"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["--cfg", "aes_armv8", "--cfg", "polyval_armv8"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["--cfg", "aes_armv8", "--cfg", "polyval_armv8"]

@@ -171,6 +171,13 @@ pub struct BackupCmd {
 }
 
 impl BackupCmd {
+    pub(crate) fn set_hook_command(&mut self, command: &str) {
+        self.hooks = self.hooks.with_command(command);
+        for snapshot in &mut self.snapshots {
+            snapshot.set_hook_command(command);
+        }
+    }
+
     fn validate(&self) -> Result<(), &str> {
         // manually check for a "source" field, check is not done by serde, see above.
         if !self.sources.is_empty() {

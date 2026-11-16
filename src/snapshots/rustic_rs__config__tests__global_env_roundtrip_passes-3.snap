@@ -29,6 +29,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         env: {
             "KEY0": "VALUE0",
@@ -81,6 +82,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
     },
     init: ConfigOptions {
@@ -198,6 +200,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         snapshots: [],
         sources: [],

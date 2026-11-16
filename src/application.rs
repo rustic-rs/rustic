@@ -5,7 +5,7 @@ use abscissa_core::{
     Application, Component, FrameworkError, FrameworkErrorKind, Shutdown, StandardPaths,
     application::{self, AppCell, fatal_error},
     config::{self, CfgCell},
-    terminal::component::Terminal,
+    terminal::{ColorChoice, component::Terminal},
 };
 
 use anyhow::Result;
@@ -78,6 +78,15 @@ impl Application for RusticApp {
         Ok(vec![Box::new(terminal)])
     }
 
+    /// Select the color behavior for Rustic's terminal streams.
+    fn term_colors(&self, command: &Self::Cmd) -> ColorChoice {
+        if command.config.global.no_color {
+            ColorChoice::Never
+        } else {
+            ColorChoice::Auto
+        }
+    }
+
     /// Register all components used by this application.
     ///
     /// If you would like to add additional components to your application
@@ -138,5 +147,24 @@ impl Application for RusticApp {
         }
 
         process::exit(exit_code);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use abscissa_core::Application;
+    use clap::Parser;
+
+    use super::{ColorChoice, RusticApp};
+    use crate::commands::EntryPoint;
+
+    #[test]
+    fn no_color_disables_terminal_colors() {
+        let command = EntryPoint::try_parse_from(["rustic", "--no-color", "version"]).unwrap();
+
+        assert_eq!(
+            RusticApp::default().term_colors(&command),
+            ColorChoice::Never
+        );
     }
 }

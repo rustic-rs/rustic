@@ -189,6 +189,28 @@ impl BackupCmd {
         }
         Ok(())
     }
+
+    fn load_glob_files(mut excludes: Excludes) -> Result<Excludes> {
+        for file in std::mem::take(&mut excludes.glob_files) {
+            let patterns = std::fs::read_to_string(&file).with_context(|| {
+                format!(
+                    "failed to read glob file `{file}`; expected a file containing glob patterns"
+                )
+            })?;
+            excludes.globs.extend(patterns.lines().map(str::to_owned));
+        }
+
+        for file in std::mem::take(&mut excludes.iglob_files) {
+            let patterns = std::fs::read_to_string(&file).with_context(|| {
+                format!(
+                    "failed to read case-insensitive glob file `{file}`; expected a file containing glob patterns"
+                )
+            })?;
+            excludes.iglobs.extend(patterns.lines().map(str::to_owned));
+        }
+
+        Ok(excludes)
+    }
 }
 
 /// Merge backup snapshots to generate
@@ -345,7 +367,7 @@ impl BackupCmd {
         source: &PathList,
         options: BTreeMap<String, String>,
         ls: bool,
-        backup_opts: BackupOptions,
+        mut backup_opts: BackupOptions,
         snap: &mut SnapshotFile,
         repo: &IndexedIdsRepo,
     ) -> Result<()> {
@@ -355,6 +377,7 @@ impl BackupCmd {
             .sanitize()
             .with_context(|| format!("error sanitizing source=s\"{:?}\"", source))?
             .merge();
+        backup_opts.excludes = Self::load_glob_files(backup_opts.excludes)?;
 
         if source.len() == 1
                 // TODO: This check should not be done on PathList, but in the sources list directly

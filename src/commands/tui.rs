@@ -15,6 +15,7 @@ pub use snapshots::Snapshots;
 use std::io;
 use std::sync::{Arc, RwLock};
 
+use crate::config::logging::TuiLogCapture;
 use anyhow::Result;
 use crossterm::event::{KeyEvent, KeyModifiers};
 use crossterm::{
@@ -38,18 +39,26 @@ impl TuiResult for bool {
 }
 
 pub fn run(f: impl FnOnce(TuiProgressBars) -> Result<()>) -> Result<()> {
-    // setup terminal
+    // Keep console logs off the TUI; flush them after the terminal is restored.
+    let log_capture = TuiLogCapture::start();
+
     let terminal = init_terminal()?;
     let terminal = Arc::new(RwLock::new(terminal));
 
-    // restore terminal (even when leaving through ?, early return, or panic)
-    defer! {
-        reset_terminal().unwrap();
-    }
+    let result = {
+        // restore terminal (even when leaving through ?, early return, or panic)
+        defer! {
+            reset_terminal().unwrap();
+        }
 
-    let progress = TuiProgressBars { terminal };
+        let progress = TuiProgressBars { terminal };
+        f(progress)
+    };
 
-    if let Err(err) = f(progress) {
+    // Terminal is back to cooked mode; now replay captured logs and errors.
+    drop(log_capture);
+
+    if let Err(err) = result {
         println!("{err:?}");
     }
 

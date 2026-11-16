@@ -59,9 +59,19 @@ options. Therefore `commandline arguments` have the highest precedence.
 Configuration files can be placed in the user's local config directory, e.g.
 `~/.config/rustic/` or in the global config dir, e.g. `/etc/rustic/`. You can
 use different config files, e.g. `myconfig.toml` and use the `-P` option to
-specify the profile name, e.g. `rustic -P myconfig`. env variables can be
-substituted in config files using the `profile-substitute-env` option. This
-allows extra customization possibilities.
+specify the profile name, e.g. `rustic -P myconfig`.
+
+On Windows, rustic also searches `%USERPROFILE%\.config\rustic\` after the
+platform user config directory and before the global config directory.
+
+To override these locations, set `RUSTIC_HOME` to an absolute rustic
+installation home. rustic searches `RUSTIC_HOME/config/` first, then
+`XDG_CONFIG_HOME/rustic/` and each `XDG_CONFIG_DIRS/rustic/` directory in
+order, before its platform user and global configuration directories. Relative
+environment directory entries are ignored.
+
+Environment variables can be substituted in config files using the
+`profile-substitute-env` option. This allows extra customization possibilities.
 
 Examples for different configuration files can be found here in the
 [/config/](/config) directory.

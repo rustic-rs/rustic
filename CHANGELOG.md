@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0](https://github.com/rustic-rs/rustic/compare/v0.11.4...v0.12.0) - 2026-11-17
+
+### Added
+
+- [**breaking**] Add more reqwest options for rest+opendal backends ([#556](https://github.com/rustic-rs/rustic_core/pull/556), [#642](https://github.com/rustic-rs/rustic_core/pull/642), [#598](https://github.com/rustic-rs/rustic_core/pull/598))
+- return exit code 3 when backup source files are unreadable ([#1908](https://github.com/rustic-rs/rustic/pull/1908), [#561](https://github.com/rustic-rs/rustic_core/pull/561))
+- impl Serialize/Deserialize and Merge for ConfigOptions ([#559](https://github.com/rustic-rs/rustic_core/pull/559))
+- log OpenDAL retries as a single line ([#562](https://github.com/rustic-rs/rustic_core/pull/562))
+- *(ls)* list entries with type and metadata with ([#1952](https://github.com/rustic-rs/rustic/pull/1952))
+- add [init] to config profile ([#1907](https://github.com/rustic-rs/rustic/pull/1907))
+
+### Fixed
+
+- *(prune)* [**breaking**] Fix bug with concurrent prune runs and recovered packs ([#639](https://github.com/rustic-rs/rustic_core/pull/639))
+- *(chunker)* [**breaking**] prefill the whole rolling hash window ([#638](https://github.com/rustic-rs/rustic_core/pull/638))
+- [**breaking**] Fix clippy lints and security issues ([#629](https://github.com/rustic-rs/rustic_core/pull/629))
+- [**breaking**] Don't merge subpaths ([#563](https://github.com/rustic-rs/rustic_core/pull/563))
+- *(backup)* compare inodes unless ignore_inode is set ([#632](https://github.com/rustic-rs/rustic_core/pull/632))
+- *(restore)* replace an entry that sits where a hardlink belongs ([#634](https://github.com/rustic-rs/rustic_core/pull/634))
+- *(restore)* prevent path traversal in LocalDestination ([#590](https://github.com/rustic-rs/rustic_core/pull/590))
+- *(chunker)* keep chunks within bounds for a small min size ([#637](https://github.com/rustic-rs/rustic_core/pull/637))
+- *(forget)* count minutes within the same hour for keep-minutely ([#633](https://github.com/rustic-rs/rustic_core/pull/633))
+- *(prune)* safely handle directory nodes without subtree in find_used_blobs ([#587](https://github.com/rustic-rs/rustic_core/pull/587))
+- *(repair)* safely handle file nodes with missing content in repair snapshots ([#586](https://github.com/rustic-rs/rustic_core/pull/586))
+- *(copy)* exit with an error when copying to a target failed ([#1950](https://github.com/rustic-rs/rustic/pull/1950))
+- *(mount)* avoid panics on integer overflow and malformed xattr names in FUSE handler ([#1938](https://github.com/rustic-rs/rustic/pull/1938))
+- *(tui)* handle directory nodes without subtree in ls view to prevent panics ([#1937](https://github.com/rustic-rs/rustic/pull/1937))
+- *(packer)* validate blob offsets and bounds in BlobCopier ([#591](https://github.com/rustic-rs/rustic_core/pull/591))
+- *(tree)* safely handle directory nodes without subtree in NodeStreamer and merge_nodes ([#588](https://github.com/rustic-rs/rustic_core/pull/588))
+- *(backend)* propagate opendal errors when checking for config ([#640](https://github.com/rustic-rs/rustic_core/pull/640))
+- set is_hot from the repository in init_with_config ([#602](https://github.com/rustic-rs/rustic_core/pull/602))
+- join tree loader threads before releasing the index ([#607](https://github.com/rustic-rs/rustic_core/pull/607))
+- reject key files with invalid or excessive scrypt parameters ([#592](https://github.com/rustic-rs/rustic_core/pull/592))
+- don't overflow in BlobLocations::can_coalesce ([#589](https://github.com/rustic-rs/rustic_core/pull/589))
+- don't underflow in BlobLocation::data_length ([#585](https://github.com/rustic-rs/rustic_core/pull/585))
+- stop tree workers after receiver closes ([#546](https://github.com/rustic-rs/rustic_core/pull/546))
+- include path in canonicalization errors ([#548](https://github.com/rustic-rs/rustic_core/pull/548))
+- iOS build ([#553](https://github.com/rustic-rs/rustic_core/pull/553))
+- protect cache backend with locks ([#544](https://github.com/rustic-rs/rustic_core/pull/544))
+- run delete hook when replacing a file ([#547](https://github.com/rustic-rs/rustic_core/pull/547))
+- use literal binary name in cargo-binstall pkg-url ([#1963](https://github.com/rustic-rs/rustic/pull/1963))
+- Print url first in docs command ([#1898](https://github.com/rustic-rs/rustic/pull/1898))
+
+### Other
+
+- [**breaking**] Prefix all http transport options with http- ([#558](https://github.com/rustic-rs/rustic_core/pull/558))
+- [**breaking**] dependency updates ([#1997](https://github.com/rustic-rs/rustic/pull/1997), [#653](https://github.com/rustic-rs/rustic_core/pull/653), [#1990](https://github.com/rustic-rs/rustic/pull/1990))
+- don't hash all-zero chunks ([#611](https://github.com/rustic-rs/rustic_core/pull/611))
+- add OpenDAL attribution ([#552](https://github.com/rustic-rs/rustic_core/pull/552))
+- fix cargo-careful on main ([#648](https://github.com/rustic-rs/rustic_core/pull/648))
+- compare the Debug form of the path in the sanitize error ([#630](https://github.com/rustic-rs/rustic_core/pull/630))
+- tidy up type parameters ([#580](https://github.com/rustic-rs/rustic_core/pull/580))
+- update core README credential API ([#549](https://github.com/rustic-rs/rustic_core/pull/549))
+- Document Debian installation from the pkg.haus APT archive ([#1881](https://github.com/rustic-rs/rustic/pull/1881))
+- Document OneDrive OAuth setup ([#1920](https://github.com/rustic-rs/rustic/pull/1920))
+
 ## [0.11.4](https://github.com/rustic-rs/rustic/compare/v0.11.3...v0.11.4) - 2026-08-17
 
 ### Added

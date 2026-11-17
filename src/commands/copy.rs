@@ -8,7 +8,7 @@ use crate::{
     status_err,
 };
 use abscissa_core::{Command, FrameworkError, Runnable, Shutdown, config::Override};
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use conflate::Merge;
 use log::{Level, error, info, log};
 use serde::{Deserialize, Serialize};
@@ -87,6 +87,7 @@ impl CopyCmd {
         // sort for nicer output
         snapshots.sort_unstable();
 
+        let mut is_err = false;
         for target in &config.copy.targets {
             let mut merge_logs = Vec::new();
             let mut target_config = RusticConfig::default();
@@ -100,9 +101,14 @@ impl CopyCmd {
                 target_opt.run(|target_repo| self.copy(&repo, target_repo, target_opt, &snapshots))
             {
                 error!("error copying to target: {err}");
+                is_err = true;
             }
         }
-        Ok(())
+        if is_err {
+            Err(anyhow!("Copying failed for at least one target!"))
+        } else {
+            Ok(())
+        }
     }
 
     fn copy(

@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- [**breaking**] Add more reqwest options for rest+opendal backends ([#556](https://github.com/rustic-rs/rustic_core/pull/556), [#642](https://github.com/rustic-rs/rustic_core/pull/642), [#598](https://github.com/rustic-rs/rustic_core/pull/598))
+- Add more reqwest options for rest+opendal backends ([#556](https://github.com/rustic-rs/rustic_core/pull/556), [#642](https://github.com/rustic-rs/rustic_core/pull/642), [#598](https://github.com/rustic-rs/rustic_core/pull/598))
 - return exit code 3 when backup source files are unreadable ([#1908](https://github.com/rustic-rs/rustic/pull/1908), [#561](https://github.com/rustic-rs/rustic_core/pull/561))
 - impl Serialize/Deserialize and Merge for ConfigOptions ([#559](https://github.com/rustic-rs/rustic_core/pull/559))
 - log OpenDAL retries as a single line ([#562](https://github.com/rustic-rs/rustic_core/pull/562))
@@ -17,8 +17,8 @@ All notable changes to this project will be documented in this file.
 
 - *(prune)* [**breaking**] Fix bug with concurrent prune runs and recovered packs ([#639](https://github.com/rustic-rs/rustic_core/pull/639))
 - *(chunker)* [**breaking**] prefill the whole rolling hash window ([#638](https://github.com/rustic-rs/rustic_core/pull/638))
-- [**breaking**] Fix clippy lints and security issues ([#629](https://github.com/rustic-rs/rustic_core/pull/629))
 - [**breaking**] Don't merge subpaths ([#563](https://github.com/rustic-rs/rustic_core/pull/563))
+- Fix clippy lints and security issues ([#629](https://github.com/rustic-rs/rustic_core/pull/629))
 - *(backup)* compare inodes unless ignore_inode is set ([#632](https://github.com/rustic-rs/rustic_core/pull/632))
 - *(restore)* replace an entry that sits where a hardlink belongs ([#634](https://github.com/rustic-rs/rustic_core/pull/634))
 - *(restore)* prevent path traversal in LocalDestination ([#590](https://github.com/rustic-rs/rustic_core/pull/590))
@@ -48,7 +48,7 @@ All notable changes to this project will be documented in this file.
 ### Other
 
 - [**breaking**] Prefix all http transport options with http- ([#558](https://github.com/rustic-rs/rustic_core/pull/558))
-- [**breaking**] dependency updates ([#1997](https://github.com/rustic-rs/rustic/pull/1997), [#653](https://github.com/rustic-rs/rustic_core/pull/653), [#1990](https://github.com/rustic-rs/rustic/pull/1990))
+- dependency updates ([#1997](https://github.com/rustic-rs/rustic/pull/1997), [#653](https://github.com/rustic-rs/rustic_core/pull/653), [#1990](https://github.com/rustic-rs/rustic/pull/1990))
 - don't hash all-zero chunks ([#611](https://github.com/rustic-rs/rustic_core/pull/611))
 - add OpenDAL attribution ([#552](https://github.com/rustic-rs/rustic_core/pull/552))
 - fix cargo-careful on main ([#648](https://github.com/rustic-rs/rustic_core/pull/648))

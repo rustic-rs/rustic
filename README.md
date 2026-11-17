@@ -94,6 +94,9 @@ information on how to get started.
 
 ### From binaries
 
+- [releases](https://github.com/rustic-rs/rustic/releases).
+- [nightly binaries](https://rustic.cli.rs/docs/nightly_builds.html).
+
 #### [cargo-binstall](https://crates.io/crates/cargo-binstall)
 
 ```bash
@@ -116,11 +119,13 @@ scoop install rustic
 brew install rustic
 ```
 
-Or you can check out the
-[releases](https://github.com/rustic-rs/rustic/releases).
+#### Debian
 
-Nightly binaries are available
-[here](https://rustic.cli.rs/docs/nightly_builds.html).
+##### [pkg.haus](https://pkg.haus)
+
+```bash
+sudo apt install rustic
+```
 
 ### Docker
 

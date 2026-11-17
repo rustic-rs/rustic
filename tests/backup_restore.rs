@@ -223,3 +223,41 @@ fn test_backup_and_restore_passes() -> TestResult<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_ls_json_long_has_metadata() -> TestResult<()> {
+    let temp_dir = setup()?;
+    let backup = src_snapshot()?.into_path();
+
+    rustic_runner(&temp_dir)?
+        .arg("backup")
+        .arg(backup.path())
+        .assert()
+        .success();
+
+    let output = rustic_runner(&temp_dir)?
+        .args(["ls", "--json", "--long", "latest"])
+        .output()?;
+    assert!(output.status.success());
+
+    let entries: Vec<serde_json::Value> = serde_json::from_slice(&output.stdout)?;
+    assert!(!entries.is_empty());
+    for entry in &entries {
+        assert!(entry["path"].is_string());
+        assert!(entry["type"].is_string());
+    }
+    assert!(entries.iter().any(|entry| entry["type"] == "dir"));
+
+    // parent dirs of the backup path have no metadata, but files have
+    let files: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry["type"] == "file")
+        .collect();
+    assert!(!files.is_empty());
+    for file in files {
+        assert!(file["mtime"].is_string());
+        assert!(file["size"].is_u64());
+    }
+
+    Ok(())
+}

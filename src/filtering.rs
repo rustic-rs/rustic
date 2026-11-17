@@ -74,7 +74,7 @@ impl SnapshotFn {
 }
 
 #[cfg(feature = "rhai")]
-#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
+#[cached(key = "String", convert = r#"{ s.to_string() }"#, max_size = 1)]
 fn string_to_fn(s: &str) -> Option<SnapshotFn> {
     match SnapshotFn::from_str(s) {
         Ok(filter_fn) => Some(filter_fn),
@@ -131,7 +131,7 @@ impl SnapshotJq {
 }
 
 #[cfg(feature = "jq")]
-#[cached(key = "String", convert = r#"{ s.to_string() }"#, size = 1)]
+#[cached(key = "String", convert = r#"{ s.to_string() }"#, max_size = 1)]
 fn string_to_jq(s: &str) -> Option<SnapshotJq> {
     match SnapshotJq::from_str(s) {
         Ok(filter_jq) => Some(filter_jq),

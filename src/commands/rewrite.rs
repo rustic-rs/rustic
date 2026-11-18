@@ -2,7 +2,7 @@
 
 use crate::{
     Application, RUSTIC_APP,
-    commands::snapshots::print_snapshots,
+    jinja::output_rewrite,
     repository::{IndexedRepo, OpenRepo, get_snapots_from_ids},
     status_err,
 };
@@ -79,7 +79,7 @@ impl RewriteCmd {
 
         let snaps = repo.rewrite_snapshots(snapshots, &self.opts())?;
 
-        self.output(snaps);
+        self.output(snaps)?;
 
         Ok(())
     }
@@ -93,18 +93,20 @@ impl RewriteCmd {
 
         let snaps = repo.rewrite_snapshots_and_trees(snapshots, &self.opts(), &tree_opts)?;
 
-        self.output(snaps);
+        self.output(snaps)?;
 
         Ok(())
     }
 
-    fn output(&self, snaps: Vec<SnapshotFile>) {
+    fn output(&self, snaps: Vec<SnapshotFile>) -> Result<()> {
         let config = RUSTIC_APP.config();
         if config.global.dry_run {
             println!("Would have rewritten the following snapshots:");
-            print_snapshots(snaps, false, true);
+            let output = output_rewrite(&snaps)?;
+            println!("{output}");
         } else {
             info!("{} snapshots have been rewritten", snaps.len());
         }
+        Ok(())
     }
 }

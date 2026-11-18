@@ -1,0 +1,20 @@
+{# Template for forget output - used in `forget` command -#}
+{% from "snapshot_detail_macros.j2" import display_group %}
+{% for group in forget_groups %}
+
+Snapshots for {{ display_group(group.group_key)}}:
+{% filter table %}
+{# print header of the table #}
+ID | Time | Host | Label | Tags | Paths | Action | Reason
+---
+{% for item in group.items %}
+  {# print row of the table #}
+  {% set s = item.snapshot %}
+  {{s.id[:8]}} | {{s.time | timeformat}} | {{s.hostname}} | {{s.label}} | {{s.tags | join("\n")}} | {{s.paths | join("\n")}} |
+  {% if item.keep %} keep {% else %} remove {% endif %} |
+  {{item.reasons | join("\n")}} 
+  ---
+{% endfor %}
+{% endfilter %}
+
+{% endfor %}

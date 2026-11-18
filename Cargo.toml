@@ -128,9 +128,12 @@ toml = "1.0.3"
 zip = { version = "9.4.2", default-features = false, features = ["deflate", "jiff-02"] }
 
 # filtering
+include_dir = "0.7.4"
 jaq-core = { version = "2.0.0", optional = true }
 jaq-json = { version = "1.0.0", features = ["serde_json"], optional = true }
 jaq-std = { version = "2.0.0", optional = true }
+minijinja = { version = "3.1.0", default-features = false, features = ["builtins", "serde", "std_collections", "multi_template", "macros", "debug"] }
+minijinja-contrib = { version = "3.1.0", default-features = false }
 opentelemetry = { version = "0.33.1", default-features = false, features = ["metrics"], optional = true }
 opentelemetry-otlp = { version = "0.33.1", features = ["metrics"], optional = true }
 opentelemetry_sdk = { version = "0.33.1", default-features = false, features = ["metrics"], optional = true }

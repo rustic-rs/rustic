@@ -232,6 +232,11 @@ pub struct GlobalOptions {
     #[merge(strategy = conflate::btreemap::append_or_ignore)]
     pub env: BTreeMap<String, String>,
 
+    /// Template path for output/tui templates (jinja2)
+    #[clap(long, global = true, env = "RUSTIC_TEMPLATE_PATH", value_name = "PATH", value_hint = ValueHint::DirPath)]
+    #[merge(strategy=conflate::option::overwrite_none)]
+    pub template_path: Option<String>,
+
     /// Push metrics to a Prometheus Pushgateway
     #[serde_as(as = "Option<DisplayFromStr>")]
     #[clap(long, global = true, env = "RUSTIC_PROMETHEUS", value_name = "PUSHGATEWAY_URL", value_hint = ValueHint::Url)]

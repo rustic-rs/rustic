@@ -1,0 +1,6 @@
+{# Template for snapshots rewrite - used in `rewrite` commands #}
+{% set count = snapshots | length %}
+{% include 'snapshots_basic.j2' %}
+{# empty line #}
+
+{{count}} snapshot(s)

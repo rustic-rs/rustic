@@ -64,6 +64,7 @@ pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod filtering;
 pub(crate) mod helpers;
+pub(crate) mod jinja;
 #[cfg(any(feature = "prometheus", feature = "opentelemetry"))]
 pub(crate) mod metrics;
 pub(crate) mod repository;

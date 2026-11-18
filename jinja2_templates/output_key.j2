@@ -1,0 +1,12 @@
+{# Template for key output - used in `key` command -#}
+{% filter table %}
+{# print header of the table #}
+ID | User | Host | Created
+---
+{% for key_id, key in keys %}
+  {# print row of the table #}
+  {% if used_key == key_id %}*{% endif %}{{key_id[:8]}} | {{key.username}} | {{key.hostname}} |
+  {% if key.created is defined %}{{key.created | timeformat}}{% endif %} |
+  ---
+{% endfor %}
+{% endfilter %}

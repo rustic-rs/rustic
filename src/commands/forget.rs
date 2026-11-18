@@ -1,7 +1,8 @@
 //! `forget` subcommand
 
+use crate::jinja::output_forget;
 use crate::repository::{OpenRepo, get_grouped_snapshots};
-use crate::{Application, RUSTIC_APP, RusticConfig, helpers::table_with_titles, status_err};
+use crate::{Application, RUSTIC_APP, RusticConfig, status_err};
 
 use abscissa_core::{Command, FrameworkError, Runnable};
 use abscissa_core::{Shutdown, config::Override};
@@ -15,7 +16,7 @@ use serde_with::{DisplayFromStr, serde_as};
 
 use crate::{commands::prune::PruneCmd, filtering::SnapshotFilter};
 
-use rustic_core::{ForgetGroups, ForgetSnapshot, KeepOptions, SnapshotGroupCriterion};
+use rustic_core::{ForgetGroups, KeepOptions, SnapshotGroupCriterion};
 
 /// `forget` subcommand
 #[derive(clap::Parser, Command, Debug)]
@@ -136,7 +137,8 @@ impl ForgetCmd {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &groups)?;
         } else {
-            print_groups(&groups);
+            let output = output_forget(&groups)?;
+            info!("{output}");
         }
 
         let forget_snaps = groups.into_forget_ids();
@@ -159,48 +161,5 @@ impl ForgetCmd {
         }
 
         Ok(())
-    }
-}
-
-/// Print groups to stdout
-///
-/// # Arguments
-///
-/// * `groups` - forget groups to print
-fn print_groups(groups: &ForgetGroups) {
-    let config = RUSTIC_APP.config();
-    for group in &groups.0 {
-        let mut table = table_with_titles([
-            "ID", "Time", "Host", "Label", "Tags", "Paths", "Action", "Reason",
-        ]);
-
-        for ForgetSnapshot {
-            snapshot: sn,
-            keep,
-            reasons,
-        } in &group.items
-        {
-            let time = config.global.format_time(&sn.time).to_string();
-            let tags = sn.tags.formatln();
-            let paths = sn.paths.formatln();
-            let action = if *keep { "keep" } else { "remove" };
-            let reason = reasons.join("\n");
-            _ = table.add_row([
-                &sn.id.to_string(),
-                &time,
-                &sn.hostname,
-                &sn.label,
-                &tags,
-                &paths,
-                action,
-                &reason,
-            ]);
-        }
-
-        if !group.group_key.is_empty() {
-            info!("snapshots for {}:\n{table}", group.group_key);
-        } else {
-            info!("snapshots:\n{table}");
-        }
     }
 }

@@ -1,8 +1,6 @@
 //! `key` subcommand
 
-use crate::{
-    Application, RUSTIC_APP, helpers::table_with_titles, repository::OpenRepo, status_err,
-};
+use crate::{Application, RUSTIC_APP, jinja::output_key, repository::OpenRepo, status_err};
 
 use std::path::PathBuf;
 
@@ -149,22 +147,8 @@ impl ListCmd {
             })
             .filter_map(Result::ok);
 
-        let mut table = table_with_titles(["ID", "User", "Host", "Created"]);
-        _ = table.add_rows(keys.map(|key: (_, KeyFile)| {
-            [
-                format!(
-                    "{}{}",
-                    if used_key == &Some(key.0) { "*" } else { "" },
-                    key.0
-                ),
-                key.1.username.unwrap_or_default(),
-                key.1.hostname.unwrap_or_default(),
-                key.1
-                    .created
-                    .map_or(String::new(), |time| format!("{time}")),
-            ]
-        }));
-        println!("{table}");
+        let output = output_key(keys, used_key)?;
+        println!("{output}");
         Ok(())
     }
 }
@@ -211,20 +195,9 @@ impl RemoveCmd {
                 }
             })
             .filter_map(Result::ok);
-
-        let mut table = table_with_titles(["ID", "User", "Host", "Created"]);
-        _ = table.add_rows(keys.map(|key: (_, KeyFile)| {
-            [
-                key.0.to_string(),
-                key.1.username.unwrap_or_default(),
-                key.1.hostname.unwrap_or_default(),
-                key.1
-                    .created
-                    .map_or(String::new(), |time| format!("{time}")),
-            ]
-        }));
         println!("would have removed the following keys:");
-        println!("{table}");
+        let output = output_key(keys, &None)?;
+        println!("{output}");
         Ok(())
     }
 }

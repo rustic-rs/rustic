@@ -16,7 +16,7 @@ use style::palette::tailwind;
 
 use crate::{
     commands::{
-        snapshots::{fill_table, snap_to_table},
+        snapshots::snap_to_table,
         tui::{
             diff::{Diff, DiffResult},
             ls::{Ls, LsResult},
@@ -30,6 +30,7 @@ use crate::{
         },
     },
     filtering::SnapshotFilter,
+    jinja::tui_snapshot_details,
     repository::IndexedRepo,
 };
 
@@ -183,17 +184,10 @@ impl<'a> Snapshots<'a> {
         filter: SnapshotFilter,
         group_by: SnapshotGroupCriterion,
     ) -> Result<Self> {
-        let header = [
-            "", " ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
-        ]
-        .into_iter()
-        .map(Text::from)
-        .collect();
-
         let mut app = Self {
             current_screen: CurrentScreen::Snapshots,
             current_view: View::Filter,
-            table: WithBlock::new(SelectTable::new(header), Block::new()),
+            table: WithBlock::new(SelectTable::new(Vec::new()), Block::new()),
             repo,
             snaps_status: Vec::new(),
             original_snapshots: Vec::new(),
@@ -340,26 +334,14 @@ impl<'a> Snapshots<'a> {
             .tree
             .iter()
             .filter_map(|item| item.leaf_data().copied())
-            .fold(
-                (false, false, false, false),
-                |(mut a, mut b, mut c, mut d), i| {
-                    if self.snaps_status[i].marked {
-                        a = true;
-                    } else {
-                        b = true;
-                    }
-
-                    if self.snaps_status[i].modified {
-                        c = true;
-                    }
-
-                    if self.snaps_status[i].to_forget {
-                        d = true;
-                    }
-
-                    (a, b, c, d)
-                },
-            );
+            .fold((false, false, false, false), |(a, b, c, d), i| {
+                (
+                    a | self.snaps_status[i].marked,
+                    b | !self.snaps_status[i].marked,
+                    c | self.snaps_status[i].modified,
+                    d | self.snaps_status[i].to_forget,
+                )
+            });
 
         let mark = match (has_mark, has_not_mark) {
             (false, _) => " ",
@@ -457,6 +439,12 @@ impl<'a> Snapshots<'a> {
             .max()
             .unwrap_or(1);
         let height = max_tags.max(max_paths).max(1) + 1;
+        let header = [
+            "", " ID", "Time", "Host", "Label", "Tags", "Paths", "Files", "Dirs", "Size",
+        ]
+        .into_iter()
+        .map(Text::from)
+        .collect();
 
         let rows = self
             .tree
@@ -464,6 +452,7 @@ impl<'a> Snapshots<'a> {
             .map(|tree| self.table_row(tree))
             .collect();
 
+        self.table.widget.set_header(header);
         self.table.widget.set_content(rows, height);
         self.table.block = Block::new()
             .borders(Borders::BOTTOM)
@@ -523,14 +512,28 @@ impl<'a> Snapshots<'a> {
         }
     }
 
-    pub fn snapshot_details(&self) -> PopUpTable {
+    pub fn snapshot_details(&self) -> Result<PopUpTable> {
+        let mut table = Vec::new();
         let mut rows = Vec::new();
         if let Some(snap) = self.selected_snapshot() {
-            fill_table(snap, |title, value| {
-                rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
-            });
+            tui_snapshot_details(
+                snap,
+                |header| {
+                    table.push(
+                        header
+                            .into_iter()
+                            .map(|s| Text::from(s.to_string()))
+                            .collect(),
+                    );
+                },
+                |_alignments| {},
+                |row| {
+                    rows.push(row.into_iter().map(|s| Text::from(s.to_string())).collect());
+                },
+            )?;
         }
-        popup_table("snapshot details", rows)
+        table.extend(rows);
+        Ok(popup_table("snapshot details", table))
     }
 
     pub fn snapshots_summary(&mut self) -> Result<PopUpTable> {
@@ -892,7 +895,7 @@ impl<'a> ProcessEvent for Snapshots<'a> {
                                 }
                                 Char('i') => {
                                     self.current_screen =
-                                        CurrentScreen::Table(self.snapshot_details());
+                                        CurrentScreen::Table(self.snapshot_details()?);
                                 }
                                 Char('S') => {
                                     self.current_screen =

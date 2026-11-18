@@ -13,13 +13,13 @@ use style::palette::tailwind;
 use crate::{
     commands::{
         diff::{DiffStatistics, NodeDiff},
-        snapshots::fill_table,
         tui::widgets::{
             Draw, PopUpPrompt, PopUpText, ProcessEvent, PromptResult, SelectTable, WithBlock,
             popup_prompt, popup_text,
         },
     },
     helpers::bytes_size_to_string,
+    jinja::tui_snapshot_diff_details,
     repository::IndexedRepo,
 };
 
@@ -424,19 +424,27 @@ impl<'a> Diff<'a> {
         Ok(popup_table("diff summary", rows))
     }
 
-    pub fn snapshot_details(&self) -> PopUpTable {
+    pub fn snapshot_details(&self) -> Result<PopUpTable> {
+        let mut table = Vec::new();
         let mut rows = Vec::new();
-        let mut rows_right = Vec::new();
-        fill_table(&self.snapshot_left, |title, value| {
-            rows.push(vec![Text::from(title.to_string()), Text::from(value)]);
-        });
-        fill_table(&self.snapshot_right, |_, value| {
-            rows_right.push(Text::from(value));
-        });
-        for (row, right) in rows.iter_mut().zip(rows_right) {
-            row.push(right);
-        }
-        popup_table("snapshot details", rows)
+        tui_snapshot_diff_details(
+            &self.snapshot_left,
+            &self.snapshot_right,
+            |header| {
+                table.push(
+                    header
+                        .into_iter()
+                        .map(|s| Text::from(s.to_string()))
+                        .collect(),
+                );
+            },
+            |_alignments| {},
+            |row| {
+                rows.push(row.into_iter().map(|s| Text::from(s.to_string())).collect());
+            },
+        )?;
+        table.extend(rows);
+        Ok(popup_table("snapshot details", table))
     }
 }
 
@@ -480,7 +488,8 @@ impl<'a> ProcessEvent for Diff<'a> {
                         }
                     }
                     Char('I') => {
-                        self.current_screen = CurrentScreen::Table(self.snapshot_details());
+                        let details = self.snapshot_details();
+                        self.current_screen = CurrentScreen::Table(details?);
                     }
                     _ => self.table.input(event),
                 },

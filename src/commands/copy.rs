@@ -3,7 +3,7 @@
 use crate::{
     Application, RUSTIC_APP, RusticConfig,
     commands::init::init_credentials,
-    helpers::table_with_titles,
+    jinja::output_copy,
     repository::{AllRepositoryOptions, IndexedRepo, Repo, get_snapots_from_ids},
     status_err,
 };
@@ -151,23 +151,8 @@ impl CopyCmd {
             )?
         };
 
-        let mut table =
-            table_with_titles(["ID", "Time", "Host", "Label", "Tags", "Paths", "Status"]);
-        for CopySnapshot { relevant, sn } in &snaps {
-            let tags = sn.tags.formatln();
-            let paths = sn.paths.formatln();
-            let time = config.global.format_time(&sn.time).to_string();
-            _ = table.add_row([
-                &sn.id.to_string(),
-                &time,
-                &sn.hostname,
-                &sn.label,
-                &tags,
-                &paths,
-                &(if *relevant { "to copy" } else { "existing" }).to_string(),
-            ]);
-        }
-        println!("{table}");
+        let output = output_copy(&snaps)?;
+        println!("{output}");
 
         let count = snaps.iter().filter(|sn| sn.relevant).count();
         if count > 0 {

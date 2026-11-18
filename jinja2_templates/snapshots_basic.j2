@@ -1,0 +1,35 @@
+{# Template for basic snapshots output in a table #}
+{% filter table %}
+{# print header of the table #}
+ID | Time | Host | Label | Tags | Paths
+{% if snapshots|selectattr('summary') | list %}
+{% if snapshots|selectattr('summary.total_files_processed', 'defined') | list %}
+|> Files
+{% endif %}
+{% if snapshots|selectattr('summary.total_dirs_processed', 'defined') | list %}
+|> Dirs
+{% endif %}
+{% if snapshots|selectattr('summary.total_bytes_processed', 'defined') | list %}
+|> Size
+{% endif %}
+{# "Errors" column is only added, if some errors exist #}
+{% if snapshots|selectattr('summary.error_count', 'defined') | selectattr('summary.error_count', 'gt', 0) | list %}
+|> Errors
+{% endif %}
+{% endif %}
+---
+{% for s in snapshots %}
+  {# Compute a "(+x)" if we have a count and it is > 1 #}
+  {% set count = (counts | default([]))[loop.index0] | default(1) %}
+  {% if count > 1 %}
+    {% set print_count = "(+%d)" | format(count-1) %}
+  {% endif %}
+  {# print row of the table #}
+  {{s.id[:8]}} {{print_count}} | {{s.time | timeformat}} | {{s.hostname}} | {{s.label}} | {{s.tags | join("\n")}} | {{s.paths | join("\n")}} |
+  {% if s.summary is defined %}
+  {{s.summary.total_files_processed}} | {{ s.summary.total_dirs_processed}} | {{s.summary.total_bytes_processed | filesizeformat(true)}} |
+  {{s.summary.error_count}}
+  {% endif %}
+  ---
+{% endfor %}
+{% endfilter %}

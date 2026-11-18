@@ -1,0 +1,25 @@
+{# Template for snapshots detail - used in `snapshots` and `backup` command and in tui mode #}
+{#--------------------------------------------#}
+{% macro source(summary) %}
+ files: {{summary.total_files_processed}} / dirs: {{summary.total_dirs_processed}} / size: {{summary.total_bytes_processed | filesizeformat(true)}}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro files(summary) %}
+new: {{"%10d" | format(summary.files_new)}} / changed: {{"%10d" | format(summary.files_changed)}} / unchanged: {{"%10d" | format(summary.files_unmodified)}}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro dirs(summary) %}
+new: {{"%10d" | format(summary.dirs_new)}} / changed: {{"%10d" | format(summary.dirs_changed)}} / unchanged: {{"%10d" | format(summary.dirs_unmodified)}}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro added(summary) %}
+{% if summary.data_blobs + summary.tree_blobs > 0 %}
+data:  {{"%10s" | format(summary.data_blobs)}} blobs / raw: {{"%10s" | format(summary.data_added_files | filesizeformat(true))}} / packed: {{"%10s" | format(summary.data_added_files_packed | filesizeformat(true))}}
+tree:  {{"%10s" | format(summary.tree_blobs)}} blobs / raw: {{"%10s" | format(summary.data_added_trees | filesizeformat(true))}} / packed: {{"%10s" | format(summary.data_added_trees_packed | filesizeformat(true))}}
+total: {{"%10s" | format(summary.data_blobs + summary.tree_blobs)}} blobs / raw: {{"%10s" | format(summary.data_added | filesizeformat(true))}} / packed: {{"%10s" | format(summary.data_added_packed | filesizeformat(true))}}
+{% else %}
+-
+{% endif %}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro display_group(group) %}({% for k in group %}{{k}}: [{{group[k]}}]{{ ', ' if not loop.last }}{% endfor %}){% endmacro %}

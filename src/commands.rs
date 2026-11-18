@@ -57,7 +57,7 @@ use crate::{
 use abscissa_core::{
     Command, Configurable, FrameworkError, FrameworkErrorKind, Runnable, Shutdown, config::Override,
 };
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::builder::{
     Styles,
     styling::{AnsiColor, Effects},
@@ -274,8 +274,21 @@ impl Configurable<RusticConfig> for EntryPoint {
         if config.global.use_profiles.is_empty() {
             config.merge_profile("rustic", &mut merge_logs, Level::Info)?;
         } else {
+            let mut missing_profiles = Vec::new();
             for profile in &config.global.use_profiles.clone() {
-                config.merge_profile(profile, &mut merge_logs, Level::Warn)?;
+                missing_profiles.extend(config.merge_profile_with_missing(
+                    profile,
+                    &mut merge_logs,
+                    Level::Warn,
+                )?);
+            }
+            if matches!(self.commands, RusticCmd::Backup(_)) && !missing_profiles.is_empty() {
+                return Err(FrameworkErrorKind::ConfigError
+                    .context(anyhow!(
+                        "backup profile(s) not found: {}",
+                        missing_profiles.join(", ")
+                    ))
+                    .into());
             }
         }
 

@@ -5455,7 +5455,7 @@ dependencies = [
 
 [[package]]
 name = "rustic-rs"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "abscissa_core",
  "anyhow",

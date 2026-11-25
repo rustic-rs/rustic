@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.1](https://github.com/rustic-rs/rustic/compare/v0.12.0...v0.12.1) - 2026-11-25
+
+### Added
+
+- Use minijinja for output templates ([#2006](https://github.com/rustic-rs/rustic/pull/2006))
+
 ## [0.12.0](https://github.com/rustic-rs/rustic/compare/v0.11.4...v0.12.0) - 2026-11-17
 
 ### Added

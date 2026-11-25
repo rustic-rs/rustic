@@ -11,6 +11,7 @@
 use-profiles = []
 profile-substitute-env = false
 dry-run = false
+template-path = "/my/template-path" # Default: not set
 log-level = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
 log-level-logfile = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"
 log-level-dryrun = "info" # any of "off", "error", "warn", "info", "debug", "trace"; default: "info"

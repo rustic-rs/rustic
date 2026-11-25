@@ -1,0 +1,76 @@
+{# Template for repository information output - used in `repoinfo` command -#}
+{#--------------------------------------------#}
+{% macro repo_table(repo) %}
+{% filter table %}
+{# print header of the table #}
+File Type |> Count |> Total Size
+---
+{% for file in repo %}
+  {{file.tpe}} | {{file.count}} | {{file.size | filesizeformat(true)}}
+  ---
+{% endfor %}
+total | {{repo | sum(attribute="count")}} | {{repo | sum(attribute="size") | filesizeformat(true)}}
+{% endfilter %}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro repo_files(infos) %}
+
+Repository files:
+{{repo_table(infos.files.repo)}}
+{% if infos.files.repo_hot is defined %}
+  {{repo_table(info.files.repo_hot)}}
+{% endif %}
+{% endmacro%}
+{#--------------------------------------------#}
+{% macro add_blobs(blobs, extra="") %}
+{% for blobs in blobs %}
+  {% if blobs.count > 0 %}
+  {{blobs.blob_type}} {{extra}}| {{blobs.count}} | {{blobs.data_size | filesizeformat(true)}} | {{blobs.size | filesizeformat(true)}}
+  ---
+  {% endif %}
+{% endfor %}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro index_blobs(index) %}
+
+Blobs from index:
+{% filter table %}
+Blob Type |> Count |> Total Size |> Total Size in Packs
+---
+{{add_blobs(index.blobs)}}
+{{add_blobs(index.blobs_delete, extra="to delete")}}
+{% set total_blobs = index.blobs + index.blobs_delete %}
+total | {{total_blobs | sum(attribute="count")}} |
+{{total_blobs | sum(attribute="data_size") | filesizeformat(true)}} |
+{{total_blobs | sum(attribute="size") | filesizeformat(true)}} |
+{% endfilter %}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro add_packs(packs, extra="") %}
+{% for packs in packs %}
+  {% if packs.count > 0 %}
+  {{packs.blob_type}} {{extra}}| {{packs.count}} | {{packs.min_size | filesizeformat(true)}} | {{packs.max_size | filesizeformat(true)}}
+  ---
+  {% endif %}
+{% endfor %}
+{% endmacro %}
+{#--------------------------------------------#}
+{% macro index_packs(index) %}
+
+Packs from index:
+{% filter table %}
+Blob Type |> Pack count |> Minimum Size |> Maximum Size
+---
+{{add_packs(index.packs)}}
+{{add_packs(index.packs_delete, "to delete")}}
+{% endfilter %}
+{% endmacro %}
+{#--------------------------------------------#}
+
+{% if infos.files is defined %}
+  {{repo_files(infos)}}
+{% endif %}
+{% if infos.index is defined %}
+  {{index_blobs(infos.index)}}
+  {{index_packs(infos.index)}}
+{% endif %}

@@ -1,0 +1,35 @@
+{# Template for snapshot groups output - used in `snapshots` command #}
+{% from "snapshot_detail_macros.j2" import display_group %}
+{% for group in snapshot_groups %}
+Snapshots for {{ display_group(group.group_key)}}:
+{% set snapshots = group.items %}
+{% set count = snapshots | length %}
+{% if opts is defined and opts.long %}
+  {% for snap in snapshots %}
+    {% filter table %}
+    {% include 'snapshot_details.j2' %}
+    {% endfilter %}
+
+    {% if not loop.last %}
+      {# empty line #}
+
+    {% endif %}
+  {% endfor %}
+{% else %}
+  {% if opts is defined and not opts.all %}
+    {# group snapshots by identical tree; use only the first snapshot of the group and set the count in a separate array "counts" #}
+    {% set ns = namespace(counts=[], snaps=[]) %}
+    {% for key, group in snapshots | groupby("tree") %}
+    {% set ns.counts = ns.counts + [group | length] %}
+    {% set ns.snaps = ns.snaps + [group | first] %}
+    {% endfor %}
+    {% set snapshots = ns.snaps %}
+    {% set counts = ns.counts %}
+  {% endif %}
+  {% include 'snapshots_basic.j2' %}
+{% endif %}
+
+{{count}} snapshot(s)
+  
+{% endfor %}
+total: {{snapshot_groups | map(attribute="items") | map("length") | sum}} snapshot(s)

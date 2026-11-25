@@ -8,12 +8,13 @@ use std::{collections::BTreeMap, env};
 
 use crate::commands::ls::LsCmd;
 use crate::commands::program_version;
+use crate::jinja::output_backup;
 use crate::repository::IndexedIdsRepo;
 use crate::{
     Application, RUSTIC_APP,
-    commands::{init::init, snapshots::fill_table},
+    commands::init::init,
     config::{hooks::Hooks, parse_labels},
-    helpers::{bold_cell, bytes_size_to_string, table},
+    helpers::bytes_size_to_string,
     repository::Repo,
     status_err,
 };
@@ -21,7 +22,6 @@ use crate::{
 use abscissa_core::{Command, Runnable, Shutdown};
 use anyhow::{Context, Result, anyhow, bail};
 use clap::ValueHint;
-use comfy_table::Cell;
 use conflate::{Merge, MergeFrom};
 use log::{debug, error, info, warn};
 use rustic_backend::OpenDALBackend;
@@ -495,14 +495,8 @@ impl BackupCmd {
             let mut stdout = std::io::stdout();
             serde_json::to_writer_pretty(&mut stdout, &snap)?;
         } else if self.long {
-            let mut table = table();
-
-            let add_entry = |title: &str, value: String| {
-                _ = table.add_row([bold_cell(title), Cell::new(value)]);
-            };
-            fill_table(&snap, add_entry);
-
-            println!("{table}");
+            let output = output_backup(&snap)?;
+            println!("{output}");
         } else {
             let summary = snap.summary.as_ref().unwrap();
             info!(

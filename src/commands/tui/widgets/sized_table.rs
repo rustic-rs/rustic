@@ -1,3 +1,5 @@
+use itertools::{EitherOrBoth, Itertools};
+
 use super::{Constraint, Draw, Frame, Rect, Row, SizedWidget, Table, Text};
 
 pub struct SizedTable {
@@ -18,8 +20,12 @@ impl SizedTable {
             .map(|row| row.iter().map(Text::width).collect())
             .reduce(|widths: Vec<usize>, row| {
                 row.iter()
-                    .zip(widths.iter())
-                    .map(|(r, w)| r.max(w))
+                    .zip_longest(widths.iter())
+                    .map(|zip| match zip {
+                        EitherOrBoth::Both(r, w) => r.max(w),
+                        EitherOrBoth::Left(r) => r,
+                        EitherOrBoth::Right(w) => w,
+                    })
                     .copied()
                     .collect()
             })

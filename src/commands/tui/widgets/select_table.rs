@@ -55,6 +55,10 @@ impl SelectTable {
         }
     }
 
+    pub fn set_header(&mut self, header: Vec<Text<'static>>) {
+        self.header = header;
+    }
+
     pub fn set_content(&mut self, content: Vec<Vec<Text<'static>>>, row_height: usize) {
         let colors = TableColors::new(&tailwind::BLUE);
         let selected_style = Style::default()

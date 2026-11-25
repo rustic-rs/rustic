@@ -42,6 +42,7 @@ RusticConfig {
             "KEY8": "VALUE8",
             "KEY9": "VALUE9",
         },
+        template_path: None,
         prometheus: None,
         prometheus_user: None,
         prometheus_pass: None,

@@ -1,0 +1,14 @@
+{# Template for output of snapshots with info whether to copy them - used in `copy` command -#}
+{% filter table %}
+{# print header of the table #}
+ID | Time | Host | Label | Tags | Paths | Status
+---
+{% for item in copy_snapshots %}
+  {# print row of the table #}
+  {% set s = item.0 %}
+  {{s.id[:8]}} | {{s.time | timeformat}} | {{s.hostname}} | {{s.label}} | {{s.tags | join("\n")}} | {{s.paths | join("\n")}} |
+  {% if item.1 %} to copy {% else %} existing {% endif %} |
+  ---
+{% endfor %}
+{% endfilter %}
+

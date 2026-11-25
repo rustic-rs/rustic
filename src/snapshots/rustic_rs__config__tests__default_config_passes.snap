@@ -31,6 +31,7 @@ RusticConfig {
             env: {},
         },
         env: {},
+        template_path: None,
         prometheus: None,
         prometheus_user: None,
         prometheus_pass: None,

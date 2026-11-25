@@ -29,6 +29,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         env: {},
         template_path: None,
@@ -71,6 +72,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
     },
     init: ConfigOptions {
@@ -188,6 +190,7 @@ RusticConfig {
             run_finally: [],
             context: "",
             env: {},
+            command: None,
         },
         snapshots: [],
         sources: [],

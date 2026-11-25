@@ -169,6 +169,11 @@ impl RusticConfig {
 #[derive(Default, Debug, Parser, Clone, Deserialize, Serialize, Merge)]
 #[serde(default, rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GlobalOptions {
+    /// Disable colored output
+    #[clap(long, global = true)]
+    #[merge(strategy=conflate::bool::overwrite_false)]
+    pub no_color: bool,
+
     /// Substitute environment variables in profiles
     #[clap(long, global = true, env = "RUSTIC_PROFILE_SUBSTITUTE_ENV")]
     #[merge(strategy=conflate::bool::overwrite_false)]

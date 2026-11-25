@@ -21,9 +21,18 @@ static GLOBAL: MiMalloc = MiMalloc;
 #[cfg(feature = "jemallocator")]
 use jemallocator_global as _;
 
+use std::env;
+
 use rustic_rs::application::RUSTIC_APP;
 
 /// Boot Rustic
 fn main() {
+    // Clap renders `--help` before the application has been initialized, so set the
+    // standard color opt-out before it parses the command line.
+    if env::args_os().any(|arg| arg == "--no-color") {
+        unsafe {
+            env::set_var("NO_COLOR", "1");
+        }
+    }
     abscissa_core::boot(&RUSTIC_APP);
 }
